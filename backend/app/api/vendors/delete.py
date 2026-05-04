@@ -1,0 +1,18 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_user, get_db
+from app.db.models import User, Vendor, PurchaseEntry, VendorPayment
+
+router = APIRouter()
+
+
+@router.delete("/{vendor_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_vendor(vendor_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    vendor.status = 0
+    db.commit()
+    return None

@@ -1,0 +1,26 @@
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_user, get_db
+from app.db.models import User
+from app.schemas.item import ItemOut
+from app.services.item_service import list_items as list_items_service
+
+router = APIRouter()
+
+
+@router.get("/", response_model=list[ItemOut])
+def list_items(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=1000),
+    q: str | None = Query(None),
+    status: int | None = Query(None),
+    category_id: int | None = Query(None),
+    search_field: str | None = Query(None),
+    sort_by: str = Query("id"),
+    sort_order: str = Query("desc"),
+):
+    return list_items_service(db, page, page_size, q, status, category_id, search_field, sort_by, sort_order)
+

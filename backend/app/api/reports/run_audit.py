@@ -1,0 +1,14 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_user, get_db
+from app.db.models import User
+from app.utils.tasks import audit_stock_integrity
+
+router = APIRouter()
+
+
+@router.post("/run-audit")
+def trigger_audit(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    audit_stock_integrity()
+    return {"message": "Stock integrity audit completed. Check notifications if any discrepancies were found."}
