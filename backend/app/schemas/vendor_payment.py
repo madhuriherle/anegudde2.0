@@ -10,7 +10,7 @@ class VendorPaymentCreate(BaseModel):
     payment_mode: str
     reference_no: str | None = None
     remarks: str | None = None
-    user_id: int
+    user_id: int | None = None
     status: int = 1
 
 

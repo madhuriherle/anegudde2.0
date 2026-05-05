@@ -1,18 +1,18 @@
 from datetime import date, datetime
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
+from app.schemas.menu_item import MenuItemOut
 
 
 class WastageItemIn(BaseModel):
-    item_id: int
+    menu_item_id: int
     quantity: Decimal
-    unit_cost_at_time: Decimal | None = None
 
 
 class WastageEntryCreate(BaseModel):
     wastage_date: date
     reason: str | None = None
-    user_id: int
+    user_id: int | None = None
     status: int = 1
     items: list[WastageItemIn]
 
@@ -34,10 +34,9 @@ class WastageEntryOut(BaseModel):
 class WastageItemOut(BaseModel):
     id: int
     wastage_entry_id: int
-    item_id: int
+    menu_item_id: int
     quantity: Decimal
-    unit_cost_at_time: Decimal | None = None
-    line_total: Decimal
+    menu_item: MenuItemOut | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

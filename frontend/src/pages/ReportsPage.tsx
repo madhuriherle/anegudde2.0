@@ -177,8 +177,15 @@ const ReportsPage: React.FC = () => {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <Grid container spacing={3} sx={{ alignItems: 'flex-end' }}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 3,
+            alignItems: 'end',
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr 1fr' },
+          }}
+        >
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               From Date
             </Typography>
@@ -190,8 +197,8 @@ const ReportsPage: React.FC = () => {
               onChange={(e) => setFromDate(e.target.value)}
               slotProps={{ inputLabel: { shrink: true } }}
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               To Date
             </Typography>
@@ -203,8 +210,8 @@ const ReportsPage: React.FC = () => {
               onChange={(e) => setToDate(e.target.value)}
               slotProps={{ inputLabel: { shrink: true } }}
             />
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Group By
             </Typography>
@@ -218,8 +225,8 @@ const ReportsPage: React.FC = () => {
               <MenuItem value="day">Day wise</MenuItem>
               <MenuItem value="month">Month wise</MenuItem>
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Box>
+          <Box>
             <Button 
               variant="contained" 
               fullWidth 
@@ -229,8 +236,8 @@ const ReportsPage: React.FC = () => {
             >
               Generate
             </Button>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>

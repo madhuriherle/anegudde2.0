@@ -12,9 +12,13 @@ import UsersPage from './pages/UsersPage';
 import ChefsPage from './pages/ChefsPage';
 import ItemCategoriesPage from './pages/ItemCategoriesPage';
 import UnitsPage from './pages/UnitsPage';
+import MenuItemsPage from './pages/MenuItemsPage';
 import WastagesPage from './pages/WastagesPage';
+import TokensPage from './pages/TokensPage';
+import TokenHistoryPage from './pages/TokenHistoryPage';
 import ReportsPage from './pages/ReportsPage';
 import ProfilePage from './pages/ProfilePage';
+import VendorPaymentsPage from './pages/VendorPaymentsPage';
 import DailyStockReportPage from './pages/DailyStockReportPage';
 import MonthlyPerformanceReportPage from './pages/MonthlyPerformanceReportPage';
 import VendorOutstandingReportPage from './pages/VendorOutstandingReportPage';
@@ -31,8 +35,11 @@ function App() {
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/items/:id/history" element={<ItemHistoryPage />} />
         <Route path="/purchases" element={<PurchasesPage />} />
+        <Route path="/tokens" element={<TokensPage />} />
+        <Route path="/tokens/history" element={<TokenHistoryPage />} />
         <Route path="/consumptions" element={<ConsumptionsPage />} />
         <Route path="/wastages" element={<WastagesPage />} />
+        <Route path="/vendor-payments" element={<VendorPaymentsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/reports/daily-closing" element={<DailyStockReportPage />} />
         <Route path="/reports/monthly-performance" element={<MonthlyPerformanceReportPage />} />
@@ -41,6 +48,7 @@ function App() {
         <Route path="/settings/chefs" element={<ChefsPage />} />
         <Route path="/settings/categories" element={<ItemCategoriesPage />} />
         <Route path="/settings/units" element={<UnitsPage />} />
+        <Route path="/settings/menu-items" element={<MenuItemsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
 

@@ -36,6 +36,8 @@ import {
   Category,
   Straighten,
   Person,
+  Payments,
+  ConfirmationNumber,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
@@ -46,8 +48,10 @@ const templeLogoSrc = '/temple-logo.jpg';
 const menuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/' },
   { text: 'Vendors', icon: <People />, path: '/vendors' },
+  { text: 'Payments', icon: <Payments />, path: '/vendor-payments' },
   { text: 'Items', icon: <Inventory />, path: '/items' },
   { text: 'Purchases', icon: <ShoppingCart />, path: '/purchases' },
+  { text: 'Tokens', icon: <ConfirmationNumber />, path: '/tokens' },
   { text: 'Consumption', icon: <Restaurant />, path: '/consumptions' },
   { text: 'Wastage', icon: <DeleteOutlined />, path: '/wastages' },
   { text: 'Reports', icon: <BarChart />, path: '/reports' },
@@ -57,6 +61,7 @@ const masterSettings = [
   { text: 'Chefs', icon: <Restaurant />, path: '/settings/chefs' },
   { text: 'Categories', icon: <Category />, path: '/settings/categories' },
   { text: 'Units', icon: <Straighten />, path: '/settings/units' },
+  { text: 'Menu Items', icon: <Restaurant />, path: '/settings/menu-items' },
   { text: 'Users', icon: <AdminPanelSettings />, path: '/users' },
 ];
 

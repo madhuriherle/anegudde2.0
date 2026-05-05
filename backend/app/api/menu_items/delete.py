@@ -1,0 +1,20 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from app.api.deps import get_db, get_current_user
+from app.db.models import MenuItem, User
+
+router = APIRouter()
+
+@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_menu_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+
+    db.delete(db_item)
+    db.commit()
+    return None

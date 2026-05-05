@@ -84,8 +84,14 @@ const ProfilePage: React.FC = () => {
         </Box>
 
         <Box component="form" onSubmit={handleUpdate} sx={{ p: 4, bgcolor: '#fafafa' }}>
-          <Grid container spacing={4}>
-            <Grid item xs={12}>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 4,
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+            }}
+          >
+            <Box sx={{ gridColumn: 'span 2' }}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
                 Account Username
               </Typography>
@@ -105,9 +111,9 @@ const ProfilePage: React.FC = () => {
                   },
                 }}
               />
-            </Grid>
+            </Box>
 
-            <Grid item xs={12} md={12}>
+            <Box sx={{ gridColumn: 'span 2' }}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
                 Current Password <span style={{ color: 'red' }}>*</span>
               </Typography>
@@ -140,9 +146,9 @@ const ProfilePage: React.FC = () => {
                   },
                 }}
               />
-            </Grid>
+            </Box>
 
-            <Grid item xs={12} md={6}>
+            <Box>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
                 New Password <span style={{ color: 'red' }}>*</span>
               </Typography>
@@ -155,9 +161,9 @@ const ProfilePage: React.FC = () => {
                 required
                 sx={{ bgcolor: 'white' }}
               />
-            </Grid>
+            </Box>
 
-            <Grid item xs={12} md={6}>
+            <Box>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
                 Re-type New Password <span style={{ color: 'red' }}>*</span>
               </Typography>
@@ -170,9 +176,9 @@ const ProfilePage: React.FC = () => {
                 required
                 sx={{ bgcolor: 'white' }}
               />
-            </Grid>
+            </Box>
 
-            <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gridColumn: 'span 2' }}>
               <Button
                 type="submit"
                 variant="contained"
@@ -188,8 +194,8 @@ const ProfilePage: React.FC = () => {
               >
                 {loading ? <CircularProgress size={24} color="inherit" /> : 'Update Password'}
               </Button>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </Box>
       </Paper>
       

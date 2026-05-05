@@ -3,16 +3,16 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#5b5a5f', // Temple Brown-Gray
-      light: '#74737a',
-      dark: '#45444a',
+      main: '#040b6b', // Deep Royal Blue
+      light: '#1a2490',
+      dark: '#02074f',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#c28b2c', // Temple Gold
-      light: '#d6ab5d',
-      dark: '#9b6e1f',
-      contrastText: '#1f1a12',
+      main: '#0a1f8f',
+      light: '#1f34a8',
+      dark: '#06156b',
+      contrastText: '#ffffff',
     },
     error: {
       main: '#8f2d2d', // Deep Maroon Red
@@ -22,8 +22,8 @@ const theme = createTheme({
       paper: '#ffffff',
     },
     text: {
-      primary: '#1d2328',
-      secondary: '#5f6770',
+      primary: '#000000',
+      secondary: '#1f2937',
     },
   },
   typography: {
@@ -54,7 +54,7 @@ const theme = createTheme({
         root: {
           fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
           fontWeight: 500,
-          color: '#1d2328',
+          color: '#000000',
           fontSize: '1.3rem',
           lineHeight: 1.2,
         },

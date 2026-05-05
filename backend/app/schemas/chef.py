@@ -9,7 +9,7 @@ class ChefBase(BaseModel):
 
 
 class ChefCreate(ChefBase):
-    user_id: int
+    user_id: int | None = None
 
 
 class ChefOut(ChefBase):

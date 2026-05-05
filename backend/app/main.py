@@ -19,10 +19,11 @@ from app.api.units import router as units_router
 from app.api.users import router as users_router
 from app.api.vendor_payments import router as vendor_payments_router
 from app.api.vendors import router as vendors_router
+from app.api.menu_items import router as menu_items_router
 from app.api.wastages import router as wastages_router
+from app.api.tokens import router as tokens_router
 from app.middleware.exception_handlers import register_exception_handlers
 from app.utils.tasks import run_daily_snapshot_task, run_monthly_summary_task, audit_stock_integrity
-from app.utils.partition_manager import manage_yearly_partitions
 from apscheduler.schedulers.background import BackgroundScheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -40,7 +41,6 @@ app.add_middleware(
 scheduler = BackgroundScheduler()
 @app.on_event('startup')
 def startup_event():
-    manage_yearly_partitions()
     scheduler.start()
 
 @app.on_event('shutdown')
@@ -55,6 +55,7 @@ def read_root(): return {'status': 'live'}
 app.include_router(auth_router)
 app.include_router(chefs_router)
 app.include_router(vendors_router)
+app.include_router(menu_items_router)
 app.include_router(items_router)
 app.include_router(units_router)
 app.include_router(item_categories_router)
@@ -67,3 +68,4 @@ app.include_router(users_router)
 app.include_router(notifications_router)
 app.include_router(reports_router)
 app.include_router(dashboard_router)
+app.include_router(tokens_router)

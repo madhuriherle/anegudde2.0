@@ -355,8 +355,15 @@ const ItemsPage: React.FC = () => {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <Grid container spacing={3} sx={{ alignItems: 'flex-end' }}>
-          <Grid item xs={12} sm={6} md={1.5}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 3,
+            alignItems: 'end',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '1.5fr 2fr 2.5fr 2fr 4fr' },
+          }}
+        >
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Rows
             </Typography>
@@ -371,8 +378,8 @@ const ItemsPage: React.FC = () => {
                 <MenuItem key={size} value={size}>{size}</MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Status
             </Typography>
@@ -387,8 +394,8 @@ const ItemsPage: React.FC = () => {
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="disabled">Disabled</MenuItem>
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2.5}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Category
             </Typography>
@@ -404,8 +411,8 @@ const ItemsPage: React.FC = () => {
                 <MenuItem key={c.id} value={c.id}>{c.category_name}</MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Search Type
             </Typography>
@@ -422,8 +429,8 @@ const ItemsPage: React.FC = () => {
               <MenuItem value="category">Category</MenuItem>
               <MenuItem value="unit">Unit</MenuItem>
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={12} md={4}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Search Items
             </Typography>
@@ -434,16 +441,18 @@ const ItemsPage: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search color="action" />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search color="action" />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <Paper 
@@ -525,7 +534,7 @@ const ItemsPage: React.FC = () => {
         onClose={() => setViewDialogOpen(false)} 
         maxWidth="sm" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Item Details
@@ -591,7 +600,7 @@ const ItemsPage: React.FC = () => {
         onClose={handleClose} 
         maxWidth="sm" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle>
           {editingItem ? 'Edit Item' : 'Add New Item'}
@@ -684,7 +693,7 @@ const ItemsPage: React.FC = () => {
       </Dialog>
 
       {/* Adjust Stock Dialog */}
-      <Dialog open={adjustOpen} onClose={() => setAdjustOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+      <Dialog open={adjustOpen} onClose={() => setAdjustOpen(false)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
         <DialogTitle>Adjust Stock: {adjustItem?.item_name}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={3} sx={{ mt: 1 }}>

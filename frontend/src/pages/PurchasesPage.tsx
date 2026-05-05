@@ -52,7 +52,11 @@ const purchaseItemSchema = z.object({
 const purchaseSchema = z.object({
   vendor_id: z.coerce.number().min(1, 'Vendor is required'),
   purchase_date: z.string().min(1, 'Date is required'),
-  bill_no: z.string().optional(),
+  bill_no: z.string().optional(), // Used as Invoice Number
+  invoice_amount: z.coerce.number().min(0, 'Invoice amount cannot be negative').optional(),
+  sgst: z.coerce.number().min(0, 'SGST cannot be negative').default(0),
+  cgst: z.coerce.number().min(0, 'CGST cannot be negative').default(0),
+  igst: z.coerce.number().min(0, 'IGST cannot be negative').default(0),
   items: z.array(purchaseItemSchema).min(1, 'At least one item is required'),
 });
 
@@ -167,6 +171,10 @@ const PurchasesPage: React.FC = () => {
           purchase_date: fullData.purchase_date,
           vendor_id: fullData.vendor_id,
           bill_no: fullData.bill_no || '',
+          invoice_amount: fullData.invoice_amount || 0,
+          sgst: fullData.sgst || 0,
+          cgst: fullData.cgst || 0,
+          igst: fullData.igst || 0,
           items: fullData.items.map((item: any) => ({
             item_id: item.item_id,
             quantity: item.quantity,
@@ -183,6 +191,7 @@ const PurchasesPage: React.FC = () => {
         purchase_date: new Date().toISOString().split('T')[0],
         vendor_id: '' as any,
         bill_no: '',
+        invoice_amount: 0,
         items: [{ item_id: '' as any, quantity: 0, price: 0 }],
       });
     }
@@ -239,6 +248,19 @@ const PurchasesPage: React.FC = () => {
       renderCell: (params: any) => (
         <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
           <Typography variant="body2">{params.value}</Typography>
+        </Box>
+      )
+    },
+    { 
+      field: 'bill_no', 
+      headerName: 'Invoice No', 
+      flex: 1,
+      minWidth: 120,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params: any) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
+          <Typography variant="body2">{params.value || '-'}</Typography>
         </Box>
       )
     },
@@ -405,8 +427,15 @@ const PurchasesPage: React.FC = () => {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <Grid container spacing={3} sx={{ alignItems: 'flex-end' }}>
-          <Grid item xs={12} sm={6} md={1.5}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 3,
+            alignItems: 'end',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '1.5fr 2fr 2.5fr 6fr' },
+          }}
+        >
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Rows
             </Typography>
@@ -421,8 +450,8 @@ const PurchasesPage: React.FC = () => {
                 <MenuItem key={size} value={size}>{size}</MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Status Filter
             </Typography>
@@ -437,8 +466,8 @@ const PurchasesPage: React.FC = () => {
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="disabled">Disabled</MenuItem>
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2.5}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Search Type
             </Typography>
@@ -454,8 +483,8 @@ const PurchasesPage: React.FC = () => {
               <MenuItem value="vendor">Vendor</MenuItem>
               <MenuItem value="item">Item Name</MenuItem>
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={12} md={6}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Quick Search
             </Typography>
@@ -466,16 +495,18 @@ const PurchasesPage: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search color="action" />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search color="action" />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <Paper 
@@ -557,7 +588,7 @@ const PurchasesPage: React.FC = () => {
         onClose={() => setViewDialogOpen(false)} 
         maxWidth="sm" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Purchase Summary
@@ -567,11 +598,30 @@ const PurchasesPage: React.FC = () => {
           <Stack spacing={0}>
             <DetailItem label="Purchase Date" value={viewingPurchase?.purchase_date} />
             <DetailItem label="Vendor" value={vendors?.find((v: any) => v.id === viewingPurchase?.vendor_id)?.vendor_name} />
-            <DetailItem label="Bill Number" value={viewingPurchase?.bill_no} />
+            <DetailItem label="Invoice Number" value={viewingPurchase?.bill_no} />
             <DetailItem label="Recorded By" value={viewingPurchase?.user?.full_name} />
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 2, color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>Total Amount</Typography>
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Rs.{Number(viewingPurchase?.total_amount).toLocaleString()}</Typography>
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 2, color: 'white' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.9 }}>Items Subtotal</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Rs.{Number(viewingPurchase?.total_amount).toLocaleString()}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.9 }}>SGST</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Rs.{Number(viewingPurchase?.sgst || 0).toLocaleString()}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.9 }}>CGST</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Rs.{Number(viewingPurchase?.cgst || 0).toLocaleString()}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.9 }}>IGST</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Rs.{Number(viewingPurchase?.igst || 0).toLocaleString()}</Typography>
+              </Box>
+              <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.3)' }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>Invoice Grand Total</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Rs.{Number(viewingPurchase?.invoice_amount || (Number(viewingPurchase?.total_amount) + Number(viewingPurchase?.sgst||0) + Number(viewingPurchase?.cgst||0) + Number(viewingPurchase?.igst||0))).toLocaleString()}</Typography>
+              </Box>
             </Box>
           </Stack>
 
@@ -633,7 +683,7 @@ const PurchasesPage: React.FC = () => {
         onClose={handleClose} 
         maxWidth="md" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle>
           {editingPurchase ? 'Edit Purchase Entry' : 'Record New Purchase'}
@@ -644,12 +694,12 @@ const PurchasesPage: React.FC = () => {
               mb: 4,
               mt: 1,
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1.4fr 1fr 1fr' },
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
               gap: 2,
               alignItems: 'start',
             }}
           >
-            <Box>
+            <Box sx={{ gridColumn: 'span 2' }}>
               <Controller
                 name="vendor_id"
                 control={control}
@@ -672,7 +722,7 @@ const PurchasesPage: React.FC = () => {
             <Box>
               <TextField
                 {...register('purchase_date')}
-                label="Date *"
+                label="Purchase Date *"
                 type="date"
                 fullWidth
                 slotProps={{ inputLabel: { shrink: true } }}
@@ -680,12 +730,56 @@ const PurchasesPage: React.FC = () => {
               />
             </Box>
             <Box>
-              <TextField {...register('bill_no')} label="Bill No" fullWidth />
+              <TextField {...register('bill_no')} label="Invoice/Bill Number" fullWidth />
+            </Box>
+            <Box sx={{ gridColumn: 'span 2' }}>
+              <TextField 
+                {...register('invoice_amount')} 
+                label="Total Invoice Amount (As per Bill)" 
+                type="number" 
+                fullWidth 
+                placeholder="Enter manual invoice total"
+                slotProps={{
+                  input: {
+                    startAdornment: <InputAdornment position="start">Rs.</InputAdornment>,
+                  }
+                }}
+                error={!!errors.invoice_amount}
+                helperText={errors.invoice_amount?.message}
+              />
+            </Box>
+
+            {/* Tax Details Section */}
+            <Box sx={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mt: 1 }}>
+              <TextField 
+                {...register('sgst')} 
+                label="SGST Amount" 
+                type="number" 
+                fullWidth 
+                size="small"
+                slotProps={{ input: { startAdornment: <InputAdornment position="start">Rs.</InputAdornment> } }}
+              />
+              <TextField 
+                {...register('cgst')} 
+                label="CGST Amount" 
+                type="number" 
+                fullWidth 
+                size="small"
+                slotProps={{ input: { startAdornment: <InputAdornment position="start">Rs.</InputAdornment> } }}
+              />
+              <TextField 
+                {...register('igst')} 
+                label="IGST Amount" 
+                type="number" 
+                fullWidth 
+                size="small"
+                slotProps={{ input: { startAdornment: <InputAdornment position="start">Rs.</InputAdornment> } }}
+              />
             </Box>
           </Box>
 
           <Typography variant="subtitle2" color="primary" sx={{ mb: 2, fontWeight: 'bold', textTransform: 'uppercase' }}>
-            Purchase Items List
+            Items in Purchase
           </Typography>
           
           <Paper elevation={0} variant="outlined" sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 3 }}>
@@ -762,9 +856,39 @@ const PurchasesPage: React.FC = () => {
             </Button>
           </Paper>
 
-          <Box sx={{ mt: 3, p: 2, bgcolor: 'primary.main', borderRadius: 2, color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 12px rgba(26, 35, 126, 0.2)' }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>Grand Total:</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Rs.{totalAmount.toLocaleString()}</Typography>
+          <Box sx={{ mt: 3, p: 2.5, bgcolor: 'grey.50', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>ITEMS SUBTOTAL:</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Rs.{totalAmount.toLocaleString()}</Typography>
+            </Box>
+            
+            {(Number(watch('sgst')) > 0 || Number(watch('cgst')) > 0 || Number(watch('igst')) > 0) && (
+              <Box sx={{ display: 'flex', gap: 3, mb: 1, mt: 1, p: 1, bgcolor: 'white', borderRadius: 1.5, border: '1px dashed', borderColor: 'divider' }}>
+                {Number(watch('sgst')) > 0 && (
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>SGST: <b style={{ color: '#2e7d32' }}>Rs.{Number(watch('sgst')).toLocaleString()}</b></Typography>
+                )}
+                {Number(watch('cgst')) > 0 && (
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>CGST: <b style={{ color: '#2e7d32' }}>Rs.{Number(watch('cgst')).toLocaleString()}</b></Typography>
+                )}
+                {Number(watch('igst')) > 0 && (
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>IGST: <b style={{ color: '#2e7d32' }}>Rs.{Number(watch('igst')).toLocaleString()}</b></Typography>
+                )}
+              </Box>
+            )}
+
+            <Divider sx={{ my: 1.5 }} />
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', lineHeight: 1 }}>GRAND TOTAL</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  {Number(watch('invoice_amount')) > 0 ? '(Manual Invoice Override)' : '(Items + Taxes)'}
+                </Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                Rs.{Number(watch('invoice_amount') || (totalAmount + Number(watch('sgst')||0) + Number(watch('cgst')||0) + Number(watch('igst')||0))).toLocaleString()}
+              </Typography>
+            </Box>
           </Box>
 
           {mutation.isError && (

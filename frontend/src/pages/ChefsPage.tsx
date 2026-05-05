@@ -38,7 +38,6 @@ import { useNotification } from '../context/NotificationContext';
 const chefSchema = z.object({
   chef_name: z.string().min(1, 'Name is required'),
   phone: z.string().regex(/^[0-9]{8,15}$/, 'Phone number must be between 8 and 15 digits').optional().or(z.literal('')),
-  specialization: z.string().optional().or(z.literal('')),
   status: z.coerce.number().default(1),
 });
 
@@ -81,15 +80,27 @@ const ChefsPage: React.FC = () => {
 
   const mutation = useMutation({
     mutationFn: async (data: ChefFormValues) => {
-      if (editingChef) return api.put(`/chefs/${editingChef.id}`, data);
-      return api.post('/chefs', data);
+      // Clean payload: Remove user_id if present (backend handles it)
+      const payload = {
+        chef_name: data.chef_name,
+        phone: data.phone || null,
+        status: data.status
+      };
+      if (editingChef) return api.put(`/chefs/${editingChef.id}`, payload);
+      return api.post('/chefs', payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chefs'] });
       showSuccess(editingChef ? 'Chef updated' : 'Chef added');
       handleClose();
     },
-    onError: (err: any) => showError(err.response?.data?.detail || 'Operation failed'),
+    onError: (err: any) => {
+      const detail = err.response?.data?.detail;
+      const message = typeof detail === 'string' 
+        ? detail 
+        : (Array.isArray(detail) ? detail[0]?.msg : 'Operation failed');
+      showError(message);
+    }
   });
 
   const deleteMutation = useMutation({
@@ -232,8 +243,15 @@ const ChefsPage: React.FC = () => {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <Grid container spacing={3} sx={{ alignItems: 'flex-end' }}>
-          <Grid item xs={12} sm={3} md={2}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 3,
+            alignItems: 'end',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 2.5fr 7.5fr' },
+          }}
+        >
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Rows
             </Typography>
@@ -248,8 +266,8 @@ const ChefsPage: React.FC = () => {
                 <MenuItem key={size} value={size}>{size}</MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={3} md={2.5}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Status Filter
             </Typography>
@@ -264,8 +282,8 @@ const ChefsPage: React.FC = () => {
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="disabled">Disabled</MenuItem>
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={7.5}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Quick Search
             </Typography>
@@ -276,16 +294,18 @@ const ChefsPage: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search color="action" />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search color="action" />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <Paper 
@@ -335,7 +355,7 @@ const ChefsPage: React.FC = () => {
         onClose={() => setViewDialogOpen(false)} 
         maxWidth="xs" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Chef Details
@@ -388,7 +408,7 @@ const ChefsPage: React.FC = () => {
         onClose={handleClose} 
         maxWidth="sm" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle>
           {editingChef ? 'Edit Chef' : 'New Chef'}

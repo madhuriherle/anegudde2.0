@@ -229,8 +229,15 @@ const ItemCategoriesPage: React.FC = () => {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <Grid container spacing={3} sx={{ alignItems: 'flex-end' }}>
-          <Grid item xs={12} sm={3} md={2}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 3,
+            alignItems: 'end',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 2.5fr 7.5fr' },
+          }}
+        >
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Rows
             </Typography>
@@ -245,8 +252,8 @@ const ItemCategoriesPage: React.FC = () => {
                 <MenuItem key={size} value={size}>{size}</MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={3} md={2.5}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Status Filter
             </Typography>
@@ -261,8 +268,8 @@ const ItemCategoriesPage: React.FC = () => {
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="disabled">Disabled</MenuItem>
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={7.5}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Quick Search
             </Typography>
@@ -273,16 +280,18 @@ const ItemCategoriesPage: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search color="action" />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search color="action" />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <Paper 
@@ -332,7 +341,7 @@ const ItemCategoriesPage: React.FC = () => {
         onClose={() => setViewDialogOpen(false)} 
         maxWidth="xs" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Category Details
@@ -383,7 +392,7 @@ const ItemCategoriesPage: React.FC = () => {
         onClose={handleClose} 
         maxWidth="xs" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle>
           {editingCategory ? 'Edit Category' : 'New Category'}

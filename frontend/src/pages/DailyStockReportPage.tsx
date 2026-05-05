@@ -137,8 +137,15 @@ const DailyStockReportPage: React.FC = () => {
         </Box>
       </Box>
 
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+      <Box 
+        sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, 
+          gap: 3, 
+          mb: 3 
+        }}
+      >
+        <Box>
           <Paper sx={{ p: 3, bgcolor: 'primary.main', color: 'white', borderRadius: 4, boxShadow: '0 4px 12px rgba(26, 35, 126, 0.2)' }}>
             <Typography variant="subtitle2" sx={{ opacity: 0.9, fontWeight: 'bold', textTransform: 'uppercase', mb: 1 }}>
               Estimated Stock Value
@@ -148,8 +155,8 @@ const DailyStockReportPage: React.FC = () => {
             </Typography>
             <Typography variant="caption" sx={{ opacity: 0.8, mt: 1, display: 'block' }}>Based on item prices as of {targetDate}</Typography>
           </Paper>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       <Paper 
         elevation={0}
@@ -163,8 +170,15 @@ const DailyStockReportPage: React.FC = () => {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <Grid container spacing={2} sx={{ alignItems: 'center' }}>
-          <Grid item xs={12} sm={4} md={3}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            alignItems: 'center',
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 2fr', md: '3fr 2fr 7fr' },
+          }}
+        >
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Report Date
             </Typography>
@@ -176,8 +190,8 @@ const DailyStockReportPage: React.FC = () => {
               onChange={(e) => setTargetDate(e.target.value)}
               slotProps={{ inputLabel: { shrink: true } }}
             />
-          </Grid>
-          <Grid item xs={12} sm={3} md={2} sx={{ pt: { xs: 2, sm: 3.5 } }}>
+          </Box>
+          <Box sx={{ pt: { xs: 0, sm: 2.5 } }}>
             <Button 
               variant="contained" 
               fullWidth 
@@ -187,12 +201,11 @@ const DailyStockReportPage: React.FC = () => {
             >
               View
             </Button>
-          </Grid>
-          <Grid item xs={12} sm={5} md={7} sx={{ display: 'flex', alignItems: 'center', pt: { xs: 2, sm: 3.5 }, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', pt: { xs: 0, sm: 2.5 }, justifyContent: 'flex-end' }}>
             <InfoOutlined color="action" sx={{ mr: 1, fontSize: 18 }} />
-            
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>

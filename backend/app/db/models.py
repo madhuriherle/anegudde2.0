@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Integer, Numeric, SmallInteger, String, Text
+﻿from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Integer, Numeric, SmallInteger, String, Text, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -14,8 +14,8 @@ class Role(Base):
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(Integer, nullable=True)
+    updated_by = Column(Integer, nullable=True)
 
 class Privilege(Base):
     __tablename__ = "privileges"
@@ -25,8 +25,8 @@ class Privilege(Base):
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(Integer, nullable=True)
+    updated_by = Column(Integer, nullable=True)
 
 class User(Base):
     __tablename__ = "users"
@@ -73,6 +73,7 @@ class Vendor(Base):
     id = Column(Integer, primary_key=True)
     vendor_code = Column(String(30), unique=True, nullable=False)
     vendor_name = Column(String(150), nullable=False)
+    contact_person = Column(String(150), nullable=True)
     contact_number = Column(String(20), nullable=False)
     alternate_contact_number = Column(String(20), nullable=True)
     email = Column(String(150), nullable=True)
@@ -98,11 +99,27 @@ class Unit(Base):
     id = Column(Integer, primary_key=True)
     unit_name = Column(String(50), nullable=False)
     unit_code = Column(String(20), nullable=False)
-    status = Column(Integer, nullable=False, default=1)
+    status = Column(Integer, nullable=False, server_default=text("1")) # 1: Active, 0: Inactive
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+class MenuItem(Base):
+    __tablename__ = "menu_items"
+    id = Column(Integer, primary_key=True)
+    dish_name = Column(String(150), nullable=False)
+    unit_id = Column(Integer, ForeignKey("units.id"), nullable=False)
+    status = Column(Integer, nullable=False, server_default=text("1")) # 1: Active, 0: Disabled
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    unit = relationship("Unit")
+    creator = relationship("User", foreign_keys=[created_by])
+    updater = relationship("User", foreign_keys=[updated_by])
 
 class ItemCategory(Base):
     __tablename__ = "item_categories"
@@ -140,10 +157,14 @@ class Item(Base):
 class PurchaseEntry(Base):
     __tablename__ = "purchase_entries"
     id = Column(Integer, primary_key=True)
-    purchase_date = Column(Date, primary_key=True, nullable=False)
+    purchase_date = Column(Date, nullable=False)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
-    bill_no = Column(String(50), nullable=True)
-    total_amount = Column(Numeric(15, 3), nullable=False)
+    bill_no = Column(String(50), nullable=True) # Bill/Invoice Number
+    total_amount = Column(Numeric(15, 3), nullable=False) # Sum of item line totals
+    invoice_amount = Column(Numeric(15, 3), nullable=True) # Manual entry for actual invoice amount
+    sgst = Column(Numeric(15, 3), nullable=False, default=0)
+    cgst = Column(Numeric(15, 3), nullable=False, default=0)
+    igst = Column(Numeric(15, 3), nullable=False, default=0)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -153,13 +174,12 @@ class PurchaseEntry(Base):
     vendor = relationship("Vendor", foreign_keys=[vendor_id])
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("PurchaseItem", back_populates="purchase_entry", cascade="all, delete-orphan")
-    __table_args__ = ({"postgresql_partition_by": "RANGE (purchase_date)"},)
 
 class PurchaseItem(Base):
     __tablename__ = "purchase_items"
     id = Column(Integer, primary_key=True)
-    purchase_entry_id = Column(Integer, nullable=False)
-    purchase_date = Column(Date, primary_key=True, nullable=False) # Partition key from parent
+    purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=False)
+    purchase_date = Column(Date, nullable=False)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     quantity = Column(Numeric(15, 3), nullable=False)
     price = Column(Numeric(15, 3), nullable=False)
@@ -170,19 +190,12 @@ class PurchaseItem(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     item = relationship("Item", foreign_keys=[item_id])
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ['purchase_entry_id', 'purchase_date'], 
-            ['purchase_entries.id', 'purchase_entries.purchase_date']
-        ),
-        {"postgresql_partition_by": "RANGE (purchase_date)"},
-    )
     purchase_entry = relationship("PurchaseEntry", back_populates="items")
 
 class ConsumptionEntry(Base):
     __tablename__ = "consumption_entries"
     id = Column(Integer, primary_key=True)
-    usage_date = Column(Date, primary_key=True, nullable=False)
+    usage_date = Column(Date, nullable=False)
     people_served = Column(Integer, nullable=True)
     chef_id = Column(Integer, ForeignKey("chefs.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -194,13 +207,12 @@ class ConsumptionEntry(Base):
     chef = relationship("Chef", foreign_keys=[chef_id])
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("ConsumptionItem", back_populates="consumption_entry", cascade="all, delete-orphan")
-    __table_args__ = ({"postgresql_partition_by": "RANGE (usage_date)"},)
 
 class ConsumptionItem(Base):
     __tablename__ = "consumption_items"
     id = Column(Integer, primary_key=True)
-    consumption_entry_id = Column(Integer, nullable=False)
-    usage_date = Column(Date, primary_key=True, nullable=False) # Partition key from parent
+    consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=False)
+    usage_date = Column(Date, nullable=False)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     quantity_used = Column(Numeric(15, 3), nullable=False)
     unit_cost_at_time = Column(Numeric(15, 3), nullable=True)
@@ -210,19 +222,12 @@ class ConsumptionItem(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     item = relationship("Item", foreign_keys=[item_id])
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ['consumption_entry_id', 'usage_date'], 
-            ['consumption_entries.id', 'consumption_entries.usage_date']
-        ),
-        {"postgresql_partition_by": "RANGE (usage_date)"},
-    )
     consumption_entry = relationship("ConsumptionEntry", back_populates="items")
 
 class WastageEntry(Base):
     __tablename__ = "wastage_entries"
     id = Column(Integer, primary_key=True)
-    wastage_date = Column(Date, primary_key=True, nullable=False)
+    wastage_date = Column(Date, nullable=False)
     reason = Column(Text, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(Integer, nullable=False, default=1)
@@ -232,47 +237,36 @@ class WastageEntry(Base):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("WastageItem", back_populates="wastage_entry", cascade="all, delete-orphan")
-    __table_args__ = ({"postgresql_partition_by": "RANGE (wastage_date)"},)
 
 class WastageItem(Base):
     __tablename__ = "wastage_items"
     id = Column(Integer, primary_key=True)
-    wastage_entry_id = Column(Integer, nullable=False)
-    wastage_date = Column(Date, primary_key=True, nullable=False) # Partition key from parent
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    wastage_entry_id = Column(Integer, ForeignKey("wastage_entries.id"), nullable=False)
+    wastage_date = Column(Date, nullable=False)
+    menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=False)
     quantity = Column(Numeric(15, 3), nullable=False)
-    unit_cost_at_time = Column(Numeric(15, 3), nullable=True)
-    line_total = Column(Numeric(15, 3), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    item = relationship("Item", foreign_keys=[item_id])
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ['wastage_entry_id', 'wastage_date'], 
-            ['wastage_entries.id', 'wastage_entries.wastage_date']
-        ),
-        {"postgresql_partition_by": "RANGE (wastage_date)"},
-    )
+    menu_item = relationship("MenuItem")
     wastage_entry = relationship("WastageEntry", back_populates="items")
 
 class StockAdjustment(Base):
     __tablename__ = "stock_adjustments"
     id = Column(Integer, primary_key=True)
-    adjustment_date = Column(Date, primary_key=True, nullable=False)
+    adjustment_date = Column(Date, nullable=False)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     adjusted_qty = Column(Numeric(15, 3), nullable=False)
     reason = Column(String(255), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    __table_args__ = ({"postgresql_partition_by": "RANGE (adjustment_date)"},)
 
 class VendorPayment(Base):
     __tablename__ = "vendor_payments"
     id = Column(Integer, primary_key=True)
-    payment_date = Column(Date, primary_key=True, nullable=False)
+    payment_date = Column(Date, nullable=False)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
     amount = Column(Numeric(15, 3), nullable=False)
     payment_mode = Column(String(30), nullable=False)
@@ -284,12 +278,11 @@ class VendorPayment(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    __table_args__ = ({"postgresql_partition_by": "RANGE (payment_date)"},)
 
 class StockLedger(Base):
     __tablename__ = "stock_ledger"
     id = Column(Integer, primary_key=True)
-    txn_date = Column(Date, primary_key=True, nullable=False)
+    txn_date = Column(Date, nullable=False)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     txn_type = Column(SmallInteger, nullable=False)
     ref_table = Column(String(100), nullable=False)
@@ -304,27 +297,25 @@ class StockLedger(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    __table_args__ = ({"postgresql_partition_by": "RANGE (txn_date)"},)
 
 # ==========================================
-# 3. SYSTEM & SUMMARY TABLES (PARTITIONED)
+# 3. SYSTEM & SUMMARY TABLES
 # ==========================================
 
 class Notification(Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, primary_key=True, nullable=False, server_default=func.now()) # Partitioned by creation date
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
     title = Column(String(150), nullable=False)
     message = Column(Text, nullable=False)
     notification_type = Column(String(50), nullable=False, default="info")
     is_read = Column(Integer, nullable=False, default=0)
     link = Column(String(255), nullable=True)
-    __table_args__ = ({"postgresql_partition_by": "RANGE (created_at)"},)
 
 class LoginHistory(Base):
     __tablename__ = "login_history"
     id = Column(Integer, primary_key=True)
-    logged_in_at = Column(DateTime, primary_key=True, nullable=False)
+    logged_in_at = Column(DateTime, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     login_identifier = Column(String(150), nullable=False)
     login_status = Column(String(20), nullable=False)
@@ -335,12 +326,11 @@ class LoginHistory(Base):
     session_token = Column(Text, nullable=True)
     logged_out_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    __table_args__ = ({"postgresql_partition_by": "RANGE (logged_in_at)"},)
 
 class DailyStockSummary(Base):
     __tablename__ = "daily_stock_summary"
     id = Column(Integer, primary_key=True)
-    summary_date = Column(Date, primary_key=True, nullable=False)
+    summary_date = Column(Date, nullable=False)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     opening_stock = Column(Numeric(15, 3), nullable=False)
     purchased_qty = Column(Numeric(15, 3), nullable=False)
@@ -352,12 +342,11 @@ class DailyStockSummary(Base):
     stock_value = Column(Numeric(15, 2), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    __table_args__ = ({"postgresql_partition_by": "RANGE (summary_date)"},)
 
 class MonthlyStockSummary(Base):
     __tablename__ = "monthly_stock_summary"
     id = Column(Integer, primary_key=True)
-    summary_month = Column(Date, primary_key=True, nullable=False)
+    summary_month = Column(Date, nullable=False)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     opening_stock = Column(Numeric(15, 3), nullable=False)
     total_purchased_qty = Column(Numeric(15, 3), nullable=False)
@@ -369,4 +358,37 @@ class MonthlyStockSummary(Base):
     closing_stock_value = Column(Numeric(15, 2), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    __table_args__ = ({"postgresql_partition_by": "RANGE (summary_month)"},)
+
+# ==========================================
+# 4. TOKEN SYSTEM (PARTITIONED)
+# ==========================================
+
+class TokenGeneration(Base):
+    __tablename__ = "token_generations"
+    id = Column(Integer, primary_key=True)
+    date = Column(Date, unique=True, nullable=False)
+    total_tokens = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    creator = relationship("User", foreign_keys=[created_by])
+
+class TokenDetail(Base):
+    __tablename__ = "token_details"
+    id = Column(Integer, primary_key=True)
+    generation_id = Column(Integer, ForeignKey("token_generations.id"), nullable=False)
+    token_count = Column(Integer, nullable=False)
+    created_at = Column(DateTime, primary_key=True, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    creator = relationship("User", foreign_keys=[created_by])
+    
+    __table_args__ = (
+        {"postgresql_partition_by": "RANGE (created_at)"}
+    )
+
+

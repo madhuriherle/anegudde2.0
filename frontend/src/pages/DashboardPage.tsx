@@ -5,53 +5,23 @@ import {
   Paper,
   Typography,
   Box,
-  Button,
   CircularProgress,
   List,
   ListItem,
   ListItemText,
   Chip,
   Divider,
-  Tooltip,
 } from '@mui/material';
 import {
   ArrowForward,
   DashboardOutlined,
-  Refresh,
 } from '@mui/icons-material';
 import api from '../api/axios';
-import { useNotification } from '../context/NotificationContext';
 
 const inr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { showSuccess, showError, showConfirm } = useNotification();
-
-  const { data: trendData, isLoading: trendLoading, refetch: refetchTrend } = useQuery({
-    queryKey: ['dashboard-stock-trend'],
-    queryFn: async () => (await api.get('/dashboard/stock-trend')).data,
-  });
-
-  const [isBackfilling, setIsBackfilling] = React.useState(false);
-
-  const handleBackfill = async () => {
-    const confirmed = await showConfirm(
-      'Generate Historical Data',
-      'Do you want to generate/backfill dashboard historical trend data now?'
-    );
-    if (!confirmed) return;
-    setIsBackfilling(true);
-    try {
-      await api.post('/dashboard/backfill-trend');
-      showSuccess('Historical trend data generated successfully');
-      refetchTrend();
-    } catch (err) {
-      showError('Failed to generate trend data');
-    } finally {
-      setIsBackfilling(false);
-    }
-  };
 
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['dashboard-overview'],
@@ -73,7 +43,7 @@ const DashboardPage: React.FC = () => {
     queryFn: async () => (await api.get('/dashboard/recent-activity')).data,
   });
 
-  if (overviewLoading || todayLoading || lowStockLoading || activitiesLoading || trendLoading) {
+  if (overviewLoading || todayLoading || lowStockLoading || activitiesLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
         <CircularProgress />
@@ -89,21 +59,18 @@ const DashboardPage: React.FC = () => {
     );
   }
 
-  const trend = Array.isArray(trendData) ? trendData : [];
-  const trendMax = trend.length ? Math.max(...trend.map((d: any) => Number(d.value) || 0), 1) : 1;
-
   const todayCards = [
-    { title: "Today's Purchase", value: `\u20B9${inr.format(Number(today.purchase_amount || 0))}`, to: '/purchases', color: '#06b6d4' },
-    { title: "Today's Consumption", value: today.consumption_entries, to: '/consumptions', color: '#8b5cf6' },
-    { title: 'Wastage', value: today.wastage_entries, to: '/wastages', color: '#ef4444' },
-    { title: 'Vendor Payments', value: `\u20B9${inr.format(Number(today.vendor_payment_amount || 0))}`, to: '/vendor-payments', color: '#14b8a6' },
+    { title: "Today's Purchase", value: `\u20B9${inr.format(Number(today.purchase_amount || 0))}`, to: '/purchases', color: '#e0f2fe' },
+    { title: "Today's Consumption", value: today.consumption_entries, to: '/consumptions', color: '#ede9fe' },
+    { title: 'Wastage', value: today.wastage_entries, to: '/wastages', color: '#fee2e2' },
+    { title: 'Vendor Payments', value: `\u20B9${inr.format(Number(today.vendor_payment_amount || 0))}`, to: '/vendor-payments', color: '#ccfbf1' },
   ];
 
   const summaryCards = [
-    { title: 'Current Stock', value: `\u20B9${inr.format(Number(overview.total_stock_value || 0))}`, to: '/items', color: '#3b82f6' },
-    { title: 'Financial Balance', value: `\u20B9${inr.format(Number(overview.total_outstanding_balance || 0))}`, to: '/vendors', color: '#10b981' },
-    { title: 'Total Vendors', value: overview.total_vendors, to: '/vendors', color: '#2563eb' },
-    { title: 'Total Items', value: overview.total_items, to: '/items', color: '#22c55e' },
+    { title: 'Current Stock', value: `\u20B9${inr.format(Number(overview.total_stock_value || 0))}`, to: '/items', color: '#dbeafe' },
+    { title: 'Financial Balance', value: `\u20B9${inr.format(Number(overview.total_outstanding_balance || 0))}`, to: '/vendors', color: '#dcfce7' },
+    { title: 'Total Vendors', value: overview.total_vendors, to: '/vendors', color: '#e0e7ff' },
+    { title: 'Total Items', value: overview.total_items, to: '/items', color: '#dcfce7' },
   ];
 
   return (
@@ -139,67 +106,43 @@ const DashboardPage: React.FC = () => {
         ))}
       </CardGrid>
 
-      <Paper elevation={0} sx={{ p: 4, mt: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="h6" sx={{ mb: 3, fontWeight: 800 }}>
-          Stock Value Trend (Last 30 Days)
-        </Typography>
-        <Box sx={{ height: 220, display: 'flex', alignItems: 'flex-end', gap: 0.5, pt: 1 }}>
-          {trend.map((d: any, i: number) => (
-            <Tooltip key={i} title={`${d.date}: \u20B9${inr.format(Number(d.value) || 0)}`}>
-              <Box
-                sx={{
-                  flex: 1,
-                  minWidth: 8,
-                  height: `${Math.max((Number(d.value || 0) / trendMax) * 100, 3)}%`,
-                  borderRadius: '6px 6px 0 0',
-                  bgcolor: 'primary.light',
-                  transition: 'all 0.2s ease',
-                  '&:hover': { bgcolor: 'primary.main' },
-                }}
-              />
-            </Tooltip>
-          ))}
-          {trend.length === 0 && (
-            <Box sx={{ width: '100%', textAlign: 'center', py: 6 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Not enough data to show trend.
-              </Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={isBackfilling ? <CircularProgress size={16} /> : <Refresh />}
-                onClick={handleBackfill}
-                disabled={isBackfilling}
-                sx={{ borderRadius: 2, fontWeight: 'bold' }}
-              >
-                {isBackfilling ? 'Generating...' : 'Generate Historical Data'}
-              </Button>
-            </Box>
-          )}
-        </Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>
-            {trend[0]?.date || ''}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>
-            {trend[trend.length - 1]?.date || ''}
-          </Typography>
-        </Box>
-      </Paper>
-
-      <Box sx={{ display: 'grid', gap: 4, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, mt: 4 }}>
-        <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, mt: 3 }}>
+        <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
           <SectionTitle title="Low Stock Alerts" compact actionLabel="View items" onAction={() => navigate('/items')} />
+          <Box sx={{ mb: 1.5 }}>
+            <Chip
+              size="small"
+              label={`${lowStock.length} item${lowStock.length === 1 ? '' : 's'} below threshold`}
+              sx={{ bgcolor: '#fee2e2', color: '#991b1b', fontWeight: 600 }}
+            />
+          </Box>
           <Divider sx={{ mb: 2 }} />
           <List disablePadding>
             {lowStock.length > 0 ? (
               lowStock.map((item: any) => (
-                <ListItem key={item.item_id} sx={{ px: 0, py: 1.5, borderBottom: '1px dashed', borderColor: 'divider', '&:last-child': { border: 0 } }}>
+                <ListItem
+                  key={item.item_id}
+                  sx={{
+                    px: 1.25,
+                    py: 1.25,
+                    mb: 1,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: '#fecaca',
+                    backgroundColor: '#fff7f7',
+                    '&:last-child': { mb: 0 },
+                  }}
+                >
                   <ListItemText
-                    primary={<Typography sx={{ fontWeight: 700 }}>{item.item_name}</Typography>}
-                    secondary={`Current: ${item.current_stock} | Min Alert: ${item.min_stock_level}`}
+                    primary={<Typography sx={{ fontWeight: 600 }}>{item.item_name}</Typography>}
+                    secondary={
+                      <Box component="span" sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                        <Chip size="small" label={`Current: ${item.current_stock}`} sx={{ height: 22, fontWeight: 600, bgcolor: '#e2e8f0' }} />
+                        <Chip size="small" label={`Min: ${item.min_stock_level}`} sx={{ height: 22, fontWeight: 600, bgcolor: '#fee2e2', color: '#991b1b' }} />
+                      </Box>
+                    }
                   />
-                  <Chip size="small" label="Low Stock" color="error" variant="filled" sx={{ fontWeight: 'bold' }} />
+                  <Chip size="small" label="Low" sx={{ fontWeight: 700, bgcolor: '#ef4444', color: '#fff' }} />
                 </ListItem>
               ))
             ) : (
@@ -210,15 +153,45 @@ const DashboardPage: React.FC = () => {
           </List>
         </Paper>
 
-        <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
+        <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
           <SectionTitle title="Recent System Activity" compact />
+          <Box sx={{ mb: 1.5 }}>
+            <Chip
+              size="small"
+              label={`${activities.length} recent event${activities.length === 1 ? '' : 's'}`}
+              sx={{ bgcolor: '#e0e7ff', color: '#1e3a8a', fontWeight: 600 }}
+            />
+          </Box>
           <Divider sx={{ mb: 2 }} />
           <List disablePadding>
             {activities.length > 0 ? (
               activities.map((act: any, idx: number) => (
-                <ListItem key={idx} sx={{ px: 0, py: 1.5, alignItems: 'flex-start', borderBottom: '1px dashed', borderColor: 'divider', '&:last-child': { border: 0 } }}>
+                <ListItem
+                  key={idx}
+                  sx={{
+                    px: 1.25,
+                    py: 1.1,
+                    mb: 1,
+                    alignItems: 'flex-start',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: '#e5e7eb',
+                    '&:last-child': { mb: 0 },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      bgcolor: act.activity_type === 'payment' ? '#ef4444' : '#2563eb',
+                      mt: 1,
+                      mr: 1.25,
+                      flexShrink: 0,
+                    }}
+                  />
                   <ListItemText
-                    primary={<Typography sx={{ fontWeight: 700 }}>{act.title}</Typography>}
+                    primary={<Typography sx={{ fontWeight: 600 }}>{act.title}</Typography>}
                     secondary={
                       <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, mt: 0.5 }}>
                         <Typography component="span" variant="caption" color="text.secondary">
@@ -234,7 +207,7 @@ const DashboardPage: React.FC = () => {
                     <Typography
                       sx={{
                         ml: 2,
-                        fontWeight: 800,
+                        fontWeight: 700,
                         color: act.activity_type === 'payment' ? 'error.main' : 'success.main',
                         whiteSpace: 'nowrap',
                       }}

@@ -15,16 +15,42 @@ def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: Use
     now = datetime.now(timezone.utc)
     total = Decimal("0")
     for it in payload.items: total += it.quantity * it.price
-    next_entry_id = (db.query(func.max(PurchaseEntry.id)).scalar() or 0) + 1
-    entry = PurchaseEntry(id=next_entry_id, vendor_id=payload.vendor_id, purchase_date=payload.purchase_date, bill_no=payload.bill_no, total_amount=total, user_id=payload.user_id, status=payload.status, created_at=now, updated_at=now, created_by=current_user.id, updated_by=current_user.id)
+    
+    vendor = db.query(Vendor).filter(Vendor.id == payload.vendor_id).first()
+    if not vendor:
+        raise HTTPException(status_code=400, detail="Invalid vendor_id")
+
+    entry = PurchaseEntry(
+        vendor_id=payload.vendor_id, 
+        purchase_date=payload.purchase_date, 
+        bill_no=payload.bill_no, 
+        total_amount=total, 
+        invoice_amount=payload.invoice_amount,
+        sgst=payload.sgst,
+        cgst=payload.cgst,
+        igst=payload.igst,
+        user_id=payload.user_id, 
+        status=payload.status, 
+        created_at=now, 
+        updated_at=now, 
+        created_by=current_user.id, 
+        updated_by=current_user.id
+    )
     db.add(entry); db.flush()
-    entry_id = entry.id
+    
     for it in payload.items:
         item = db.query(Item).filter(Item.id == it.item_id).first()
         line_total = it.quantity * it.price
-        db.add(PurchaseItem(purchase_entry_id=entry_id, purchase_date=payload.purchase_date, item_id=it.item_id, quantity=it.quantity, price=it.price, line_total=line_total, status=1, created_at=now, updated_at=now, created_by=current_user.id, updated_by=current_user.id))
+        db.add(PurchaseItem(purchase_entry_id=entry.id, purchase_date=payload.purchase_date, item_id=it.item_id, quantity=it.quantity, price=it.price, line_total=line_total, status=1, created_at=now, updated_at=now, created_by=current_user.id, updated_by=current_user.id))
         item.current_stock += it.quantity
-        db.add(StockLedger(item_id=item.id, txn_date=payload.purchase_date, txn_type=1, ref_table="purchase_entries", ref_id=entry_id, qty_in=it.quantity, qty_out=0, unit_cost=it.price, value_in=line_total, value_out=0, balance=item.current_stock, created_at=now, updated_at=now, created_by=current_user.id, updated_by=current_user.id))
+        db.add(StockLedger(item_id=item.id, txn_date=payload.purchase_date, txn_type=1, ref_table="purchase_entries", ref_id=entry.id, qty_in=it.quantity, qty_out=0, unit_cost=it.price, value_in=line_total, value_out=0, balance=item.current_stock, created_at=now, updated_at=now, created_by=current_user.id, updated_by=current_user.id))
+    
+    # Calculate Final Total for Vendor Balance
+    final_total = payload.invoice_amount if (payload.invoice_amount and payload.invoice_amount > 0) else (total + payload.sgst + payload.cgst + payload.igst)
+    
+    # Update Vendor Balance
+    vendor.current_balance += final_total
+    
     db.commit(); return entry
 
 def get_purchase(purchase_id: int, db: Session) -> PurchaseEntry:
@@ -36,10 +62,28 @@ def get_purchase_full(purchase_id: int, db: Session) -> dict:
     entry = db.query(PurchaseEntry).options(joinedload(PurchaseEntry.user)).filter(PurchaseEntry.id == purchase_id).first()
     if not entry: raise HTTPException(status_code=404, detail="Not found")
     items = db.query(PurchaseItem).filter(PurchaseItem.purchase_entry_id == purchase_id, PurchaseItem.purchase_date == entry.purchase_date).all()
-    return {"id": entry.id, "purchase_date": entry.purchase_date, "total_amount": entry.total_amount, "items": [{"id": i.id, "item_id": i.item_id, "quantity": i.quantity, "price": i.price} for i in items]}
+    return {
+        "id": entry.id, 
+        "purchase_date": entry.purchase_date, 
+        "vendor_id": entry.vendor_id,
+        "bill_no": entry.bill_no,
+        "total_amount": entry.total_amount, 
+        "invoice_amount": entry.invoice_amount,
+        "sgst": entry.sgst,
+        "cgst": entry.cgst,
+        "igst": entry.igst,
+        "items": [{"id": i.id, "item_id": i.item_id, "quantity": i.quantity, "price": i.price} for i in items]
+    }
 
 def delete_purchase(purchase_id: int, db: Session, current_user: User) -> None:
     entry = get_purchase(purchase_id, db)
+    
+    vendor = db.query(Vendor).filter(Vendor.id == entry.vendor_id).first()
+    if vendor:
+        # Subtract the original total used (Invoice Amount or calculated total)
+        orig_total = entry.invoice_amount if (entry.invoice_amount and entry.invoice_amount > 0) else (entry.total_amount + entry.sgst + entry.cgst + entry.igst)
+        vendor.current_balance -= orig_total
+
     db.query(PurchaseItem).filter(PurchaseItem.purchase_entry_id == purchase_id, PurchaseItem.purchase_date == entry.purchase_date).delete()
     db.query(StockLedger).filter(StockLedger.ref_table == "purchase_entries", StockLedger.ref_id == purchase_id, StockLedger.txn_date == entry.purchase_date).delete()
     db.delete(entry); db.commit()

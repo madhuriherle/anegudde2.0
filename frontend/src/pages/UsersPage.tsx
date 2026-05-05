@@ -255,8 +255,15 @@ const UsersPage: React.FC = () => {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <Grid container spacing={3} sx={{ alignItems: 'flex-end' }}>
-          <Grid item xs={12} sm={3} md={2}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 3,
+            alignItems: 'end',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 2.5fr 7.5fr' },
+          }}
+        >
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Rows
             </Typography>
@@ -271,8 +278,8 @@ const UsersPage: React.FC = () => {
                 <MenuItem key={size} value={size}>{size}</MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={3} md={2.5}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Status Filter
             </Typography>
@@ -287,8 +294,8 @@ const UsersPage: React.FC = () => {
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="disabled">Disabled</MenuItem>
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={7.5}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Quick Search
             </Typography>
@@ -299,16 +306,18 @@ const UsersPage: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search color="action" />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search color="action" />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <Paper 
@@ -358,7 +367,7 @@ const UsersPage: React.FC = () => {
         onClose={() => setViewDialogOpen(false)} 
         maxWidth="xs" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           User Details
@@ -404,29 +413,36 @@ const UsersPage: React.FC = () => {
         onClose={handleClose} 
         maxWidth="sm" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle>
           {editingUser ? 'Edit User' : 'New User'}
         </DialogTitle>
         <DialogContent dividers>
-          <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
+          <Box 
+            sx={{ 
+              mt: 1,
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: 3
+            }}
+          >
+            <Box>
               <TextField {...register('username')} label="Username *" fullWidth error={!!errors.username} helperText={errors.username?.message} disabled={!!editingUser} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+            <Box>
               <TextField {...register('password')} label={editingUser ? "Password (Leave blank to keep same)" : "Password *"} type="password" fullWidth error={!!errors.password} helperText={errors.password?.message} />
-            </Grid>
-            <Grid item xs={12}>
+            </Box>
+            <Box sx={{ gridColumn: 'span 2' }}>
               <TextField {...register('full_name')} label="Full Name *" fullWidth error={!!errors.full_name} helperText={errors.full_name?.message} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+            <Box>
               <TextField {...register('email')} label="Email Address" fullWidth error={!!errors.email} helperText={errors.email?.message} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+            <Box>
               <TextField {...register('phone')} label="Phone Number" fullWidth error={!!errors.phone} helperText={errors.phone?.message} />
-            </Grid>
-            <Grid item xs={12}>
+            </Box>
+            <Box sx={{ gridColumn: 'span 2' }}>
               <Controller
                 name="role_id"
                 control={control}
@@ -438,9 +454,9 @@ const UsersPage: React.FC = () => {
                   </TextField>
                 )}
               />
-            </Grid>
+            </Box>
             
-            <Grid item xs={12}>
+            <Box sx={{ gridColumn: 'span 2' }}>
               <Controller
                 name="status"
                 control={control}
@@ -464,8 +480,8 @@ const UsersPage: React.FC = () => {
                   </Box>
                 )}
               />
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
           <Button onClick={handleClose} color="inherit">Cancel</Button>

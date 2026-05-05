@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 class VendorBase(BaseModel):
     vendor_code: str
     vendor_name: str
+    contact_person: str | None = None
     contact_number: str
     alternate_contact_number: str | None = None
     email: str | None = None
@@ -30,6 +31,7 @@ class VendorCreate(VendorBase):
 class VendorUpdate(BaseModel):
     vendor_code: str | None = None
     vendor_name: str | None = None
+    contact_person: str | None = None
     contact_number: str | None = None
     alternate_contact_number: str | None = None
     email: str | None = None

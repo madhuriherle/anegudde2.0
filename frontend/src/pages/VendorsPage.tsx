@@ -26,7 +26,8 @@ import {
   Search, 
   Save, 
   Storefront,
-  Visibility
+  Visibility,
+  Payments
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import { useForm, Controller } from 'react-hook-form';
@@ -39,6 +40,7 @@ import { useNotification } from '../context/NotificationContext';
 const vendorSchema = z.object({
   vendor_code: z.string().optional().or(z.literal('')).or(z.null()),
   vendor_name: z.string().min(1, 'Name is required'),
+  contact_person: z.string().optional().or(z.literal('')).or(z.null()),
   contact_number: z.string().regex(/^[0-9]{8,15}$/, 'Contact number must be between 8 and 15 digits'),
   alternate_contact_number: z.string().regex(/^[0-9]{8,15}$/, 'Contact number must be between 8 and 15 digits').optional().or(z.literal('')).or(z.null()),
   email: z.string().email('Invalid email format').optional().or(z.literal('')).or(z.null()),
@@ -46,12 +48,12 @@ const vendorSchema = z.object({
   address_line2: z.string().optional().or(z.literal('')).or(z.null()),
   city: z.string().optional().or(z.literal('')).or(z.null()),
   state: z.string().optional().or(z.literal('')).or(z.null()),
-  postal_code: z.string().optional().or(z.literal('')).or(z.null()),
-  gst_number: z.string().optional().or(z.literal('')).or(z.null()),
-  pan_number: z.string().optional().or(z.literal('')).or(z.null()),
+  postal_code: z.string().regex(/^[0-9]{6}$/, 'Postal Code must be 6 digits').optional().or(z.literal('')).or(z.null()),
+  gst_number: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, 'Invalid GST format').optional().or(z.literal('')).or(z.null()),
+  pan_number: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN format').optional().or(z.literal('')).or(z.null()),
   opening_balance: z.coerce.number().min(0, 'Cannot be negative'),
   current_balance: z.coerce.number().optional().default(0),
-  credit_limit: z.coerce.number().optional().or(z.literal('')).or(z.null()),
+  credit_limit: z.coerce.number().min(0, 'Cannot be negative').optional().or(z.literal('')).or(z.null()),
   notes: z.string().optional().or(z.literal('')).or(z.null()),
   status: z.coerce.number().default(1),
 });
@@ -67,6 +69,7 @@ const normalizeOptionalString = (value: unknown) => {
 const buildVendorPayload = (data: VendorFormValues) => {
   const payload: any = {
     vendor_name: data.vendor_name?.trim(),
+    contact_person: normalizeOptionalString(data.contact_person),
     contact_number: data.contact_number?.trim(),
     alternate_contact_number: normalizeOptionalString(data.alternate_contact_number),
     email: normalizeOptionalString(data.email),
@@ -209,9 +212,25 @@ const VendorsPage: React.FC = () => {
 
   const columns: any[] = [
     { field: 'id', headerName: 'Vendor ID', flex: 0.4, minWidth: 80 },
-    { field: 'vendor_code', headerName: 'Code', flex: 0.5, minWidth: 100 },
     { field: 'vendor_name', headerName: 'Vendor Name', flex: 1.4, minWidth: 160 },
     { field: 'contact_number', headerName: 'Contact', flex: 1, minWidth: 130 },
+    { field: 'address_line1', headerName: 'Address', flex: 1.8, minWidth: 220 },
+    { 
+      field: 'opening_balance', 
+      headerName: 'Opening Bal', 
+      flex: 0.9,
+      minWidth: 130,
+      type: 'number',
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params: any) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+            Rs.{Number(params.value || 0).toLocaleString()}
+          </Typography>
+        </Box>
+      )
+    },
     { 
       field: 'current_balance', 
       headerName: 'Current Bal', 
@@ -225,24 +244,6 @@ const VendorsPage: React.FC = () => {
           <Typography variant="body2" sx={{ fontWeight: 'bold', color: params.value > 0 ? 'error.main' : 'success.main' }}>
             Rs.{Number(params.value).toLocaleString()}
           </Typography>
-        </Box>
-      )
-    },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
-      flex: 0.8,
-      minWidth: 110,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
-          <Chip 
-            label={params.value === 1 ? 'Active' : 'Disabled'} 
-            color={params.value === 1 ? 'success' : 'default'} 
-            size="small" 
-            sx={{ fontWeight: 600 }}
-          />
         </Box>
       )
     },
@@ -339,8 +340,15 @@ const VendorsPage: React.FC = () => {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <Grid container spacing={3} sx={{ alignItems: 'flex-end' }}>
-          <Grid item xs={12} sm={6} md={1.5}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 3,
+            alignItems: 'end',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '1.5fr 2fr 2.5fr 6fr' },
+          }}
+        >
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Rows
             </Typography>
@@ -355,8 +363,8 @@ const VendorsPage: React.FC = () => {
                 <MenuItem key={size} value={size}>{size}</MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Status
             </Typography>
@@ -371,8 +379,8 @@ const VendorsPage: React.FC = () => {
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="disabled">Disabled</MenuItem>
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2.5}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Search Type
             </Typography>
@@ -390,8 +398,8 @@ const VendorsPage: React.FC = () => {
               <MenuItem value="gst">GST Number</MenuItem>
               <MenuItem value="city">City</MenuItem>
             </TextField>
-          </Grid>
-          <Grid item xs={12} sm={12} md={6}>
+          </Box>
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Search Vendors
             </Typography>
@@ -402,16 +410,18 @@ const VendorsPage: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search color="action" />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search color="action" />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <Paper 
@@ -493,7 +503,7 @@ const VendorsPage: React.FC = () => {
         onClose={() => setViewDialogOpen(false)} 
         maxWidth="sm" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Vendor Details
@@ -505,8 +515,10 @@ const VendorsPage: React.FC = () => {
         </DialogTitle>
         <DialogContent sx={{ mt: 2, p: 3 }}>
           <Stack spacing={0}>
+            <DetailItem label="Vendor ID" value={viewingVendor?.id} />
             <DetailItem label="Vendor Code" value={viewingVendor?.vendor_code} />
             <DetailItem label="Vendor Name" value={viewingVendor?.vendor_name} />
+            <DetailItem label="Contact Person" value={viewingVendor?.contact_person} />
             <DetailItem label="Primary Contact" value={viewingVendor?.contact_number} />
             <DetailItem label="Alternate Contact" value={viewingVendor?.alternate_contact_number} />
             <DetailItem label="Email Address" value={viewingVendor?.email} />
@@ -564,94 +576,114 @@ const VendorsPage: React.FC = () => {
         onClose={handleClose} 
         maxWidth="md" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle>
           {editingVendor ? 'Edit Vendor Profile' : 'Add New Vendor'}
         </DialogTitle>
         <DialogContent dividers>
-          <Box sx={{ mt: 1 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField {...register('vendor_code')} label="Vendor Code" fullWidth />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Current Balance"
-                  type="number"
-                  fullWidth
-                  value={editingVendor?.current_balance ?? 0}
-                  InputProps={{ readOnly: true }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField {...register('vendor_name')} label="Vendor Name *" fullWidth error={!!errors.vendor_name} helperText={errors.vendor_name?.message} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField {...register('contact_number')} label="Primary Contact *" fullWidth error={!!errors.contact_number} helperText={errors.contact_number?.message} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField {...register('alternate_contact_number')} label="Alternate Contact" fullWidth error={!!errors.alternate_contact_number} helperText={errors.alternate_contact_number?.message} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField {...register('email')} label="Email Address" fullWidth error={!!errors.email} helperText={errors.email?.message} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField {...register('gst_number')} label="GST Number" fullWidth />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField {...register('pan_number')} label="PAN Number" fullWidth />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField {...register('opening_balance')} label="Opening Balance *" type="number" fullWidth error={!!errors.opening_balance} helperText={errors.opening_balance?.message} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField {...register('credit_limit')} label="Credit Limit" type="number" fullWidth error={!!errors.credit_limit} helperText={errors.credit_limit?.message} />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField {...register('address_line1')} label="Address Line 1 *" fullWidth error={!!errors.address_line1} helperText={errors.address_line1?.message} />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField {...register('address_line2')} label="Address Line 2" fullWidth />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField {...register('city')} label="City" fullWidth />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField {...register('state')} label="State" fullWidth />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField {...register('postal_code')} label="Postal Code" fullWidth />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField {...register('notes')} label="Additional Notes" fullWidth multiline rows={3} />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between',
-                      p: 2,
-                      bgcolor: 'grey.50',
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: 'divider'
-                    }}>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Active Status</Typography>
-                      <Switch 
-                        checked={field.value === 1} 
-                        onChange={(e) => field.onChange(e.target.checked ? 1 : 0)} 
-                        color="success" 
-                      />
-                    </Box>
-                  )}
-                />
-              </Grid>
-            </Grid>
+          <Box 
+            sx={{ 
+              mt: 1,
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: 3
+            }}
+          >
+            <Box sx={{ gridColumn: 'span 2' }}>
+              <TextField {...register('vendor_name')} label="Vendor Name (Shop Name) *" fullWidth error={!!errors.vendor_name} helperText={errors.vendor_name?.message} />
+            </Box>
+            <Box sx={{ gridColumn: 'span 2' }}>
+              <TextField {...register('contact_person')} label="Contact Person (Individual Name)" fullWidth error={!!errors.contact_person} helperText={errors.contact_person?.message} />
+            </Box>
+            <Box>
+              <TextField {...register('contact_number')} label="Primary Contact *" fullWidth error={!!errors.contact_number} helperText={errors.contact_number?.message} />
+            </Box>
+            <Box>
+              <TextField {...register('alternate_contact_number')} label="Alternate Contact" fullWidth error={!!errors.alternate_contact_number} helperText={errors.alternate_contact_number?.message} />
+            </Box>
+            <Box>
+              <TextField {...register('email')} label="Email Address" fullWidth error={!!errors.email} helperText={errors.email?.message} />
+            </Box>
+            <Box>
+              <TextField {...register('gst_number')} label="GST Number" fullWidth error={!!errors.gst_number} helperText={errors.gst_number?.message} />
+            </Box>
+            <Box>
+              <TextField {...register('pan_number')} label="PAN Number" fullWidth error={!!errors.pan_number} helperText={errors.pan_number?.message} />
+            </Box>
+            <Box>
+              <TextField {...register('credit_limit')} label="Credit Limit" type="number" fullWidth error={!!errors.credit_limit} helperText={errors.credit_limit?.message} />
+            </Box>
+
+            {/* Financial Section */}
+            <Box sx={{ gridColumn: 'span 2', mt: 1 }}>
+               <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main', textTransform: 'uppercase', letterSpacing: 1 }}>
+                 Financial Details
+               </Typography>
+               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                  <TextField 
+                    {...register('opening_balance')} 
+                    label="Opening Balance *" 
+                    type="number" 
+                    fullWidth 
+                    error={!!errors.opening_balance} 
+                    helperText={errors.opening_balance?.message}
+                    slotProps={{ input: { readOnly: !!editingVendor } }}
+                  />
+                  <TextField
+                    label="Current Balance"
+                    type="number"
+                    fullWidth
+                    value={editingVendor?.current_balance ?? 0}
+                    slotProps={{ input: { readOnly: true } }}
+                    helperText="Auto-calculated based on transactions"
+                  />
+               </Box>
+            </Box>
+
+            <Box sx={{ gridColumn: 'span 2', mt: 1 }}>
+               <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main', textTransform: 'uppercase', letterSpacing: 1 }}>
+                 Address & Location
+               </Typography>
+               <Box sx={{ display: 'grid', gap: 3 }}>
+                  <TextField {...register('address_line1')} label="Address Line 1 *" fullWidth error={!!errors.address_line1} helperText={errors.address_line1?.message} />
+                  <TextField {...register('address_line2')} label="Address Line 2" fullWidth />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 3 }}>
+                    <TextField {...register('city')} label="City" fullWidth />
+                    <TextField {...register('state')} label="State" fullWidth />
+                    <TextField {...register('postal_code')} label="Postal Code" fullWidth error={!!errors.postal_code} helperText={errors.postal_code?.message} />
+                  </Box>
+               </Box>
+            </Box>
+
+            <Box sx={{ gridColumn: 'span 2' }}>
+              <TextField {...register('notes')} label="Additional Notes" fullWidth multiline rows={3} />
+            </Box>
+            <Box sx={{ gridColumn: 'span 2' }}>
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    p: 2,
+                    bgcolor: 'grey.50',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider'
+                  }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Active Status</Typography>
+                    <Switch 
+                      checked={field.value === 1} 
+                      onChange={(e) => field.onChange(e.target.checked ? 1 : 0)} 
+                      color="success" 
+                    />
+                  </Box>
+                )}
+              />
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
@@ -672,8 +704,3 @@ const VendorsPage: React.FC = () => {
 };
 
 export default VendorsPage;
-
-
-
-
-

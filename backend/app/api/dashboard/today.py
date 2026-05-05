@@ -31,13 +31,7 @@ def today_summary(db: Session = Depends(get_db), _: User = Depends(get_current_u
     )
     
     wastage_entries = db.query(func.count(WastageEntry.id)).filter(WastageEntry.wastage_date == today).scalar() or 0
-    wastage_value = (
-        db.query(func.coalesce(func.sum(WastageItem.line_total), 0))
-        .join(WastageEntry)
-        .filter(WastageEntry.wastage_date == today)
-        .scalar()
-        or Decimal("0")
-    )
+    wastage_value = Decimal("0") # Cooked food wastage doesn't have a direct raw material cost tracked here
     
     vendor_payment_amount = (
         db.query(func.coalesce(func.sum(VendorPayment.amount), 0)).filter(VendorPayment.payment_date == today).scalar()

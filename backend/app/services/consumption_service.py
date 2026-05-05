@@ -44,8 +44,8 @@ def get_consumption_full(consumption_id: int, db: Session) -> ConsumptionEntry:
 
 def delete_consumption(consumption_id: int, db: Session, current_user: User) -> None:
     entry = get_consumption(consumption_id, db)
-    db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id, ConsumptionItem.usage_date == entry.usage_date).delete()
-    db.query(StockLedger).filter(StockLedger.ref_table == "consumption_entries", StockLedger.ref_id == consumption_id, StockLedger.txn_date == entry.usage_date).delete()
+    db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id).delete()
+    db.query(StockLedger).filter(StockLedger.ref_table == "consumption_entries", StockLedger.ref_id == consumption_id).delete()
     db.delete(entry); db.commit()
 
 def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db: Session, current_user: User) -> dict:

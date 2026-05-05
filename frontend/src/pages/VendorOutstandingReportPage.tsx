@@ -116,8 +116,15 @@ const VendorOutstandingReportPage: React.FC = () => {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <Grid container spacing={2} sx={{ alignItems: 'flex-end' }}>
-          <Grid item xs={12} sm={8} md={6}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            alignItems: 'end',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+          }}
+        >
+          <Box>
             <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Quick Search
             </Typography>
@@ -128,16 +135,18 @@ const VendorOutstandingReportPage: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search color="action" />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search color="action" />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>

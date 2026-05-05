@@ -12,7 +12,11 @@ class PurchaseItemIn(BaseModel):
 class PurchaseEntryCreate(BaseModel):
     vendor_id: int
     purchase_date: date
-    bill_no: str | None = None
+    bill_no: str | None = None # Invoice/Bill Number
+    invoice_amount: Decimal | None = None # Actual invoice total
+    sgst: Decimal = Decimal("0")
+    cgst: Decimal = Decimal("0")
+    igst: Decimal = Decimal("0")
     user_id: int
     status: int = 1
     items: list[PurchaseItemIn]
@@ -33,8 +37,12 @@ class PurchaseEntryOut(BaseModel):
     id: int
     vendor_id: int
     purchase_date: date
-    bill_no: str | None = None
+    bill_no: str | None = None # Invoice/Bill Number
     total_amount: Decimal
+    invoice_amount: Decimal | None = None
+    sgst: Decimal
+    cgst: Decimal
+    igst: Decimal
     user_id: int
     status: int
     created_at: datetime
@@ -48,7 +56,11 @@ class PurchaseEntryOut(BaseModel):
 class PurchaseEntryUpdate(BaseModel):
     vendor_id: int
     purchase_date: date
-    bill_no: str | None = None
+    bill_no: str | None = None # Invoice/Bill Number
+    invoice_amount: Decimal | None = None
+    sgst: Decimal = Decimal("0")
+    cgst: Decimal = Decimal("0")
+    igst: Decimal = Decimal("0")
     items: list[PurchaseItemIn]
 
 

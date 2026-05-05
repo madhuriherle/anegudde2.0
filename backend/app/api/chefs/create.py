@@ -15,11 +15,12 @@ def create_chef(
     current_user: User = Depends(get_current_user)
 ):
     now = datetime.now(timezone.utc)
+    chef_data = chef_in.model_dump()
+    if not chef_data.get("user_id"):
+        chef_data["user_id"] = current_user.id
+        
     chef = Chef(
-        chef_name=chef_in.chef_name,
-        phone=chef_in.phone,
-        user_id=chef_in.user_id,
-        status=chef_in.status,
+        **chef_data,
         created_at=now,
         updated_at=now,
         created_by=current_user.id,
