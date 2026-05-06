@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Integer, Numeric, SmallInteger, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -84,8 +85,7 @@ class Vendor(Base):
     postal_code = Column(String(20), nullable=True)
     gst_number = Column(String(30), nullable=True)
     pan_number = Column(String(20), nullable=True)
-    opening_balance = Column(Numeric(15, 3), nullable=False, default=0)
-    current_balance = Column(Numeric(15, 3), nullable=False, default=0)
+    opening_balance = Column(Text, nullable=False, default="0")
     credit_limit = Column(Numeric(15, 3), nullable=True)
     notes = Column(Text, nullable=True)
     status = Column(Integer, nullable=False, default=1)
@@ -353,6 +353,10 @@ class ActivityLog(Base):
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
     request_id = Column(String(64), nullable=True)
+    route_template = Column(String(255), nullable=True)
+    duration_ms = Column(Integer, nullable=True)
+    error_code = Column(String(64), nullable=True)
+    meta = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)

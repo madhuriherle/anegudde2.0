@@ -17,6 +17,8 @@ def list_vendors(
     q: str | None = Query(None),
     status: int | None = Query(None),
     search_field: str | None = Query(None),
+    from_date: str | None = Query(None),
+    to_date: str | None = Query(None),
     sort_by: str = Query("id"),
     sort_order: str = Query("desc"),
 ):
@@ -24,6 +26,12 @@ def list_vendors(
     
     if status is not None:
         query = query.filter(Vendor.status == status)
+
+    if from_date:
+        query = query.filter(Vendor.created_at >= from_date)
+    if to_date:
+        # Append 23:59:59 to to_date to include the entire day
+        query = query.filter(Vendor.created_at <= f"{to_date} 23:59:59")
 
     if q:
         like = f"%{q}%"

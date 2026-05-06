@@ -17,6 +17,21 @@
   --color-sidebar-active: #a0785a;
   --color-sidebar-hover: rgba(160, 120, 90, 0.15);
 
+  /* Premium Action & Badge Colors */
+  --color-action-edit-bg: #E8F1FF;
+  --color-action-edit-text: #2563EB;
+  --color-action-edit-hover: #DBEAFE;
+  --color-action-delete-bg: #FDECEC;
+  --color-action-delete-text: #DC2626;
+  --color-action-delete-hover: #FEE2E2;
+  --color-action-view-bg: #FFF4E8;
+  --color-action-view-text: #D97706;
+  --color-action-view-hover: #FEF3C7;
+  --color-badge-active-bg: #EAF7EE;
+  --color-badge-active-text: #15803D;
+  --color-badge-disabled-bg: #F3F4F6;
+  --color-badge-disabled-text: #6B7280;
+
   --font-serif: "Merriweather", serif;
   --font-sans: "Inter", sans-serif;
 }
@@ -41,6 +56,18 @@
 
   .temple-section-header {
     @apply text-xs font-bold text-primary uppercase tracking-[0.2em] mb-4 mt-6;
+  }
+
+  .action-btn-view {
+    @apply px-3 py-1.5 rounded-md text-xs font-semibold bg-action-view-bg text-action-view-text hover:bg-action-view-hover transition-colors;
+  }
+
+  .action-btn-edit {
+    @apply px-3 py-1.5 rounded-md text-xs font-semibold bg-action-edit-bg text-action-edit-text hover:bg-action-edit-hover transition-colors;
+  }
+
+  .action-btn-delete {
+    @apply px-3 py-1.5 rounded-md text-xs font-semibold bg-action-delete-bg text-action-delete-text hover:bg-action-delete-hover transition-colors;
   }
 }
 

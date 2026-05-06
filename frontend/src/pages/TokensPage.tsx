@@ -201,16 +201,16 @@ const TokensPage: React.FC = () => {
                 {errors.token_count && <p className="text-xs text-red-500">{errors.token_count.message}</p>}
               </div>
             </div>
-            <DialogFooter className="gap-2">
-              <Button type="button" variant="ghost" onClick={handleClose} className="text-text-main">
+            <DialogFooter className="gap-3">
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={createMutation.isPending}
-                className="text-text-main"
+                className="w-28 h-10 text-text-main"
               >
-                {createMutation.isPending ? 'Processing...' : 'Issue Tokens'}
+                {createMutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>
@@ -268,7 +268,7 @@ const TokensPage: React.FC = () => {
             </div>
           </div>
           <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} variant="outline" className="text-text-main">
+            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">
               Close
             </Button>
           </DialogFooter>

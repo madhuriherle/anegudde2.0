@@ -1,4 +1,5 @@
 import os
+import time
 
 from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -11,7 +12,9 @@ from app.utils.audit import log_activity_event
 
 class ActivityAuditMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        start_time = time.perf_counter()
         response = await call_next(request)
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
 
         if request.url.path.startswith(("/docs", "/openapi.json", "/redoc")):
             return response
@@ -28,6 +31,13 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
         client_ip = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
         request_id = response.headers.get("X-Request-ID")
+        route_template = self._get_route_template(request)
+        error_code = None if response.status_code < 400 else f"HTTP_{response.status_code}"
+        meta = {
+            "query_params": dict(request.query_params),
+            "path_params": request.path_params,
+            "status_family": f"{response.status_code // 100}xx",
+        }
 
         db = SessionLocal()
         try:
@@ -43,6 +53,10 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
                 ip_address=client_ip,
                 user_agent=user_agent,
                 request_id=request_id,
+                route_template=route_template,
+                duration_ms=duration_ms,
+                error_code=error_code,
+                meta=meta,
                 created_by=user_id,
                 updated_by=user_id,
             )
@@ -63,6 +77,12 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
         if len(parts) != 2 or parts[0].lower() != "bearer":
             return None
         return parts[1].strip()
+
+    @staticmethod
+    def _get_route_template(request: Request) -> str:
+        route = request.scope.get("route")
+        template = getattr(route, "path", None)
+        return template or request.url.path
 
     @staticmethod
     def _get_user_id_from_token(token: str | None) -> int | None:

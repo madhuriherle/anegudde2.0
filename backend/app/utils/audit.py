@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -53,6 +54,10 @@ def log_activity_event(
     ip_address: str | None = None,
     user_agent: str | None = None,
     request_id: str | None = None,
+    route_template: str | None = None,
+    duration_ms: int | None = None,
+    error_code: str | None = None,
+    meta: dict[str, Any] | None = None,
     created_by: int | None = None,
     updated_by: int | None = None,
 ):
@@ -70,6 +75,10 @@ def log_activity_event(
             ip_address=_truncate(ip_address, 45),
             user_agent=user_agent,
             request_id=_truncate(request_id, 64),
+            route_template=_truncate(route_template, 255),
+            duration_ms=duration_ms,
+            error_code=_truncate(error_code, 64),
+            meta=meta or {},
             created_at=now,
             updated_at=now,
             created_by=created_by,

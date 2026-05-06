@@ -5,7 +5,6 @@ import {
   Edit, 
   Trash2, 
   Eye,
-  Save,
   Trash,
   Search
 } from 'lucide-react';
@@ -232,36 +231,20 @@ const mutation = useMutation({
       id: 'actions',
       header: "Actions",
       cell: info => (
-        <div className="flex justify-end gap-2 px-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => handleView(info.row.original.raw_wastage)}
-            className="h-8 px-2"
-          >
-            View
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => handleOpen(info.row.original.raw_wastage)}
-            className="h-8 px-2"
-          >
-            Edit
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm"
+        <div className="flex items-center justify-end gap-2 px-4">
+          <button onClick={() => handleView(info.row.original.raw_wastage)} className="action-btn-view">View</button>
+          <button onClick={() => handleOpen(info.row.original.raw_wastage)} className="action-btn-edit">Edit</button>
+          <button
             onClick={async () => {
               const confirmed = await showConfirm('Delete Record', `Are you sure you want to delete this wastage record?`);
               if (confirmed) {
                 deleteMutation.mutate(info.row.original.entryId);
               }
             }}
-            className="h-8 px-2"
+            className="action-btn-delete"
           >
             Delete
-          </Button>
+          </button>
         </div>
       ),
     },
@@ -275,7 +258,7 @@ const mutation = useMutation({
             <Trash className="w-8 h-8 text-primary" />
           </div>
           <div>
-            <h2 className="text-text-main">Wastage Records (Prepared Dishes)</h2>
+            <h2 className="text-text-main">Wastage Records (Prepared Dishes)</h2>
           </div>
         </div>
         <Button 
@@ -364,7 +347,7 @@ const mutation = useMutation({
             </div>
           </div>
           <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} className="text-text-main">
+            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">
               Close
             </Button>
           </DialogFooter>
@@ -456,17 +439,16 @@ const mutation = useMutation({
               </div>
             </div>
 
-            <DialogFooter className="pt-4 border-t border-border-temple/40 gap-2">
-              <Button type="button" variant="ghost" onClick={handleClose} className="text-text-main">
+            <DialogFooter className="gap-3">
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={mutation.isPending}
-                className="text-text-main font-bold"
+                className="w-28 h-10 text-text-main"
               >
-                <Save className="w-4 h-4 mr-2" />
-                {mutation.isPending ? 'Saving...' : editingWastage ? 'Update Record' : 'Save Record'}
+                {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>

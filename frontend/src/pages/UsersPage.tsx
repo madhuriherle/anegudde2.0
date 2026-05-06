@@ -6,7 +6,6 @@ import {
   Trash2, 
   Search, 
   Eye,
-  Save,
   Users,
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
@@ -20,7 +19,7 @@ import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
-import { Badge } from '../components/ui/Badge';
+import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
 import { 
   Dialog, 
   DialogContent, 
@@ -108,6 +107,15 @@ const UsersPage: React.FC = () => {
     onError: (err: any) => showError(err.response?.data?.detail || 'Delete failed'),
   });
 
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/users/${id}`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      showSuccess('Status updated successfully');
+    },
+    onError: (err: any) => showError(err.response?.data?.detail || 'Status update failed'),
+  });
+
   const handleOpen = (userData: any = null) => {
     setEditingUser(userData);
     if (userData) {
@@ -164,49 +172,35 @@ const UsersPage: React.FC = () => {
       accessorKey: 'status', 
       header: 'Status', 
       cell: info => (
-        <Badge>
-          {info.getValue() === 1 ? 'Active' : 'Disabled'}
-        </Badge>
+        <InlineStatusSelect
+          value={Number(info.getValue() ?? 1)}
+          disabled={statusMutation.isPending}
+          onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })}
+        />
       )
     },
     {
       id: 'actions',
       header: "Actions",
       cell: info => (
-        <div className="flex justify-end gap-2 px-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => handleView(info.row.original)}
-            className="h-8 px-2"
-          >
-            View
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => handleOpen(info.row.original)}
-            className="h-8 px-2"
-          >
-            Edit
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm"
+        <div className="flex items-center justify-end gap-2 px-4">
+          <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
+          <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
+          <button
             onClick={async () => {
               const confirmed = await showConfirm('Delete User', `Are you sure you want to delete user "${info.row.original.username}"?`);
               if (confirmed) {
                 deleteMutation.mutate(info.row.original.id);
               }
             }}
-            className="h-8 px-2"
+            className="action-btn-delete"
           >
             Delete
-          </Button>
+          </button>
         </div>
       ),
     },
-  ], [roles, deleteMutation, showConfirm]);
+  ], [roles, deleteMutation, showConfirm, statusMutation]);
 
   return (
     <div className="space-y-6">
@@ -216,7 +210,7 @@ const UsersPage: React.FC = () => {
             <Users className="w-8 h-8 text-primary" />
           </div>
           <div>
-            <h2 className="text-text-main">User Management</h2>
+            <h2 className="text-text-main">User Management</h2>
           </div>
         </div>
         <Button 
@@ -273,12 +267,7 @@ const UsersPage: React.FC = () => {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-md border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-text-main">User Details</DialogTitle>
-              <Badge>
-                {viewingUser?.status === 1 ? 'Active' : 'Disabled'}
-              </Badge>
-            </div>
+            <DialogTitle className="text-text-main">User Details</DialogTitle>
           </DialogHeader>
           <div className="space-y-0 mt-4">
             <DetailItem label="Username" value={viewingUser?.username} />
@@ -286,23 +275,9 @@ const UsersPage: React.FC = () => {
             <DetailItem label="Email" value={viewingUser?.email} />
             <DetailItem label="Phone" value={viewingUser?.phone} />
             <DetailItem label="Role" value={roles?.find((r: any) => r.id === viewingUser?.role_id)?.role_name} />
-
-            <div className="pt-6 pb-2">
-              <span className="text-sm font-bold text-text-main">Audit Information</span>
-            </div>
-            <div className="p-4 bg-bg-temple border border-border-temple rounded-md space-y-0">
-              <DetailItem 
-                label="Created At" 
-                value={viewingUser?.created_at ? new Date(viewingUser.created_at).toLocaleString() : '-'} 
-              />
-              <DetailItem 
-                label="Last Updated" 
-                value={viewingUser?.updated_at ? new Date(viewingUser.updated_at).toLocaleString() : '-'} 
-              />
-            </div>
           </div>
           <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} className="text-text-main">
+            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">
               Close
             </Button>
           </DialogFooter>
@@ -375,17 +350,16 @@ const UsersPage: React.FC = () => {
                 />
               </div>
             </div>
-            <DialogFooter className="pt-4 border-t border-border-temple/40 gap-2">
-              <Button type="button" variant="ghost" onClick={handleClose} className="text-text-main">
+            <DialogFooter className="gap-3">
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={mutation.isPending}
-                className="text-text-main font-bold"
+                className="w-28 h-10 text-text-main"
               >
-                <Save className="w-4 h-4 mr-2" />
-                {mutation.isPending ? 'Saving...' : editingUser ? 'Update User' : 'Save User'}
+                {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>

@@ -247,27 +247,17 @@ const ConsumptionsPage: React.FC = () => {
       id: 'actions',
       header: "Actions",
       cell: info => (
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => handleView(info.row.original.entry)}
-            className="text-text-main"
-          >
-            View
-          </button>
-          <button 
-            onClick={() => handleOpen(info.row.original.entry)}
-            className="text-text-main"
-          >
-            Edit
-          </button>
-          <button 
+        <div className="flex items-center gap-2">
+          <button onClick={() => handleView(info.row.original.entry)} className="action-btn-view">View</button>
+          <button onClick={() => handleOpen(info.row.original.entry)} className="action-btn-edit">Edit</button>
+          <button
             onClick={async () => {
               const confirmed = await showConfirm('Delete Record', `Are you sure you want to delete this usage record?`);
               if (confirmed) {
                 deleteMutation.mutate(info.row.original.entry.id);
               }
             }}
-            className="text-text-main"
+            className="action-btn-delete"
           >
             Delete
           </button>
@@ -347,10 +337,7 @@ const ConsumptionsPage: React.FC = () => {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh] border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-2xl font-semibold text-gray-800 font-serif">Usage Summary</DialogTitle>
-              <Badge variant="secondary">#{viewingConsumption?.id}</Badge>
-            </div>
+            <DialogTitle className="text-text-main">Usage Summary</DialogTitle>
             <DialogDescription className="sr-only">
               Detailed breakdown of items consumed and recorded in this entry.
             </DialogDescription>
@@ -391,16 +378,10 @@ const ConsumptionsPage: React.FC = () => {
                   </tbody>
                </table>
             </div>
-
-            <div className="pt-10 pb-3">
-              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.2em]">System Audit Info</span>
-            </div>
-            <DetailItem label="Created At" value={viewingConsumption?.created_at ? new Date(viewingConsumption.created_at).toLocaleString() : '-'} />
-            <DetailItem label="Created By" value={users?.find((u: any) => u.id === viewingConsumption?.created_by)?.full_name || viewingConsumption?.user?.full_name} />
           </div>
           
-          <DialogFooter className="mt-8">
-            <Button onClick={() => setViewDialogOpen(false)} className="w-full sm:w-auto">Close</Button>
+          <DialogFooter className="mt-8 border-t border-border-temple/40 pt-4">
+            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -503,12 +484,12 @@ const ConsumptionsPage: React.FC = () => {
               </div>
             </div>
 
-            <DialogFooter className="pt-4 gap-3">
-              <Button type="button" variant="outline" onClick={handleClose} className="h-12 rounded-xl border-[#D2B89B] text-secondary hover:bg-[#F5E6D3] flex-1">
+            <DialogFooter className="gap-3">
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>
-              <Button type="submit" disabled={mutation.isPending} className="h-12 rounded-xl shadow-lg shadow-primary/20 flex-1 bg-primary hover:bg-primary-dark">
-                {mutation.isPending ? 'Processing...' : editingConsumption ? 'Update Record' : 'Save Usage Entry'}
+              <Button type="submit" disabled={mutation.isPending} className="w-28 h-10 text-text-main">
+                {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>

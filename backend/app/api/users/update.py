@@ -17,16 +17,26 @@ def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if payload.username != user.username and db.query(User).filter(User.username == payload.username).first():
-        raise HTTPException(status_code=400, detail="Username already exists")
-    if payload.role_id != user.role_id and not db.query(Role).filter(Role.id == payload.role_id).first():
-        raise HTTPException(status_code=400, detail="Invalid role_id")
+    if payload.username is not None and payload.username != user.username:
+        if db.query(User).filter(User.username == payload.username).first():
+            raise HTTPException(status_code=400, detail="Username already exists")
 
-    user.username = payload.username
-    user.full_name = payload.full_name
-    user.role_id = payload.role_id
-    user.email = payload.email
-    user.phone = payload.phone
+    if payload.role_id is not None and payload.role_id != user.role_id:
+        if not db.query(Role).filter(Role.id == payload.role_id).first():
+            raise HTTPException(status_code=400, detail="Invalid role_id")
+
+    if payload.username is not None:
+        user.username = payload.username
+    if payload.full_name is not None:
+        user.full_name = payload.full_name
+    if payload.role_id is not None:
+        user.role_id = payload.role_id
+    if payload.email is not None:
+        user.email = payload.email
+    if payload.phone is not None:
+        user.phone = payload.phone
+    if payload.status is not None:
+        user.status = payload.status
     if payload.password:
         user.password = hash_password(payload.password)
 

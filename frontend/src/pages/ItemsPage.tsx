@@ -11,7 +11,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
-import { Badge } from '../components/ui/Badge';
+import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
 import { 
   Dialog, 
   DialogContent, 
@@ -117,6 +117,15 @@ const ItemsPage: React.FC = () => {
     onError: (err: any) => showError(err.response?.data?.detail || 'Delete failed'),
   });
 
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/items/update_item/${id}`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      showSuccess('Status updated successfully');
+    },
+    onError: (err: any) => showError(err.response?.data?.detail || 'Status update failed'),
+  });
+
   const handleOpen = (item: any = null) => {
     setEditingItem(item);
     if (item) {
@@ -214,49 +223,36 @@ const ItemsPage: React.FC = () => {
       accessorKey: 'status',
       header: 'Status',
       cell: info => (
-        <Badge>
-          {info.getValue() === 1 ? 'Active' : 'Disabled'}
-        </Badge>
+        <InlineStatusSelect
+          value={Number(info.getValue() ?? 1)}
+          disabled={statusMutation.isPending}
+          onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })}
+        />
       )
     },
     {
       id: 'actions',
       header: "Actions",
       cell: info => (
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => handleView(info.row.original)}
-            className="text-text-main hover:text-primary transition-colors"
-          >
-            View
-          </button>
-          <button 
-            onClick={() => navigate(`/items/${info.row.original.id}/history`)}
-            className="text-text-main hover:text-primary transition-colors"
-          >
-            History
-          </button>
-          <button 
-            onClick={() => handleOpen(info.row.original)}
-            className="text-text-main hover:text-primary transition-colors"
-          >
-            Edit
-          </button>
-          <button 
+        <div className="flex items-center gap-2">
+          <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
+          <button onClick={() => navigate(`/items/${info.row.original.id}/history`)} className="action-btn-view">History</button>
+          <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
+          <button
             onClick={async () => {
               const confirmed = await showConfirm('Delete Item', `Are you sure you want to delete this item?`);
               if (confirmed) {
                 deleteMutation.mutate(info.row.original.id);
               }
             }}
-            className="text-text-main hover:text-primary transition-colors"
+            className="action-btn-delete"
           >
             Delete
           </button>
         </div>
       )
     }
-  ], [categories, units, navigate, deleteMutation, showConfirm]);
+  ], [categories, units, navigate, deleteMutation, showConfirm, statusMutation]);
 
     return (
     <div className="space-y-6">
@@ -323,12 +319,7 @@ const ItemsPage: React.FC = () => {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh] border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-2xl font-semibold text-gray-800 font-serif">Item Details</DialogTitle>
-              <Badge variant={viewingItem?.status === 1 ? 'success' : 'secondary'}>
-                {viewingItem?.status === 1 ? 'Active' : 'Disabled'}
-              </Badge>
-            </div>
+            <DialogTitle className="text-text-main">Item Details</DialogTitle>
             <DialogDescription className="sr-only">
               Technical specifications and current inventory status for this item.
             </DialogDescription>
@@ -340,15 +331,9 @@ const ItemsPage: React.FC = () => {
             <DetailItem label="Standard Price" value={`₹${Number(viewingItem?.default_price || 0).toLocaleString()}`} />
             <DetailItem label="Current Stock" value={viewingItem?.current_stock} />
             <DetailItem label="Min Stock Alert" value={viewingItem?.min_stock_level} />
-            
-            <div className="pt-10 pb-3">
-              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.2em]">System Audit Info</span>
-            </div>
-            <DetailItem label="Created At" value={viewingItem?.created_at ? new Date(viewingItem.created_at).toLocaleString() : '-'} />
-            <DetailItem label="Created By" value={users?.find((u: any) => u.id === viewingItem?.created_by)?.username} />
           </div>
-          <DialogFooter className="mt-6">
-            <Button onClick={() => setViewDialogOpen(false)} className="w-full sm:w-auto">Close</Button>
+          <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
+            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -445,12 +430,12 @@ const ItemsPage: React.FC = () => {
               </div>
             </div>
 
-            <DialogFooter className="pt-4 gap-3">
-              <Button type="button" variant="outline" onClick={handleClose} className="h-12 rounded-xl border-[#D2B89B] text-secondary hover:bg-[#F5E6D3] flex-1">
+            <DialogFooter className="gap-3">
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>
-              <Button type="submit" disabled={mutation.isPending} className="h-12 rounded-xl shadow-lg shadow-primary/20 flex-1 bg-primary hover:bg-primary-dark">
-                {mutation.isPending ? 'Saving...' : editingItem ? 'Update Item' : 'Save Item'}
+              <Button type="submit" disabled={mutation.isPending} className="w-28 h-10 text-text-main">
+                {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>

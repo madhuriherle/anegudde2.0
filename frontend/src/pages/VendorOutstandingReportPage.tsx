@@ -17,6 +17,11 @@ import { Badge } from '../components/ui/Badge';
 
 const VendorOutstandingReportPage: React.FC = () => {
   const [search, setSearch] = useState('');
+  const formatAmount = (value: unknown) => {
+    const num = Number(value ?? 0);
+    if (!Number.isFinite(num)) return '₹0';
+    return `₹${num.toLocaleString()}`;
+  };
 
   const { data: vendorData, isLoading } = useQuery({
     queryKey: ['vendor-outstanding'],
@@ -44,7 +49,7 @@ const VendorOutstandingReportPage: React.FC = () => {
       'Vendor Code',
       'Vendor Name',
       'Contact',
-      'Current Balance',
+      'Opening Balance',
       'Credit Limit',
     ];
 
@@ -90,10 +95,10 @@ const VendorOutstandingReportPage: React.FC = () => {
     },
     { 
       accessorKey: 'current_balance', 
-      header: 'Outstanding Balance', 
+      header: 'Opening Balance', 
       cell: info => (
         <span className="font-black text-red-600">
-          ₹{Number(info.getValue()).toLocaleString()}
+          {formatAmount(info.getValue())}
         </span>
       ),
     },
@@ -102,7 +107,7 @@ const VendorOutstandingReportPage: React.FC = () => {
       header: 'Credit Limit', 
       cell: info => {
         const val = info.getValue();
-        return <span className="text-text-main">{val ? `₹${Number(val).toLocaleString()}` : 'No Limit'}</span>;
+        return <span className="text-text-main">{val ? formatAmount(val) : 'No Limit'}</span>;
       }
     },
     {

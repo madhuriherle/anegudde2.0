@@ -17,8 +17,14 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
-class UserUpdate(UserBase):
+class UserUpdate(BaseModel):
+    username: str | None = None
+    full_name: str | None = None
+    role_id: int | None = None
+    email: str | None = None
+    phone: str | None = None
     password: str | None = None
+    status: int | None = None
 
 class UserOut(UserBase):
     id: int

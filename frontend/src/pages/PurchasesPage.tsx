@@ -6,7 +6,6 @@ import {
   Trash2, 
   Search, 
   Eye,
-  Save,
   Trash,
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
@@ -273,25 +272,19 @@ const PurchasesPage: React.FC = () => {
       header: "Actions",
       cell: info => (
         <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => handleView(info.row.original.entry)} className="h-8 px-2">
-            View
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleOpen(info.row.original.entry)} className="h-8 px-2">
-            Edit
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <button onClick={() => handleView(info.row.original.entry)} className="action-btn-view">View</button>
+          <button onClick={() => handleOpen(info.row.original.entry)} className="action-btn-edit">Edit</button>
+          <button
             onClick={async () => {
               const confirmed = await showConfirm('Delete Purchase', `Are you sure you want to delete this purchase entry?`);
               if (confirmed) {
                 deleteMutation.mutate(info.row.original.entry.id);
               }
-            }} 
-            className="h-8 px-2"
+            }}
+            className="action-btn-delete"
           >
             Delete
-          </Button>
+          </button>
         </div>
       )
     }
@@ -364,11 +357,8 @@ const PurchasesPage: React.FC = () => {
       {/* View Details Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-border-temple">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-text-main font-temple">Purchase Summary</DialogTitle>
-              <Badge>#{viewingPurchase?.id}</Badge>
-            </div>
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-text-main font-temple">Purchase Summary</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-x-6">
@@ -424,19 +414,9 @@ const PurchasesPage: React.FC = () => {
                 </table>
               </div>
             </div>
-
-            <div className="space-y-2 mt-6">
-              <h4 className="text-sm font-bold text-text-main/60 uppercase tracking-wider px-1">Audit Information</h4>
-              <div className="bg-bg-temple/20 p-4 rounded-lg border border-border-temple/40 grid grid-cols-2 gap-x-6">
-                <DetailItem label="Created At" value={viewingPurchase?.created_at ? new Date(viewingPurchase.created_at).toLocaleString() : '-'} />
-                <DetailItem label="Created By" value={users?.find((u: any) => u.id === viewingPurchase?.created_by)?.full_name || viewingPurchase?.user?.full_name || '-'} />
-                <DetailItem label="Last Updated" value={viewingPurchase?.updated_at ? new Date(viewingPurchase.updated_at).toLocaleString() : '-'} />
-                <DetailItem label="Updated By" value={users?.find((u: any) => u.id === viewingPurchase?.updated_by)?.full_name || '-'} />
-              </div>
-            </div>
           </div>
-          <DialogFooter className="mt-8">
-            <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+          <DialogFooter className="mt-8 border-t border-border-temple/40 pt-4">
+            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -580,12 +560,11 @@ const PurchasesPage: React.FC = () => {
             </div>
 
             <DialogFooter className="gap-3">
-              <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>
-              <Button type="submit" disabled={mutation.isPending} className="flex items-center gap-2">
-                {mutation.isPending ? (
-                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : <Save className="h-4 w-4" />}
-                {editingPurchase ? 'Update Purchase' : 'Save Purchase'}
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending} className="w-28 h-10 text-text-main">
+                {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>

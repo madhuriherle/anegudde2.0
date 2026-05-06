@@ -6,7 +6,6 @@ import {
   Trash2, 
   Search, 
   Eye,
-  Save,
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
@@ -18,7 +17,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
-import { Badge } from '../components/ui/Badge';
+import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
 import { 
   Dialog, 
   DialogContent, 
@@ -109,6 +108,15 @@ const ChefsPage: React.FC = () => {
     onError: (err: any) => showError(err.response?.data?.detail || 'Delete failed'),
   });
 
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/chefs/${id}`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chefs'] });
+      showSuccess('Status updated successfully');
+    },
+    onError: (err: any) => showError(err.response?.data?.detail || 'Status update failed'),
+  });
+
   const handleOpen = (chef: any = null) => {
     setEditingChef(chef);
     if (chef) {
@@ -165,9 +173,11 @@ const ChefsPage: React.FC = () => {
       accessorKey: 'status',
       header: 'Status',
       cell: info => (
-        <Badge variant={info.getValue() === 1 ? 'default' : 'secondary'}>
-          {info.getValue() === 1 ? 'Active' : 'Disabled'}
-        </Badge>
+        <InlineStatusSelect
+          value={Number(info.getValue() ?? 1)}
+          disabled={statusMutation.isPending}
+          onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })}
+        />
       )
     },
     {
@@ -175,45 +185,29 @@ const ChefsPage: React.FC = () => {
       header: "Actions",
       cell: info => (
         <div className="flex items-center justify-end gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => handleView(info.row.original)}
-            className="h-8 px-2"
-          >
-            View
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => handleOpen(info.row.original)}
-            className="h-8 px-2"
-          >
-            Edit
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
+          <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
+          <button
             onClick={async () => {
               const confirmed = await showConfirm('Delete Chef', `Are you sure you want to delete chef "${info.row.original.chef_name}"?`);
               if (confirmed) {
                 deleteMutation.mutate(info.row.original.id);
               }
             }}
-            className="h-8 px-2"
+            className="action-btn-delete"
           >
             Delete
-          </Button>
+          </button>
         </div>
       )
     }
-  ], [deleteMutation, showConfirm]);
+  ], [deleteMutation, showConfirm, statusMutation]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main text-2xl font-semibold">Chefs Management</h2>
+          <h2 className="text-text-main text-2xl font-semibold">Chefs Management</h2>
         </div>
         <Button onClick={() => handleOpen()} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -265,44 +259,16 @@ const ChefsPage: React.FC = () => {
       {/* View Details Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-md border-border-temple">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-text-main">Chef Details</DialogTitle>
-              <Badge variant={viewingChef?.status === 1 ? 'default' : 'secondary'}>
-                {viewingChef?.status === 1 ? 'Active' : 'Disabled'}
-              </Badge>
-            </div>
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-text-main">Chef Details</DialogTitle>
           </DialogHeader>
           <div className="space-y-1 mt-4">
-            <DetailItem label="Chef ID" value={viewingChef?.id} />
             <DetailItem label="Chef Name" value={viewingChef?.chef_name} />
             <DetailItem label="Phone Number" value={viewingChef?.phone} />
             <DetailItem label="Specialization" value={viewingChef?.specialization} />
-            
-            <div className="pt-6 pb-2">
-              <h4 className="text-sm font-semibold text-text-main underline decoration-border-temple underline-offset-4">Audit Information</h4>
-            </div>
-            <div className="bg-bg-temple/50 p-4 rounded-lg border border-border-temple/20 space-y-1">
-              <DetailItem 
-                label="Created At" 
-                value={viewingChef?.created_at ? new Date(viewingChef.created_at).toLocaleString() : '-'} 
-              />
-              <DetailItem 
-                label="Created By" 
-                value={users?.find((u: any) => u.id === viewingChef?.created_by)?.username || viewingChef?.created_by} 
-              />
-              <DetailItem 
-                label="Last Updated" 
-                value={viewingChef?.updated_at ? new Date(viewingChef.updated_at).toLocaleString() : '-'} 
-              />
-              <DetailItem 
-                label="Updated By" 
-                value={users?.find((u: any) => u.id === viewingChef?.updated_by)?.username || viewingChef?.updated_by} 
-              />
-            </div>
           </div>
-          <DialogFooter className="mt-6">
-            <Button onClick={() => setViewDialogOpen(false)}>
+          <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
+            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">
               Close
             </Button>
           </DialogFooter>
@@ -357,14 +323,11 @@ const ChefsPage: React.FC = () => {
             </div>
 
             <DialogFooter className="gap-3">
-              <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
-              <Button type="submit" disabled={mutation.isPending} className="flex items-center gap-2">
-                {mutation.isPending ? 'Saving...' : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    {editingChef ? 'Update' : 'Save'}
-                  </>
-                )}
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending} className="w-28 h-10 text-text-main">
+                {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>

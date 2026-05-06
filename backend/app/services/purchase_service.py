@@ -45,12 +45,6 @@ def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: Use
         item.current_stock += it.quantity
         db.add(StockLedger(item_id=item.id, txn_date=payload.purchase_date, txn_type=1, ref_table="purchase_entries", ref_id=entry.id, qty_in=it.quantity, qty_out=0, unit_cost=it.price, value_in=line_total, value_out=0, balance=item.current_stock, created_at=now, updated_at=now, created_by=current_user.id, updated_by=current_user.id))
     
-    # Calculate Final Total for Vendor Balance
-    final_total = payload.invoice_amount if (payload.invoice_amount and payload.invoice_amount > 0) else (total + payload.sgst + payload.cgst + payload.igst)
-    
-    # Update Vendor Balance
-    vendor.current_balance += final_total
-    
     db.commit(); return entry
 
 def get_purchase(purchase_id: int, db: Session) -> PurchaseEntry:
@@ -78,12 +72,6 @@ def get_purchase_full(purchase_id: int, db: Session) -> dict:
 def delete_purchase(purchase_id: int, db: Session, current_user: User) -> None:
     entry = get_purchase(purchase_id, db)
     
-    vendor = db.query(Vendor).filter(Vendor.id == entry.vendor_id).first()
-    if vendor:
-        # Subtract the original total used (Invoice Amount or calculated total)
-        orig_total = entry.invoice_amount if (entry.invoice_amount and entry.invoice_amount > 0) else (entry.total_amount + entry.sgst + entry.cgst + entry.igst)
-        vendor.current_balance -= orig_total
-
     db.query(PurchaseItem).filter(PurchaseItem.purchase_entry_id == purchase_id, PurchaseItem.purchase_date == entry.purchase_date).delete()
     db.query(StockLedger).filter(StockLedger.ref_table == "purchase_entries", StockLedger.ref_id == purchase_id, StockLedger.txn_date == entry.purchase_date).delete()
     db.delete(entry); db.commit()

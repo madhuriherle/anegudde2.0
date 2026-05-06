@@ -173,7 +173,7 @@ const MainLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Notifications */}
+            {/* Notifications - Hidden for now
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
                 <button className="relative p-2 text-secondary-light hover:bg-secondary/5 rounded-full transition-all focus:outline-none">
@@ -233,6 +233,7 @@ const MainLayout: React.FC = () => {
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>
             </DropdownMenu.Root>
+            */}
 
             <span className="hidden sm:block text-xs font-medium text-gray-700 ml-2">
               {user?.full_name}

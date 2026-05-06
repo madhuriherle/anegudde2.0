@@ -31,10 +31,7 @@ def overview(db: Session = Depends(get_db), _: User = Depends(get_current_user))
         or Decimal("0")
     )
 
-    total_outstanding_balance = (
-        db.query(func.coalesce(func.sum(Vendor.current_balance), 0)).scalar()
-        or Decimal("0")
-    )
+    total_outstanding_balance = Decimal("0")
 
     return DashboardOverview(
         total_vendors=total_vendors,

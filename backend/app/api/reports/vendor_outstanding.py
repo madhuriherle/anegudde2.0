@@ -9,15 +9,15 @@ router = APIRouter()
 
 @router.get("/vendor-outstanding")
 def vendor_outstanding_report(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
-    vendors = db.query(Vendor).filter(Vendor.current_balance != 0).order_by(Vendor.current_balance.desc()).all()
+    vendors = db.query(Vendor).order_by(Vendor.id.desc()).all()
     return [
         {
             "id": v.id,
             "vendor_code": v.vendor_code,
             "vendor_name": v.vendor_name,
             "contact_number": v.contact_number,
-            "current_balance": v.current_balance,
-            "credit_limit": v.credit_limit,
+            "current_balance": v.opening_balance,
+            "credit_limit": None,
         }
         for v in vendors
     ]

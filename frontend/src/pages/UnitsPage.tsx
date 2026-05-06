@@ -6,7 +6,6 @@ import {
   Trash2, 
   Search, 
   Eye,
-  Save,
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
@@ -19,7 +18,7 @@ import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
-import { Badge } from '../components/ui/Badge';
+import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
 import { 
   Dialog, 
   DialogContent, 
@@ -96,6 +95,15 @@ const UnitsPage: React.FC = () => {
     onError: (err: any) => showError(err.response?.data?.detail || 'Delete failed'),
   });
 
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/units/${id}`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      showSuccess('Status updated successfully');
+    },
+    onError: (err: any) => showError(err.response?.data?.detail || 'Status update failed'),
+  });
+
   const handleOpen = (unit: any = null) => {
     setEditingUnit(unit);
     if (unit) reset(unit);
@@ -141,49 +149,35 @@ const UnitsPage: React.FC = () => {
       accessorKey: 'status', 
       header: 'Status', 
       cell: info => (
-        <Badge>
-          {info.getValue() === 1 ? 'Active' : 'Disabled'}
-        </Badge>
+        <InlineStatusSelect
+          value={Number(info.getValue() ?? 1)}
+          disabled={statusMutation.isPending}
+          onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })}
+        />
       )
     },
     {
       id: 'actions',
       header: "Actions",
       cell: info => (
-        <div className="flex justify-end gap-2 px-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => handleView(info.row.original)}
-            className="h-8 px-2"
-          >
-            View
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => handleOpen(info.row.original)}
-            className="h-8 px-2"
-          >
-            Edit
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm"
+        <div className="flex items-center justify-end gap-2 px-4">
+          <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
+          <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
+          <button
             onClick={async () => {
               const confirmed = await showConfirm('Delete Unit', `Are you sure you want to delete unit "${info.row.original.unit_name}"?`);
               if (confirmed) {
                 deleteMutation.mutate(info.row.original.id);
               }
             }}
-            className="h-8 px-2"
+            className="action-btn-delete"
           >
             Delete
-          </Button>
+          </button>
         </div>
       ),
     },
-  ], [deleteMutation, showConfirm]);
+  ], [deleteMutation, showConfirm, statusMutation]);
 
   return (
     <div className="space-y-6">
@@ -245,42 +239,14 @@ const UnitsPage: React.FC = () => {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-md border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-text-main">Unit Details</DialogTitle>
-              <Badge>
-                {viewingUnit?.status === 1 ? 'Active' : 'Disabled'}
-              </Badge>
-            </div>
+            <DialogTitle className="text-text-main">Unit Details</DialogTitle>
           </DialogHeader>
           <div className="space-y-0 mt-4">
-            <DetailItem label="Unit ID" value={viewingUnit?.id} />
             <DetailItem label="Unit Name" value={viewingUnit?.unit_name} />
             <DetailItem label="Unit Code" value={viewingUnit?.unit_code} />
-
-            <div className="pt-6 pb-2">
-              <span className="text-sm font-bold text-text-main">Audit Information</span>
-            </div>
-            <div className="p-4 bg-bg-temple border border-border-temple rounded-md space-y-0">
-              <DetailItem 
-                label="Created At" 
-                value={viewingUnit?.created_at ? new Date(viewingUnit.created_at).toLocaleString() : '-'} 
-              />
-              <DetailItem 
-                label="Created By" 
-                value={users?.find((u: any) => u.id === viewingUnit?.created_by)?.username || viewingUnit?.created_by} 
-              />
-              <DetailItem 
-                label="Last Updated" 
-                value={viewingUnit?.updated_at ? new Date(viewingUnit.updated_at).toLocaleString() : '-'} 
-              />
-              <DetailItem 
-                label="Updated By" 
-                value={users?.find((u: any) => u.id === viewingUnit?.updated_by)?.username || viewingUnit?.updated_by} 
-              />
-            </div>
           </div>
           <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} className="text-text-main">
+            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">
               Close
             </Button>
           </DialogFooter>
@@ -322,17 +288,16 @@ const UnitsPage: React.FC = () => {
                 />
               </div>
             </div>
-            <DialogFooter className="pt-4 border-t border-border-temple/40 gap-2">
-              <Button type="button" variant="ghost" onClick={handleClose} className="text-text-main">
+            <DialogFooter className="gap-3">
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={mutation.isPending}
-                className="text-text-main font-bold"
+                className="w-28 h-10 text-text-main"
               >
-                <Save className="w-4 h-4 mr-2" />
-                {mutation.isPending ? 'Saving...' : editingUnit ? 'Update' : 'Save'}
+                {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>

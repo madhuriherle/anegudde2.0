@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from decimal import Decimal
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.db.models import User, Vendor, VendorPayment
@@ -34,9 +33,6 @@ def create_vendor_payment(payload, db: Session, current_user: User) -> VendorPay
     
     db.add(payment)
     
-    # Update Vendor Balance: Payment decreases the outstanding balance
-    vendor.current_balance -= Decimal(str(payload.amount))
-    
     db.commit()
     db.refresh(payment)
     return payment
@@ -45,11 +41,6 @@ def delete_vendor_payment(payment_id: int, db: Session, current_user: User) -> N
     payment = db.query(VendorPayment).filter(VendorPayment.id == payment_id).first()
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
-    
-    vendor = db.query(Vendor).filter(Vendor.id == payment.vendor_id).first()
-    if vendor:
-        # Reverse the balance update: Deleting a payment increases the outstanding balance
-        vendor.current_balance += Decimal(str(payment.amount))
     
     db.delete(payment)
     db.commit()
