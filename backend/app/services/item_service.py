@@ -5,21 +5,28 @@ from fastapi import HTTPException
 from sqlalchemy import String
 from sqlalchemy.orm import Session, joinedload
 
-from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit
+from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit, ItemType
 from app.schemas.item import ItemCreate, ItemUpdate
 
 
-def validate_fk(db: Session, payload: ItemCreate | ItemUpdate):
+def validate_fk(db: Session, payload: ItemCreate | ItemUpdate, type_id: int | None = None):
+    if type_id is not None:
+        item_type = db.query(ItemType).filter(ItemType.id == type_id, ItemType.status == 1).first()
+        if not item_type:
+            raise HTTPException(status_code=400, detail="Invalid type_id")
     if hasattr(payload, "category_id") and payload.category_id is not None:
-        if not db.query(ItemCategory).filter(ItemCategory.id == payload.category_id).first():
+        category = db.query(ItemCategory).filter(ItemCategory.id == payload.category_id).first()
+        if not category:
             raise HTTPException(status_code=400, detail="Invalid category_id")
+        if type_id is not None and category.type_id != type_id:
+            raise HTTPException(status_code=400, detail="category_id does not belong to provided type_id")
     if hasattr(payload, "unit_id") and payload.unit_id is not None:
         if not db.query(Unit).filter(Unit.id == payload.unit_id).first():
             raise HTTPException(status_code=400, detail="Invalid unit_id")
 
 
-def create_item(payload: ItemCreate, db: Session, current_user: User) -> Item:
-    validate_fk(db, payload)
+def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: int | None = None) -> Item:
+    validate_fk(db, payload, type_id)
     exists = db.query(Item).filter(Item.item_name == payload.item_name).first()
     if exists:
         raise HTTPException(status_code=400, detail="item_name already exists")
@@ -45,11 +52,12 @@ def list_items(
     q: str | None, 
     status: int | None = None,
     category_id: int | None = None,
+    type_id: int | None = None,
     search_field: str | None = None,
     sort_by: str = "id", 
     sort_order: str = "desc"
 ) -> list[Item]:
-    query = db.query(Item).options(
+    query = db.query(Item).join(ItemCategory, Item.category_id == ItemCategory.id).options(
         joinedload(Item.category),
         joinedload(Item.unit)
     )
@@ -59,6 +67,8 @@ def list_items(
     
     if category_id is not None:
         query = query.filter(Item.category_id == category_id)
+    if type_id is not None:
+        query = query.filter(ItemCategory.type_id == type_id)
 
     if q:
         like = f"%{q}%"
@@ -91,9 +101,9 @@ def get_item(item_id: int, db: Session) -> Item:
     return item
 
 
-def update_item(item_id: int, payload: ItemUpdate, db: Session, current_user: User) -> Item:
+def update_item(item_id: int, payload: ItemUpdate, db: Session, current_user: User, type_id: int | None = None) -> Item:
     item = get_item(item_id, db)
-    validate_fk(db, payload)
+    validate_fk(db, payload, type_id)
 
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(item, key, value)

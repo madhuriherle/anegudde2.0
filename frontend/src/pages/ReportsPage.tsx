@@ -1,25 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Box,
-  Typography,
-  Paper,
-  Grid,
-  TextField,
-  MenuItem,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TableFooter,
-  CircularProgress,
-} from '@mui/material';
-import { FilterList, Download, PictureAsPdf, Assessment } from '@mui/icons-material';
+  Filter,
+  Download,
+  FileText,
+  Loader2,
+} from 'lucide-react';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Label } from '../components/ui/Label';
+import { Card, CardContent } from '../components/ui/Card';
 
 const ReportsPage: React.FC = () => {
   const { showSuccess, showError } = useNotification();
@@ -54,7 +47,6 @@ const ReportsPage: React.FC = () => {
       'Wastage',
       'Closing Stock',
       'Purchase Value',
-      'Payment Value',
       'Net Balance',
     ];
 
@@ -67,7 +59,6 @@ const ReportsPage: React.FC = () => {
       row.wastage_qty,
       row.closing_stock,
       row.purchase_value,
-      row.vendor_payment_value,
       row.net_financial_balance,
     ]);
 
@@ -118,221 +109,167 @@ const ReportsPage: React.FC = () => {
       consumed_qty: acc.consumed_qty + Number(row.consumed_qty),
       wastage_qty: acc.wastage_qty + Number(row.wastage_qty),
       purchase_value: acc.purchase_value + Number(row.purchase_value),
-      vendor_payment_value: acc.vendor_payment_value + Number(row.vendor_payment_value),
       net_financial_balance: acc.net_financial_balance + Number(row.net_financial_balance),
     }), {
       purchased_qty: 0,
       consumed_qty: 0,
       wastage_qty: 0,
       purchase_value: 0,
-      vendor_payment_value: 0,
       net_financial_balance: 0,
     });
   }, [reportData]);
 
   return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0, md: 0.5 },
-        pb: { xs: 1, md: 3 },
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-            Stock & Financial Reports
-          </Typography>
-        </Box>
-      </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-text-main">Stock & Financial Reports</h2>
+          <p className="text-text-main text-sm">Analyze stock movements and financial implications.</p>
+        </div>
+        <div className="flex items-center gap-2">
           <Button 
-            variant="outlined" 
-            startIcon={<Download />} 
+            variant="outline" 
             onClick={handleExport}
-            sx={{ fontWeight: 'bold', borderRadius: 2 }}
+            className="text-text-main"
           >
+            <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
           <Button 
-            variant="outlined" 
-            color="secondary" 
-            startIcon={<PictureAsPdf />} 
+            variant="outline" 
             onClick={handleExportPDF}
-            sx={{ fontWeight: 'bold', borderRadius: 2 }}
+            className="text-text-main"
           >
+            <FileText className="w-4 h-4 mr-2" />
             Export PDF
           </Button>
-      </Box>
+        </div>
+      </div>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 4, 
-          border: '1px solid',
-          borderColor: 'divider',
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(8px)'
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 3,
-            alignItems: 'end',
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr 1fr' },
-          }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              From Date
-            </Typography>
-            <TextField
-              type="date"
-              fullWidth
-              size="small"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              To Date
-            </Typography>
-            <TextField
-              type="date"
-              fullWidth
-              size="small"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Group By
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={groupBy}
-              onChange={(e) => setGroupBy(e.target.value)}
-            >
-              <MenuItem value="day">Day wise</MenuItem>
-              <MenuItem value="month">Month wise</MenuItem>
-            </TextField>
-          </Box>
-          <Box>
+      <Card className="border-border-temple">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-text-main">From Date</Label>
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="text-text-main"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-text-main">To Date</Label>
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="text-text-main"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Group By</Label>
+              <Select value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
+                <option value="day">Day wise</option>
+                <option value="month">Month wise</option>
+              </Select>
+            </div>
             <Button 
-              variant="contained" 
-              fullWidth 
-              startIcon={<FilterList />} 
               onClick={() => refetch()}
-              sx={{ fontWeight: 'bold', borderRadius: 2 }}
+              className="text-text-main w-full"
             >
+              <Filter className="w-4 h-4 mr-2" />
               Generate
             </Button>
-          </Box>
-        </Box>
-      </Paper>
+          </div>
+        </CardContent>
+      </Card>
 
-      <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-        <Table stickyHeader size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Period</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Opening Stock</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Purchased</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Consumed</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Wastage</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Closing Stock</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Purchase Val</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Payment Val</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Net Balance</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 10 }}>
-                  <CircularProgress />
-                  <Typography variant="body2" sx={{ mt: 2 }}>Calculating stock ledger...</Typography>
-                </TableCell>
-              </TableRow>
-            ) : reportData?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
-                  <Typography variant="body1" color="text.secondary">No data found for the selected range.</Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              reportData?.map((row: any) => (
-                <TableRow key={row.period} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell sx={{ fontWeight: 'bold', py: 1.5 }}>{row.period}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5 }}>{Number(row.opening_stock).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ color: 'success.main', fontWeight: 500, py: 1.5 }}>+{Number(row.purchased_qty).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ color: 'error.main', fontWeight: 500, py: 1.5 }}>-{Number(row.consumed_qty).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ color: 'warning.main', fontWeight: 500, py: 1.5 }}>-{Number(row.wastage_qty).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, py: 1.5 }}>{Number(row.closing_stock).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5 }}>₹{Number(row.purchase_value).toLocaleString()}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5 }}>₹{Number(row.vendor_payment_value).toLocaleString()}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: row.net_financial_balance > 0 ? 'error.main' : 'success.main', py: 1.5 }}>
-                    ₹{Number(row.net_financial_balance).toLocaleString()}
-                  </TableCell>
-                </TableRow>
-              ))
+      <div className="rounded-md border border-border-temple overflow-hidden bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-primary text-white uppercase text-[11px] font-bold tracking-wider">
+              <tr>
+                <th className="px-4 py-3 border-b border-primary/20">Period</th>
+                <th className="px-4 py-3 border-b border-primary/20 text-right">Opening Stock</th>
+                <th className="px-4 py-3 border-b border-primary/20 text-right">Purchased</th>
+                <th className="px-4 py-3 border-b border-primary/20 text-right">Consumed</th>
+                <th className="px-4 py-3 border-b border-primary/20 text-right">Wastage</th>
+                <th className="px-4 py-3 border-b border-primary/20 text-right">Closing Stock</th>
+                <th className="px-4 py-3 border-b border-primary/20 text-right">Purchase Val</th>
+                <th className="px-4 py-3 border-b border-primary/20 text-right">Net Balance</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="text-text-main">Calculating stock ledger...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : reportData?.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-20 text-center text-text-main">
+                    No data found for the selected range.
+                  </td>
+                </tr>
+              ) : (
+                reportData?.map((row: any) => (
+                  <tr key={row.period} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-4 py-3 font-bold text-text-main">{row.period}</td>
+                    <td className="px-4 py-3 text-right text-text-main">{Number(row.opening_stock).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-green-600 font-medium">+{Number(row.purchased_qty).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-red-600 font-medium">-{Number(row.consumed_qty).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-orange-600 font-medium">-{Number(row.wastage_qty).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-text-main">{Number(row.closing_stock).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-text-main">₹{Number(row.purchase_value).toLocaleString()}</td>
+                    <td className={`px-4 py-3 text-right font-bold ${row.net_financial_balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      ₹{Number(row.net_financial_balance).toLocaleString()}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            {totals && (
+              <tfoot className="bg-gray-50 border-t-2 border-border-temple">
+                <tr>
+                  <td className="px-4 py-3 font-black text-text-main">TOTAL</td>
+                  <td className="px-4 py-3 text-right font-black text-text-main">
+                    {Number(reportData[0]?.opening_stock || 0).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-black text-green-700">
+                    +{Number(totals.purchased_qty).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-black text-red-700">
+                    -{Number(totals.consumed_qty).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-black text-orange-700">
+                    -{Number(totals.wastage_qty).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-black text-text-main">
+                    {Number(reportData[reportData.length - 1]?.closing_stock || 0).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-black text-text-main">
+                    ₹{Number(totals.purchase_value).toLocaleString()}
+                  </td>
+                  <td className={`px-4 py-3 text-right font-black ${totals.net_financial_balance > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                    ₹{Number(totals.net_financial_balance).toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
             )}
-          </TableBody>
-          {totals && (
-            <TableFooter sx={{ bgcolor: 'grey.50', borderTop: '2px solid', borderColor: 'divider' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 900, py: 2 }}>TOTAL</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 900, py: 2 }}>
-                  {Number(reportData[0]?.opening_stock || 0).toFixed(2)}
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 900, color: 'success.dark', py: 2 }}>
-                  +{Number(totals.purchased_qty).toFixed(2)}
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 900, color: 'error.dark', py: 2 }}>
-                  -{Number(totals.consumed_qty).toFixed(2)}
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 900, color: 'warning.dark', py: 2 }}>
-                  -{Number(totals.wastage_qty).toFixed(2)}
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 900, py: 2 }}>
-                  {Number(reportData[reportData.length - 1]?.closing_stock || 0).toFixed(2)}
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 900, py: 2 }}>
-                  ₹{Number(totals.purchase_value).toLocaleString()}
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 900, py: 2 }}>
-                  ₹{Number(totals.vendor_payment_value).toLocaleString()}
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 900, color: totals.net_financial_balance > 0 ? 'error.dark' : 'success.dark', py: 2 }}>
-                  ₹{Number(totals.net_financial_balance).toLocaleString()}
-                </TableCell>
-              </TableRow>
-            </TableFooter>
-          )}
-        </Table>
-      </TableContainer>
+          </table>
+        </div>
+      </div>
 
-
-      <Box sx={{ mt: 3, p: 2, borderRadius: 2, bgcolor: 'info.light', color: 'info.contrastText', border: '1px solid', borderColor: 'info.main' }}>
-         <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
-           * Net Balance = Purchase Value - Vendor Payments. Negative value means payments exceed purchases in this period.
-         </Typography>
-      </Box>
-    </Box>
+      <div className="p-4 rounded-md bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium">
+        * Net Balance is derived from stock and purchase trends for the selected period.
+      </div>
+    </div>
   );
 };
 
 export default ReportsPage;
-
-
-
-

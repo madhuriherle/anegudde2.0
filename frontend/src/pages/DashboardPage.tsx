@@ -1,22 +1,19 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import {
-  Paper,
-  Typography,
-  Box,
-  CircularProgress,
-  List,
-  ListItem,
-  ListItemText,
-  Chip,
-  Divider,
-} from '@mui/material';
-import {
-  ArrowForward,
-  DashboardOutlined,
-} from '@mui/icons-material';
+import { 
+  ArrowRight, 
+  TrendingUp,
+  Users,
+  Package,
+  ShoppingCart,
+  UtensilsCrossed,
+  Trash2
+} from 'lucide-react';
 import api from '../api/axios';
+import { cn } from '../utils/cn';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 
 const inr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
@@ -45,297 +42,164 @@ const DashboardPage: React.FC = () => {
 
   if (overviewLoading || todayLoading || lowStockLoading || activitiesLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
-        <CircularProgress />
-      </Box>
+      <div className="flex items-center justify-center p-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   if (!overview || !today || !Array.isArray(lowStock) || !Array.isArray(activities)) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Typography color="error">Failed to load dashboard data.</Typography>
-      </Box>
+      <div className="p-8 text-center text-error font-medium">
+        Failed to load dashboard data.
+      </div>
     );
   }
 
   const todayCards = [
-    { title: "Today's Purchase", value: `\u20B9${inr.format(Number(today.purchase_amount || 0))}`, to: '/purchases', color: '#e0f2fe' },
-    { title: "Today's Consumption", value: today.consumption_entries, to: '/consumptions', color: '#ede9fe' },
-    { title: 'Wastage', value: today.wastage_entries, to: '/wastages', color: '#fee2e2' },
-    { title: 'Vendor Payments', value: `\u20B9${inr.format(Number(today.vendor_payment_amount || 0))}`, to: '/vendor-payments', color: '#ccfbf1' },
+    { title: "Today's Purchase", value: `\u20B9${inr.format(Number(today.purchase_amount || 0))}`, to: '/purchases' },
+    { title: "Today's Consumption", value: today.consumption_entries, to: '/consumptions' },
+    { title: 'Wastage', value: today.wastage_entries, to: '/wastages' },
   ];
 
   const summaryCards = [
-    { title: 'Current Stock', value: `\u20B9${inr.format(Number(overview.total_stock_value || 0))}`, to: '/items', color: '#dbeafe' },
-    { title: 'Financial Balance', value: `\u20B9${inr.format(Number(overview.total_outstanding_balance || 0))}`, to: '/vendors', color: '#dcfce7' },
-    { title: 'Total Vendors', value: overview.total_vendors, to: '/vendors', color: '#e0e7ff' },
-    { title: 'Total Items', value: overview.total_items, to: '/items', color: '#dcfce7' },
+    { title: 'Current Stock', value: `\u20B9${inr.format(Number(overview.total_stock_value || 0))}`, to: '/items' },
+    { title: 'Financial Balance', value: `\u20B9${inr.format(Number(overview.total_outstanding_balance || 0))}`, to: '/vendors' },
+    { title: 'Total Vendors', value: overview.total_vendors, to: '/vendors' },
+    { title: 'Total Items', value: overview.total_items, to: '/items' },
   ];
 
   return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0.5, md: 1 },
-        pb: { xs: 1, md: 3 },
-        '& .MuiTypography-root': {
-          fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-          fontWeight: 400,
-        },
-      }}
-    >
-      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <DashboardOutlined sx={{ color: 'text.secondary' }} />
-        <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-          Dashboard
-        </Typography>
-      </Box>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-text-main">Dashboard Overview</h2>
+      </div>
 
-      <SectionTitle title="Today's Metrics" sx={{ mt: 0.5 }} />
-      <CardGrid>
-        {todayCards.map((card) => (
-          <NavCard key={card.title} title={card.title} value={card.value} color={card.color} onClick={() => navigate(card.to)} />
-        ))}
-      </CardGrid>
+      <section className="space-y-4">
+        <h3 className="text-text-main">Today's Metrics</h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {todayCards.map((card) => (
+            <button
+              key={card.title}
+              onClick={() => navigate(card.to)}
+              className="flex flex-col p-6 border border-border-temple bg-white text-left"
+            >
+              <span className="text-text-main mb-1">{card.title}</span>
+              <span className="text-text-main">{card.value}</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
-      <SectionTitle title="Overall Summary" sx={{ mt: 3 }} />
-      <CardGrid>
-        {summaryCards.map((card) => (
-          <NavCard key={card.title} title={card.title} value={card.value} color={card.color} onClick={() => navigate(card.to)} />
-        ))}
-      </CardGrid>
+      <section className="space-y-4">
+        <h3 className="text-text-main">Overall Summary</h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {summaryCards.map((card) => (
+            <button
+              key={card.title}
+              onClick={() => navigate(card.to)}
+              className="flex flex-col p-6 border border-border-temple bg-white text-left"
+            >
+              <span className="text-text-main mb-1">{card.title}</span>
+              <span className="text-text-main">{card.value}</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, mt: 3 }}>
-        <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-          <SectionTitle title="Low Stock Alerts" compact actionLabel="View items" onAction={() => navigate('/items')} />
-          <Box sx={{ mb: 1.5 }}>
-            <Chip
-              size="small"
-              label={`${lowStock.length} item${lowStock.length === 1 ? '' : 's'} below threshold`}
-              sx={{ bgcolor: '#fee2e2', color: '#991b1b', fontWeight: 600 }}
-            />
-          </Box>
-          <Divider sx={{ mb: 2 }} />
-          <List disablePadding>
-            {lowStock.length > 0 ? (
-              lowStock.map((item: any) => (
-                <ListItem
-                  key={item.item_id}
-                  sx={{
-                    px: 1.25,
-                    py: 1.25,
-                    mb: 1,
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: '#fecaca',
-                    backgroundColor: '#fff7f7',
-                    '&:last-child': { mb: 0 },
-                  }}
-                >
-                  <ListItemText
-                    primary={<Typography sx={{ fontWeight: 600 }}>{item.item_name}</Typography>}
-                    secondary={
-                      <Box component="span" sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                        <Chip size="small" label={`Current: ${item.current_stock}`} sx={{ height: 22, fontWeight: 600, bgcolor: '#e2e8f0' }} />
-                        <Chip size="small" label={`Min: ${item.min_stock_level}`} sx={{ height: 22, fontWeight: 600, bgcolor: '#fee2e2', color: '#991b1b' }} />
-                      </Box>
-                    }
-                  />
-                  <Chip size="small" label="Low" sx={{ fontWeight: 700, bgcolor: '#ef4444', color: '#fff' }} />
-                </ListItem>
-              ))
-            ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-                No low stock items. All good!
-              </Typography>
-            )}
-          </List>
-        </Paper>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Low Stock Alerts */}
+        <Card className="flex flex-col border-border-temple">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-bg-temple">
+            <div className="space-y-1">
+              <CardTitle className="text-text-main">Low Stock Alerts</CardTitle>
+              <div className="flex items-center gap-2">
+                <span className="text-text-main">
+                  {lowStock.length} items below threshold
+                </span>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/items')} className="text-text-main">
+              View items
+            </Button>
+          </CardHeader>
+          <CardContent className="flex-1">
+            <div className="space-y-3 mt-4">
+              {lowStock.length > 0 ? (
+                lowStock.map((item: any) => (
+                  <div 
+                    key={item.item_id}
+                    className="flex items-center justify-between p-3 border border-border-temple"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-text-main">{item.item_name}</span>
+                      <div className="flex items-center gap-2">
+                         <span className="text-text-main">Current: {item.current_stock}</span>
+                         <span className="text-text-main">Min: {item.min_stock_level}</span>
+                      </div>
+                    </div>
+                    <span className="text-text-main">Low</span>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-text-main">
+                  <p>No low stock items. All good!</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-          <SectionTitle title="Recent System Activity" compact />
-          <Box sx={{ mb: 1.5 }}>
-            <Chip
-              size="small"
-              label={`${activities.length} recent event${activities.length === 1 ? '' : 's'}`}
-              sx={{ bgcolor: '#e0e7ff', color: '#1e3a8a', fontWeight: 600 }}
-            />
-          </Box>
-          <Divider sx={{ mb: 2 }} />
-          <List disablePadding>
-            {activities.length > 0 ? (
-              activities.map((act: any, idx: number) => (
-                <ListItem
-                  key={idx}
-                  sx={{
-                    px: 1.25,
-                    py: 1.1,
-                    mb: 1,
-                    alignItems: 'flex-start',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: '#e5e7eb',
-                    '&:last-child': { mb: 0 },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      bgcolor: act.activity_type === 'payment' ? '#ef4444' : '#2563eb',
-                      mt: 1,
-                      mr: 1.25,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <ListItemText
-                    primary={<Typography sx={{ fontWeight: 600 }}>{act.title}</Typography>}
-                    secondary={
-                      <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, mt: 0.5 }}>
-                        <Typography component="span" variant="caption" color="text.secondary">
-                          {act.description}
-                        </Typography>
-                        <Typography component="span" variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>
+        {/* Recent Activity */}
+        <Card className="flex flex-col border-border-temple">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-bg-temple">
+            <div className="space-y-1">
+              <CardTitle className="text-text-main">Recent System Activity</CardTitle>
+              <div className="flex items-center gap-2">
+                <span className="text-text-main">
+                  {activities.length} recent events
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1">
+             <div className="space-y-3 mt-4">
+              {activities.length > 0 ? (
+                activities.map((act: any, idx: number) => (
+                  <div 
+                    key={idx}
+                    className="flex items-start gap-4 p-3 border border-transparent"
+                  >
+                    <div className="w-2 h-2 mt-1.5 rounded-full flex-shrink-0 bg-text-main" />
+                    <div className="flex-1 flex flex-col gap-0.5 min-w-0">
+                      <span className="text-text-main truncate">{act.title}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-text-main truncate">{act.description}</span>
+                        <span className="text-text-main whitespace-nowrap">
                           {new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                  {act.amount ? (
-                    <Typography
-                      sx={{
-                        ml: 2,
-                        fontWeight: 700,
-                        color: act.activity_type === 'payment' ? 'error.main' : 'success.main',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {act.activity_type === 'payment' ? '-' : '+'}\u20B9{inr.format(Number(act.amount))}
-                    </Typography>
-                  ) : null}
-                </ListItem>
-              ))
-            ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-                No recent activities logged today.
-              </Typography>
-            )}
-          </List>
-        </Paper>
-      </Box>
-    </Box>
+                        </span>
+                      </div>
+                    </div>
+                    {act.amount && (
+                      <span className="text-text-main whitespace-nowrap">
+                        {act.activity_type === 'payment' ? '-' : '+'}\u20B9{inr.format(Number(act.amount))}
+                      </span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-text-main">
+                  <p>No recent activities logged today.</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 
-const CardGrid = ({ children }: { children: React.ReactNode }) => (
-  <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' } }}>{children}</Box>
-);
-
-const SectionTitle = ({
-  title,
-  actionLabel,
-  onAction,
-  compact = false,
-  sx = {},
-}: {
-  title: string;
-  actionLabel?: string;
-  onAction?: () => void;
-  compact?: boolean;
-  sx?: object;
-}) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: compact ? 1 : 2.5, ...sx }}>
-    <Typography
-      variant="body1"
-      sx={{
-        fontWeight: 400,
-        letterSpacing: 0,
-        fontSize: '1rem',
-      }}
-    >
-      {title}
-    </Typography>
-    {actionLabel && onAction ? (
-      <Box
-        onClick={onAction}
-        sx={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 0.5,
-          cursor: 'pointer',
-          color: 'primary.main',
-          fontWeight: 700,
-          '&:hover': { textDecoration: 'underline' },
-        }}
-      >
-        <Typography variant="body2" sx={{ fontWeight: 700 }}>
-          {actionLabel}
-        </Typography>
-        <ArrowForward fontSize="small" />
-      </Box>
-    ) : null}
-  </Box>
-);
-
-const NavCard = ({
-  title,
-  value,
-  color,
-  onClick,
-}: {
-  title: string;
-  value: string | number;
-  color: string;
-  onClick: () => void;
-}) => (
-  <Paper
-    elevation={0}
-    onClick={onClick}
-    sx={{
-      p: 1.5,
-      minHeight: 86,
-      cursor: 'pointer',
-      borderRadius: 2,
-      border: '1px solid',
-      borderColor: 'rgba(0,0,0,0.08)',
-      transition: 'all 0.2s ease',
-      bgcolor: color,
-      '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 8px 18px rgba(0,0,0,0.16)' },
-    }}
-  >
-    <Box>
-      <Typography
-        variant="body2"
-        sx={{
-          fontWeight: 400,
-          color: '#1f2937',
-          textTransform: 'none',
-          letterSpacing: 0,
-          mb: 0.5,
-          display: 'block',
-          textAlign: 'center',
-          fontSize: '0.95rem',
-        }}
-      >
-        {title}
-      </Typography>
-      <Typography
-        variant="body1"
-        sx={{
-          fontWeight: 400,
-          color: '#0f172a',
-          lineHeight: 1.1,
-          textAlign: 'center',
-          fontSize: '1.2rem',
-        }}
-      >
-        {value}
-      </Typography>
-    </Box>
-  </Paper>
-);
-
 export default DashboardPage;
+
 

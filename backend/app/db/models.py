@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Integer, Numeric, SmallInteger, String, Text, text
+from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Integer, Numeric, SmallInteger, String, Text, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -105,6 +105,16 @@ class Unit(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
+class ItemType(Base):
+    __tablename__ = "item_types"
+    id = Column(Integer, primary_key=True)
+    type_name = Column(String(100), unique=True, nullable=False)
+    status = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
 class MenuItem(Base):
     __tablename__ = "menu_items"
     id = Column(Integer, primary_key=True)
@@ -124,12 +134,14 @@ class MenuItem(Base):
 class ItemCategory(Base):
     __tablename__ = "item_categories"
     id = Column(Integer, primary_key=True)
+    type_id = Column(Integer, ForeignKey("item_types.id"), nullable=False)
     category_name = Column(String(100), nullable=False)
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    item_type = relationship("ItemType", foreign_keys=[type_id])
 
 class Item(Base):
     __tablename__ = "items"
@@ -326,6 +338,25 @@ class LoginHistory(Base):
     session_token = Column(Text, nullable=True)
     logged_out_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    activity_at = Column(DateTime, nullable=False, server_default=func.now())
+    method = Column(String(10), nullable=False)
+    endpoint = Column(String(255), nullable=False)
+    action = Column(String(150), nullable=False)
+    activity_status = Column(String(20), nullable=False, default="SUCCESS")
+    reason = Column(String(255), nullable=True)
+    http_status_code = Column(Integer, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    request_id = Column(String(64), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
 class DailyStockSummary(Base):
     __tablename__ = "daily_stock_summary"

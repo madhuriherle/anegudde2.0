@@ -18,11 +18,9 @@ import TokensPage from './pages/TokensPage';
 import TokenHistoryPage from './pages/TokenHistoryPage';
 import ReportsPage from './pages/ReportsPage';
 import ProfilePage from './pages/ProfilePage';
-import VendorPaymentsPage from './pages/VendorPaymentsPage';
 import DailyStockReportPage from './pages/DailyStockReportPage';
 import MonthlyPerformanceReportPage from './pages/MonthlyPerformanceReportPage';
 import VendorOutstandingReportPage from './pages/VendorOutstandingReportPage';
-import { Typography, Box } from '@mui/material';
 
 function App() {
   return (
@@ -39,7 +37,6 @@ function App() {
         <Route path="/tokens/history" element={<TokenHistoryPage />} />
         <Route path="/consumptions" element={<ConsumptionsPage />} />
         <Route path="/wastages" element={<WastagesPage />} />
-        <Route path="/vendor-payments" element={<VendorPaymentsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/reports/daily-closing" element={<DailyStockReportPage />} />
         <Route path="/reports/monthly-performance" element={<MonthlyPerformanceReportPage />} />

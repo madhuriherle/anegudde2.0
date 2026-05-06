@@ -6,7 +6,7 @@ from app.schemas.item_category import ItemCategoryOut
 
 router = APIRouter()
 
-@router.get("/", response_model=list[ItemCategoryOut])
+@router.get("/list_categories", response_model=list[ItemCategoryOut])
 def list_categories(
     db: Session = Depends(get_db), 
     _: User = Depends(get_current_user),
@@ -14,8 +14,11 @@ def list_categories(
     page_size: int = Query(20, ge=1, le=1000),
     q: str | None = Query(None),
     search_field: str | None = Query(None),
+    type_id: int | None = Query(None),
 ):
     query = db.query(ItemCategory)
+    if type_id is not None:
+        query = query.filter(ItemCategory.type_id == type_id)
     if q:
         like = f"%{q}%"
         from sqlalchemy import String

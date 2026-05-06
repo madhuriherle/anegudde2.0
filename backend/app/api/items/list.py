@@ -9,7 +9,7 @@ from app.services.item_service import list_items as list_items_service
 router = APIRouter()
 
 
-@router.get("/", response_model=list[ItemOut])
+@router.get("/list_items", response_model=list[ItemOut])
 def list_items(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
@@ -18,9 +18,10 @@ def list_items(
     q: str | None = Query(None),
     status: int | None = Query(None),
     category_id: int | None = Query(None),
+    type_id: int | None = Query(None),
     search_field: str | None = Query(None),
     sort_by: str = Query("id"),
     sort_order: str = Query("desc"),
 ):
-    return list_items_service(db, page, page_size, q, status, category_id, search_field, sort_by, sort_order)
+    return list_items_service(db, page, page_size, q, status, category_id, type_id, search_field, sort_by, sort_order)
 
