@@ -10,7 +10,7 @@ from app.schemas.vendor import VendorCreate, VendorOut
 router = APIRouter()
 
 
-@router.post("/", response_model=VendorOut, status_code=status.HTTP_201_CREATED)
+@router.post("/create_vendor", response_model=VendorOut, status_code=status.HTTP_201_CREATED)
 def create_vendor(payload: VendorCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     data = payload.model_dump()
     

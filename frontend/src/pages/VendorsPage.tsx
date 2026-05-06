@@ -1,40 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Grid,
-  CircularProgress,
-  MenuItem,
-  Chip,
-  Switch,
-  Stack,
-  InputAdornment,
-} from '@mui/material';
 import { 
-  Add, 
+  Plus, 
   Edit, 
-  Delete, 
+  Trash2, 
   Search, 
-  Save, 
-  Storefront,
-  Visibility,
-  Payments
-} from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+  Eye,
+  Phone,
+  Store,
+  MapPin,
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
+import { cn } from '../utils/cn';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { Badge } from '../components/ui/Badge';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription
+} from '../components/ui/Dialog';
+import { Select } from '../components/ui/Select';
+import { Switch } from '../components/ui/Switch';
+import { Label } from '../components/ui/Label';
+import { DetailItem } from '../components/ui/DetailItem';
 
 // Zod Schema for Validation
 const vendorSchema = z.object({
@@ -42,15 +41,15 @@ const vendorSchema = z.object({
   vendor_name: z.string().min(1, 'Name is required'),
   contact_person: z.string().optional().or(z.literal('')).or(z.null()),
   contact_number: z.string().regex(/^[0-9]{8,15}$/, 'Contact number must be between 8 and 15 digits'),
-  alternate_contact_number: z.string().regex(/^[0-9]{8,15}$/, 'Contact number must be between 8 and 15 digits').optional().or(z.literal('')).or(z.null()),
+  alternate_contact_number: z.string().optional().or(z.literal('')).or(z.null()),
   email: z.string().email('Invalid email format').optional().or(z.literal('')).or(z.null()),
   address_line1: z.string().min(1, 'Address is required'),
   address_line2: z.string().optional().or(z.literal('')).or(z.null()),
   city: z.string().optional().or(z.literal('')).or(z.null()),
   state: z.string().optional().or(z.literal('')).or(z.null()),
   postal_code: z.string().regex(/^[0-9]{6}$/, 'Postal Code must be 6 digits').optional().or(z.literal('')).or(z.null()),
-  gst_number: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, 'Invalid GST format').optional().or(z.literal('')).or(z.null()),
-  pan_number: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN format').optional().or(z.literal('')).or(z.null()),
+  gst_number: z.string().optional().or(z.literal('')).or(z.null()),
+  pan_number: z.string().optional().or(z.literal('')).or(z.null()),
   opening_balance: z.coerce.number().min(0, 'Cannot be negative'),
   current_balance: z.coerce.number().optional().default(0),
   credit_limit: z.coerce.number().min(0, 'Cannot be negative').optional().or(z.literal('')).or(z.null()),
@@ -97,7 +96,6 @@ const VendorsPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
-  const [pageSize, setPageSize] = useState(20);
   const [status, setStatus] = useState<string>('all');
   const [searchField, setSearchField] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -109,28 +107,28 @@ const VendorsPage: React.FC = () => {
   const [viewingVendor, setViewingVendor] = useState<any>(null);
 
   // Fetch Vendors
-  const { data: vendors, isLoading } = useQuery({
-    queryKey: ['vendors', search, pageSize, status, searchField],
+  const { data: vendors, isLoading: vendorsLoading } = useQuery({
+    queryKey: ['vendors', search, status, searchField],
     queryFn: async () => {
       const params: any = { 
         q: search, 
-        page_size: pageSize,
+        page_size: 1000,
       };
       if (status !== 'all') params.status = status === 'active' ? 1 : 0;
       if (searchField !== 'all') params.search_field = searchField;
       
-      const res = await api.get('/vendors', { params });
+      const res = await api.get('/vendors/list_vendors', { params });
       return res.data;
     },
   });
 
   const { data: users } = useQuery({
     queryKey: ['users-list-minimal'],
-    queryFn: async () => (await api.get('/users', { params: { page_size: 1000 } })).data,
+    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
   });
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<VendorFormValues>({
-    resolver: zodResolver(vendorSchema),
+    resolver: zodResolver(vendorSchema) as any,
   });
 
   // Create/Update Mutation
@@ -138,9 +136,9 @@ const VendorsPage: React.FC = () => {
     mutationFn: async (data: VendorFormValues) => {
       const payload = buildVendorPayload(data);
       if (editingVendor) {
-        return api.put(`/vendors/${editingVendor.id}`, payload);
+        return api.put(`/vendors/update_vendor/${editingVendor.id}`, payload);
       }
-      return api.post('/vendors', payload);
+      return api.post('/vendors/create_vendor', payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
@@ -148,41 +146,58 @@ const VendorsPage: React.FC = () => {
       handleClose();
     },
     onError: (err: any) => {
-      const detail = err?.response?.data?.detail;
-      const message = Array.isArray(detail)
-        ? detail.map((d: any) => d?.msg || JSON.stringify(d)).join(', ')
-        : detail || err?.response?.data?.message || 'Operation failed';
-      showError(message);
+      showError(err.response?.data?.detail || 'Operation failed');
     }
   });
 
   // Delete Mutation
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return api.delete(`/vendors/${id}`);
-    },
+    mutationFn: async (id: number) => api.delete(`/vendors/delete_vendor/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
       showSuccess('Vendor deleted successfully');
     },
-    onError: (err: any) => {
-      showError(err.response?.data?.detail || 'Delete failed');
-    }
+    onError: (err: any) => showError(err.response?.data?.detail || 'Delete failed'),
   });
 
   const handleOpen = (vendor: any = null) => {
     setEditingVendor(vendor);
     if (vendor) {
-      reset(vendor);
+      reset({
+        ...vendor,
+        vendor_code: vendor.vendor_code ?? '',
+        contact_person: vendor.contact_person ?? '',
+        alternate_contact_number: vendor.alternate_contact_number ?? '',
+        email: vendor.email ?? '',
+        address_line2: vendor.address_line2 ?? '',
+        city: vendor.city ?? '',
+        state: vendor.state ?? '',
+        postal_code: vendor.postal_code ?? '',
+        gst_number: vendor.gst_number ?? '',
+        pan_number: vendor.pan_number ?? '',
+        notes: vendor.notes ?? '',
+        opening_balance: vendor.opening_balance ?? 0,
+        credit_limit: vendor.credit_limit ?? 0,
+      });
     } else {
       reset({
         vendor_code: '',
         vendor_name: '',
+        contact_person: '',
         contact_number: '',
+        alternate_contact_number: '',
+        email: '',
         address_line1: '',
+        address_line2: '',
+        city: '',
+        state: '',
+        postal_code: '',
+        gst_number: '',
+        pan_number: '',
         opening_balance: 0,
         current_balance: 0,
         credit_limit: 0,
+        notes: '',
         status: 1,
       });
     }
@@ -210,311 +225,151 @@ const VendorsPage: React.FC = () => {
     }
   };
 
-  const columns: any[] = [
-    { field: 'id', headerName: 'Vendor ID', flex: 0.4, minWidth: 80 },
-    { field: 'vendor_name', headerName: 'Vendor Name', flex: 1.4, minWidth: 160 },
-    { field: 'contact_number', headerName: 'Contact', flex: 1, minWidth: 130 },
-    { field: 'address_line1', headerName: 'Address', flex: 1.8, minWidth: 220 },
-    { 
-      field: 'opening_balance', 
-      headerName: 'Opening Bal', 
-      flex: 0.9,
-      minWidth: 130,
-      type: 'number',
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-            Rs.{Number(params.value || 0).toLocaleString()}
-          </Typography>
-        </Box>
-      )
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: 'id',
+      header: 'ID',
+      cell: info => <span className="text-text-main">{info.getValue() as string}</span>,
     },
-    { 
-      field: 'current_balance', 
-      headerName: 'Current Bal', 
-      flex: 1,
-      minWidth: 130,
-      type: 'number',
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: params.value > 0 ? 'error.main' : 'success.main' }}>
-            Rs.{Number(params.value).toLocaleString()}
-          </Typography>
-        </Box>
+    {
+      accessorKey: 'vendor_name',
+      header: 'Vendor Name',
+      cell: info => (
+        <div className="flex flex-col">
+          <span className="text-text-main">{info.getValue() as string}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'contact_number',
+      header: 'Contact',
+      cell: info => (
+        <div className="flex items-center gap-1.5">
+          <span className="text-text-main">{info.getValue() as string}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'current_balance',
+      header: 'Balance',
+      cell: info => {
+        const val = info.getValue() as number;
+        return (
+          <span className="text-text-main">
+            {'\u20B9'}{val.toLocaleString()}
+          </span>
+        );
+      }
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: info => (
+        <Badge>
+          {info.getValue() === 1 ? 'Active' : 'Disabled'}
+        </Badge>
       )
     },
     {
-      field: 'actions',
-      headerName: 'Actions',
-      flex: 1.2,
-      minWidth: 150,
-      sortable: false,
-      filterable: false,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
-          <IconButton onClick={() => handleView(params.row)} size="small" color="info" sx={{ mr: 1, bgcolor: 'info.light', color: 'white', '&:hover': { bgcolor: 'info.main' } }}>
-            <Visibility fontSize="small" />
-          </IconButton>
-          <IconButton onClick={() => handleOpen(params.row)} size="small" color="primary" sx={{ mr: 1, bgcolor: 'primary.light', color: 'white', '&:hover': { bgcolor: 'primary.main' } }}>
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton onClick={async () => {
-            const confirmed = await showConfirm('Delete Vendor', `Are you sure you want to delete vendor "${params.row.vendor_name}"? This action cannot be undone.`);
-            if (confirmed) {
-              deleteMutation.mutate(params.row.id);
-            }
-          }} size="small" color="error" sx={{ bgcolor: 'error.light', color: 'white', '&:hover': { bgcolor: 'error.main' } }}>
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
-      ),
-    },
-  ];
-
-  const DetailItem = ({ label, value, color }: { label: string, value: any, color?: string }) => (
-    <Box sx={{ display: 'flex', py: 1.2, borderBottom: '1px dashed', borderColor: 'divider' }}>
-      <Typography variant="body2" sx={{ fontWeight: 'bold', width: '40%', color: 'text.secondary' }}>
-        {label}
-      </Typography>
-      <Typography variant="body2" sx={{ width: '60%', fontWeight: 500, color: color || 'text.primary' }}>
-        {value || '-'}
-      </Typography>
-    </Box>
-  );
-
-  const formatWithId = (idValue: any, labelValue: any) => {
-    if (!idValue && !labelValue) return '-';
-    if (!idValue) return `${labelValue}`;
-    if (!labelValue) return `ID: ${idValue}`;
-    return `${labelValue} (ID: ${idValue})`;
-  };
+      id: 'actions',
+      header: () => <div className="text-left">Actions</div>,
+      cell: info => (
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => handleView(info.row.original)}
+            className="text-text-main"
+          >
+            View
+          </button>
+          <button 
+            onClick={() => handleOpen(info.row.original)}
+            className="text-text-main"
+          >
+            Edit
+          </button>
+          <button 
+            onClick={async () => {
+              const confirmed = await showConfirm('Delete Vendor', `Are you sure you want to delete "${info.row.original.vendor_name}"?`);
+              if (confirmed) {
+                deleteMutation.mutate(info.row.original.id);
+              }
+            }}
+            className="text-text-main"
+          >
+            Delete
+          </button>
+        </div>
+      )
+    }
+  ], [deleteMutation, showConfirm]);
 
   return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0, md: 0.5 },
-        pb: { xs: 1, md: 3 },
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Storefront sx={{ color: 'text.secondary' }} />
-          <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-            Vendor Management
-          </Typography>
-        </Box>
-      </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button 
-          variant="contained" 
-          startIcon={<Add />} 
-          onClick={() => handleOpen()}
-          sx={{ 
-            px: 3, 
-            py: 1.2, 
-            borderRadius: 2.5,
-            boxShadow: '0 4px 12px rgba(26, 35, 126, 0.3)',
-            fontWeight: 'bold'
-          }}
-        >
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-text-main">Vendor Management</h2>
+            <p className="text-text-main">Manage vendor profiles and monitor outstanding balances.</p>
+          </div>
+        </div>
+        <Button onClick={() => handleOpen()} className="text-text-main">
           Add New Vendor
         </Button>
-      </Box>
+      </div>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 4, 
-          border: '1px solid',
-          borderColor: 'divider',
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(8px)'
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 3,
-            alignItems: 'end',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '1.5fr 2fr 2.5fr 6fr' },
-          }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Rows
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <MenuItem key={size} value={size}>{size}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Status
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="disabled">Disabled</MenuItem>
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Search Type
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
-            >
-              <MenuItem value="all">All Fields</MenuItem>
-              <MenuItem value="name">Name</MenuItem>
-              <MenuItem value="code">Code</MenuItem>
-              <MenuItem value="contact">Contact</MenuItem>
-              <MenuItem value="gst">GST Number</MenuItem>
-              <MenuItem value="city">City</MenuItem>
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Search Vendors
-            </Typography>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Type to search..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search color="action" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          </Box>
-        </Box>
-      </Paper>
+      <Card className="border-border-temple">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+             <div className="space-y-1.5">
+              <Label className="text-text-main">Status</Label>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Search Type</Label>
+              <Select value={searchField} onChange={(e) => setSearchField(e.target.value)}>
+                <option value="all">All Fields</option>
+                <option value="name">Name</option>
+                <option value="code">Code</option>
+                <option value="contact">Contact</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5 lg:col-span-2">
+              <Label className="text-text-main">Search</Label>
+              <div className="relative">
+                <Input 
+                  placeholder="Type to search..." 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="text-text-main"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          height: 650, 
-          width: '100%', 
-          borderRadius: 4, 
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.03)'
-        }}
-      >
-        <DataGrid
-          rows={vendors || []}
-          columns={columns.map((col: any) => ({
-            ...col,
-            sortable: col.field === 'id' || col.field === 'entryId' || String(col.field).toLowerCase().includes('date'),
-          }))}
-          loading={isLoading}
-          pageSizeOptions={[pageSize]}
-          initialState={{
-            pagination: { paginationModel: { pageSize: pageSize } },
-          }}
-          disableRowSelectionOnClick
-          disableColumnMenu
-          disableColumnResize
-          sx={{
-            border: 'none',
-            '& .MuiDataGrid-columnHeader': {
-              backgroundColor: 'primary.main',
-              color: 'white',
-              fontSize: '0.9rem',
-              fontWeight: 'bold',
-            },
-            '& .MuiDataGrid-columnHeaderTitle': {
-              fontWeight: 'bold !important',
-              color: 'white',
-            },
-            '& .MuiDataGrid-columnHeader .MuiIconButton-root': {
-              color: 'rgba(255, 255, 255, 0.85)',
-              backgroundColor: 'transparent !important',
-            },
-            '& .MuiDataGrid-iconButtonContainer': {
-              visibility: 'hidden',
-              width: 'auto',
-            },
-            '& .MuiDataGrid-columnHeader--sorted .MuiDataGrid-iconButtonContainer': {
-              visibility: 'visible',
-            },
-            '& .MuiDataGrid-sortIcon': {
-              color: 'rgba(255, 255, 255, 0.85)',
-            },
-            '& .MuiDataGrid-columnSeparator': {
-              color: 'rgba(255, 255, 255, 0.35)',
-            },
-            '& .MuiDataGrid-columnSeparator svg': {
-              display: 'none',
-            },
-            '& .MuiDataGrid-cell': {
-              borderColor: 'grey.100',
-              '&:focus': { outline: 'none' },
-            },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: 'rgba(26, 35, 126, 0.04)',
-            },
-            '& .MuiDataGrid-footerContainer': {
-              borderTop: '1px solid',
-              borderColor: 'divider',
-            },
-          }}
-        />
-      </Paper>
+      <DataTable 
+        columns={columns} 
+        data={vendors || []} 
+        loading={vendorsLoading} 
+      />
 
-      {/* View Details Dialog */}
-      <Dialog 
-        open={viewDialogOpen} 
-        onClose={() => setViewDialogOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Vendor Details
-          <Chip 
-            label={viewingVendor?.status === 1 ? 'Active' : 'Disabled'} 
-            sx={{ bgcolor: viewingVendor?.status === 1 ? 'success.main' : 'grey.400', color: 'white', fontWeight: 'bold' }}
-            size="small" 
-          />
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2, p: 3 }}>
-          <Stack spacing={0}>
+      {/* View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh] border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-text-main">Vendor Profile</DialogTitle>
+              <Badge>
+                {viewingVendor?.status === 1 ? 'Active' : 'Disabled'}
+              </Badge>
+            </div>
+          </DialogHeader>
+          <div className="space-y-0 mt-4">
             <DetailItem label="Vendor ID" value={viewingVendor?.id} />
             <DetailItem label="Vendor Code" value={viewingVendor?.vendor_code} />
             <DetailItem label="Vendor Name" value={viewingVendor?.vendor_name} />
@@ -522,184 +377,181 @@ const VendorsPage: React.FC = () => {
             <DetailItem label="Primary Contact" value={viewingVendor?.contact_number} />
             <DetailItem label="Alternate Contact" value={viewingVendor?.alternate_contact_number} />
             <DetailItem label="Email Address" value={viewingVendor?.email} />
+            <DetailItem label="Current Balance" value={`₹${Number(viewingVendor?.current_balance || 0).toLocaleString()}`} />
+            <DetailItem label="Opening Balance" value={`₹${Number(viewingVendor?.opening_balance || 0).toLocaleString()}`} />
+            <DetailItem label="Credit Limit" value={viewingVendor?.credit_limit != null ? `₹${Number(viewingVendor?.credit_limit).toLocaleString()}` : '-'} />
             <DetailItem label="GST Number" value={viewingVendor?.gst_number} />
             <DetailItem label="PAN Number" value={viewingVendor?.pan_number} />
-            <DetailItem label="Opening Balance" value={viewingVendor?.opening_balance ? `Rs.${Number(viewingVendor.opening_balance).toLocaleString()}` : 'Rs.0'} />
-            <DetailItem label="Current Balance" value={`Rs.${Number(viewingVendor?.current_balance).toLocaleString()}`} color="error.main" />
-            <DetailItem label="Credit Limit" value={viewingVendor?.credit_limit ? `Rs.${Number(viewingVendor.credit_limit).toLocaleString()}` : 'Rs.0'} />
-            <DetailItem label="Address" value={`${viewingVendor?.address_line1 || ''}${viewingVendor?.address_line2 ? ', ' + viewingVendor.address_line2 : ''}`} />
-            <DetailItem label="City/State" value={`${viewingVendor?.city || ''}${viewingVendor?.state ? ', ' + viewingVendor.state : ''}`} />
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>Notes</Typography>
-              <Typography variant="body2" sx={{ mt: 0.5, p: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}>{viewingVendor?.notes || 'No additional notes'}</Typography>
-            </Box>
-          </Stack>
+            <DetailItem label="Notes" value={viewingVendor?.notes} />
+            
+            <div className="pt-8 pb-3">
+              <span className="text-text-main">Address Details</span>
+            </div>
+            <div className="p-4 bg-bg-temple border border-border-temple text-text-main leading-relaxed">
+              {viewingVendor?.address_line1}
+              {viewingVendor?.address_line2 && <><br/>{viewingVendor.address_line2}</>}
+              {(viewingVendor?.city || viewingVendor?.state) && <><br/>{viewingVendor?.city}, {viewingVendor?.state} {viewingVendor?.postal_code}</>}
+            </div>
 
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mt: 3, mb: 1, color: 'text.secondary', px: 1 }}>
-            Audit Information
-          </Typography>
-          <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-            <DetailItem 
-              label="Created At" 
-              value={viewingVendor?.created_at ? new Date(viewingVendor.created_at).toLocaleString() : '-'} 
-            />
-            <DetailItem 
-              label="Created By" 
-              value={formatWithId(
-                viewingVendor?.created_by,
-                users?.find((u: any) => u.id === viewingVendor?.created_by)?.username
-              )} 
-            />
-            <DetailItem 
-              label="Last Updated" 
-              value={viewingVendor?.updated_at ? new Date(viewingVendor.updated_at).toLocaleString() : '-'} 
-            />
-            <DetailItem 
-              label="Updated By" 
-              value={formatWithId(
-                viewingVendor?.updated_by,
-                users?.find((u: any) => u.id === viewingVendor?.updated_by)?.username
-              )} 
-            />
-          </Box>
+            <div className="pt-10 pb-3">
+              <span className="text-text-main">System Audit Info</span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-8">
+                <DetailItem label="Created At" value={viewingVendor?.created_at ? new Date(viewingVendor.created_at).toLocaleString() : '-'} />
+                <DetailItem label="Created By" value={users?.find((u: any) => u.id === viewingVendor?.created_by)?.username} />
+                <DetailItem label="Updated At" value={viewingVendor?.updated_at ? new Date(viewingVendor.updated_at).toLocaleString() : '-'} />
+                <DetailItem label="Updated By" value={users?.find((u: any) => u.id === viewingVendor?.updated_by)?.username} />
+            </div>
+          </div>
+          <DialogFooter className="mt-10 border-t border-border-temple/40 pt-6">
+            <Button onClick={() => setViewDialogOpen(false)} className="text-text-main">Close Profile</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={() => setViewDialogOpen(false)} variant="contained" color="primary" sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}>
-            Close
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Add/Edit Dialog */}
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="md" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle>
-          {editingVendor ? 'Edit Vendor Profile' : 'Add New Vendor'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box 
-            sx={{ 
-              mt: 1,
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: 3
-            }}
-          >
-            <Box sx={{ gridColumn: 'span 2' }}>
-              <TextField {...register('vendor_name')} label="Vendor Name (Shop Name) *" fullWidth error={!!errors.vendor_name} helperText={errors.vendor_name?.message} />
-            </Box>
-            <Box sx={{ gridColumn: 'span 2' }}>
-              <TextField {...register('contact_person')} label="Contact Person (Individual Name)" fullWidth error={!!errors.contact_person} helperText={errors.contact_person?.message} />
-            </Box>
-            <Box>
-              <TextField {...register('contact_number')} label="Primary Contact *" fullWidth error={!!errors.contact_number} helperText={errors.contact_number?.message} />
-            </Box>
-            <Box>
-              <TextField {...register('alternate_contact_number')} label="Alternate Contact" fullWidth error={!!errors.alternate_contact_number} helperText={errors.alternate_contact_number?.message} />
-            </Box>
-            <Box>
-              <TextField {...register('email')} label="Email Address" fullWidth error={!!errors.email} helperText={errors.email?.message} />
-            </Box>
-            <Box>
-              <TextField {...register('gst_number')} label="GST Number" fullWidth error={!!errors.gst_number} helperText={errors.gst_number?.message} />
-            </Box>
-            <Box>
-              <TextField {...register('pan_number')} label="PAN Number" fullWidth error={!!errors.pan_number} helperText={errors.pan_number?.message} />
-            </Box>
-            <Box>
-              <TextField {...register('credit_limit')} label="Credit Limit" type="number" fullWidth error={!!errors.credit_limit} helperText={errors.credit_limit?.message} />
-            </Box>
+      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
+        <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh] border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-text-main">
+              {editingVendor ? 'Edit Vendor Profile' : 'Add New Vendor'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4" autoComplete="off">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+              <div className="md:col-span-2">
+                <Label className="text-text-main">Vendor Name (Shop Name) *</Label>
+                <Input {...register('vendor_name')} placeholder="e.g. Laxmi Traders" className="text-text-main" />
+                {errors.vendor_name && <p className="text-text-main">{errors.vendor_name.message}</p>}
+              </div>
 
-            {/* Financial Section */}
-            <Box sx={{ gridColumn: 'span 2', mt: 1 }}>
-               <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main', textTransform: 'uppercase', letterSpacing: 1 }}>
-                 Financial Details
-               </Typography>
-               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-                  <TextField 
-                    {...register('opening_balance')} 
-                    label="Opening Balance *" 
+              <div>
+                <Label className="text-text-main">Contact Person</Label>
+                <Input {...register('contact_person')} placeholder="Individual Name" className="text-text-main" />
+              </div>
+
+              <div>
+                <Label className="text-text-main">Primary Contact *</Label>
+                <Input {...register('contact_number')} placeholder="Mobile Number" className="text-text-main" />
+                {errors.contact_number && <p className="text-text-main">{errors.contact_number.message}</p>}
+              </div>
+
+              <div>
+                <Label className="text-text-main">Alternate Contact</Label>
+                <Input {...register('alternate_contact_number')} placeholder="Secondary Number" className="text-text-main" />
+              </div>
+
+              <div>
+                <Label className="text-text-main">Email Address</Label>
+                <Input {...register('email')} type="email" placeholder="email@example.com" className="text-text-main" />
+                {errors.email && <p className="text-text-main">{errors.email.message}</p>}
+              </div>
+
+              <div>
+                <Label className="text-text-main">GST Number</Label>
+                <Input {...register('gst_number')} placeholder="GSTIN" className="text-text-main" />
+                {errors.gst_number && <p className="text-text-main">{errors.gst_number.message}</p>}
+              </div>
+
+              <div>
+                <Label className="text-text-main">PAN Number</Label>
+                <Input {...register('pan_number')} placeholder="PAN" className="text-text-main" />
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-text-main">Financial Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div>
+                  <Label className="text-text-main">Opening Balance *</Label>
+                  <Input 
                     type="number" 
-                    fullWidth 
-                    error={!!errors.opening_balance} 
-                    helperText={errors.opening_balance?.message}
-                    slotProps={{ input: { readOnly: !!editingVendor } }}
+                    {...register('opening_balance')} 
+                    readOnly={!!editingVendor}
+                    className="text-text-main bg-bg-temple"
                   />
-                  <TextField
-                    label="Current Balance"
-                    type="number"
-                    fullWidth
+                </div>
+                <div>
+                  <Label className="text-text-main">Current Balance</Label>
+                  <Input 
+                    type="number" 
                     value={editingVendor?.current_balance ?? 0}
-                    slotProps={{ input: { readOnly: true } }}
-                    helperText="Auto-calculated based on transactions"
+                    readOnly
+                    className="text-text-main bg-bg-temple"
                   />
-               </Box>
-            </Box>
+                </div>
+                <div>
+                  <Label className="text-text-main">Credit Limit</Label>
+                  <Input
+                    type="number"
+                    {...register('credit_limit')}
+                    placeholder="Max limit"
+                    className="text-text-main"
+                  />
+                </div>
+              </div>
+            </div>
 
-            <Box sx={{ gridColumn: 'span 2', mt: 1 }}>
-               <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main', textTransform: 'uppercase', letterSpacing: 1 }}>
-                 Address & Location
-               </Typography>
-               <Box sx={{ display: 'grid', gap: 3 }}>
-                  <TextField {...register('address_line1')} label="Address Line 1 *" fullWidth error={!!errors.address_line1} helperText={errors.address_line1?.message} />
-                  <TextField {...register('address_line2')} label="Address Line 2" fullWidth />
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 3 }}>
-                    <TextField {...register('city')} label="City" fullWidth />
-                    <TextField {...register('state')} label="State" fullWidth />
-                    <TextField {...register('postal_code')} label="Postal Code" fullWidth error={!!errors.postal_code} helperText={errors.postal_code?.message} />
-                  </Box>
-               </Box>
-            </Box>
+            <div>
+              <h4 className="text-text-main">Address & Location</h4>
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-text-main">Address Line 1 *</Label>
+                  <Input {...register('address_line1')} className="text-text-main" />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-text-main">City</Label>
+                    <Input {...register('city')} className="text-text-main" />
+                  </div>
+                  <div>
+                    <Label className="text-text-main">State</Label>
+                    <Input {...register('state')} className="text-text-main" />
+                  </div>
+                  <div>
+                    <Label className="text-text-main">Postal Code</Label>
+                    <Input {...register('postal_code')} className="text-text-main" />
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            <Box sx={{ gridColumn: 'span 2' }}>
-              <TextField {...register('notes')} label="Additional Notes" fullWidth multiline rows={3} />
-            </Box>
-            <Box sx={{ gridColumn: 'span 2' }}>
-              <Controller
+            <div className="space-y-2">
+              <Label className="text-text-main">Notes</Label>
+              <textarea
+                {...register('notes')}
+                rows={3}
+                placeholder="Any additional vendor notes..."
+                className="flex w-full border border-border-temple bg-white px-3 py-2 text-text-main focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+               <div className="space-y-0.5">
+                  <Label className="text-text-main">Active Status</Label>
+               </div>
+               <Controller
                 name="status"
                 control={control}
                 render={({ field }) => (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    p: 2,
-                    bgcolor: 'grey.50',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'divider'
-                  }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Active Status</Typography>
-                    <Switch 
-                      checked={field.value === 1} 
-                      onChange={(e) => field.onChange(e.target.checked ? 1 : 0)} 
-                      color="success" 
-                    />
-                  </Box>
+                  <Switch 
+                    checked={field.value === 1} 
+                    onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)} 
+                  />
                 )}
               />
-            </Box>
-          </Box>
+            </div>
+
+            <DialogFooter className="pt-6 border-t border-border-temple/40 gap-3">
+              <Button type="button" variant="ghost" onClick={handleClose} className="text-text-main">Cancel</Button>
+              <Button type="submit" disabled={mutation.isPending} className="text-text-main">
+                {mutation.isPending ? 'Saving...' : editingVendor ? 'Update Vendor' : 'Save Vendor'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleClose} color="inherit">Cancel</Button>
-          <Button 
-            onClick={handleSubmit(onSubmit)} 
-            variant="contained" 
-            startIcon={<Save />} 
-            disabled={mutation.isPending}
-            sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}
-          >
-            {mutation.isPending ? 'Saving...' : editingVendor ? 'Update Vendor' : 'Save Vendor'}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 };
 

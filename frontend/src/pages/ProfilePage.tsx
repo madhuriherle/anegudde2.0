@@ -1,29 +1,19 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Paper,
-  Grid,
-  Breadcrumbs,
-  Link,
-  IconButton,
-  InputAdornment,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
-import {
-  Edit,
-  Visibility,
-  VisibilityOff,
-  Person,
+  Eye,
+  EyeOff,
+  User,
   Lock,
-  AdminPanelSettings,
-} from '@mui/icons-material';
+  Save,
+  ShieldCheck,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/axios';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card, CardContent } from '../components/ui/Card';
+import { Label } from '../components/ui/Label';
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
@@ -67,146 +57,113 @@ const ProfilePage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: { xs: 1, md: 3 }, maxWidth: 800, mx: 'auto' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-            Account Settings
-          </Typography>
-          
-        </Box>
-      </Box>
+    <div className="max-w-3xl mx-auto space-y-8">
+      <div>
+        <h2 className="text-text-main text-2xl font-semibold font-temple">Account Settings</h2>
+        <p className="text-text-main/70">Manage your profile information and account security.</p>
+      </div>
 
-      <Paper elevation={0} sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-        <Box sx={{ p: 3, display: 'flex', alignItems: 'center', bgcolor: 'primary.main', color: 'white' }}>
-          <Edit sx={{ mr: 1.5 }} />
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Change Password</Typography>
-        </Box>
+      <Card className="border-border-temple overflow-hidden shadow-md">
+        <div className="bg-primary-main p-4 flex items-center gap-3">
+          <ShieldCheck className="text-white h-5 w-5" />
+          <h3 className="text-white font-bold text-lg">Change Password</h3>
+        </div>
 
-        <Box component="form" onSubmit={handleUpdate} sx={{ p: 4, bgcolor: '#fafafa' }}>
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 4,
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-            }}
-          >
-            <Box sx={{ gridColumn: 'span 2' }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
-                Account Username
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                value={user?.username || ''}
-                disabled
-                sx={{ bgcolor: 'white' }}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Person fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-            </Box>
+        <CardContent className="p-6 sm:p-8 bg-bg-temple/20">
+          <form onSubmit={handleUpdate} className="space-y-6">
+            <div className="space-y-1.5">
+              <Label className="text-text-main font-bold">Account Username</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-main/40" />
+                <Input
+                  value={user?.username || ''}
+                  disabled
+                  className="pl-10 bg-white"
+                />
+              </div>
+            </div>
 
-            <Box sx={{ gridColumn: 'span 2' }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
-                Current Password <span style={{ color: 'red' }}>*</span>
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                type={showPassword ? 'text' : 'password'}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                sx={{ bgcolor: 'white' }}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Lock fontSize="small" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          size="small"
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                        >
-                          {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-            </Box>
+            <div className="space-y-1.5">
+              <Label className="text-text-main font-bold">
+                Current Password <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-main/40" />
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  className="pl-10 pr-10 bg-white"
+                  placeholder="Enter your current password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-main/40 hover:text-text-main"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
 
-            <Box>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
-                New Password <span style={{ color: 'red' }}>*</span>
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                type={showPassword ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                sx={{ bgcolor: 'white' }}
-              />
-            </Box>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5">
+                <Label className="text-text-main font-bold">
+                  New Password <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  className="bg-white"
+                  placeholder="New password"
+                />
+              </div>
 
-            <Box>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
-                Re-type New Password <span style={{ color: 'red' }}>*</span>
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                type={showPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                sx={{ bgcolor: 'white' }}
-              />
-            </Box>
+              <div className="space-y-1.5">
+                <Label className="text-text-main font-bold">
+                  Re-type New Password <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="bg-white"
+                  placeholder="Confirm new password"
+                />
+              </div>
+            </div>
 
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gridColumn: 'span 2' }}>
+            <div className="flex justify-end pt-4">
               <Button
                 type="submit"
-                variant="contained"
                 disabled={loading || !currentPassword || !newPassword || !confirmPassword}
-                sx={{
-                  bgcolor: 'success.main',
-                  '&:hover': { bgcolor: 'success.dark' },
-                  px: 4,
-                  py: 1.5,
-                  borderRadius: 2,
-                  fontWeight: 'bold'
-                }}
+                className="px-8 flex items-center gap-2"
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Update Password'}
+                {loading ? (
+                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Update Password
+                  </>
+                )}
               </Button>
-            </Box>
-          </Box>
-        </Box>
-      </Paper>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
       
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 4, display: 'block', textAlign: 'center', fontWeight: 'bold' }}>
-        Copyright © {new Date().getFullYear()} Anegudde Temple. All rights reserved.
-      </Typography>
-    </Box>
+      <div className="pt-8 border-t border-border-temple/40">
+        <p className="text-xs text-text-main/50 text-center font-bold">
+          Copyright © {new Date().getFullYear()} Anegudde Temple. All rights reserved.
+        </p>
+      </div>
+    </div>
   );
 };
 
 export default ProfilePage;
-
-
-

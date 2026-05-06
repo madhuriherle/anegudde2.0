@@ -1,20 +1,16 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Box,
-  Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Button,
-} from '@mui/material';
-import { Download, CalendarMonth } from '@mui/icons-material';
+import { 
+  Download, 
+  Calendar,
+  ChevronRight,
+  Info
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
+import { Button } from '../components/ui/Button';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
 
 const MonthlyPerformanceReportPage: React.FC = () => {
   const { data: monthlyData, isLoading } = useQuery({
@@ -73,96 +69,103 @@ const MonthlyPerformanceReportPage: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: 'month',
+      header: 'Month',
+      cell: info => (
+        <span className="text-text-main font-semibold">
+          {new Date(info.getValue() as string).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'item_name',
+      header: 'Item Name',
+      cell: info => <span className="text-text-main">{info.getValue() as string}</span>,
+    },
+    {
+      accessorKey: 'opening_stock',
+      header: () => <div className="text-right">Opening</div>,
+      cell: info => <div className="text-right text-text-main">{Number(info.getValue()).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: 'total_purchased',
+      header: () => <div className="text-right">Purchased</div>,
+      cell: info => <div className="text-right text-green-600 font-medium">+{Number(info.getValue()).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: 'total_consumed',
+      header: () => <div className="text-right">Consumed</div>,
+      cell: info => <div className="text-right text-red-600 font-medium">-{Number(info.getValue()).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: 'total_wastage',
+      header: () => <div className="text-right">Wastage</div>,
+      cell: info => <div className="text-right text-orange-600 font-medium">-{Number(info.getValue()).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: 'closing_stock',
+      header: () => <div className="text-right">Closing</div>,
+      cell: info => <div className="text-right text-text-main font-bold">{Number(info.getValue()).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: 'stock_value',
+      header: () => <div className="text-right">Est. Value</div>,
+      cell: info => (
+        <div className="text-right text-text-main font-medium">
+          ₹{Number(info.getValue() || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        </div>
+      ),
+    },
+  ], []);
+
   return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0, md: 0.5 },
-        pb: { xs: 1, md: 3 },
-      }}
-    >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-              Monthly Performance
-            </Typography>
-            
-          </Box>
-        </Box>
-        <Button 
-          variant="outlined" 
-          startIcon={<Download />} 
-          onClick={handleExport}
-          sx={{ fontWeight: 'bold', borderRadius: 2 }}
-        >
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-text-main text-2xl font-semibold font-temple">Monthly Performance</h2>
+          <p className="text-text-main/70">Analyze monthly inventory trends and stock valuations.</p>
+        </div>
+        <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
+          <Download className="h-4 w-4" />
           Export CSV
         </Button>
-      </Box>
+      </div>
 
-      <Paper sx={{ mb: 4, p: 3, bgcolor: 'primary.main', color: 'white', borderRadius: 4, display: 'inline-block', minWidth: 300, boxShadow: '0 4px 12px rgba(26, 35, 126, 0.2)' }}>
-        <Typography variant="subtitle2" sx={{ opacity: 0.9, fontWeight: 'bold', textTransform: 'uppercase', mb: 1 }}>
-          Cumulative Stock Value
-        </Typography>
-        <Typography variant="h4" sx={{ fontWeight: 800 }}>
-          ₹{totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </Typography>
-        <Typography variant="caption" sx={{ opacity: 0.8, display: 'block', mt: 1 }}>
-          Total value of all item snapshots in this report
-        </Typography>
-      </Paper>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-primary-main border-none shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4 text-white/80 mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider">Cumulative Stock Value</span>
+              <Calendar className="h-3.5 w-3.5" />
+            </div>
+            <div className="text-3xl font-bold text-white">
+              ₹{totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <p className="text-xs text-white/60 mt-2 flex items-center gap-1">
+              <ChevronRight className="h-3 w-3" />
+              Total value of all item snapshots in this report
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-      <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-        <Table stickyHeader size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Month</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Item Name</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Opening</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Purchased</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Consumed</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Wastage</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Closing</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Est. Value</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 10 }}>
-                  <CircularProgress />
-                  <Typography variant="body2" sx={{ mt: 2 }}>Loading monthly data...</Typography>
-                </TableCell>
-              </TableRow>
-            ) : monthlyData?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
-                  <Typography variant="body1" color="text.secondary">No monthly summaries found.</Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              monthlyData?.map((row: any) => (
-                <TableRow key={row.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell sx={{ fontWeight: 'bold', py: 1.5 }}>{new Date(row.month).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</TableCell>
-                  <TableCell sx={{ py: 1.5 }}>{row.item_name}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5 }}>{Number(row.opening_stock).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ color: 'success.main', fontWeight: 500, py: 1.5 }}>+{Number(row.total_purchased).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ color: 'error.main', fontWeight: 500, py: 1.5 }}>-{Number(row.total_consumed).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ color: 'warning.main', fontWeight: 500, py: 1.5 }}>-{Number(row.total_wastage).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: 'primary.main', py: 1.5 }}>{Number(row.closing_stock).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5 }}>₹{Number(row.stock_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+      <Card className="border-border-temple bg-white/80 backdrop-blur-sm overflow-hidden">
+        <DataTable 
+          columns={columns} 
+          data={monthlyData || []} 
+          loading={isLoading}
+        />
+        {monthlyData?.length === 0 && !isLoading && (
+          <div className="py-20 text-center space-y-4">
+            <Info className="h-10 w-10 text-text-main/20 mx-auto" />
+            <p className="text-text-main/60">No monthly summaries found.</p>
+          </div>
+        )}
+      </Card>
+    </div>
   );
 };
 
 export default MonthlyPerformanceReportPage;
-
-
-
-

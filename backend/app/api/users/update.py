@@ -11,7 +11,7 @@ from app.schemas.user import UserOut, UserUpdate
 router = APIRouter()
 
 
-@router.put("/{user_id}", response_model=UserOut)
+@router.put("/update_user/{user_id}", response_model=UserOut)
 def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:

@@ -6,7 +6,7 @@ from app.schemas.menu_item import MenuItemOut
 
 router = APIRouter()
 
-@router.get("/", response_model=list[MenuItemOut])
+@router.get("/list_menu_items", response_model=list[MenuItemOut])
 def list_menu_items(
     db: Session = Depends(get_db),
     status: int = None,

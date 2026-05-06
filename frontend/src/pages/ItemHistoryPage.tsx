@@ -1,27 +1,25 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Box,
-  Typography,
-  Paper,
-  IconButton,
-  CircularProgress,
-  Chip,
-} from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
-import ArrowBack from '@mui/icons-material/ArrowBack';
-import ShoppingCart from '@mui/icons-material/ShoppingCart';
-import Restaurant from '@mui/icons-material/Restaurant';
-import Tune from '@mui/icons-material/Tune';
-import HelpOutlined from '@mui/icons-material/HelpOutlined';
+import { 
+  ArrowLeft, 
+  ShoppingCart, 
+  Utensils, 
+  Settings2, 
+  HelpCircle 
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
+import { Button } from '../components/ui/Button';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { Badge } from '../components/ui/Badge';
 
-const txnTypes: Record<number, { label: string; icon: any; color: string }> = {
-  1: { label: 'Purchase', icon: <ShoppingCart sx={{ fontSize: 16 }} />, color: 'success' },
-  2: { label: 'Consumption', icon: <Restaurant sx={{ fontSize: 16 }} />, color: 'error' },
-  3: { label: 'Wastage', icon: <HelpOutlined sx={{ fontSize: 16 }} />, color: 'warning' },
-  4: { label: 'Adjustment', icon: <Tune sx={{ fontSize: 16 }} />, color: 'secondary' },
+const txnTypes: Record<number, { label: string; icon: any; variant: "default" | "secondary" | "outline" | "ghost" | "error" }> = {
+  1: { label: 'Purchase', icon: <ShoppingCart className="h-3 w-3 mr-1" />, variant: 'default' },
+  2: { label: 'Consumption', icon: <Utensils className="h-3 w-3 mr-1" />, variant: 'error' },
+  3: { label: 'Wastage', icon: <HelpCircle className="h-3 w-3 mr-1" />, variant: 'secondary' },
+  4: { label: 'Adjustment', icon: <Settings2 className="h-3 w-3 mr-1" />, variant: 'outline' },
 };
 
 const ItemHistoryPage: React.FC = () => {
@@ -44,197 +42,122 @@ const ItemHistoryPage: React.FC = () => {
     },
   });
 
-  const columns: any[] = [
-    { field: 'id', headerName: 'Ledger ID', width: 100, sortable: true },
-    { field: 'txn_date', headerName: 'Date', width: 130, sortable: true },
+  const columns = useMemo<ColumnDef<any>[]>(() => [
     {
-      field: 'txn_type',
-      headerName: 'Type',
-      width: 150,
-      sortable: false,
-      renderCell: (params) => {
-        const type = txnTypes[params.value] || { label: 'Unknown', color: 'default' };
+      accessorKey: 'id',
+      header: 'Ledger ID',
+      cell: info => <span className="text-text-main font-mono">{info.getValue() as string}</span>,
+    },
+    {
+      accessorKey: 'txn_date',
+      header: 'Date',
+      cell: info => <span className="text-text-main">{info.getValue() as string}</span>,
+    },
+    {
+      accessorKey: 'txn_type',
+      header: 'Type',
+      cell: info => {
+        const type = txnTypes[info.getValue() as number] || { label: 'Unknown', variant: 'outline', icon: null };
         return (
-          <Chip
-            icon={type.icon}
-            label={type.label}
-            size="small"
-            color={type.color as any}
-            variant="outlined"
-            sx={{ fontWeight: 'medium' }}
-          />
+          <Badge variant={type.variant} className="flex items-center w-fit">
+            {type.icon}
+            {type.label}
+          </Badge>
         );
       }
     },
     {
-      field: 'ref_info',
-      headerName: 'Reference',
-      width: 180,
-      sortable: false,
-      valueGetter: (params, row) => `${row.ref_table} #${row.ref_id}`
+      accessorKey: 'ref_info',
+      header: 'Reference',
+      cell: info => {
+        const row = info.row.original;
+        return <span className="text-text-main text-sm">{row.ref_table} #{row.ref_id}</span>;
+      }
     },
     {
-      field: 'qty_in',
-      headerName: 'Qty In',
-      width: 100,
-      type: 'number',
-      sortable: false,
-      cellClassName: 'numeric-cell-top',
-      renderCell: (params) => (
-        <Typography variant="body2" sx={{ color: params.value > 0 ? 'success.main' : 'text.disabled', fontWeight: params.value > 0 ? 'bold' : 'normal' }}>
-          {params.value > 0 ? `+${params.value}` : '-'}
-        </Typography>
+      accessorKey: 'qty_in',
+      header: () => <div className="text-right">Qty In</div>,
+      cell: info => {
+        const val = Number(info.getValue());
+        return (
+          <div className={`text-right font-bold ${val > 0 ? 'text-green-600' : 'text-text-main/30'}`}>
+            {val > 0 ? `+${val}` : '-'}
+          </div>
+        );
+      }
+    },
+    {
+      accessorKey: 'qty_out',
+      header: () => <div className="text-right">Qty Out</div>,
+      cell: info => {
+        const val = Number(info.getValue());
+        return (
+          <div className={`text-right font-bold ${val > 0 ? 'text-red-600' : 'text-text-main/30'}`}>
+            {val > 0 ? `-${val}` : '-'}
+          </div>
+        );
+      }
+    },
+    {
+      accessorKey: 'unit_cost',
+      header: () => <div className="text-right">Unit Cost</div>,
+      cell: info => <div className="text-right text-text-main">₹{Number(info.getValue()).toLocaleString()}</div>
+    },
+    {
+      accessorKey: 'value_in',
+      header: () => <div className="text-right">Value In</div>,
+      cell: info => {
+        const val = Number(info.getValue());
+        return <div className="text-right text-text-main">{val > 0 ? `₹${val.toLocaleString()}` : '-'}</div>;
+      }
+    },
+    {
+      accessorKey: 'value_out',
+      header: () => <div className="text-right">Value Out</div>,
+      cell: info => {
+        const val = Number(info.getValue());
+        return <div className="text-right text-text-main">{val > 0 ? `₹${val.toLocaleString()}` : '-'}</div>;
+      }
+    },
+    {
+      accessorKey: 'balance',
+      header: () => <div className="text-right">Running Balance</div>,
+      cell: info => (
+        <div className="text-right font-bold text-primary-main">
+          {info.getValue() as string}
+        </div>
       )
     },
-    {
-      field: 'qty_out',
-      headerName: 'Qty Out',
-      width: 100,
-      type: 'number',
-      sortable: false,
-      cellClassName: 'numeric-cell-top',
-      renderCell: (params) => (
-        <Typography variant="body2" sx={{ color: params.value > 0 ? 'error.main' : 'text.disabled', fontWeight: params.value > 0 ? 'bold' : 'normal' }}>
-          {params.value > 0 ? `-${params.value}` : '-'}
-        </Typography>
-      )
-    },
-    {
-      field: 'unit_cost',
-      headerName: 'Unit Cost',
-      width: 120,
-      type: 'number',
-      sortable: false,
-      cellClassName: 'numeric-cell-top',
-      valueFormatter: (params) => `?${Number(params).toLocaleString()}`
-    },
-    {
-      field: 'value_in',
-      headerName: 'Value In',
-      width: 120,
-      type: 'number',
-      sortable: false,
-      cellClassName: 'numeric-cell-top',
-      valueFormatter: (params) => params > 0 ? `?${Number(params).toLocaleString()}` : '-'
-    },
-    {
-      field: 'value_out',
-      headerName: 'Value Out',
-      width: 120,
-      type: 'number',
-      sortable: false,
-      cellClassName: 'numeric-cell-top',
-      valueFormatter: (params) => params > 0 ? `?${Number(params).toLocaleString()}` : '-'
-    },
-    {
-      field: 'balance',
-      headerName: 'Running Balance',
-      width: 130,
-      type: 'number',
-      sortable: false,
-      cellClassName: 'numeric-cell-top',
-      renderCell: (params) => (
-        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          {params.value}
-        </Typography>
-      )
-    },
-  ];
-
-  if (isLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  ], []);
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <IconButton onClick={() => navigate('/items')}>
-          <ArrowBack />
-        </IconButton>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-            {item?.item_name} - Ledger History
-          </Typography>
-        </Box>
-      </Box>
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => navigate('/items')}
+          className="rounded-full h-10 w-10 p-0"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h2 className="text-text-main text-2xl font-semibold font-temple">
+            {item?.item_name || 'Loading...'}
+          </h2>
+          <p className="text-text-main/70">Inventory transaction history and running balance.</p>
+        </div>
+      </div>
 
-      <Paper sx={{ height: 600, width: '100%', borderRadius: 2, boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
-        <DataGrid
-          rows={ledger || []}
-          columns={columns.map((col: any) => ({
-            ...col,
-            sortable: col.field === 'id' || col.field === 'entryId' || String(col.field).toLowerCase().includes('date'),
-          }))}
+      <Card className="border-border-temple overflow-hidden bg-white shadow-sm">
+        <DataTable 
+          columns={columns} 
+          data={ledger || []} 
           loading={isLoading}
-          pageSizeOptions={[20, 50, 100]}
-          initialState={{
-            pagination: { paginationModel: { pageSize: 20 } },
-            sorting: { sortModel: [{ field: 'id', sort: 'desc' }] },
-          }}
-          disableRowSelectionOnClick
-          disableColumnMenu
-          disableColumnFilter
-          disableColumnSelector
-          disableColumnResize
-          sx={{
-            border: 'none',
-            '& .MuiDataGrid-columnHeader': {
-              backgroundColor: 'primary.main',
-              color: 'white',
-              fontSize: '0.9rem',
-              fontWeight: 'bold',
-            },
-            '& .MuiDataGrid-columnHeaderTitle': {
-              fontWeight: 'bold !important',
-              color: 'white',
-            },
-            '& .MuiDataGrid-columnHeader .MuiIconButton-root': {
-              color: 'rgba(255, 255, 255, 0.85)',
-              backgroundColor: 'transparent !important',
-            },
-            '& .MuiDataGrid-iconButtonContainer': {
-              visibility: 'hidden',
-              width: 'auto',
-            },
-            '& .MuiDataGrid-columnHeader--sorted .MuiDataGrid-iconButtonContainer': {
-              visibility: 'visible',
-            },
-            '& .MuiDataGrid-sortIcon': {
-              color: 'rgba(255, 255, 255, 0.85)',
-            },
-            '& .MuiDataGrid-columnSeparator': {
-              color: 'rgba(255, 255, 255, 0.35)',
-            },
-            '& .MuiDataGrid-columnSeparator svg': {
-              display: 'none',
-            },
-            '& .MuiDataGrid-cell': {
-              borderColor: 'grey.100',
-              '&:focus': { outline: 'none' },
-            },
-            '& .numeric-cell-top': {
-              alignItems: 'flex-start',
-              pt: 1,
-            },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: 'rgba(26, 35, 126, 0.04)',
-            },
-            '& .MuiDataGrid-footerContainer': {
-              borderTop: '1px solid',
-              borderColor: 'divider',
-            },
-          }}
         />
-      </Paper>
-    </Box>
+      </Card>
+    </div>
   );
 };
 
 export default ItemHistoryPage;
-
-
-

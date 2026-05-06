@@ -5,7 +5,7 @@ from app.db.models import Chef, User
 
 router = APIRouter()
 
-@router.delete("/{chef_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/delete_chef/{chef_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_chef(
     *,
     db: Session = Depends(get_db),

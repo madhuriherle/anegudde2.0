@@ -1,48 +1,38 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Grid,
-  Alert,
-  CircularProgress,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Divider,
-  Stack,
-  Tooltip,
-  Chip,
-  InputAdornment,
-} from '@mui/material';
 import { 
-  Add, 
-  Delete, 
-  Save, 
+  Plus, 
+  Trash2, 
   Search, 
-  Edit,
-  Restaurant,
-  Visibility
-} from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+  Eye, 
+  Edit, 
+  PlusCircle,
+  UtensilsCrossed,
+  Utensils
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { Badge } from '../components/ui/Badge';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription
+} from '../components/ui/Dialog';
+import { Select } from '../components/ui/Select';
+import { Label } from '../components/ui/Label';
+import { DetailItem } from '../components/ui/DetailItem';
 
 const consumptionItemSchema = z.object({
   item_id: z.coerce.number().min(1, 'Item is required'),
@@ -52,7 +42,7 @@ const consumptionItemSchema = z.object({
 const consumptionSchema = z.object({
   chef_id: z.coerce.number().min(1, 'Chef is required'),
   usage_date: z.string().min(1, 'Date is required'),
-  people_served: z.coerce.number().optional().or(z.literal('')).or(z.null()),
+  people_served: z.coerce.number().optional().or(z.null()),
   items: z.array(consumptionItemSchema).min(1, 'At least one item is required'),
 });
 
@@ -64,7 +54,6 @@ const ConsumptionsPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
-  const [pageSize, setPageSize] = useState(20);
   const [status, setStatus] = useState<string>('all');
   const [searchField, setSearchField] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -76,51 +65,44 @@ const ConsumptionsPage: React.FC = () => {
   const [viewingConsumption, setViewingConsumption] = useState<any>(null);
 
   const { data: consumptions, isLoading: consumptionsLoading } = useQuery({
-    queryKey: ['consumptions', search, pageSize, status, searchField],
+    queryKey: ['consumptions', search, status, searchField],
     queryFn: async () => {
-      const params: any = { q: search, page_size: pageSize };
+      const params: any = { q: search, page_size: 1000 };
       if (status !== 'all') params.status = status === 'active' ? 1 : 0;
       if (searchField !== 'all') params.search_field = searchField;
-      const res = await api.get('/consumptions/', { params });
+      const res = await api.get('/consumptions/list_consumptions', { params });
       return res.data;
     },
   });
 
-  const { data: chefs, isLoading: chefsLoading, isError: chefsError } = useQuery({
+  const { data: chefs } = useQuery({
     queryKey: ['chefs-list'],
-    queryFn: async () => {
-      const res = await api.get('/chefs', { params: { page_size: 1000 } });
-      return res.data;
-    },
+    queryFn: async () => (await api.get('/chefs/list_chefs', { params: { page_size: 1000 } })).data,
   });
 
   const chefOptions = useMemo(() => {
     if (Array.isArray(chefs)) return chefs;
     if (Array.isArray((chefs as any)?.items)) return (chefs as any).items;
-    if (Array.isArray((chefs as any)?.data)) return (chefs as any).data;
-    if (Array.isArray((chefs as any)?.results)) return (chefs as any).results;
-    if (Array.isArray((chefs as any)?.rows)) return (chefs as any).rows;
     return [];
   }, [chefs]);
 
   const { data: items } = useQuery({
     queryKey: ['items-list'],
-    queryFn: async () => {
-      const res = await api.get('/items');
-      return res.data;
-    },
+    queryFn: async () => (await api.get('/items/list_items')).data,
   });
 
   const { data: users } = useQuery({
     queryKey: ['users-list-minimal'],
-    queryFn: async () => (await api.get('/users', { params: { page_size: 1000 } })).data,
+    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
   });
 
   const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<ConsumptionFormValues>({
-    resolver: zodResolver(consumptionSchema),
+    resolver: zodResolver(consumptionSchema) as any,
     defaultValues: {
       usage_date: new Date().toISOString().split('T')[0],
-      items: [{ item_id: '' as any, quantity_used: 0 }],
+      chef_id: 0,
+      people_served: 0,
+      items: [{ item_id: 0, quantity_used: 0 }],
     },
   });
 
@@ -132,64 +114,54 @@ const ConsumptionsPage: React.FC = () => {
   const watchedItems = watch('items');
 
   const mutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: ConsumptionFormValues) => {
       const normalizedPayload = {
         ...data,
-        people_served: data.people_served === '' || data.people_served === undefined ? null : Number(data.people_served),
-        chef_id: data.chef_id === '' || data.chef_id === undefined ? null : Number(data.chef_id),
+        people_served: data.people_served === undefined ? null : Number(data.people_served),
+        chef_id: Number(data.chef_id),
         items: (data.items || []).map((it: any) => ({
           item_id: Number(it.item_id),
           quantity_used: Number(it.quantity_used),
         })),
       };
       if (editingConsumption) {
-        return api.put(`/consumptions/${editingConsumption.id}/`, { ...normalizedPayload, user_id: user?.id, status: 1 });
+        return api.put(`/consumptions/update_consumption/${editingConsumption.id}`, { ...normalizedPayload, user_id: user?.id, status: 1 });
       }
-      return api.post('/consumptions/', { ...normalizedPayload, user_id: user?.id, status: 1 });
+      return api.post('/consumptions/create_consumption', { ...normalizedPayload, user_id: user?.id, status: 1 });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consumptions'] });
       queryClient.invalidateQueries({ queryKey: ['items'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
-      showSuccess(editingConsumption ? 'Usage record updated successfully' : 'Usage record saved successfully');
+      showSuccess(editingConsumption ? 'Usage record updated' : 'Usage record saved');
       handleClose();
     },
     onError: (err: any) => {
-        const detail = err?.response?.data?.detail;
-        const msg = Array.isArray(detail)
-          ? detail.map((d: any) => d?.msg).filter(Boolean).join(', ')
-          : typeof detail === 'string'
-            ? detail
-            : 'Failed to save record';
-        showError(msg);
+        showError(err.response?.data?.detail || 'Failed to save record');
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return api.delete(`/consumptions/${id}/`);
-    },
+    mutationFn: async (id: number) => api.delete(`/consumptions/delete_consumption/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consumptions'] });
       queryClient.invalidateQueries({ queryKey: ['items'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
-      showSuccess('Usage record deleted successfully');
+      showSuccess('Usage record deleted');
     },
-    onError: (err: any) => {
-      showError(err.response?.data?.detail || 'Failed to delete record');
-    }
+    onError: (err: any) => showError(err.response?.data?.detail || 'Delete failed'),
   });
 
   const handleOpen = async (consumption: any = null) => {
     if (consumption) {
       try {
-        const res = await api.get(`/consumptions/${consumption.id}`);
+        const res = await api.get(`/consumptions/get_consumption/${consumption.id}`);
         const fullData = res.data;
         setEditingConsumption(fullData);
         reset({
           usage_date: fullData.usage_date,
           chef_id: fullData.chef_id,
-          people_served: fullData.people_served || '',
+          people_served: fullData.people_served || 0,
           items: fullData.items.map((item: any) => ({
             item_id: item.item_id,
             quantity_used: item.quantity_used
@@ -203,9 +175,9 @@ const ConsumptionsPage: React.FC = () => {
       setEditingConsumption(null);
       reset({
         usage_date: new Date().toISOString().split('T')[0],
-        chef_id: '' as any,
-        people_served: '',
-        items: [{ item_id: '' as any, quantity_used: 0 }],
+        chef_id: 0,
+        people_served: 0,
+        items: [{ item_id: 0, quantity_used: 0 }],
       });
     }
     setOpen(true);
@@ -213,7 +185,7 @@ const ConsumptionsPage: React.FC = () => {
 
   const handleView = async (consumption: any) => {
     try {
-      const res = await api.get(`/consumptions/${consumption.id}`);
+      const res = await api.get(`/consumptions/get_consumption/${consumption.id}`);
       setViewingConsumption(res.data);
       setViewDialogOpen(true);
     } catch (err) {
@@ -237,555 +209,319 @@ const ConsumptionsPage: React.FC = () => {
     }
   };
 
-  const columns: any[] = [
-    { 
-      field: 'entryId', 
-      headerName: 'Record ID', 
-      flex: 0.5, 
-      minWidth: 80,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
-          <Typography variant="body2">{params.value}</Typography>
-        </Box>
-      )
-    },
-    { 
-      field: 'usage_date', 
-      headerName: 'Usage Date', 
-      flex: 1, 
-      minWidth: 120,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
-          <Typography variant="body2">{params.value}</Typography>
-        </Box>
-      )
-    },
-    { 
-      field: 'chef_id', 
-      headerName: 'Chef', 
-      flex: 1.5,
-      minWidth: 150,
-      valueGetter: (params: any) => {
-          const chef = chefOptions?.find((c: any) => c.id === params);
-          return chef ? chef.chef_name : params;
-      }
-    },
-    { 
-      field: 'item_id', 
-      headerName: 'Item', 
-      flex: 1.5,
-      minWidth: 150,
-      valueGetter: (params: any) => {
-          const item = items?.find((i: any) => i.id === params);
-          return item ? item.item_name : params;
-      }
-    },
-    { 
-      field: 'quantity_used', 
-      headerName: 'Qty Used', 
-      flex: 0.8, 
-      minWidth: 110, 
-      type: 'number',
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'error.main' }}>
-            {params.value} {items?.find((i: any) => i.id === params.row.item_id)?.unit?.unit_code}
-          </Typography>
-        </Box>
-      )
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: 'entryId',
+      header: 'ID',
+      cell: info => <span className="text-text-main">{info.getValue() as string}</span>,
     },
     {
-      field: 'actions',
-      headerName: 'Actions',
-      flex: 1,
-      minWidth: 150,
-      sortable: false,
-      filterable: false,
-      headerAlign: 'right',
-      align: 'right',
-      renderCell: (params: any) => (
-        <Box>
-          <IconButton onClick={() => handleView(params.row.entry)} size="small" color="info" sx={{ mr: 1, bgcolor: 'info.light', color: 'white', '&:hover': { bgcolor: 'info.main' } }}>
-            <Visibility fontSize="small" />
-          </IconButton>
-          <IconButton onClick={() => handleOpen(params.row.entry)} size="small" color="primary" sx={{ mr: 1, bgcolor: 'primary.light', color: 'white', '&:hover': { bgcolor: 'primary.main' } }}>
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton onClick={async () => {
-            const confirmed = await showConfirm('Delete Record', `Are you sure you want to delete this usage record?`);
-            if (confirmed) {
-              deleteMutation.mutate(params.row.entry.id);
-            }
-          }} size="small" color="error" sx={{ bgcolor: 'error.light', color: 'white', '&:hover': { bgcolor: 'error.main' } }}>
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
-      ),
+      accessorKey: 'usage_date',
+      header: 'Date',
+      cell: info => <span className="text-text-main">{info.getValue() as string}</span>,
     },
-  ];
+    {
+      accessorKey: 'chef_id',
+      header: 'Chef',
+      cell: info => {
+        const chef = chefOptions?.find((c: any) => c.id === info.getValue());
+        return <span className="text-text-main">{chef ? (chef.chef_name || chef.name) : info.getValue() as string}</span>;
+      }
+    },
+    {
+      accessorKey: 'item_id',
+      header: 'Item',
+      cell: info => {
+        const item = items?.find((i: any) => i.id === info.getValue());
+        return <span className="text-text-main">{item ? item.item_name : info.getValue() as string}</span>;
+      }
+    },
+    {
+      accessorKey: 'quantity_used',
+      header: 'Qty Used',
+      cell: info => {
+        const item = items?.find((i: any) => i.id === info.row.original.item_id);
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className="text-text-main">{info.getValue() as number}</span>
+            <span className="text-text-main">{item?.unit?.unit_code}</span>
+          </div>
+        );
+      }
+    },
+    {
+      id: 'actions',
+      header: () => <div className="text-left">Actions</div>,
+      cell: info => (
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => handleView(info.row.original.entry)}
+            className="text-text-main"
+          >
+            View
+          </button>
+          <button 
+            onClick={() => handleOpen(info.row.original.entry)}
+            className="text-text-main"
+          >
+            Edit
+          </button>
+          <button 
+            onClick={async () => {
+              const confirmed = await showConfirm('Delete Record', `Are you sure you want to delete this usage record?`);
+              if (confirmed) {
+                deleteMutation.mutate(info.row.original.entry.id);
+              }
+            }}
+            className="text-text-main"
+          >
+            Delete
+          </button>
+        </div>
+      )
+    }
+  ], [chefOptions, items, deleteMutation, showConfirm]);
 
-  // Flatten the data: One row per item consumed
   const flattenedRows = useMemo(() => {
     if (!consumptions) return [];
     return consumptions.flatMap((c: any) => 
       c.items.map((item: any) => ({
         ...item,
-        id: `c${c.id}-i${item.id}`, // Unique ID for DataGrid
+        id: `c${c.id}-i${item.id}`,
         entryId: c.id,
         usage_date: c.usage_date,
         chef_id: c.chef_id,
         people_served: c.people_served,
-        entry: c // Keep reference for 'View'
+        entry: c
       }))
     );
   }, [consumptions]);
 
-  const DetailItem = ({ label, value, color }: { label: string, value: any, color?: string }) => (
-    <Box sx={{ display: 'flex', py: 1.2, borderBottom: '1px dashed', borderColor: 'divider' }}>
-      <Typography variant="body2" sx={{ fontWeight: 'bold', width: '40%', color: 'text.secondary' }}>
-        {label}
-      </Typography>
-      <Typography variant="body2" sx={{ width: '60%', fontWeight: 500, color: color || 'text.primary' }}>
-        {value || '-'}
-      </Typography>
-    </Box>
-  );
-
-  return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0, md: 0.5 },
-        pb: { xs: 1, md: 3 },
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-            Consumption Logs
-          </Typography>
-        </Box>
-      </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button 
-          variant="contained" 
-          color="primary"
-          startIcon={<Add />} 
-          onClick={() => handleOpen()}
-          sx={{ 
-            px: 3, 
-            py: 1.2, 
-            borderRadius: 2.5,
-            boxShadow: '0 4px 12px rgba(26, 35, 126, 0.3)',
-            fontWeight: 'bold'
-          }}
-        >
+    return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-text-main">Consumption Logs</h2>
+        </div>
+        <Button onClick={() => handleOpen()} className="text-text-main">
           New Entry
         </Button>
-      </Box>
+      </div>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 4, 
-          border: '1px solid',
-          borderColor: 'divider',
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(8px)'
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 3,
-            alignItems: 'end',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '1.5fr 2fr 2.5fr 6fr' },
-          }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Rows
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <MenuItem key={size} value={size}>{size}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Status Filter
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <MenuItem value="all">All</MenuItem>
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="disabled">Disabled</MenuItem>
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Search Type
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
-            >
-              <MenuItem value="all">All Fields</MenuItem>
-              <MenuItem value="chef">Chef Name</MenuItem>
-              <MenuItem value="item">Item Name</MenuItem>
-              <MenuItem value="id">Record ID</MenuItem>
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Quick Search
-            </Typography>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search usage records..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search color="action" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          </Box>
-        </Box>
-      </Paper>
+      <Card className="border-border-temple">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Status</Label>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Search Type</Label>
+              <Select value={searchField} onChange={(e) => setSearchField(e.target.value)}>
+                <option value="all">All Fields</option>
+                <option value="chef">Chef Name</option>
+                <option value="item">Item Name</option>
+                <option value="id">Record ID</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5 lg:col-span-2">
+              <Label className="text-text-main">Search</Label>
+              <div className="relative">
+                <Input 
+                  placeholder="Search usage records..." 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="text-text-main"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          height: 650, 
-          width: '100%', 
-          borderRadius: 4, 
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.03)'
-        }}
-      >
-        <DataGrid
-          rows={flattenedRows}
-          columns={columns.map((col: any) => ({
-            ...col,
-            sortable: col.field === 'id' || col.field === 'entryId' || String(col.field).toLowerCase().includes('date'),
-          }))}
-          loading={consumptionsLoading}
-          pageSizeOptions={[pageSize]}
-          initialState={{
-            pagination: { paginationModel: { pageSize: pageSize } },
-          }}
-          disableRowSelectionOnClick
-          disableColumnMenu
-          disableColumnResize
-          sx={{
-            border: 'none',
-            '& .MuiDataGrid-columnHeader': {
-              backgroundColor: 'primary.main',
-              color: 'white',
-              fontSize: '0.9rem',
-              fontWeight: 'bold',
-            },
-            '& .MuiDataGrid-columnHeaderTitle': {
-              fontWeight: 'bold !important',
-              color: 'white',
-            },
-            '& .MuiDataGrid-columnHeader .MuiIconButton-root': {
-              color: 'rgba(255, 255, 255, 0.85)',
-              backgroundColor: 'transparent !important',
-            },
-            '& .MuiDataGrid-iconButtonContainer': {
-              visibility: 'hidden',
-              width: 'auto',
-            },
-            '& .MuiDataGrid-columnHeader--sorted .MuiDataGrid-iconButtonContainer': {
-              visibility: 'visible',
-            },
-            '& .MuiDataGrid-sortIcon': {
-              color: 'rgba(255, 255, 255, 0.85)',
-            },
-            '& .MuiDataGrid-columnSeparator': {
-              color: 'rgba(255, 255, 255, 0.35)',
-            },
-            '& .MuiDataGrid-columnSeparator svg': {
-              display: 'none',
-            },
-            '& .MuiDataGrid-cell': {
-              borderColor: 'grey.100',
-              '&:focus': { outline: 'none' },
-            },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: 'rgba(26, 35, 126, 0.04)',
-            },
-            '& .MuiDataGrid-footerContainer': {
-              borderTop: '1px solid',
-              borderColor: 'divider',
-            },
-          }}
-        />
-      </Paper>
+      <DataTable 
+        columns={columns} 
+        data={flattenedRows} 
+        loading={consumptionsLoading} 
+      />
 
-      {/* View Details Dialog */}
-      <Dialog 
-        open={viewDialogOpen} 
-        onClose={() => setViewDialogOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Consumption Record Summary
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 'bold' }}>#{viewingConsumption?.id}</Typography>
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2, p: 3 }}>
-          <Stack spacing={0}>
+      {/* View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh] border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-2xl font-semibold text-gray-800 font-serif">Usage Summary</DialogTitle>
+              <Badge variant="secondary">#{viewingConsumption?.id}</Badge>
+            </div>
+            <DialogDescription className="sr-only">
+              Detailed breakdown of items consumed and recorded in this entry.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-0 mt-4 px-2">
             <DetailItem label="Usage Date" value={viewingConsumption?.usage_date} />
             <DetailItem label="Chef in Charge" value={chefOptions?.find((c: any) => c.id === viewingConsumption?.chef_id)?.chef_name} />
             <DetailItem label="People Served" value={viewingConsumption?.people_served} />
             <DetailItem label="Recorded By" value={viewingConsumption?.user?.full_name} />
-          </Stack>
-
-          <Typography variant="subtitle2" color="primary" sx={{ mb: 2, mt: 4, fontWeight: 'bold', textTransform: 'uppercase' }}>Items Consumed</Typography>
-          <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
-            <Table size="small">
-              <TableHead sx={{ bgcolor: 'grey.50' }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Item Name</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Quantity</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Unit</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {viewingConsumption?.items?.map((item: any, idx: number) => {
-                  const itemData = items?.find((i: any) => i.id === item.item_id);
-                  return (
-                    <TableRow key={idx}>
-                      <TableCell>{itemData?.item_name}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold', color: 'error.main' }}>{item.quantity_used}</TableCell>
-                      <TableCell align="right">{itemData?.unit?.unit_code}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mt: 3, mb: 1, color: 'text.secondary', px: 1 }}>
-            Audit Information
-          </Typography>
-          <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-            <DetailItem 
-              label="Created At" 
-              value={viewingConsumption?.created_at ? new Date(viewingConsumption.created_at).toLocaleString() : '-'} 
-            />
-            <DetailItem 
-              label="Created By" 
-              value={users?.find((u: any) => u.id === viewingConsumption?.created_by)?.full_name || viewingConsumption?.user?.full_name || '-'} 
-            />
-            <DetailItem 
-              label="Last Updated" 
-              value={viewingConsumption?.updated_at ? new Date(viewingConsumption.updated_at).toLocaleString() : '-'} 
-            />
-            <DetailItem 
-              label="Updated By" 
-              value={users?.find((u: any) => u.id === viewingConsumption?.updated_by)?.full_name || '-'} 
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={() => setViewDialogOpen(false)} variant="contained" color="primary" sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="md" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle>
-          {editingConsumption ? 'Edit Usage Record' : 'Log New Consumption'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 2,
-              mb: 4,
-              mt: 1,
-              gridTemplateColumns: { xs: '1fr', sm: 'minmax(260px, 2fr) 1fr 1fr' },
-              alignItems: 'start',
-            }}
-          >
-            <Box sx={{ minWidth: 0 }}>
-              <Controller
-                name="chef_id"
-                control={control}
-                render={({ field }) => (
-                  <TextField 
-                    {...field}
-                    select 
-                    label="Select Chef *" 
-                    fullWidth 
-                    error={!!errors.chef_id} 
-                    helperText={errors.chef_id?.message}
-                  >
-                    {chefsLoading && (
-                      <MenuItem disabled value="">
-                        Loading chefs...
-                      </MenuItem>
-                    )}
-                    {!chefsLoading && chefsError && (
-                      <MenuItem disabled value="">
-                        Failed to load chefs
-                      </MenuItem>
-                    )}
-                    {!chefsLoading && !chefsError && chefOptions.map((c: any) => (
-                      <MenuItem key={c.id} value={c.id}>
-                        {c.chef_name || c.name || `Chef #${c.id}`}
-                      </MenuItem>
-                    ))}
-                    {!chefsLoading && !chefsError && chefOptions.length === 0 && (
-                      <MenuItem disabled value="">
-                        No chefs found
-                      </MenuItem>
-                    )}
-                  </TextField>
-                )}
-              />
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                {...register('usage_date')}
-                label="Date *"
-                type="date"
-                fullWidth
-                slotProps={{ inputLabel: { shrink: true } }}
-                error={!!errors.usage_date}
-              />
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField {...register('people_served')} label="People Served" type="number" fullWidth />
-            </Box>
-          </Box>
-
-          <Typography variant="subtitle2" color="primary" sx={{ mb: 2, fontWeight: 'bold', textTransform: 'uppercase' }}>
-            Consumed Items List
-          </Typography>
-          
-          <Paper elevation={0} variant="outlined" sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 3 }}>
-            {/* Header Row */}
-            <Box sx={{ display: { xs: 'none', sm: 'flex' }, mb: 1, px: 1 }}>
-              <Typography variant="caption" sx={{ flex: 7, fontWeight: 'bold', color: 'text.secondary' }}>Item Name *</Typography>
-              <Typography variant="caption" sx={{ flex: 3, fontWeight: 'bold', ml: 1, color: 'text.secondary' }}>Quantity Used *</Typography>
-              <Box sx={{ width: 40 }}></Box>
-            </Box>
-
-            {fields.map((field, index) => (
-              <Stack key={field.id} direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2, alignItems: 'start' }}>
-                <Box sx={{ flex: 7, width: '100%' }}>
-                  <Controller
-                    name={`items.${index}.item_id` as const}
-                    control={control}
-                    render={({ field: itemField }) => (
-                      <TextField 
-                        {...itemField}
-                        select 
-                        fullWidth 
-                        size="small"
-                        error={!!errors?.items?.[index]?.item_id}
-                        label={index === 0 ? "Select Item" : ""}
-                        sx={{ bgcolor: 'white' }}
-                      >
-                        {items?.filter((i: any) => i.status === 1 || watchedItems?.[index]?.item_id === i.id).map((i: any) => (
-                          <MenuItem key={i.id} value={i.id}>{i.item_name} ({i.unit?.unit_code})</MenuItem>
-                        ))}
-                      </TextField>
-                    )}
-                  />
-                </Box>
-                <Box sx={{ flex: 3, width: '100%' }}>
-                  <TextField 
-                    {...register(`items.${index}.quantity_used` as const)} 
-                    type="number" 
-                    fullWidth 
-                    size="small" 
-                    error={!!errors?.items?.[index]?.quantity_used}
-                    label={index === 0 ? "Qty" : ""}
-                    sx={{ bgcolor: 'white' }}
-                  />
-                </Box>
-                <IconButton color="error" onClick={() => remove(index)} disabled={fields.length === 1} size="small" sx={{ mt: { xs: 0, sm: index === 0 ? 0.5 : 0 } }}>
-                  <Delete />
-                </IconButton>
-              </Stack>
-            ))}
             
-            <Button size="small" color="primary" startIcon={<Add />} onClick={() => append({ item_id: '' as any, quantity_used: 0 })} sx={{ mt: 1, fontWeight: 'bold' }}>
-              Add Another Item
-            </Button>
-          </Paper>
+            <div className="pt-8 pb-3">
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.2em] flex items-center gap-1">
+                Items Consumed
+              </span>
+            </div>
+            
+            <div className="rounded-lg border border-border-temple/40 overflow-hidden">
+               <table className="w-full text-[11px]">
+                  <thead className="bg-gray-50 text-text-light font-bold uppercase tracking-widest">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Item</th>
+                      <th className="px-3 py-2 text-right">Quantity</th>
+                      <th className="px-3 py-2 text-right">Unit</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-temple/40">
+                    {viewingConsumption?.items?.map((item: any, idx: number) => {
+                      const itemData = items?.find((i: any) => i.id === item.item_id);
+                      return (
+                        <tr key={idx}>
+                          <td className="px-3 py-2 font-normal text-gray-700">{itemData?.item_name}</td>
+                          <td className="px-3 py-2 text-right font-normal text-gray-700">{item.quantity_used}</td>
+                          <td className="px-3 py-2 text-right font-bold text-text-light">{itemData?.unit?.unit_code}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+               </table>
+            </div>
 
-          {mutation.isError && (
-            <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>
-              {(mutation.error as any).response?.data?.detail || 'An error occurred'}
-            </Alert>
-          )}
+            <div className="pt-10 pb-3">
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.2em]">System Audit Info</span>
+            </div>
+            <DetailItem label="Created At" value={viewingConsumption?.created_at ? new Date(viewingConsumption.created_at).toLocaleString() : '-'} />
+            <DetailItem label="Created By" value={users?.find((u: any) => u.id === viewingConsumption?.created_by)?.full_name || viewingConsumption?.user?.full_name} />
+          </div>
+          
+          <DialogFooter className="mt-8">
+            <Button onClick={() => setViewDialogOpen(false)} className="w-full sm:w-auto">Close</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleClose} color="inherit">Cancel</Button>
-          <Button 
-            onClick={handleSubmit(onSubmit)} 
-            variant="contained" 
-            color="primary"
-            startIcon={<Save />} 
-            disabled={mutation.isPending}
-            sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}
-          >
-            {mutation.isPending ? 'Saving...' : editingConsumption ? 'Update Record' : 'Save Entry'}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
+        <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{editingConsumption ? 'Edit Usage Record' : 'Log New Consumption'}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {editingConsumption ? 'Update the details of an existing usage record.' : 'Enter details for daily item consumption in the kitchen.'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit(onSubmit)} className="temple-form">
+            <div className="temple-form-section">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="temple-label">Chef In Charge *</Label>
+                  <Controller
+                    name="chef_id"
+                    control={control}
+                    render={({ field }) => (
+                      <Select {...field} className="temple-input">
+                        <option value="">Select Chef</option>
+                        {chefOptions.map((c: any) => (
+                          <option key={c.id} value={c.id}>{c.chef_name || c.name}</option>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                  {errors.chef_id && <p className="text-xs font-medium text-error ml-1">{errors.chef_id.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="temple-label">Usage Date *</Label>
+                  <Input type="date" {...register('usage_date')} className="temple-input" />
+                  {errors.usage_date && <p className="text-xs font-medium text-error ml-1">{errors.usage_date.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="temple-label">People Served</Label>
+                  <Input type="number" {...register('people_served')} placeholder="Count" className="temple-input" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <h4 className="temple-section-header flex items-center gap-2 mt-0">
+                  Consumed Items List
+                </h4>
+                <Button type="button" size="sm" variant="outline" onClick={() => append({ item_id: 0, quantity_used: 0 })} className="h-9 gap-2 font-bold text-xs rounded-xl border-primary/20 text-primary hover:bg-primary/5">
+                  Add Item
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {fields.map((field, index) => (
+                  <div key={field.id} className="temple-form-section relative group">
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+                      <div className="sm:col-span-8 space-y-2">
+                        <Label className="temple-label">Item Name *</Label>
+                        <Controller
+                          name={`items.${index}.item_id` as const}
+                          control={control}
+                          render={({ field: itemField }) => (
+                            <Select {...itemField} className="temple-input">
+                              <option value="">Select Item</option>
+                              {items?.filter((i: any) => i.status === 1 || watchedItems?.[index]?.item_id === i.id).map((i: any) => (
+                                <option key={i.id} value={i.id}>{i.item_name} ({i.unit?.unit_code})</option>
+                              ))}
+                            </Select>
+                          )}
+                        />
+                      </div>
+                      <div className="sm:col-span-3 space-y-2">
+                        <Label className="temple-label">Qty Used *</Label>
+                        <Input type="number" step="0.001" {...register(`items.${index}.quantity_used` as const)} className="temple-input" />
+                      </div>
+                      <div className="sm:col-span-1 flex justify-end pb-1">
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-10 w-10 text-error hover:bg-error/10 rounded-xl"
+                          onClick={() => remove(index)}
+                          disabled={fields.length === 1}
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <DialogFooter className="pt-4 gap-3">
+              <Button type="button" variant="outline" onClick={handleClose} className="h-12 rounded-xl border-[#D2B89B] text-secondary hover:bg-[#F5E6D3] flex-1">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending} className="h-12 rounded-xl shadow-lg shadow-primary/20 flex-1 bg-primary hover:bg-primary-dark">
+                {mutation.isPending ? 'Processing...' : editingConsumption ? 'Update Record' : 'Save Usage Entry'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
 export default ConsumptionsPage;
+
 
 
 

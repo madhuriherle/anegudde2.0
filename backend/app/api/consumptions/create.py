@@ -7,7 +7,7 @@ from app.api.deps import get_current_user, get_db
 from app.db.models import Chef, ConsumptionEntry, ConsumptionItem, Item, Notification, StockLedger, User
 from app.schemas.consumption import ConsumptionEntryCreate, ConsumptionEntryOut
 router = APIRouter()
-@router.post("/", response_model=ConsumptionEntryOut, status_code=status.HTTP_201_CREATED)
+@router.post("/create_consumption", response_model=ConsumptionEntryOut, status_code=status.HTTP_201_CREATED)
 def create_consumption(payload: ConsumptionEntryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not db.query(User).filter(User.id == payload.user_id).first(): raise HTTPException(status_code=400, detail="Invalid user_id")
     if payload.chef_id and not db.query(Chef).filter(Chef.id == payload.chef_id).first(): raise HTTPException(status_code=400, detail="Invalid chef_id")

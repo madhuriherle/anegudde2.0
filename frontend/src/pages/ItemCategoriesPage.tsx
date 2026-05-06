@@ -1,39 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Grid,
-  CircularProgress,
-  MenuItem,
-  Chip,
-  Switch,
-  Stack,
-  InputAdornment,
-} from '@mui/material';
 import { 
-  Add, 
+  Plus, 
   Edit, 
-  Delete, 
+  Trash2, 
   Search, 
-  Save, 
-  Category,
-  Visibility
-} from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+  Eye,
+  Save,
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { Badge } from '../components/ui/Badge';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+} from '../components/ui/Dialog';
+import { Select } from '../components/ui/Select';
+import { Switch } from '../components/ui/Switch';
+import { Label } from '../components/ui/Label';
+import { DetailItem } from '../components/ui/DetailItem';
 
 const categorySchema = z.object({
   category_name: z.string().min(1, 'Name is required'),
@@ -127,326 +123,213 @@ const ItemCategoriesPage: React.FC = () => {
     }
   };
 
-  const columns: any[] = [
-    { field: 'id', headerName: 'ID', flex: 0.5, minWidth: 80 },
-    { field: 'category_name', headerName: 'Category Name', flex: 2.5, minWidth: 200 },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
-      flex: 1,
-      minWidth: 120,
-      renderCell: (params: any) => (
-        <Chip 
-          label={params.value === 1 ? 'Active' : 'Disabled'} 
-          color={params.value === 1 ? 'success' : 'default'} 
-          size="small" 
-          sx={{ fontWeight: 600 }}
-        />
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: 'id',
+      header: 'ID',
+      cell: info => <span className="text-text-main">{info.getValue() as string}</span>,
+    },
+    {
+      accessorKey: 'category_name',
+      header: 'Category Name',
+      cell: info => <span className="text-text-main font-medium">{info.getValue() as string}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: info => (
+        <Badge variant={info.getValue() === 1 ? 'default' : 'secondary'}>
+          {info.getValue() === 1 ? 'Active' : 'Disabled'}
+        </Badge>
       )
     },
     {
-      field: 'actions',
-      headerName: 'Actions',
-      flex: 1.2,
-      minWidth: 150,
-      sortable: false,
-      filterable: false,
-      headerAlign: 'right',
-      align: 'right',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <IconButton onClick={() => handleView(params.row)} size="small" color="info" sx={{ mr: 1, bgcolor: 'info.light', color: 'white', '&:hover': { bgcolor: 'info.main' } }}>
-            <Visibility fontSize="small" />
-          </IconButton>
-          <IconButton onClick={() => handleOpen(params.row)} size="small" color="primary" sx={{ mr: 1, bgcolor: 'primary.light', color: 'white', '&:hover': { bgcolor: 'primary.main' } }}>
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton onClick={async () => {
-            const confirmed = await showConfirm('Delete Category', `Are you sure you want to delete category "${params.row.category_name}"?`);
-            if (confirmed) {
-              deleteMutation.mutate(params.row.id);
-            }
-          }} size="small" color="error" sx={{ bgcolor: 'error.light', color: 'white', '&:hover': { bgcolor: 'error.main' } }}>
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
-      ),
-    },
-  ];
-
-  const DetailItem = ({ label, value }: { label: string, value: any }) => (
-    <Box sx={{ display: 'flex', py: 1.2, borderBottom: '1px dashed', borderColor: 'divider' }}>
-      <Typography variant="body2" sx={{ fontWeight: 'bold', width: '40%', color: 'text.secondary' }}>
-        {label}
-      </Typography>
-      <Typography variant="body2" sx={{ width: '60%', fontWeight: 500, color: 'text.primary' }}>
-        {value || '-'}
-      </Typography>
-    </Box>
-  );
+      id: 'actions',
+      header: () => <div className="text-right">Actions</div>,
+      cell: info => (
+        <div className="flex items-center justify-end gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleView(info.row.original)}
+            className="h-8 w-8 p-0"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleOpen(info.row.original)}
+            className="h-8 w-8 p-0"
+          >
+            <Edit className="h-4 w-4 text-blue-600" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={async () => {
+              const confirmed = await showConfirm('Delete Category', `Are you sure you want to delete category "${info.row.original.category_name}"?`);
+              if (confirmed) {
+                deleteMutation.mutate(info.row.original.id);
+              }
+            }}
+            className="h-8 w-8 p-0"
+          >
+            <Trash2 className="h-4 w-4 text-red-600" />
+          </Button>
+        </div>
+      )
+    }
+  ], [deleteMutation, showConfirm]);
 
   return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0, md: 0.5 },
-        pb: { xs: 1, md: 3 },
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-            Item Categories
-          </Typography>
-        </Box>
-      </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button 
-          variant="contained" 
-          startIcon={<Add />} 
-          onClick={() => handleOpen()}
-          sx={{ 
-            px: 3, 
-            py: 1.2, 
-            borderRadius: 2.5,
-            boxShadow: '0 4px 12px rgba(26, 35, 126, 0.3)',
-            fontWeight: 'bold'
-          }}
-        >
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-text-main text-2xl font-semibold font-temple">Item Categories</h2>
+          <p className="text-text-main/70">Manage product categories and classifications.</p>
+        </div>
+        <Button onClick={() => handleOpen()} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
           Add Category
         </Button>
-      </Box>
+      </div>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 4, 
-          border: '1px solid',
-          borderColor: 'divider',
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(8px)'
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 3,
-            alignItems: 'end',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 2.5fr 7.5fr' },
-          }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Rows
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <MenuItem key={size} value={size}>{size}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Status Filter
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="disabled">Disabled</MenuItem>
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Quick Search
-            </Typography>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search categories..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search color="action" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          </Box>
-        </Box>
-      </Paper>
+      <Card className="border-border-temple">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+             <div className="space-y-1.5">
+              <Label className="text-text-main font-medium">Rows</Label>
+              <Select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+                {[10, 20, 50, 100].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-text-main font-medium">Status Filter</Label>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5 lg:col-span-2">
+              <Label className="text-text-main font-medium">Quick Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-main/50" />
+                <Input 
+                  placeholder="Search categories..." 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          height: 600, 
-          width: '100%', 
-          borderRadius: 4, 
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.03)'
-        }}
-      >
-        <DataGrid
-          rows={categories || []}
-          columns={columns}
-          loading={isLoading}
-          pageSizeOptions={[pageSize]}
-          initialState={{
-            pagination: { paginationModel: { pageSize: pageSize } },
-          }}
-          disableRowSelectionOnClick
-          disableColumnMenu
-          sx={{
-            border: 'none',
-            '& .MuiDataGrid-columnHeader': {
-              backgroundColor: 'primary.main',
-              color: 'white',
-              fontSize: '0.9rem',
-              fontWeight: 'bold',
-            },
-            '& .MuiDataGrid-cell': {
-              borderColor: 'grey.100',
-              '&:focus': { outline: 'none' },
-            },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: 'rgba(26, 35, 126, 0.04)',
-            },
-          }}
+      <div className="rounded-xl border border-border-temple overflow-hidden bg-white">
+        <DataTable 
+          columns={columns} 
+          data={categories || []} 
+          loading={isLoading} 
         />
-      </Paper>
+      </div>
 
       {/* View Details Dialog */}
-      <Dialog 
-        open={viewDialogOpen} 
-        onClose={() => setViewDialogOpen(false)} 
-        maxWidth="xs" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Category Details
-          <Chip 
-            label={viewingCategory?.status === 1 ? 'Active' : 'Disabled'} 
-            sx={{ bgcolor: viewingCategory?.status === 1 ? 'success.main' : 'grey.400', color: 'white', fontWeight: 'bold' }}
-            size="small" 
-          />
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2, p: 3 }}>
-          <Stack spacing={0}>
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-md border-border-temple">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-text-main">Category Details</DialogTitle>
+              <Badge variant={viewingCategory?.status === 1 ? 'default' : 'secondary'}>
+                {viewingCategory?.status === 1 ? 'Active' : 'Disabled'}
+              </Badge>
+            </div>
+          </DialogHeader>
+          <div className="space-y-1 mt-4">
             <DetailItem label="Category ID" value={viewingCategory?.id} />
             <DetailItem label="Category Name" value={viewingCategory?.category_name} />
-          </Stack>
-
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mt: 3, mb: 1, color: 'text.secondary', px: 1 }}>
-            Audit Information
-          </Typography>
-          <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-            <DetailItem 
-              label="Created At" 
-              value={viewingCategory?.created_at ? new Date(viewingCategory.created_at).toLocaleString() : '-'} 
-            />
-            <DetailItem 
-              label="Created By" 
-              value={users?.find((u: any) => u.id === viewingCategory?.created_by)?.username || viewingCategory?.created_by} 
-            />
-            <DetailItem 
-              label="Last Updated" 
-              value={viewingCategory?.updated_at ? new Date(viewingCategory.updated_at).toLocaleString() : '-'} 
-            />
-            <DetailItem 
-              label="Updated By" 
-              value={users?.find((u: any) => u.id === viewingCategory?.updated_by)?.username || viewingCategory?.updated_by} 
-            />
-          </Box>
+            
+            <div className="pt-6 pb-2">
+              <h4 className="text-sm font-semibold text-text-main underline decoration-border-temple underline-offset-4 font-temple">Audit Information</h4>
+            </div>
+            <div className="bg-bg-temple/50 p-4 rounded-lg border border-border-temple/20 space-y-1">
+              <DetailItem 
+                label="Created At" 
+                value={viewingCategory?.created_at ? new Date(viewingCategory.created_at).toLocaleString() : '-'} 
+              />
+              <DetailItem 
+                label="Created By" 
+                value={users?.find((u: any) => u.id === viewingCategory?.created_by)?.username || viewingCategory?.created_by} 
+              />
+              <DetailItem 
+                label="Last Updated" 
+                value={viewingCategory?.updated_at ? new Date(viewingCategory.updated_at).toLocaleString() : '-'} 
+              />
+              <DetailItem 
+                label="Updated By" 
+                value={users?.find((u: any) => u.id === viewingCategory?.updated_by)?.username || viewingCategory?.updated_by} 
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-6">
+            <Button onClick={() => setViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={() => setViewDialogOpen(false)} variant="contained" color="primary" sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}>
-            Close
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Add/Edit Dialog */}
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="xs" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle>
-          {editingCategory ? 'Edit Category' : 'New Category'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={3} sx={{ mt: 1 }}>
-            <TextField {...register('category_name')} label="Category Name *" fullWidth error={!!errors.category_name} helperText={errors.category_name?.message} />
-            
-            <Controller
-              name="status"
-              control={control}
-              render={({ field }) => (
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  p: 2,
-                  bgcolor: 'grey.50',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'divider'
-                }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Active Status</Typography>
-                  <Switch 
-                    checked={field.value === 1} 
-                    onChange={(e) => field.onChange(e.target.checked ? 1 : 0)} 
-                    color="success" 
-                  />
-                </Box>
-              )}
-            />
-          </Stack>
+      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
+        <DialogContent className="max-w-md border-border-temple">
+          <DialogHeader>
+            <DialogTitle className="text-text-main font-temple">
+              {editingCategory ? 'Edit Category' : 'New Category'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-4">
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-text-main font-medium">Category Name *</Label>
+                <Input {...register('category_name')} placeholder="Enter category name" />
+                {errors.category_name && <p className="text-xs text-red-500 font-medium">{errors.category_name.message}</p>}
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-bg-temple/30 rounded-lg border border-border-temple/20">
+                <Label className="text-text-main font-medium">Active Status</Label>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch 
+                      checked={field.value === 1} 
+                      onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)} 
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-3">
+              <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
+              <Button type="submit" disabled={mutation.isPending} className="flex items-center gap-2">
+                {mutation.isPending ? 'Saving...' : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    {editingCategory ? 'Update' : 'Save'}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleClose} color="inherit">Cancel</Button>
-          <Button 
-            onClick={handleSubmit(onSubmit)} 
-            variant="contained" 
-            startIcon={<Save />} 
-            disabled={mutation.isPending}
-            sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}
-          >
-            {mutation.isPending ? 'Saving...' : editingCategory ? 'Update' : 'Save'}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 };
 
 export default ItemCategoriesPage;
-
-
-
-
-
-

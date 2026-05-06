@@ -7,7 +7,7 @@ from app.services.consumption_service import list_consumptions as list_consumpti
 
 router = APIRouter()
 
-@router.get("/", response_model=list[ConsumptionEntryFullOut])
+@router.get("/list_consumptions", response_model=list[ConsumptionEntryFullOut])
 def list_consumptions(
     db: Session = Depends(get_db), 
     _: User = Depends(get_current_user),

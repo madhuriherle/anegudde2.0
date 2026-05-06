@@ -7,7 +7,7 @@ from app.services.wastage_service import list_wastages as list_wastages_service
 
 router = APIRouter()
 
-@router.get("/", response_model=list[WastageEntryFullOut])
+@router.get("/list_wastages", response_model=list[WastageEntryFullOut])
 def list_wastages(
     db: Session = Depends(get_db), 
     _: User = Depends(get_current_user),

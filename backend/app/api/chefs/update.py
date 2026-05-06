@@ -6,7 +6,7 @@ from app.schemas.chef import ChefBase, ChefOut
 
 router = APIRouter()
 
-@router.put("/{chef_id}", response_model=ChefOut)
+@router.put("/update_chef/{chef_id}", response_model=ChefOut)
 def update_chef(
     *,
     db: Session = Depends(get_db),

@@ -1,41 +1,31 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  Stack,
-  InputAdornment,
-  TableContainer,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-} from '@mui/material';
 import { 
-  Add, 
-  Search, 
-  Save, 
-  Visibility,
+  Plus, 
+  Eye, 
   History,
-  ConfirmationNumber
-} from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+  Ticket,
+  Loader2
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Label } from '../components/ui/Label';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from '../components/ui/Dialog';
 
 const tokenSchema = z.object({
   token_count: z.coerce.number().min(1, 'Token count must be at least 1'),
@@ -49,9 +39,7 @@ const TokensPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
-  const [pageSize, setPageSize] = useState(20);
-  const [search, setSearch] = useState('');
-
+  const [pageSize] = useState(20);
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingDate, setViewingDate] = useState<string | null>(null);
@@ -123,203 +111,181 @@ const TokensPage: React.FC = () => {
     }
   };
 
-  const columns: any[] = [
-    { field: 'date', headerName: 'Date', flex: 1, minWidth: 150 },
+  const columns = useMemo<ColumnDef<any>[]>(() => [
     { 
-      field: 'total_tokens', 
-      headerName: 'Total Tokens Issued', 
-      flex: 1, 
-      minWidth: 150,
-      renderCell: (params: any) => (
-        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          {params.value}
-        </Typography>
+      accessorKey: 'date', 
+      header: 'Date', 
+    },
+    { 
+      accessorKey: 'total_tokens', 
+      header: 'Total Tokens Issued', 
+      cell: info => (
+        <span className="font-bold text-primary">
+          {info.getValue() as number}
+        </span>
       )
     },
-    { field: 'created_at', headerName: 'First Token At', flex: 1, minWidth: 180, 
-      valueFormatter: (params: any) => new Date(params).toLocaleString() 
+    { 
+      accessorKey: 'created_at', 
+      header: 'First Token At', 
+      cell: info => {
+        const val = info.getValue() as string;
+        return val ? new Date(val).toLocaleString() : '-';
+      }
     },
     {
-      field: 'actions',
-      headerName: 'Actions',
-      flex: 0.8,
-      minWidth: 120,
-      sortable: false,
-      headerAlign: 'right',
-      align: 'right',
-      renderCell: (params: any) => (
-        <Button 
-          startIcon={<Visibility />} 
-          size="small" 
-          variant="outlined"
-          onClick={() => handleViewDetails(params.row.date)}
-          sx={{ borderRadius: 2 }}
-        >
-          Details
-        </Button>
+      id: 'actions',
+      header: () => <div className="text-right px-4">Actions</div>,
+      cell: info => (
+        <div className="flex justify-end px-4">
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => handleViewDetails(info.row.original.date)}
+            className="text-text-main h-8"
+          >
+            <Eye className="w-3.5 h-3.5 mr-1" />
+            Details
+          </Button>
+        </div>
       ),
     },
-  ];
+  ], []);
 
   return (
-    <Box sx={{ px: { xs: 1, md: 3 }, pb: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <ConfirmationNumber color="primary" sx={{ fontSize: 32 }} />
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Token Management
-            </Typography>
-            <Button 
-              size="small" 
-              startIcon={<History />} 
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-primary/10 rounded-xl">
+            <Ticket className="w-8 h-8 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-text-main">Token Management</h2>
+            <button 
               onClick={() => navigate('/tokens/history')}
-              sx={{ textTransform: 'none', mt: -0.5 }}
+              className="text-sm text-primary hover:underline flex items-center gap-1"
             >
+              <History className="w-3.5 h-3.5" />
               View Detailed Ledger
-            </Button>
-          </Box>
-        </Box>
+            </button>
+          </div>
+        </div>
         <Button 
-          variant="contained" 
-          startIcon={<Add />} 
           onClick={handleOpen}
-          sx={{ 
-            px: 3, 
-            py: 1, 
-            borderRadius: 2.5,
-            boxShadow: '0 4px 12px rgba(26, 35, 126, 0.2)',
-            fontWeight: 'bold'
-          }}
+          className="text-text-main font-bold px-6"
         >
+          <Plus className="w-4 h-4 mr-2" />
           Issue New Tokens
         </Button>
-      </Box>
+      </div>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          height: 600, 
-          width: '100%', 
-          borderRadius: 4, 
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
-        }}
-      >
-        <DataGrid
-          rows={generations || []}
-          columns={columns}
-          loading={generationsLoading}
-          pageSizeOptions={[pageSize]}
-          initialState={{
-            pagination: { paginationModel: { pageSize: pageSize } },
-          }}
-          disableRowSelectionOnClick
-          sx={{
-            border: 'none',
-            '& .MuiDataGrid-columnHeader': {
-              backgroundColor: 'rgba(0, 0, 0, 0.02)',
-              fontWeight: 'bold',
-            },
-            '& .MuiDataGrid-cell:focus': { outline: 'none' },
-          }}
-        />
-      </Paper>
+      <DataTable
+        columns={columns}
+        data={generations || []}
+        loading={generationsLoading}
+      />
 
       {/* Issue Tokens Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
-        <DialogTitle sx={{ fontWeight: 'bold' }}>Issue New Tokens</DialogTitle>
-        <DialogContent dividers>
-          <Box sx={{ py: 2 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Enter the number of tokens being issued right now. This will be added to today's total.
-            </Typography>
-            <TextField
-              {...register('token_count')}
-              label="Token Count *"
-              type="number"
-              fullWidth
-              autoFocus
-              error={!!errors.token_count}
-              helperText={errors.token_count?.message}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <ConfirmationNumber fontSize="small" color="action" />
-                    </InputAdornment>
-                  ),
-                }
-              }}
-            />
-          </Box>
+      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
+        <DialogContent className="max-w-md border-border-temple">
+          <DialogHeader>
+            <DialogTitle className="text-text-main">Issue New Tokens</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
+            <div className="space-y-4">
+              <p className="text-sm text-text-main/70">
+                Enter the number of tokens being issued right now. This will be added to today's total.
+              </p>
+              <div className="space-y-1.5">
+                <Label className="text-text-main">Token Count *</Label>
+                <div className="relative">
+                  <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    {...register('token_count')}
+                    type="number"
+                    autoFocus
+                    className="pl-10 text-text-main"
+                    placeholder="e.g. 10"
+                  />
+                </div>
+                {errors.token_count && <p className="text-xs text-red-500">{errors.token_count.message}</p>}
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="ghost" onClick={handleClose} className="text-text-main">
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={createMutation.isPending}
+                className="text-text-main"
+              >
+                {createMutation.isPending ? 'Processing...' : 'Issue Tokens'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={handleClose} color="inherit">Cancel</Button>
-          <Button 
-            onClick={handleSubmit(onSubmit)} 
-            variant="contained" 
-            disabled={createMutation.isPending}
-            sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}
-          >
-            {createMutation.isPending ? 'Processing...' : 'Issue Tokens'}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* View Details Dialog */}
-      <Dialog 
-        open={viewDialogOpen} 
-        onClose={() => setViewDialogOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold' }}>
-          <History color="primary" />
-          Token Details for {viewingDate}
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          <TableContainer>
-            <Table size="small">
-              <TableHead sx={{ bgcolor: 'grey.50' }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', py: 1.5 }}>Time</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold', py: 1.5 }}>Tokens Issued</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold', py: 1.5 }}>Issued By</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {detailsLoading ? (
-                  <TableRow><TableCell colSpan={3} align="center" sx={{ py: 4 }}>Loading...</TableCell></TableRow>
-                ) : details?.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} align="center" sx={{ py: 4 }}>No data found</TableCell></TableRow>
-                ) : (
-                  details?.map((detail: any) => (
-                    <TableRow key={detail.id} hover>
-                      <TableCell sx={{ py: 1.5 }}>{new Date(detail.created_at).toLocaleTimeString()}</TableCell>
-                      <TableCell align="right" sx={{ py: 1.5, fontWeight: 'bold', color: 'primary.main' }}>
-                        {detail.token_count}
-                      </TableCell>
-                      <TableCell align="right" sx={{ py: 1.5 }}>
-                        {detail.creator?.full_name || '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-xl border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-text-main flex items-center gap-2">
+              <Ticket className="w-5 h-5 text-primary" />
+              Token Details for {viewingDate}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="rounded-md border border-border-temple overflow-hidden">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-bg-temple text-text-main uppercase text-[11px] font-bold tracking-wider">
+                  <tr>
+                    <th className="px-4 py-3 border-b border-border-temple">Time</th>
+                    <th className="px-4 py-3 border-b border-border-temple text-right">Tokens Issued</th>
+                    <th className="px-4 py-3 border-b border-border-temple text-right">Issued By</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-temple/40">
+                  {detailsLoading ? (
+                    <tr>
+                      <td colSpan={3} className="py-10 text-center">
+                        <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
+                      </td>
+                    </tr>
+                  ) : details?.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-10 text-center text-text-main">
+                        No data found
+                      </td>
+                    </tr>
+                  ) : (
+                    details?.map((detail: any) => (
+                      <tr key={detail.id} className="hover:bg-bg-temple/30">
+                        <td className="px-4 py-3 text-text-main">
+                          {new Date(detail.created_at).toLocaleTimeString()}
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-primary">
+                          {detail.token_count}
+                        </td>
+                        <td className="px-4 py-3 text-right text-text-main">
+                          {detail.creator?.full_name || '-'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
+            <Button onClick={() => setViewDialogOpen(false)} variant="outline" className="text-text-main">
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setViewDialogOpen(false)} variant="outlined" sx={{ px: 4, borderRadius: 2 }}>
-            Close
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 };
 

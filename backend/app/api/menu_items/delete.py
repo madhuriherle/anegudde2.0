@@ -5,7 +5,7 @@ from app.db.models import MenuItem, User
 
 router = APIRouter()
 
-@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/delete_menu_item/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_menu_item(
     item_id: int,
     db: Session = Depends(get_db),

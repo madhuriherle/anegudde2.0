@@ -5,7 +5,7 @@ from app.db.models import User
 from app.schemas.purchase import PurchaseEntryFullOut
 from app.services.purchase_service import list_purchases as list_purchases_service
 router = APIRouter()
-@router.get("/", response_model=list[PurchaseEntryFullOut])
+@router.get("/list_purchases", response_model=list[PurchaseEntryFullOut])
 def list_purchases(
     db: Session = Depends(get_db), 
     _: User = Depends(get_current_user),

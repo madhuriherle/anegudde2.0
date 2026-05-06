@@ -6,7 +6,7 @@ from app.schemas.chef import ChefOut
 
 router = APIRouter()
 
-@router.get("/", response_model=list[ChefOut])
+@router.get("/list_chefs", response_model=list[ChefOut])
 def list_chefs(
     db: Session = Depends(get_db), 
     _: User = Depends(get_current_user),

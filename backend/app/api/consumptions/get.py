@@ -7,6 +7,6 @@ from app.services.consumption_service import get_consumption_full
 
 router = APIRouter()
 
-@router.get("/{consumption_id}", response_model=ConsumptionEntryFullOut)
+@router.get("/get_consumption/{consumption_id}", response_model=ConsumptionEntryFullOut)
 def read_consumption(consumption_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     return get_consumption_full(consumption_id, db)

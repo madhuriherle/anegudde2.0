@@ -8,7 +8,7 @@ from app.schemas.user import UserOut
 router = APIRouter()
 
 
-@router.get("/", response_model=list[UserOut])
+@router.get("/list_users", response_model=list[UserOut])
 def list_users(
     db: Session = Depends(get_db), 
     _: User = Depends(get_current_user), 

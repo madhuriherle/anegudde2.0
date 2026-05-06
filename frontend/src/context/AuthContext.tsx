@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUser = async (authToken: string) => {
+  const fetchUser = async () => {
     try {
       const response = await api.get('/auth/me');
       setUser(response.data);
@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (token) {
-      fetchUser(token).finally(() => setIsLoading(false));
+      fetchUser().finally(() => setIsLoading(false));
     } else {
       setIsLoading(false);
     }
@@ -49,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (newToken: string) => {
     localStorage.setItem('token', newToken);
     setToken(newToken);
-    await fetchUser(newToken);
+    await fetchUser();
   };
 
   const logout = () => {

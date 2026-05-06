@@ -10,7 +10,7 @@ from app.schemas.vendor import VendorOut, VendorUpdate
 router = APIRouter()
 
 
-@router.put("/{vendor_id}", response_model=VendorOut)
+@router.put("/update_vendor/{vendor_id}", response_model=VendorOut)
 def update_vendor(vendor_id: int, payload: VendorUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
     if not vendor:

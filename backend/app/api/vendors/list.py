@@ -8,7 +8,7 @@ from app.schemas.vendor import VendorOut
 router = APIRouter()
 
 
-@router.get("/", response_model=list[VendorOut])
+@router.get("/list_vendors", response_model=list[VendorOut])
 def list_vendors(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),

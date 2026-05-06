@@ -7,7 +7,7 @@ from app.schemas.menu_item import MenuItemCreate, MenuItemOut
 
 router = APIRouter()
 
-@router.post("/", response_model=MenuItemOut, status_code=status.HTTP_201_CREATED)
+@router.post("/create_menu_item", response_model=MenuItemOut, status_code=status.HTTP_201_CREATED)
 def create_menu_item(
     payload: MenuItemCreate,
     db: Session = Depends(get_db),

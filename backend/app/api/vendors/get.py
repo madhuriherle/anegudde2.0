@@ -8,7 +8,7 @@ from app.schemas.vendor import VendorOut
 router = APIRouter()
 
 
-@router.get("/{vendor_id}", response_model=VendorOut)
+@router.get("/get_vendor/{vendor_id}", response_model=VendorOut)
 def get_vendor(vendor_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
     if not vendor:

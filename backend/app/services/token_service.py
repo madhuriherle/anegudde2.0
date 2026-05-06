@@ -44,8 +44,9 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     generation.updated_at = now
     
     db.commit()
-    db.refresh(generation)
-    return generation
+    db.refresh(new_detail)
+    return new_detail
+
 
 def list_token_generations(db: Session, page: int = 1, page_size: int = 20):
     query = db.query(TokenGeneration).options(joinedload(TokenGeneration.creator)).order_by(TokenGeneration.date.desc())

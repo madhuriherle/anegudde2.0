@@ -7,7 +7,7 @@ from app.services.wastage_service import create_wastage as create_wastage_servic
 
 router = APIRouter()
 
-@router.post("/", response_model=WastageEntryOut, status_code=status.HTTP_201_CREATED)
+@router.post("/create_wastage", response_model=WastageEntryOut, status_code=status.HTTP_201_CREATED)
 def create_wastage(
     payload: WastageEntryCreate, 
     db: Session = Depends(get_db), 

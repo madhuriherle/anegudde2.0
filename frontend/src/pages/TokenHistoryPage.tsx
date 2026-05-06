@@ -1,26 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  IconButton,
-  Breadcrumbs,
-  Link,
-  Avatar,
-  TextField,
-  MenuItem,
-  InputAdornment,
-} from '@mui/material';
 import { 
-  ArrowBack,
-  Search,
-  CalendarToday,
-} from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+  ArrowLeft,
+  Calendar,
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Label } from '../components/ui/Label';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
 
 const TokenHistoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -43,200 +35,124 @@ const TokenHistoryPage: React.FC = () => {
     },
   });
 
-  const columns: any[] = [
-    { field: 'id', headerName: 'ID', width: 80, sortable: false },
+  const columns = useMemo<ColumnDef<any>[]>(() => [
     { 
-      field: 'created_at', 
-      headerName: 'Date & Time', 
-      flex: 1, 
-      minWidth: 200,
-      sortable: false,
-      renderCell: (params: any) => {
-        if (!params.value) return '-';
-        const date = new Date(params.value);
+      accessorKey: 'id', 
+      header: 'ID',
+    },
+    { 
+      accessorKey: 'created_at', 
+      header: 'Date & Time', 
+      cell: info => {
+        const val = info.getValue() as string;
+        if (!val) return '-';
+        const date = new Date(val);
         return (
-          <Typography variant="body2">
+          <span className="text-text-main">
             {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Typography>
+          </span>
         );
       }
     },
     { 
-      field: 'token_count', 
-      headerName: 'Tokens Issued', 
-      flex: 0.8, 
-      minWidth: 120,
-      sortable: false,
-      renderCell: (params: any) => (
-        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          {params.value}
-        </Typography>
+      accessorKey: 'token_count', 
+      header: 'Tokens Issued', 
+      cell: info => (
+        <span className="font-bold text-primary">
+          {info.getValue() as number}
+        </span>
       )
     },
     { 
-      field: 'creator', 
-      headerName: 'Issued By', 
-      flex: 1, 
-      minWidth: 150,
-      sortable: false,
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: 'secondary.light' }}>
-            {params.value?.full_name?.[0]}
-          </Avatar>
-          <Typography variant="body2">
-            {params.value?.full_name || '-'}
-          </Typography>
-        </Box>
-      )
+      accessorKey: 'creator', 
+      header: 'Issued By', 
+      cell: info => {
+        const creator = info.getValue() as any;
+        return (
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] text-white">
+              {creator?.full_name?.[0]}
+            </div>
+            <span className="text-text-main">
+              {creator?.full_name || '-'}
+            </span>
+          </div>
+        );
+      }
     },
-  ];
+  ], []);
 
   return (
-    <Box sx={{ px: { xs: 1, md: 3 }, pb: 3 }}>
-      <Box sx={{ mb: 2 }}>
-        <Breadcrumbs sx={{ mb: 1 }}>
-          <Link 
-            component="button" 
-            variant="body2" 
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center text-sm text-gray-500 gap-2">
+          <button 
             onClick={() => navigate('/tokens')}
-            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', color: 'text.secondary', textDecoration: 'none' }}
+            className="hover:text-primary transition-colors"
           >
             Token Management
-          </Link>
-          <Typography color="text.primary" variant="body2">Detailed History</Typography>
-        </Breadcrumbs>
+          </button>
+          <span>/</span>
+          <span className="text-text-main font-medium">Detailed History</span>
+        </div>
         
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <IconButton onClick={() => navigate('/tokens')} size="small" sx={{ bgcolor: 'grey.100' }}>
-            <ArrowBack />
-          </IconButton>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
-            Token Issuance Ledger
-          </Typography>
-        </Box>
-      </Box>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/tokens')} 
+            className="h-9 w-9 p-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <h2 className="text-text-main">Token Issuance Ledger</h2>
+        </div>
+      </div>
 
-      {/* Filter Block - Matching Wastages Style */}
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 4, 
-          border: '1px solid',
-          borderColor: 'divider',
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(8px)'
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 3,
-            alignItems: 'end',
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1.5fr 1.5fr' },
-          }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Rows
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <MenuItem key={size} value={size}>{size}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Start Date
-            </Typography>
-            <TextField
-              type="date"
-              fullWidth
-              size="small"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CalendarToday fontSize="small" color="action" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              End Date
-            </Typography>
-            <TextField
-              type="date"
-              fullWidth
-              size="small"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <CalendarToday fontSize="small" color="action" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          </Box>
-        </Box>
-      </Paper>
+      <Card className="border-border-temple">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-3 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Rows</Label>
+              <Select value={pageSize.toString()} onChange={(e) => setPageSize(Number(e.target.value))}>
+                {[10, 20, 50, 100].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Start Date</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="pl-10 text-text-main"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-text-main">End Date</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="pl-10 text-text-main"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          height: 600, 
-          width: '100%', 
-          borderRadius: 4, 
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
-        }}
-      >
-        <DataGrid
-          rows={history || []}
-          columns={columns}
-          loading={isLoading}
-          pageSizeOptions={[pageSize]}
-          initialState={{
-            pagination: { paginationModel: { pageSize: pageSize } },
-          }}
-          disableRowSelectionOnClick
-          disableColumnMenu
-          sx={{
-            border: 'none',
-            '& .MuiDataGrid-columnHeader': {
-              backgroundColor: 'primary.main',
-              color: 'white',
-              fontSize: '0.9rem',
-              fontWeight: 'bold',
-            },
-            '& .MuiDataGrid-cell:focus': { outline: 'none' },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: 'rgba(26, 35, 126, 0.04)',
-            },
-          }}
-        />
-      </Paper>
-    </Box>
+      <DataTable
+        columns={columns}
+        data={history || []}
+        loading={isLoading}
+      />
+    </div>
   );
 };
 

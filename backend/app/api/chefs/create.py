@@ -7,7 +7,7 @@ from app.schemas.chef import ChefCreate, ChefOut
 
 router = APIRouter()
 
-@router.post("/", response_model=ChefOut)
+@router.post("/create_chef", response_model=ChefOut)
 def create_chef(
     *,
     db: Session = Depends(get_db),

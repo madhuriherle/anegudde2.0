@@ -1,41 +1,36 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  Chip,
-  Stack,
-  InputAdornment,
-  TableContainer,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-} from '@mui/material';
 import { 
-  Add, 
+  Plus, 
   Edit, 
-  Delete, 
+  Trash2, 
   Search, 
-  Save, 
-  Visibility
-} from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+  Eye,
+  Save,
+  Trash,
+  Loader2
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Label } from '../components/ui/Label';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { Badge } from '../components/ui/Badge';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from '../components/ui/Dialog';
+import { Select } from '../components/ui/Select';
+import { DetailItem } from '../components/ui/DetailItem';
 
 const wastageItemSchema = z.object({
   menu_item_id: z.coerce.number().min(1, 'Dish is required'),
@@ -82,12 +77,12 @@ const WastagesPage: React.FC = () => {
 
   const { data: menuItems } = useQuery({
     queryKey: ['menu-items-list'],
-    queryFn: async () => (await api.get('/menu-items')).data,
+    queryFn: async () => (await api.get('/menu_items/list_menu_items')).data,
   });
 
   const { data: users } = useQuery({
     queryKey: ['users-list-minimal'],
-    queryFn: async () => (await api.get('/users', { params: { page_size: 1000 } })).data,
+    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
   });
 
   const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<WastageFormValues>({
@@ -103,6 +98,7 @@ const WastagesPage: React.FC = () => {
   });
 
   const watchedItems = watch('items');
+
 // Mutations
 const mutation = useMutation({
   mutationFn: async (data: WastageFormValues) => {
@@ -111,7 +107,7 @@ const mutation = useMutation({
       status: 1,
     };
     if (editingWastage) return api.put(`/wastages/${editingWastage.id}`, payload);
-    return api.post('/wastages', payload);
+    return api.post('/wastages/create_wastage', payload);
   },
   onSuccess: () => {    queryClient.invalidateQueries({ queryKey: ['wastages'] });
     showSuccess(editingWastage ? 'Wastage updated' : 'Wastage recorded');
@@ -190,7 +186,7 @@ const mutation = useMutation({
     }
   };
 
-  // Flattened items for DataGrid
+  // Flattened items for DataTable
   const flattenedRows = useMemo(() => {
     if (!wastages) return [];
     const rows: any[] = [];
@@ -213,378 +209,278 @@ const mutation = useMutation({
     return rows;
   }, [wastages]);
 
-  const columns: any[] = [
-    { field: 'entryId', headerName: 'Entry ID', flex: 0.4, minWidth: 80 },
-    { field: 'wastage_date', headerName: 'Date', flex: 0.8, minWidth: 120 },
-    { field: 'dish_name', headerName: 'Dish Name', flex: 1.5, minWidth: 150 },
+  const columns = useMemo<ColumnDef<any>[]>(() => [
     { 
-      field: 'quantity', 
-      headerName: 'Qty Wasted', 
-      flex: 0.8, 
-      minWidth: 100,
-      renderCell: (params: any) => (
-        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'error.main' }}>
-          {params.value} {params.row.unit}
-        </Typography>
+      accessorKey: 'entryId', 
+      header: 'Entry ID', 
+    },
+    { 
+      accessorKey: 'wastage_date', 
+      header: 'Date', 
+    },
+    { 
+      accessorKey: 'dish_name', 
+      header: 'Dish Name', 
+    },
+    { 
+      accessorKey: 'quantity', 
+      header: 'Qty Wasted', 
+      cell: info => (
+        <span className="font-bold text-red-600">
+          {info.getValue() as number} {info.row.original.unit}
+        </span>
       )
     },
-    { field: 'reason', headerName: 'Reason', flex: 1.5, minWidth: 150 },
+    { 
+      accessorKey: 'reason', 
+      header: 'Reason', 
+    },
     {
-      field: 'actions',
-      headerName: 'Actions',
-      flex: 1,
-      minWidth: 150,
-      sortable: false,
-      filterable: false,
-      headerAlign: 'right',
-      align: 'right',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <IconButton onClick={() => handleView(params.row.raw_wastage)} size="small" color="info" sx={{ mr: 1, bgcolor: 'info.light', color: 'white', '&:hover': { bgcolor: 'info.main' } }}>
-            <Visibility fontSize="small" />
-          </IconButton>
-          <IconButton onClick={() => handleOpen(params.row.raw_wastage)} size="small" color="primary" sx={{ mr: 1, bgcolor: 'primary.light', color: 'white', '&:hover': { bgcolor: 'primary.main' } }}>
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton onClick={async () => {
-            const confirmed = await showConfirm('Delete Record', `Are you sure you want to delete this wastage record?`);
-            if (confirmed) {
-              deleteMutation.mutate(params.row.entryId);
-            }
-          }} size="small" color="error" sx={{ bgcolor: 'error.light', color: 'white', '&:hover': { bgcolor: 'error.main' } }}>
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
+      id: 'actions',
+      header: () => <div className="text-right px-4">Actions</div>,
+      cell: info => (
+        <div className="flex justify-end gap-2 px-4">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => handleView(info.row.original.raw_wastage)}
+            className="h-8 w-8 p-0"
+          >
+            <Eye className="w-4 h-4 text-blue-600" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => handleOpen(info.row.original.raw_wastage)}
+            className="h-8 w-8 p-0"
+          >
+            <Edit className="w-4 h-4 text-primary" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={async () => {
+              const confirmed = await showConfirm('Delete Record', `Are you sure you want to delete this wastage record?`);
+              if (confirmed) {
+                deleteMutation.mutate(info.row.original.entryId);
+              }
+            }}
+            className="h-8 w-8 p-0"
+          >
+            <Trash2 className="w-4 h-4 text-red-600" />
+          </Button>
+        </div>
       ),
     },
-  ];
-
-  const DetailItem = ({ label, value, color }: { label: string, value: any, color?: string }) => (
-    <Box sx={{ display: 'flex', py: 1, borderBottom: '1px dashed', borderColor: 'divider' }}>
-      <Typography variant="body2" sx={{ fontWeight: 'bold', width: '40%', color: 'text.secondary' }}>
-        {label}
-      </Typography>
-      <Typography variant="body2" sx={{ width: '60%', fontWeight: 500, color: color || 'text.primary' }}>
-        {value || '-'}
-      </Typography>
-    </Box>
-  );
+  ], [deleteMutation, showConfirm]);
 
   return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0, md: 0.5 },
-        pb: { xs: 1, md: 3 },
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-            Wastage Records (Prepared Dishes)
-          </Typography>
-        </Box>
-      </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-primary/10 rounded-xl">
+            <Trash className="w-8 h-8 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-text-main">Wastage Records (Prepared Dishes)</h2>
+            <p className="text-sm text-text-main/70">Record and monitor food wastage from the kitchen.</p>
+          </div>
+        </div>
         <Button 
-          variant="contained" 
-          startIcon={<Add />} 
           onClick={() => handleOpen()}
-          sx={{ 
-            px: 3, 
-            py: 1.2, 
-            borderRadius: 2.5,
-            boxShadow: '0 4px 12px rgba(26, 35, 126, 0.3)',
-            fontWeight: 'bold'
-          }}
+          className="text-text-main font-bold px-6"
         >
+          <Plus className="w-4 h-4 mr-2" />
           Record Wastage
         </Button>
-      </Box>
+      </div>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 4, 
-          border: '1px solid',
-          borderColor: 'divider',
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(8px)'
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 3,
-            alignItems: 'end',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 2.5fr 7.5fr' },
-          }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Rows
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <MenuItem key={size} value={size}>{size}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Status
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="disabled">Disabled</MenuItem>
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Quick Search
-            </Typography>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search by reason or dish..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search color="action" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          </Box>
-        </Box>
-      </Paper>
+      <Card className="border-border-temple">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Rows</Label>
+              <Select value={pageSize.toString()} onChange={(e) => setPageSize(Number(e.target.value))}>
+                {[10, 20, 50, 100].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Status</Label>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5 lg:col-span-2">
+              <Label className="text-text-main">Quick Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search by reason or dish..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 text-text-main"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          height: 650, 
-          width: '100%', 
-          borderRadius: 4, 
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.03)'
-        }}
-      >
-        <DataGrid
-          rows={flattenedRows}
-          columns={columns.map((col: any) => ({
-            ...col,
-            sortable: col.field === 'entryId' || String(col.field).toLowerCase().includes('date'),
-          }))}
-          loading={wastagesLoading}
-          pageSizeOptions={[pageSize]}
-          initialState={{
-            pagination: { paginationModel: { pageSize: pageSize } },
-          }}
-          disableRowSelectionOnClick
-          disableColumnMenu
-          disableColumnResize
-          sx={{
-            border: 'none',
-            '& .MuiDataGrid-columnHeader': {
-              backgroundColor: 'primary.main',
-              color: 'white',
-              fontSize: '0.9rem',
-              fontWeight: 'bold',
-            },
-            '& .MuiDataGrid-cell': {
-              borderColor: 'grey.100',
-              '&:focus': { outline: 'none' },
-            },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: 'rgba(26, 35, 126, 0.04)',
-            },
-            '& .MuiDataGrid-footerContainer': {
-              borderTop: '1px solid',
-              borderColor: 'divider',
-            },
-          }}
-        />
-      </Paper>
+      <DataTable
+        columns={columns}
+        data={flattenedRows}
+        loading={wastagesLoading}
+      />
 
       {/* View Details Dialog */}
-      <Dialog 
-        open={viewDialogOpen} 
-        onClose={() => setViewDialogOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle>Wastage Details</DialogTitle>
-        <DialogContent sx={{ mt: 2, p: 3 }}>
-          <Stack spacing={0}>
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-xl border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-text-main">Wastage Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-0 mt-4">
             <DetailItem label="Wastage Date" value={viewingWastage?.wastage_date} />
             <DetailItem label="Reason" value={viewingWastage?.reason} />
             <DetailItem label="Recorded By" value={viewingWastage?.user?.full_name} />
-          </Stack>
 
-          <Typography variant="subtitle2" color="primary" sx={{ mt: 4, mb: 1, fontWeight: 'bold', px: 1 }}>
-            Wasted Dishes List
-          </Typography>
-          <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
-            <Table size="small">
-              <TableHead sx={{ bgcolor: 'grey.50' }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Dish Name</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Quantity</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {viewingWastage?.items.map((item: any) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.menu_item?.dish_name}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'error.main' }}>
-                      {item.quantity} {item.menu_item?.unit?.unit_code}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+            <div className="pt-6 pb-2">
+              <span className="text-sm font-bold text-text-main">Wasted Dishes List</span>
+            </div>
+            <div className="rounded-md border border-border-temple overflow-hidden mt-1">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-bg-temple text-text-main uppercase text-[11px] font-bold tracking-wider">
+                  <tr>
+                    <th className="px-4 py-3 border-b border-border-temple">Dish Name</th>
+                    <th className="px-4 py-3 border-b border-border-temple text-right">Quantity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-temple/40">
+                  {viewingWastage?.items.map((item: any) => (
+                    <tr key={item.id} className="hover:bg-bg-temple/30">
+                      <td className="px-4 py-3 text-text-main">{item.menu_item?.dish_name}</td>
+                      <td className="px-4 py-3 text-right font-bold text-red-600">
+                        {item.quantity} {item.menu_item?.unit?.unit_code}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
+            <Button onClick={() => setViewDialogOpen(false)} className="text-text-main">
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setViewDialogOpen(false)} variant="contained" color="primary" sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}>
-            Close
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Add/Edit Dialog */}
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="sm" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle>
-          {editingWastage ? 'Edit Wastage Record' : 'Record New Wastage'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box
-            sx={{
-              mb: 4,
-              mt: 1,
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1.5fr' },
-              gap: 2,
-              alignItems: 'start',
-            }}
-          >
-            <Box>
-              <TextField
-                {...register('wastage_date')}
-                label="Date *"
-                type="date"
-                fullWidth
-                slotProps={{ inputLabel: { shrink: true } }}
-                error={!!errors.wastage_date}
-              />
-            </Box>
-            <Box>
-              <TextField {...register('reason')} label="Reason/Remarks *" fullWidth error={!!errors.reason} />
-            </Box>
-          </Box>
+      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
+        <DialogContent className="max-w-2xl border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-text-main">
+              {editingWastage ? 'Edit Wastage Record' : 'Record New Wastage'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-text-main">Date *</Label>
+                <Input {...register('wastage_date')} type="date" className="text-text-main" />
+                {errors.wastage_date && <p className="text-xs text-red-500">{errors.wastage_date.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main">Reason/Remarks *</Label>
+                <Input {...register('reason')} placeholder="e.g. Spilled, Burnt" className="text-text-main" />
+                {errors.reason && <p className="text-xs text-red-500">{errors.reason.message}</p>}
+              </div>
+            </div>
 
-          <Typography variant="subtitle2" color="primary" sx={{ mb: 2, fontWeight: 'bold', textTransform: 'uppercase' }}>
-            Wasted Items (Prepared Dishes)
-          </Typography>
-          
-          <Paper elevation={0} variant="outlined" sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 3 }}>
-            {fields.map((field, index) => (
-              <Stack key={field.id} direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2, alignItems: 'start' }}>
-                <Box sx={{ flex: 6, width: '100%' }}>
-                  <Controller
-                    name={`items.${index}.menu_item_id` as const}
-                    control={control}
-                    render={({ field: itemField }) => (
-                      <TextField 
-                        {...itemField}
-                        select 
-                        fullWidth 
-                        size="small"
-                        error={!!errors?.items?.[index]?.menu_item_id}
-                        label={index === 0 ? "Select Dish" : ""}
-                        sx={{ bgcolor: 'white' }}
-                      >
-                        {menuItems?.filter((i: any) => i.status === 1 || watchedItems?.[index]?.menu_item_id === i.id).map((i: any) => (
-                          <MenuItem key={i.id} value={i.id}>{i.dish_name}</MenuItem>
-                        ))}
-                      </TextField>
-                    )}
-                  />
-                </Box>
-                <Box sx={{ flex: 3, width: '100%' }}>
-                  <TextField 
-                    {...register(`items.${index}.quantity` as const)} 
-                    type="number" 
-                    fullWidth 
-                    size="small" 
-                    error={!!errors?.items?.[index]?.quantity}
-                    label={index === 0 ? "Qty" : ""}
-                    sx={{ bgcolor: 'white' }}
-                    slotProps={{
-                        input: {
-                            endAdornment: (
-                                <Typography variant="caption" color="text.secondary">
-                                    {menuItems?.find((mi: any) => mi.id === watchedItems?.[index]?.menu_item_id)?.unit?.unit_code || ''}
-                                </Typography>
-                            )
-                        }
-                    }}
-                  />
-                </Box>
-                <IconButton color="error" onClick={() => remove(index)} disabled={fields.length === 1} size="small" sx={{ mt: { xs: 0, sm: index === 0 ? 0.5 : 0 } }}>
-                  <Delete />
-                </IconButton>
-              </Stack>
-            ))}
-            
-            <Button size="small" startIcon={<Add />} onClick={() => append({ menu_item_id: '' as any, quantity: 0 })} sx={{ mt: 1, fontWeight: 'bold' }}>
-              Add Another Dish
-            </Button>
-          </Paper>
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-primary uppercase tracking-wider">Wasted Items (Prepared Dishes)</h4>
+              <div className="p-4 bg-bg-temple border border-border-temple rounded-lg space-y-4">
+                {fields.map((field, index) => (
+                  <div key={field.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                    <div className="flex-1 w-full space-y-1.5">
+                      <Label className="text-[11px] text-text-main uppercase">{index === 0 && "Select Dish"}</Label>
+                      <Controller
+                        name={`items.${index}.menu_item_id` as const}
+                        control={control}
+                        render={({ field: itemField }) => (
+                          <Select 
+                            value={itemField.value?.toString()} 
+                            onChange={(e) => itemField.onChange(Number(e.target.value))}
+                          >
+                            <option value="">Select a dish</option>
+                            {menuItems?.filter((i: any) => i.status === 1 || watchedItems?.[index]?.menu_item_id === i.id).map((i: any) => (
+                              <option key={i.id} value={i.id}>{i.dish_name}</option>
+                            ))}
+                          </Select>
+                        )}
+                      />
+                    </div>
+                    <div className="w-full sm:w-32 space-y-1.5">
+                      <Label className="text-[11px] text-text-main uppercase">{index === 0 && "Qty"}</Label>
+                      <div className="relative">
+                        <Input 
+                          {...register(`items.${index}.quantity` as const)} 
+                          type="number" 
+                          step="0.001"
+                          placeholder="0.00"
+                          className="pr-10 text-text-main"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">
+                          {menuItems?.find((mi: any) => mi.id === watchedItems?.[index]?.menu_item_id)?.unit?.unit_code || ''}
+                        </span>
+                      </div>
+                    </div>
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      onClick={() => remove(index)} 
+                      disabled={fields.length === 1}
+                      className="h-10 w-10 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                
+                <Button 
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => append({ menu_item_id: '' as any, quantity: 0 })}
+                  className="text-primary border-primary/20 hover:bg-primary/5"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Another Dish
+                </Button>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-4 border-t border-border-temple/40 gap-2">
+              <Button type="button" variant="ghost" onClick={handleClose} className="text-text-main">
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={mutation.isPending}
+                className="text-text-main font-bold"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {mutation.isPending ? 'Saving...' : editingWastage ? 'Update Record' : 'Save Record'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleClose} color="inherit">Cancel</Button>
-          <Button 
-            onClick={handleSubmit(onSubmit)} 
-            variant="contained" 
-            startIcon={<Save />} 
-            disabled={mutation.isPending}
-            sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}
-          >
-            {mutation.isPending ? 'Saving...' : editingWastage ? 'Update Record' : 'Save Record'}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 };
 

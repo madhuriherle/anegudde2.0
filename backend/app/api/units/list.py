@@ -6,7 +6,7 @@ from app.schemas.unit import UnitOut
 
 router = APIRouter()
 
-@router.get("/", response_model=list[UnitOut])
+@router.get("/list_units", response_model=list[UnitOut])
 def list_units(
     db: Session = Depends(get_db), 
     _: User = Depends(get_current_user),

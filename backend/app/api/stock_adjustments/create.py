@@ -6,7 +6,7 @@ from app.api.deps import get_current_user, get_db
 from app.db.models import Item, StockAdjustment, StockLedger, User
 from app.schemas.stock_adjustment import StockAdjustmentCreate, StockAdjustmentOut
 router = APIRouter()
-@router.post("/", response_model=StockAdjustmentOut, status_code=status.HTTP_201_CREATED)
+@router.post("/create_adjustment", response_model=StockAdjustmentOut, status_code=status.HTTP_201_CREATED)
 def create_adjustment(payload: StockAdjustmentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     item = db.query(Item).filter(Item.id == payload.item_id).first()
     if not item: raise HTTPException(status_code=400, detail="Invalid item_id")

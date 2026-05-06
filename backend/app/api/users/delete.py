@@ -7,7 +7,7 @@ from app.db.models import User
 router = APIRouter()
 
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/delete_user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")

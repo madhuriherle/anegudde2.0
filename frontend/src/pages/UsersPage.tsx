@@ -1,39 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Grid,
-  CircularProgress,
-  MenuItem,
-  Chip,
-  Switch,
-  Stack,
-  InputAdornment,
-} from '@mui/material';
 import { 
-  Add, 
+  Plus, 
   Edit, 
-  Delete, 
+  Trash2, 
   Search, 
-  Save, 
-  Group,
-  Visibility
-} from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+  Eye,
+  Save,
+  Users,
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Label } from '../components/ui/Label';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { Badge } from '../components/ui/Badge';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from '../components/ui/Dialog';
+import { Select } from '../components/ui/Select';
+import { Switch } from '../components/ui/Switch';
+import { DetailItem } from '../components/ui/DetailItem';
 
 const userSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -68,7 +65,7 @@ const UsersPage: React.FC = () => {
     queryFn: async () => {
       const params: any = { q: search, page_size: pageSize };
       if (status !== 'all') params.status = status === 'active' ? 1 : 0;
-      const res = await api.get('/users', { params });
+      const res = await api.get('/users/list_users', { params });
       return res.data;
     },
   });
@@ -90,7 +87,7 @@ const UsersPage: React.FC = () => {
       if (editingUser) {
         return api.put(`/users/${editingUser.id}`, data);
       }
-      return api.post('/users', data);
+      return api.post('/users/create_user', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -142,368 +139,261 @@ const UsersPage: React.FC = () => {
     }
   };
 
-  const columns: any[] = [
-    { field: 'id', headerName: 'ID', flex: 0.4, minWidth: 60 },
-    { field: 'username', headerName: 'Username', flex: 1, minWidth: 120 },
-    { field: 'full_name', headerName: 'Full Name', flex: 1.5, minWidth: 160 },
+  const columns = useMemo<ColumnDef<any>[]>(() => [
     { 
-      field: 'role_id', 
-      headerName: 'Role', 
-      flex: 1,
-      minWidth: 120,
-      valueGetter: (params: any) => {
-          const role = roles?.find((r: any) => r.id === params);
-          return role ? role.role_name : params;
+      accessorKey: 'id', 
+      header: 'ID', 
+    },
+    { 
+      accessorKey: 'username', 
+      header: 'Username', 
+    },
+    { 
+      accessorKey: 'full_name', 
+      header: 'Full Name', 
+    },
+    { 
+      accessorKey: 'role_id', 
+      header: 'Role', 
+      cell: info => {
+        const role = roles?.find((r: any) => r.id === info.getValue());
+        return role ? role.role_name : (info.getValue() as string);
       }
     },
     { 
-      field: 'status', 
-      headerName: 'Status', 
-      flex: 0.8,
-      minWidth: 110,
-      renderCell: (params: any) => (
-        <Chip 
-          label={params.value === 1 ? 'Active' : 'Disabled'} 
-          color={params.value === 1 ? 'success' : 'default'} 
-          size="small" 
-          sx={{ fontWeight: 600 }}
-        />
+      accessorKey: 'status', 
+      header: 'Status', 
+      cell: info => (
+        <Badge>
+          {info.getValue() === 1 ? 'Active' : 'Disabled'}
+        </Badge>
       )
     },
     {
-      field: 'actions',
-      headerName: 'Actions',
-      flex: 1.2,
-      minWidth: 150,
-      sortable: false,
-      filterable: false,
-      headerAlign: 'right',
-      align: 'right',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <IconButton onClick={() => handleView(params.row)} size="small" color="info" sx={{ mr: 1, bgcolor: 'info.light', color: 'white', '&:hover': { bgcolor: 'info.main' } }}>
-            <Visibility fontSize="small" />
-          </IconButton>
-          <IconButton onClick={() => handleOpen(params.row)} size="small" color="primary" sx={{ mr: 1, bgcolor: 'primary.light', color: 'white', '&:hover': { bgcolor: 'primary.main' } }}>
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton onClick={async () => {
-            const confirmed = await showConfirm('Delete User', `Are you sure you want to delete user "${params.row.username}"?`);
-            if (confirmed) {
-              deleteMutation.mutate(params.row.id);
-            }
-          }} size="small" color="error" sx={{ bgcolor: 'error.light', color: 'white', '&:hover': { bgcolor: 'error.main' } }}>
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
+      id: 'actions',
+      header: () => <div className="text-right px-4">Actions</div>,
+      cell: info => (
+        <div className="flex justify-end gap-2 px-4">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => handleView(info.row.original)}
+            className="h-8 w-8 p-0"
+          >
+            <Eye className="w-4 h-4 text-blue-600" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => handleOpen(info.row.original)}
+            className="h-8 w-8 p-0"
+          >
+            <Edit className="w-4 h-4 text-primary" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={async () => {
+              const confirmed = await showConfirm('Delete User', `Are you sure you want to delete user "${info.row.original.username}"?`);
+              if (confirmed) {
+                deleteMutation.mutate(info.row.original.id);
+              }
+            }}
+            className="h-8 w-8 p-0"
+          >
+            <Trash2 className="w-4 h-4 text-red-600" />
+          </Button>
+        </div>
       ),
     },
-  ];
-
-  const DetailItem = ({ label, value }: { label: string, value: any }) => (
-    <Box sx={{ display: 'flex', py: 1.2, borderBottom: '1px dashed', borderColor: 'divider' }}>
-      <Typography variant="body2" sx={{ fontWeight: 'bold', width: '40%', color: 'text.secondary' }}>
-        {label}
-      </Typography>
-      <Typography variant="body2" sx={{ width: '60%', fontWeight: 500, color: 'text.primary' }}>
-        {value || '-'}
-      </Typography>
-    </Box>
-  );
+  ], [roles, deleteMutation, showConfirm]);
 
   return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0, md: 0.5 },
-        pb: { xs: 1, md: 3 },
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-            User Management
-          </Typography>
-        </Box>
-      </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-primary/10 rounded-xl">
+            <Users className="w-8 h-8 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-text-main">User Management</h2>
+            <p className="text-sm text-text-main/70">Manage system users and their roles.</p>
+          </div>
+        </div>
         <Button 
-          variant="contained" 
-          startIcon={<Add />} 
           onClick={() => handleOpen()}
-          sx={{ 
-            px: 3, 
-            py: 1.2, 
-            borderRadius: 2.5,
-            boxShadow: '0 4px 12px rgba(26, 35, 126, 0.3)',
-            fontWeight: 'bold'
-          }}
+          className="text-text-main font-bold px-6"
         >
+          <Plus className="w-4 h-4 mr-2" />
           Add New User
         </Button>
-      </Box>
+      </div>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 4, 
-          border: '1px solid',
-          borderColor: 'divider',
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(8px)'
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 3,
-            alignItems: 'end',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 2.5fr 7.5fr' },
-          }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Rows
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <MenuItem key={size} value={size}>{size}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Status Filter
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="disabled">Disabled</MenuItem>
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Quick Search
-            </Typography>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search users..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search color="action" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          </Box>
-        </Box>
-      </Paper>
+      <Card className="border-border-temple">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Rows</Label>
+              <Select value={pageSize.toString()} onChange={(e) => setPageSize(Number(e.target.value))}>
+                {[10, 20, 50, 100].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Status Filter</Label>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5 lg:col-span-2">
+              <Label className="text-text-main">Quick Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search users..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 text-text-main"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          height: 600, 
-          width: '100%', 
-          borderRadius: 4, 
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.03)'
-        }}
-      >
-        <DataGrid
-          rows={users || []}
-          columns={columns}
-          loading={isLoading}
-          pageSizeOptions={[pageSize]}
-          initialState={{
-            pagination: { paginationModel: { pageSize: pageSize } },
-          }}
-          disableRowSelectionOnClick
-          disableColumnMenu
-          sx={{
-            border: 'none',
-            '& .MuiDataGrid-columnHeader': {
-              backgroundColor: 'primary.main',
-              color: 'white',
-              fontSize: '0.9rem',
-              fontWeight: 'bold',
-            },
-            '& .MuiDataGrid-cell': {
-              borderColor: 'grey.100',
-              '&:focus': { outline: 'none' },
-            },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: 'rgba(26, 35, 126, 0.04)',
-            },
-          }}
-        />
-      </Paper>
+      <DataTable
+        columns={columns}
+        data={users || []}
+        loading={isLoading}
+      />
 
       {/* View Details Dialog */}
-      <Dialog 
-        open={viewDialogOpen} 
-        onClose={() => setViewDialogOpen(false)} 
-        maxWidth="xs" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          User Details
-          <Chip 
-            label={viewingUser?.status === 1 ? 'Active' : 'Disabled'} 
-            sx={{ bgcolor: viewingUser?.status === 1 ? 'success.main' : 'grey.400', color: 'white', fontWeight: 'bold' }}
-            size="small" 
-          />
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2, p: 3 }}>
-          <Stack spacing={0}>
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-md border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-text-main">User Details</DialogTitle>
+              <Badge>
+                {viewingUser?.status === 1 ? 'Active' : 'Disabled'}
+              </Badge>
+            </div>
+          </DialogHeader>
+          <div className="space-y-0 mt-4">
             <DetailItem label="Username" value={viewingUser?.username} />
             <DetailItem label="Full Name" value={viewingUser?.full_name} />
             <DetailItem label="Email" value={viewingUser?.email} />
             <DetailItem label="Phone" value={viewingUser?.phone} />
             <DetailItem label="Role" value={roles?.find((r: any) => r.id === viewingUser?.role_id)?.role_name} />
-          </Stack>
 
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mt: 3, mb: 1, color: 'text.secondary', px: 1 }}>
-            Audit Information
-          </Typography>
-          <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-            <DetailItem 
-              label="Created At" 
-              value={viewingUser?.created_at ? new Date(viewingUser.created_at).toLocaleString() : '-'} 
-            />
-            <DetailItem 
-              label="Last Updated" 
-              value={viewingUser?.updated_at ? new Date(viewingUser.updated_at).toLocaleString() : '-'} 
-            />
-          </Box>
+            <div className="pt-6 pb-2">
+              <span className="text-sm font-bold text-text-main">Audit Information</span>
+            </div>
+            <div className="p-4 bg-bg-temple border border-border-temple rounded-md space-y-0">
+              <DetailItem 
+                label="Created At" 
+                value={viewingUser?.created_at ? new Date(viewingUser.created_at).toLocaleString() : '-'} 
+              />
+              <DetailItem 
+                label="Last Updated" 
+                value={viewingUser?.updated_at ? new Date(viewingUser.updated_at).toLocaleString() : '-'} 
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
+            <Button onClick={() => setViewDialogOpen(false)} className="text-text-main">
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={() => setViewDialogOpen(false)} variant="contained" color="primary" sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}>
-            Close
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Add/Edit Dialog */}
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="sm" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle>
-          {editingUser ? 'Edit User' : 'New User'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box 
-            sx={{ 
-              mt: 1,
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-              gap: 3
-            }}
-          >
-            <Box>
-              <TextField {...register('username')} label="Username *" fullWidth error={!!errors.username} helperText={errors.username?.message} disabled={!!editingUser} />
-            </Box>
-            <Box>
-              <TextField {...register('password')} label={editingUser ? "Password (Leave blank to keep same)" : "Password *"} type="password" fullWidth error={!!errors.password} helperText={errors.password?.message} />
-            </Box>
-            <Box sx={{ gridColumn: 'span 2' }}>
-              <TextField {...register('full_name')} label="Full Name *" fullWidth error={!!errors.full_name} helperText={errors.full_name?.message} />
-            </Box>
-            <Box>
-              <TextField {...register('email')} label="Email Address" fullWidth error={!!errors.email} helperText={errors.email?.message} />
-            </Box>
-            <Box>
-              <TextField {...register('phone')} label="Phone Number" fullWidth error={!!errors.phone} helperText={errors.phone?.message} />
-            </Box>
-            <Box sx={{ gridColumn: 'span 2' }}>
-              <Controller
-                name="role_id"
-                control={control}
-                render={({ field }) => (
-                  <TextField {...field} select label="Role *" fullWidth error={!!errors.role_id} helperText={errors.role_id?.message}>
-                    {roles?.map((r: any) => (
-                      <MenuItem key={r.id} value={r.id}>{r.role_name}</MenuItem>
-                    ))}
-                  </TextField>
-                )}
-              />
-            </Box>
-            
-            <Box sx={{ gridColumn: 'span 2' }}>
-              <Controller
-                name="status"
-                control={control}
-                render={({ field }) => (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    p: 2,
-                    bgcolor: 'grey.50',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'divider'
-                  }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Active Status</Typography>
+      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
+        <DialogContent className="max-w-2xl border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-text-main">
+              {editingUser ? 'Edit User' : 'New User'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5">
+                <Label className="text-text-main">Username *</Label>
+                <Input {...register('username')} placeholder="e.g. johndoe" className="text-text-main" disabled={!!editingUser} />
+                {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main">{editingUser ? "Password (Leave blank to keep same)" : "Password *"}</Label>
+                <Input {...register('password')} type="password" placeholder="••••••••" className="text-text-main" />
+                {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="text-text-main">Full Name *</Label>
+                <Input {...register('full_name')} placeholder="e.g. John Doe" className="text-text-main" />
+                {errors.full_name && <p className="text-xs text-red-500">{errors.full_name.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main">Email Address</Label>
+                <Input {...register('email')} type="email" placeholder="john@example.com" className="text-text-main" />
+                {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main">Phone Number</Label>
+                <Input {...register('phone')} placeholder="e.g. 9876543210" className="text-text-main" />
+                {errors.phone && <p className="text-xs text-red-500">{errors.phone.message}</p>}
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="text-text-main">Role *</Label>
+                <Controller
+                  name="role_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value?.toString()} onChange={(e) => field.onChange(Number(e.target.value))}>
+                      <option value="">Select a role</option>
+                      {roles?.map((r: any) => (
+                        <option key={r.id} value={r.id}>{r.role_name}</option>
+                      ))}
+                    </Select>
+                  )}
+                />
+                {errors.role_id && <p className="text-xs text-red-500">{errors.role_id.message}</p>}
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-bg-temple border border-border-temple rounded-md md:col-span-2">
+                <Label className="text-text-main font-bold">Active Status</Label>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
                     <Switch 
                       checked={field.value === 1} 
-                      onChange={(e) => field.onChange(e.target.checked ? 1 : 0)} 
-                      color="success" 
+                      onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)} 
                     />
-                  </Box>
-                )}
-              />
-            </Box>
-          </Box>
+                  )}
+                />
+              </div>
+            </div>
+            <DialogFooter className="pt-4 border-t border-border-temple/40 gap-2">
+              <Button type="button" variant="ghost" onClick={handleClose} className="text-text-main">
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={mutation.isPending}
+                className="text-text-main font-bold"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {mutation.isPending ? 'Saving...' : editingUser ? 'Update User' : 'Save User'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleClose} color="inherit">Cancel</Button>
-          <Button 
-            onClick={handleSubmit(onSubmit)} 
-            variant="contained" 
-            startIcon={<Save />} 
-            disabled={mutation.isPending}
-            sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}
-          >
-            {mutation.isPending ? 'Saving...' : editingUser ? 'Update User' : 'Save User'}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 };
 
 export default UsersPage;
-
-
-
-
-
-

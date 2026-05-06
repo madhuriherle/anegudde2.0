@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #C26A2D;
+  --color-primary-light: #D97706;
+  --color-primary-dark: #A95A24;
+  --color-secondary: #5D4037;
+  --color-secondary-light: #8D6E63;
+  --color-secondary-dark: #3E2723;
+  --color-error: #C62828;
+  --color-bg-temple: #FAF6F0;
+  --color-bg-cream: #FFF8F0;
+  --color-text-main: #3E2723;
+  --color-text-normal: #5D4037;
+  --color-text-light: #8D6E63;
+  --color-border-temple: #E7D5C3;
+
+  --font-serif: "Merriweather", serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+@layer components {
+  .temple-form {
+    @apply space-y-6 py-4;
+  }
+
+  .temple-form-section {
+    @apply space-y-4 bg-[#FFFCF8] p-5 rounded-2xl border border-[#F1E3D3] shadow-sm;
+  }
+
+  .temple-label {
+    @apply text-[15px] font-bold text-secondary mb-1.5 block;
+  }
+
+  .temple-input {
+    @apply h-12 rounded-xl border-[#D2B89B] bg-white text-secondary-dark font-medium placeholder:text-[#9C7B6A]/50 focus:ring-primary/20 focus:border-primary transition-all shadow-sm;
+  }
+
+  .temple-section-header {
+    @apply text-xs font-bold text-primary uppercase tracking-[0.2em] mb-4 mt-6;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-bg-temple text-text-main antialiased font-sans;
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-text-main font-sans;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+  }
+
+  span, div, p, label, input, select, textarea, button {
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    color: var(--color-text-main) !important;
+  }
+}
+
+
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

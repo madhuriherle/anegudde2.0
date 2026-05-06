@@ -7,7 +7,7 @@ from app.services import vendor_payment_service
 
 router = APIRouter(prefix="/vendor-payments", tags=["vendor-payments"])
 
-@router.get("/", response_model=list[VendorPaymentOut])
+@router.get("/list_vendor_payments", response_model=list[VendorPaymentOut])
 def list_vendor_payments(
     vendor_id: int = None,
     page: int = 1,
@@ -17,7 +17,7 @@ def list_vendor_payments(
 ):
     return vendor_payment_service.list_vendor_payments(db, page, page_size, vendor_id)
 
-@router.post("/", response_model=VendorPaymentOut, status_code=status.HTTP_201_CREATED)
+@router.post("/create_vendor_payment", response_model=VendorPaymentOut, status_code=status.HTTP_201_CREATED)
 def create_vendor_payment(
     payload: VendorPaymentCreate,
     db: Session = Depends(get_db),
@@ -25,7 +25,7 @@ def create_vendor_payment(
 ):
     return vendor_payment_service.create_vendor_payment(payload, db, current_user)
 
-@router.delete("/{payment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/delete_vendor_payment/{payment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_vendor_payment(
     payment_id: int,
     db: Session = Depends(get_db),

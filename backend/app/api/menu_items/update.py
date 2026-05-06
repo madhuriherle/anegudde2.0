@@ -7,7 +7,7 @@ from app.schemas.menu_item import MenuItemUpdate, MenuItemOut
 
 router = APIRouter()
 
-@router.put("/{item_id}", response_model=MenuItemOut)
+@router.put("/update_menu_item/{item_id}", response_model=MenuItemOut)
 def update_menu_item(
     item_id: int,
     payload: MenuItemUpdate,

@@ -1,24 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Box,
-  Typography,
-  Paper,
-  Grid,
-  TextField,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Tooltip,
-} from '@mui/material';
-import { FilterList, Download, Refresh, InfoOutlined, ShowChart } from '@mui/icons-material';
+import { 
+  Download, 
+  RefreshCw, 
+  Search,
+  Info,
+  ChevronRight
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { Label } from '../components/ui/Label';
 
 const DailyStockReportPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
@@ -88,184 +84,148 @@ const DailyStockReportPage: React.FC = () => {
     try {
       await api.post(`/reports/generate-daily-summary?target_date=${targetDate}`);
       showSuccess('Snapshot generation triggered successfully.');
-            refetch();
+      refetch();
     } catch (error) {
       console.error('Failed to trigger snapshot', error);
       showError('Failed to trigger snapshot');
-          }
+    }
   };
 
   const totalStockValue = snapshotData?.reduce((sum: number, row: any) => sum + (Number(row.stock_value) || 0), 0) || 0;
 
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: 'item_name',
+      header: 'Item Name',
+      cell: info => <span className="text-text-main font-medium">{info.getValue() as string}</span>,
+    },
+    {
+      accessorKey: 'opening_stock',
+      header: () => <div className="text-right">Opening</div>,
+      cell: info => <div className="text-right text-text-main">{Number(info.getValue()).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: 'purchased_qty',
+      header: () => <div className="text-right">Purchased</div>,
+      cell: info => <div className="text-right text-green-600 font-medium">+{Number(info.getValue()).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: 'consumed_qty',
+      header: () => <div className="text-right">Consumed</div>,
+      cell: info => <div className="text-right text-red-600 font-medium">-{Number(info.getValue()).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: 'wastage_qty',
+      header: () => <div className="text-right">Wastage</div>,
+      cell: info => <div className="text-right text-orange-600 font-medium">-{Number(info.getValue()).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: 'adjustment_qty',
+      header: () => <div className="text-right">Adjustment</div>,
+      cell: info => {
+        const val = Number(info.getValue());
+        return (
+          <div className={`text-right font-medium ${val >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {val > 0 ? '+' : ''}{val.toFixed(2)}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'closing_stock',
+      header: () => <div className="text-right">Closing</div>,
+      cell: info => <div className="text-right text-text-main font-bold">{Number(info.getValue()).toFixed(2)}</div>,
+    },
+    {
+      accessorKey: 'stock_value',
+      header: () => <div className="text-right">Est. Value</div>,
+      cell: info => (
+        <div className="text-right text-text-main font-medium">
+          ₹{Number(info.getValue() || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        </div>
+      ),
+    },
+  ], []);
+
   return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0, md: 0.5 },
-        pb: { xs: 1, md: 3 },
-      }}
-    >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-              Daily Closing Stock Report
-            </Typography>
-            
-          </Box>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button 
-            variant="outlined" 
-            startIcon={<Download />} 
-            onClick={handleExport}
-            sx={{ fontWeight: 'bold', borderRadius: 2 }}
-          >
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-text-main text-2xl font-semibold font-temple">Daily Closing Stock Report</h2>
+          <p className="text-text-main/70">Review inventory status and daily movement for any date.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
             Export CSV
           </Button>
-          <Tooltip title="Manually re-generate or backfill snapshot for this date">
-            <Button 
-              variant="outlined" 
-              color="warning" 
-              startIcon={<Refresh />} 
-              onClick={handleManualSnapshot}
-              sx={{ fontWeight: 'bold', borderRadius: 2 }}
-            >
-              Force Refresh
-            </Button>
-          </Tooltip>
-        </Box>
-      </Box>
+          <Button variant="outline" onClick={handleManualSnapshot} className="flex items-center gap-2 border-orange-200 text-orange-700 hover:bg-orange-50">
+            <RefreshCw className="h-4 w-4" />
+            Force Refresh
+          </Button>
+        </div>
+      </div>
 
-      <Box 
-        sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, 
-          gap: 3, 
-          mb: 3 
-        }}
-      >
-        <Box>
-          <Paper sx={{ p: 3, bgcolor: 'primary.main', color: 'white', borderRadius: 4, boxShadow: '0 4px 12px rgba(26, 35, 126, 0.2)' }}>
-            <Typography variant="subtitle2" sx={{ opacity: 0.9, fontWeight: 'bold', textTransform: 'uppercase', mb: 1 }}>
-              Estimated Stock Value
-            </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 800 }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-primary-main border-none shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4 text-white/80 mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider">Estimated Stock Value</span>
+              <Info className="h-3.5 w-3.5" />
+            </div>
+            <div className="text-3xl font-bold text-white">
               ₹{totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.8, mt: 1, display: 'block' }}>Based on item prices as of {targetDate}</Typography>
-          </Paper>
-        </Box>
-      </Box>
+            </div>
+            <p className="text-xs text-white/60 mt-2 flex items-center gap-1">
+              <ChevronRight className="h-3 w-3" />
+              Based on item prices as of {targetDate}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 4, 
-          border: '1px solid',
-          borderColor: 'divider',
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(8px)'
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            alignItems: 'center',
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 2fr', md: '3fr 2fr 7fr' },
-          }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Report Date
-            </Typography>
-            <TextField
-              type="date"
-              fullWidth
-              size="small"
-              value={targetDate}
-              onChange={(e) => setTargetDate(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-          </Box>
-          <Box sx={{ pt: { xs: 0, sm: 2.5 } }}>
-            <Button 
-              variant="contained" 
-              fullWidth 
-              startIcon={<FilterList />} 
-              onClick={() => refetch()}
-              sx={{ fontWeight: 'bold', borderRadius: 2 }}
-            >
-              View
+      <Card className="border-border-temple bg-white/80 backdrop-blur-sm">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-end gap-4">
+            <div className="space-y-1.5 flex-1 max-w-xs">
+              <Label className="text-text-main font-medium">Report Date</Label>
+              <Input 
+                type="date" 
+                value={targetDate} 
+                onChange={(e) => setTargetDate(e.target.value)}
+                className="text-text-main"
+              />
+            </div>
+            <Button onClick={() => refetch()} className="flex items-center gap-2 px-8">
+              <Search className="h-4 w-4" />
+              View Report
             </Button>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', pt: { xs: 0, sm: 2.5 }, justifyContent: 'flex-end' }}>
-            <InfoOutlined color="action" sx={{ mr: 1, fontSize: 18 }} />
-          </Box>
-        </Box>
-      </Paper>
+            <div className="flex-1 flex justify-end">
+              <div className="bg-bg-temple p-2 rounded-full border border-border-temple/40">
+                <Info className="h-5 w-5 text-text-main/60" />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-        <Table stickyHeader size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Item Name</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Opening Stock</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Purchased</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Consumed</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Wastage</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Adjustment</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Closing Stock</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Est. Value</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 10 }}>
-                  <CircularProgress />
-                  <Typography variant="body2" sx={{ mt: 2 }}>Loading snapshots...</Typography>
-                </TableCell>
-              </TableRow>
-            ) : snapshotData?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
-                  <Typography variant="body1" color="text.secondary">No snapshot found for this date.</Typography>
-                  <Button variant="text" color="primary" sx={{ mt: 1, fontWeight: 'bold' }} onClick={handleManualSnapshot}>
-                    Generate Snapshot Now
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ) : (
-              snapshotData?.map((row: any) => (
-                <TableRow key={row.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell sx={{ fontWeight: 'bold', py: 1.5 }}>{row.item_name}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5 }}>{Number(row.opening_stock).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ color: 'success.main', fontWeight: 500, py: 1.5 }}>+{Number(row.purchased_qty).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ color: 'error.main', fontWeight: 500, py: 1.5 }}>-{Number(row.consumed_qty).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ color: 'warning.main', fontWeight: 500, py: 1.5 }}>-{Number(row.wastage_qty).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ color: row.adjustment_qty >= 0 ? 'success.main' : 'error.main', fontWeight: 500, py: 1.5 }}>
-                    {row.adjustment_qty > 0 ? '+' : ''}{Number(row.adjustment_qty).toFixed(2)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, color: 'primary.main', py: 1.5 }}>{Number(row.closing_stock).toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5 }}>₹{Number(row.stock_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      </Box>
+      <div className="rounded-xl border border-border-temple overflow-hidden bg-white">
+        <DataTable 
+          columns={columns} 
+          data={snapshotData || []} 
+          loading={isLoading}
+        />
+        {snapshotData?.length === 0 && !isLoading && (
+          <div className="py-20 text-center space-y-4">
+            <p className="text-text-main/60">No snapshot found for this date.</p>
+            <Button variant="ghost" className="text-primary-main" onClick={handleManualSnapshot}>
+              Generate Snapshot Now
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
 export default DailyStockReportPage;
-
-
-
-
-

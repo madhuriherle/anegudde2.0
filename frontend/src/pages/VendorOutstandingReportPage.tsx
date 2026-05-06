@@ -1,24 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Box,
-  Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Button,
-  Chip,
-  Grid,
-  TextField,
-  InputAdornment,
-} from '@mui/material';
-import { Download, WarningAmber, Search, ReceiptLong } from '@mui/icons-material';
+import { 
+  Download, 
+  AlertTriangle, 
+  Search, 
+  FileText 
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Label } from '../components/ui/Label';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { Badge } from '../components/ui/Badge';
 
 const VendorOutstandingReportPage: React.FC = () => {
   const [search, setSearch] = useState('');
@@ -32,7 +27,7 @@ const VendorOutstandingReportPage: React.FC = () => {
   });
 
   const filteredData = useMemo(() => {
-    if (!search || !vendorData) return vendorData;
+    if (!search || !vendorData) return vendorData || [];
     return vendorData.filter((v: any) => 
       v.vendor_name.toLowerCase().includes(search.toLowerCase()) || 
       v.vendor_code.toLowerCase().includes(search.toLowerCase())
@@ -77,145 +72,109 @@ const VendorOutstandingReportPage: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    { 
+      accessorKey: 'vendor_name', 
+      header: 'Vendor Name', 
+      cell: info => <span className="font-bold text-text-main">{info.getValue() as string}</span>
+    },
+    { 
+      accessorKey: 'vendor_code', 
+      header: 'Code', 
+      cell: info => <span className="text-text-main">{info.getValue() as string}</span>
+    },
+    { 
+      accessorKey: 'contact_number', 
+      header: 'Contact', 
+      cell: info => <span className="text-text-main">{info.getValue() as string}</span>
+    },
+    { 
+      accessorKey: 'current_balance', 
+      header: 'Outstanding Balance', 
+      cell: info => (
+        <span className="font-black text-red-600">
+          ₹{Number(info.getValue()).toLocaleString()}
+        </span>
+      ),
+    },
+    { 
+      accessorKey: 'credit_limit', 
+      header: 'Credit Limit', 
+      cell: info => {
+        const val = info.getValue();
+        return <span className="text-text-main">{val ? `₹${Number(val).toLocaleString()}` : 'No Limit'}</span>;
+      }
+    },
+    {
+      id: 'status',
+      header: () => <div className="text-center px-4">Status</div>,
+      cell: info => {
+        const v = info.row.original;
+        const isOverLimit = v.credit_limit && Number(v.current_balance) > Number(v.credit_limit);
+        return (
+          <div className="flex justify-center px-4">
+            {isOverLimit ? (
+              <Badge className="bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                OVER LIMIT
+              </Badge>
+            ) : (
+              <Badge className="bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                ACTIVE
+              </Badge>
+            )}
+          </div>
+        );
+      }
+    }
+  ], []);
+
   return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0, md: 0.5 },
-        pb: { xs: 1, md: 3 },
-      }}
-    >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-              Vendor Outstanding & Aging
-            </Typography>
-            
-          </Box>
-        </Box>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-primary/10 rounded-xl">
+            <FileText className="w-8 h-8 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-text-main">Vendor Outstanding & Aging</h2>
+            <p className="text-sm text-text-main/70">Monitor unpaid balances and credit limits.</p>
+          </div>
+        </div>
         <Button 
-          variant="outlined" 
-          startIcon={<Download />} 
+          variant="outline" 
           onClick={handleExport}
-          sx={{ fontWeight: 'bold', borderRadius: 2 }}
+          className="text-text-main font-bold"
         >
+          <Download className="w-4 h-4 mr-2" />
           Export CSV
         </Button>
-      </Box>
+      </div>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 4, 
-          border: '1px solid',
-          borderColor: 'divider',
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(8px)'
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            alignItems: 'end',
-            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-          }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Quick Search
-            </Typography>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search by vendor name or code..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search color="action" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          </Box>
-        </Box>
-      </Paper>
+      <Card className="border-border-temple">
+        <CardContent className="p-4 sm:p-6">
+          <div className="max-w-md">
+            <Label className="text-text-main">Quick Search</Label>
+            <div className="relative mt-1.5">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search by vendor name or code..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 text-text-main"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-        <Table stickyHeader size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Vendor Name</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Code</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Contact</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Outstanding Balance</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Credit Limit</TableCell>
-              <TableCell align="center" sx={{ fontWeight: 'bold', bgcolor: 'primary.main', color: 'white', py: 2 }}>Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
-                  <CircularProgress />
-                  <Typography variant="body2" sx={{ mt: 2 }}>Loading vendor balances...</Typography>
-                </TableCell>
-              </TableRow>
-            ) : filteredData?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                  <Typography variant="body1" color="text.secondary">No outstanding payments matching filter.</Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredData?.map((v: any) => {
-                const isOverLimit = v.credit_limit && Number(v.current_balance) > Number(v.credit_limit);
-                return (
-                  <TableRow key={v.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                    <TableCell sx={{ fontWeight: 'bold', py: 1.5 }}>{v.vendor_name}</TableCell>
-                    <TableCell sx={{ py: 1.5 }}>{v.vendor_code}</TableCell>
-                    <TableCell sx={{ py: 1.5 }}>{v.contact_number}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800, color: 'error.main', py: 1.5 }}>
-                      ₹{Number(v.current_balance).toLocaleString()}
-                    </TableCell>
-                    <TableCell align="right" sx={{ py: 1.5 }}>
-                      {v.credit_limit ? `₹${Number(v.credit_limit).toLocaleString()}` : 'No Limit'}
-                    </TableCell>
-                    <TableCell align="center" sx={{ py: 1.5 }}>
-                      {isOverLimit ? (
-                        <Chip 
-                          icon={<WarningAmber />} 
-                          label="OVER LIMIT" 
-                          color="error" 
-                          size="small" 
-                          variant="filled" 
-                          sx={{ fontWeight: 'bold' }}
-                        />
-                      ) : (
-                        <Chip label="ACTIVE" color="success" size="small" variant="outlined" sx={{ fontWeight: 'bold' }} />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+      <DataTable
+        columns={columns}
+        data={filteredData || []}
+        loading={isLoading}
+      />
+    </div>
   );
 };
 
 export default VendorOutstandingReportPage;
-
-
-
-

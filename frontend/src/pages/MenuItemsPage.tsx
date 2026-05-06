@@ -1,36 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  Chip,
-  Switch,
-  Stack,
-  InputAdornment,
-} from '@mui/material';
 import { 
-  Add, 
+  Plus, 
   Edit, 
-  Delete, 
+  Trash2, 
   Search, 
-  Save, 
-  Visibility
-} from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+  Eye,
+  Save,
+} from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { Badge } from '../components/ui/Badge';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+} from '../components/ui/Dialog';
+import { Select } from '../components/ui/Select';
+import { Switch } from '../components/ui/Switch';
+import { Label } from '../components/ui/Label';
+import { DetailItem } from '../components/ui/DetailItem';
 
 const menuItemSchema = z.object({
   dish_name: z.string().min(1, 'Dish name is required'),
@@ -141,346 +140,237 @@ const MenuItemsPage: React.FC = () => {
     }
   };
 
-  const columns: any[] = [
-    { field: 'id', headerName: 'ID', flex: 0.4, minWidth: 80 },
-    { field: 'dish_name', headerName: 'Dish Name', flex: 2, minWidth: 200 },
-    { 
-      field: 'unit_id', 
-      headerName: 'Unit', 
-      flex: 1,
-      minWidth: 120,
-      valueGetter: (params: any) => {
-          const unit = units?.find((u: any) => u.id === params);
-          return unit ? `${unit.unit_name} (${unit.unit_code})` : params;
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: 'id',
+      header: 'ID',
+      cell: info => <span className="text-text-main font-mono">{info.getValue() as string}</span>,
+    },
+    {
+      accessorKey: 'dish_name',
+      header: 'Dish Name',
+      cell: info => <span className="text-text-main font-medium">{info.getValue() as string}</span>,
+    },
+    {
+      accessorKey: 'unit_id',
+      header: 'Unit',
+      cell: info => {
+        const unit = units?.find((u: any) => u.id === info.getValue());
+        return <span className="text-text-main">{unit ? `${unit.unit_name} (${unit.unit_code})` : (info.getValue() as string)}</span>;
       }
     },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
-      flex: 0.8,
-      minWidth: 110,
-      renderCell: (params: any) => (
-        <Chip 
-          label={params.value === 1 ? 'Active' : 'Disabled'} 
-          color={params.value === 1 ? 'success' : 'default'} 
-          size="small" 
-          sx={{ fontWeight: 600 }}
-        />
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: info => (
+        <Badge variant={info.getValue() === 1 ? 'default' : 'secondary'}>
+          {info.getValue() === 1 ? 'Active' : 'Disabled'}
+        </Badge>
       )
     },
     {
-      field: 'actions',
-      headerName: 'Actions',
-      flex: 1,
-      minWidth: 150,
-      sortable: false,
-      filterable: false,
-      headerAlign: 'right',
-      align: 'right',
-      renderCell: (params: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <IconButton onClick={() => handleView(params.row)} size="small" color="info" sx={{ mr: 1, bgcolor: 'info.light', color: 'white', '&:hover': { bgcolor: 'info.main' } }}>
-            <Visibility fontSize="small" />
-          </IconButton>
-          <IconButton onClick={() => handleOpen(params.row)} size="small" color="primary" sx={{ mr: 1, bgcolor: 'primary.light', color: 'white', '&:hover': { bgcolor: 'primary.main' } }}>
-            <Edit fontSize="small" />
-          </IconButton>
-          <IconButton onClick={async () => {
-            const confirmed = await showConfirm('Delete Menu Item', `Are you sure you want to delete this menu item?`);
-            if (confirmed) {
-              deleteMutation.mutate(params.row.id);
-            }
-          }} size="small" color="error" sx={{ bgcolor: 'error.light', color: 'white', '&:hover': { bgcolor: 'error.main' } }}>
-            <Delete fontSize="small" />
-          </IconButton>
-        </Box>
-      ),
-    },
-  ];
-
-  const DetailItem = ({ label, value, color }: { label: string, value: any, color?: string }) => (
-    <Box sx={{ display: 'flex', py: 1.2, borderBottom: '1px dashed', borderColor: 'divider' }}>
-      <Typography variant="body2" sx={{ fontWeight: 'bold', width: '40%', color: 'text.secondary' }}>
-        {label}
-      </Typography>
-      <Typography variant="body2" sx={{ width: '60%', fontWeight: 500, color: color || 'text.primary' }}>
-        {value ?? '-'}
-      </Typography>
-    </Box>
-  );
+      id: 'actions',
+      header: () => <div className="text-right">Actions</div>,
+      cell: info => (
+        <div className="flex items-center justify-end gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleView(info.row.original)}
+            className="h-8 w-8 p-0"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleOpen(info.row.original)}
+            className="h-8 w-8 p-0"
+          >
+            <Edit className="h-4 w-4 text-blue-600" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={async () => {
+              const confirmed = await showConfirm('Delete Menu Item', `Are you sure you want to delete this menu item?`);
+              if (confirmed) {
+                deleteMutation.mutate(info.row.original.id);
+              }
+            }}
+            className="h-8 w-8 p-0"
+          >
+            <Trash2 className="h-4 w-4 text-red-600" />
+          </Button>
+        </div>
+      )
+    }
+  ], [units, deleteMutation, showConfirm]);
 
   return (
-    <Box
-      sx={{
-        px: { xs: 1, md: 3 },
-        pt: { xs: 0, md: 0.5 },
-        pb: { xs: 1, md: 3 },
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 500, color: 'text.primary' }}>
-            Menu Items (Prepared Dishes)
-          </Typography>
-        </Box>
-      </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button 
-          variant="contained" 
-          startIcon={<Add />} 
-          onClick={() => handleOpen()}
-          sx={{ 
-            px: 3, 
-            py: 1.2, 
-            borderRadius: 2.5,
-            boxShadow: '0 4px 12px rgba(26, 35, 126, 0.3)',
-            fontWeight: 'bold'
-          }}
-        >
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-text-main text-2xl font-semibold font-temple">Menu Items (Prepared Dishes)</h2>
+          <p className="text-text-main/70">Manage dishes prepared in the kitchen and their tracking units.</p>
+        </div>
+        <Button onClick={() => handleOpen()} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
           Add Menu Item
         </Button>
-      </Box>
+      </div>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 4, 
-          border: '1px solid',
-          borderColor: 'divider',
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(8px)'
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 3,
-            alignItems: 'end',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: '1.5fr 2fr 8.5fr' },
-          }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Rows
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <MenuItem key={size} value={size}>{size}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Status
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="disabled">Disabled</MenuItem>
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Quick Search
-            </Typography>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search dishes..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search color="action" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-          </Box>
-        </Box>
-      </Paper>
+      <Card className="border-border-temple">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+             <div className="space-y-1.5">
+              <Label className="text-text-main font-medium">Rows</Label>
+              <Select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+                {[10, 20, 50, 100].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-text-main font-medium">Status Filter</Label>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5 lg:col-span-2">
+              <Label className="text-text-main font-medium">Quick Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-main/50" />
+                <Input 
+                  placeholder="Search dishes..." 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Paper 
-        elevation={0}
-        sx={{ 
-          height: 650, 
-          width: '100%', 
-          borderRadius: 4, 
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.03)'
-        }}
-      >
-        <DataGrid
-          rows={menuItems || []}
-          columns={columns}
-          loading={menuItemsLoading}
-          pageSizeOptions={[pageSize]}
-          initialState={{
-            pagination: { paginationModel: { pageSize: pageSize } },
-          }}
-          disableRowSelectionOnClick
-          disableColumnMenu
-          disableColumnResize
-          sx={{
-            border: 'none',
-            '& .MuiDataGrid-columnHeader': {
-              backgroundColor: 'primary.main',
-              color: 'white',
-              fontSize: '0.9rem',
-              fontWeight: 'bold',
-            },
-            '& .MuiDataGrid-cell': {
-              borderColor: 'grey.100',
-              '&:focus': { outline: 'none' },
-            },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: 'rgba(26, 35, 126, 0.04)',
-            },
-            '& .MuiDataGrid-footerContainer': {
-              borderTop: '1px solid',
-              borderColor: 'divider',
-            },
-          }}
+      <div className="rounded-xl border border-border-temple overflow-hidden bg-white">
+        <DataTable 
+          columns={columns} 
+          data={menuItems || []} 
+          loading={menuItemsLoading} 
         />
-      </Paper>
+      </div>
 
       {/* View Details Dialog */}
-      <Dialog 
-        open={viewDialogOpen} 
-        onClose={() => setViewDialogOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Menu Item Details
-          <Chip 
-            label={viewingMenuItem?.status === 1 ? 'Active' : 'Disabled'} 
-            sx={{ bgcolor: viewingMenuItem?.status === 1 ? 'success.main' : 'grey.400', color: 'white', fontWeight: 'bold' }}
-            size="small" 
-          />
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2, p: 3 }}>
-          <Stack spacing={0}>
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-md border-border-temple">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-text-main font-temple">Menu Item Details</DialogTitle>
+              <Badge variant={viewingMenuItem?.status === 1 ? 'default' : 'secondary'}>
+                {viewingMenuItem?.status === 1 ? 'Active' : 'Disabled'}
+              </Badge>
+            </div>
+          </DialogHeader>
+          <div className="space-y-1 mt-4">
             <DetailItem label="Dish Name" value={viewingMenuItem?.dish_name} />
-            <DetailItem label="Measurement Unit" value={`${viewingMenuItem?.unit?.unit_name} (${viewingMenuItem?.unit?.unit_code})`} />
-          </Stack>
-
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mt: 3, mb: 1, color: 'text.secondary', px: 1 }}>
-            Audit Information
-          </Typography>
-          <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-            <DetailItem 
-              label="Created At" 
-              value={viewingMenuItem?.created_at ? new Date(viewingMenuItem.created_at).toLocaleString() : '-'} 
-            />
-            <DetailItem 
-              label="Created By" 
-              value={users?.find((u: any) => u.id === viewingMenuItem?.created_by)?.username || viewingMenuItem?.created_by} 
-            />
-            <DetailItem 
-              label="Last Updated" 
-              value={viewingMenuItem?.updated_at ? new Date(viewingMenuItem.updated_at).toLocaleString() : '-'} 
-            />
-            <DetailItem 
-              label="Updated By" 
-              value={users?.find((u: any) => u.id === viewingMenuItem?.updated_by)?.username || viewingMenuItem?.updated_by} 
-            />
-          </Box>
+            <DetailItem label="Measurement Unit" value={viewingMenuItem?.unit ? `${viewingMenuItem.unit.unit_name} (${viewingMenuItem.unit.unit_code})` : '-'} />
+            
+            <div className="pt-6 pb-2">
+              <h4 className="text-sm font-semibold text-text-main underline decoration-border-temple underline-offset-4 font-temple">Audit Information</h4>
+            </div>
+            <div className="bg-bg-temple/50 p-4 rounded-lg border border-border-temple/20 space-y-1">
+              <DetailItem 
+                label="Created At" 
+                value={viewingMenuItem?.created_at ? new Date(viewingMenuItem.created_at).toLocaleString() : '-'} 
+              />
+              <DetailItem 
+                label="Created By" 
+                value={users?.find((u: any) => u.id === viewingMenuItem?.created_by)?.username || viewingMenuItem?.created_by} 
+              />
+              <DetailItem 
+                label="Last Updated" 
+                value={viewingMenuItem?.updated_at ? new Date(viewingMenuItem.updated_at).toLocaleString() : '-'} 
+              />
+              <DetailItem 
+                label="Updated By" 
+                value={users?.find((u: any) => u.id === viewingMenuItem?.updated_by)?.username || viewingMenuItem?.updated_by} 
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-6">
+            <Button onClick={() => setViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button onClick={() => setViewDialogOpen(false)} variant="contained" color="primary" sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}>
-            Close
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Add/Edit Dialog */}
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="xs" 
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
-      >
-        <DialogTitle>
-          {editingMenuItem ? 'Edit Menu Item' : 'Add New Menu Item'}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={3} sx={{ mt: 1 }}>
-            <TextField {...register('dish_name')} label="Dish Name *" fullWidth error={!!errors.dish_name} helperText={errors.dish_name?.message} />
-            
-            <Controller
-              name="unit_id"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} select label="Unit *" fullWidth error={!!errors.unit_id} helperText={errors.unit_id?.message}>
-                  {units?.map((u: any) => (
-                    <MenuItem key={u.id} value={u.id}>{u.unit_name} ({u.unit_code})</MenuItem>
-                  ))}
-                </TextField>
-              )}
-            />
+      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
+        <DialogContent className="max-w-md border-border-temple">
+          <DialogHeader>
+            <DialogTitle className="text-text-main font-temple">
+              {editingMenuItem ? 'Edit Menu Item' : 'Add New Menu Item'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-4">
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-text-main font-medium">Dish Name *</Label>
+                <Input {...register('dish_name')} placeholder="Enter dish name" />
+                {errors.dish_name && <p className="text-xs text-red-500 font-medium">{errors.dish_name.message}</p>}
+              </div>
 
-            <Controller
-              name="status"
-              control={control}
-              render={({ field }) => (
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  p: 2,
-                  bgcolor: 'grey.50',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'divider'
-                }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Active Status</Typography>
-                  <Switch 
-                    checked={field.value === 1} 
-                    onChange={(e) => field.onChange(e.target.checked ? 1 : 0)} 
-                    color="success" 
-                  />
-                </Box>
-              )}
-            />
-          </Stack>
+              <div className="space-y-1.5">
+                <Label className="text-text-main font-medium">Unit *</Label>
+                <Controller
+                  name="unit_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} className="w-full">
+                      <option value="">Select Unit</option>
+                      {units?.map((u: any) => (
+                        <option key={u.id} value={u.id}>{u.unit_name} ({u.unit_code})</option>
+                      ))}
+                    </Select>
+                  )}
+                />
+                {errors.unit_id && <p className="text-xs text-red-500 font-medium">{errors.unit_id.message}</p>}
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-bg-temple/30 rounded-lg border border-border-temple/20">
+                <Label className="text-text-main font-medium">Active Status</Label>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch 
+                      checked={field.value === 1} 
+                      onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)} 
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-3">
+              <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
+              <Button type="submit" disabled={mutation.isPending} className="flex items-center gap-2">
+                {mutation.isPending ? 'Saving...' : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    {editingMenuItem ? 'Update Item' : 'Save Item'}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleClose} color="inherit">Cancel</Button>
-          <Button 
-            onClick={handleSubmit(onSubmit)} 
-            variant="contained" 
-            startIcon={<Save />} 
-            disabled={mutation.isPending}
-            sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}
-          >
-            {mutation.isPending ? 'Saving...' : editingMenuItem ? 'Update Item' : 'Save Item'}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 };
 
