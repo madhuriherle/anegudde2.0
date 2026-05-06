@@ -24,7 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { cn } from '../utils/cn';
 
-const templeLogoSrc = '/temple-logo-banner.png';
+const templeLogoSrc = '/temple-logo-banner.webp';
 
 const menuItems = [
   { text: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -81,13 +81,14 @@ const MainLayout: React.FC = () => {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-secondary border-r border-secondary-dark/20">
-      <div className="px-4 py-3 border-b border-white/5">
-        <img 
-          src={templeLogoSrc} 
-          alt="Logo" 
-          className="w-full h-16 rounded-md object-contain bg-white/90 p-1 shadow-sm ring-1 ring-white/20"
-          onError={(e) => { e.currentTarget.src = '/favicon.svg'; }}
-        />
+      <div className="h-16 border-b border-white/5 flex items-center px-4">
+        <div className="bg-white p-1 rounded-lg shadow-sm w-full">
+          <img 
+            src={templeLogoSrc} 
+            alt="Logo" 
+            className="h-9 w-auto mx-auto object-contain" 
+          />
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto no-scrollbar py-4 px-3 space-y-1">
@@ -99,8 +100,8 @@ const MainLayout: React.FC = () => {
               className={cn(
                 "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300",
                 location.pathname === item.path
-                  ? "bg-secondary text-white shadow-sm scale-[1.02]"
-                  : "text-[#D7CCC8] hover:bg-white/10 hover:text-white hover:translate-x-1"
+                  ? "bg-sidebar-active text-white shadow-sm scale-[1.02]"
+                  : "text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white hover:translate-x-1"
               )}
           >
             <item.icon className={cn("w-5 h-5 transition-colors", location.pathname === item.path ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />
@@ -120,8 +121,8 @@ const MainLayout: React.FC = () => {
               className={cn(
                 "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300",
                 location.pathname === item.path
-                  ? "bg-secondary text-white shadow-sm scale-[1.02]"
-                  : "text-[#D7CCC8] hover:bg-white/10 hover:text-white hover:translate-x-1"
+                  ? "bg-sidebar-active text-white shadow-sm scale-[1.02]"
+                  : "text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white hover:translate-x-1"
               )}
           >
             <item.icon className={cn("w-5 h-5 transition-colors", location.pathname === item.path ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />
@@ -166,19 +167,8 @@ const MainLayout: React.FC = () => {
             >
               <MenuIcon className="w-6 h-6" />
             </button>
-            <div className="flex items-center gap-3">
-               <img 
-                src={templeLogoSrc} 
-                alt="Logo" 
-                className="h-8 w-auto max-w-36 rounded-md object-contain sm:hidden ring-1 ring-border-temple bg-white p-0.5 shadow-sm"
-                onError={(e) => { e.currentTarget.src = '/favicon.svg'; }}
-              />
-              <img 
-                src={templeLogoSrc} 
-                alt="Anegudde Temple Inventory" 
-                className="hidden sm:block h-12 w-auto max-w-[420px] object-contain"
-                onError={(e) => { e.currentTarget.src = '/favicon.svg'; }}
-              />
+            <div className="flex items-center gap-3 lg:hidden">
+               <span className="text-lg font-bold text-secondary font-serif">Anegudde Temple</span>
             </div>
           </div>
 

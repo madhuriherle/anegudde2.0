@@ -5,7 +5,6 @@ import {
   Plus, 
   Eye, 
   History,
-  Ticket,
   Loader2
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
@@ -17,7 +16,6 @@ import { useNotification } from '../context/NotificationContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
-import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { 
   Dialog, 
@@ -48,7 +46,7 @@ const TokensPage: React.FC = () => {
   const { data: generations, isLoading: generationsLoading } = useQuery({
     queryKey: ['token-generations', pageSize],
     queryFn: async () => {
-      const res = await api.get('/tokens/', { params: { page_size: pageSize } });
+      const res = await api.get('/tokens/list_generations', { params: { page_size: pageSize } });
       return res.data;
     },
   });
@@ -58,14 +56,14 @@ const TokensPage: React.FC = () => {
     queryKey: ['token-details', viewingDate],
     queryFn: async () => {
       if (!viewingDate) return [];
-      const res = await api.get(`/tokens/details/${viewingDate}`);
+      const res = await api.get(`/tokens/get_details_by_date/${viewingDate}`);
       return res.data;
     },
     enabled: !!viewingDate,
   });
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<TokenFormValues>({
-    resolver: zodResolver(tokenSchema),
+    resolver: zodResolver(tokenSchema) as any,
     defaultValues: {
         token_count: 0
     }
@@ -74,7 +72,7 @@ const TokensPage: React.FC = () => {
   // Mutation for creating tokens
   const createMutation = useMutation({
     mutationFn: async (data: TokenFormValues) => {
-      return api.post('/tokens/', data);
+      return api.post('/tokens/create_token', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['token-generations'] });
@@ -135,7 +133,7 @@ const TokensPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: () => <div className="text-right px-4">Actions</div>,
+      header: "Actions",
       cell: info => (
         <div className="flex justify-end px-4">
           <Button 
@@ -144,7 +142,6 @@ const TokensPage: React.FC = () => {
             onClick={() => handleViewDetails(info.row.original.date)}
             className="text-text-main h-8"
           >
-            <Eye className="w-3.5 h-3.5 mr-1" />
             Details
           </Button>
         </div>
@@ -155,20 +152,14 @@ const TokensPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 rounded-xl">
-            <Ticket className="w-8 h-8 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-text-main">Token Management</h2>
-            <button 
-              onClick={() => navigate('/tokens/history')}
-              className="text-sm text-primary hover:underline flex items-center gap-1"
-            >
-              <History className="w-3.5 h-3.5" />
-              View Detailed Ledger
-            </button>
-          </div>
+        <div>
+          <h2 className="text-text-main">Token Management</h2>
+          <button 
+            onClick={() => navigate('/tokens/history')}
+            className="text-sm text-primary hover:underline"
+          >
+            View Detailed Ledger
+          </button>
         </div>
         <Button 
           onClick={handleOpen}
@@ -199,12 +190,11 @@ const TokensPage: React.FC = () => {
               <div className="space-y-1.5">
                 <Label className="text-text-main">Token Count *</Label>
                 <div className="relative">
-                  <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     {...register('token_count')}
                     type="number"
                     autoFocus
-                    className="pl-10 text-text-main"
+                    className="text-text-main"
                     placeholder="e.g. 10"
                   />
                 </div>
@@ -231,8 +221,7 @@ const TokensPage: React.FC = () => {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-xl border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <DialogTitle className="text-text-main flex items-center gap-2">
-              <Ticket className="w-5 h-5 text-primary" />
+            <DialogTitle className="text-text-main">
               Token Details for {viewingDate}
             </DialogTitle>
           </DialogHeader>
@@ -290,3 +279,6 @@ const TokensPage: React.FC = () => {
 };
 
 export default TokensPage;
+
+
+

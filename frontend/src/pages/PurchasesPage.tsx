@@ -8,7 +8,6 @@ import {
   Eye,
   Save,
   Trash,
-  Info,
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -75,28 +74,28 @@ const PurchasesPage: React.FC = () => {
       const params: any = { q: search, page_size: pageSize };
       if (status !== 'all') params.status = status === 'active' ? 1 : 0;
       if (searchField !== 'all') params.search_field = searchField;
-      const res = await api.get('/purchases', { params });
+      const res = await api.get('/purchases/list_purchases', { params });
       return res.data;
     },
   });
 
   const { data: vendors } = useQuery({
     queryKey: ['vendors-list'],
-    queryFn: async () => (await api.get('/vendors')).data,
+    queryFn: async () => (await api.get('/vendors/list_vendors')).data,
   });
 
   const { data: items } = useQuery({
     queryKey: ['items-list'],
-    queryFn: async () => (await api.get('/items')).data,
+    queryFn: async () => (await api.get('/items/list_items')).data,
   });
 
   const { data: users } = useQuery({
     queryKey: ['users-list-minimal'],
-    queryFn: async () => (await api.get('/users', { params: { page_size: 1000 } })).data,
+    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
   });
 
   const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<PurchaseFormValues>({
-    resolver: zodResolver(purchaseSchema),
+    resolver: zodResolver(purchaseSchema) as any,
     defaultValues: {
       purchase_date: new Date().toISOString().split('T')[0],
       items: [{ item_id: '' as any, quantity: 0, price: 0 }],
@@ -116,7 +115,7 @@ const PurchasesPage: React.FC = () => {
       if (editingPurchase) {
         return api.put(`/purchases/${editingPurchase.id}`, { ...data, user_id: user?.id, status: 1 });
       }
-      return api.post('/purchases', { ...data, user_id: user?.id, status: 1 });
+      return api.post('/purchases/create_purchase', { ...data, user_id: user?.id, status: 1 });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
@@ -271,14 +270,14 @@ const PurchasesPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: () => <div className="text-right">Actions</div>,
+      header: "Actions",
       cell: info => (
         <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => handleView(info.row.original.entry)} className="h-8 w-8 p-0">
-            <Eye className="h-4 w-4" />
+          <Button variant="ghost" size="sm" onClick={() => handleView(info.row.original.entry)} className="h-8 px-2">
+            View
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleOpen(info.row.original.entry)} className="h-8 w-8 p-0">
-            <Edit className="h-4 w-4 text-blue-600" />
+          <Button variant="ghost" size="sm" onClick={() => handleOpen(info.row.original.entry)} className="h-8 px-2">
+            Edit
           </Button>
           <Button 
             variant="ghost" 
@@ -289,9 +288,9 @@ const PurchasesPage: React.FC = () => {
                 deleteMutation.mutate(info.row.original.entry.id);
               }
             }} 
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Trash2 className="h-4 w-4 text-red-600" />
+            Delete
           </Button>
         </div>
       )
@@ -303,7 +302,6 @@ const PurchasesPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-text-main text-2xl font-semibold font-temple">Purchase Entries</h2>
-          <p className="text-text-main/70">Record and track inventory purchases from vendors.</p>
         </div>
         <Button onClick={() => handleOpen()} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -506,9 +504,6 @@ const PurchasesPage: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b border-border-temple pb-2">
                 <h4 className="text-sm font-bold text-primary-main uppercase tracking-widest">Items in Purchase</h4>
-                <Button type="button" size="sm" variant="outline" onClick={() => append({ item_id: '' as any, quantity: 0, price: 0 })} className="h-8 text-xs">
-                  <Plus className="h-3 w-3 mr-1" /> Add Item
-                </Button>
               </div>
               
               <div className="space-y-4">
@@ -548,6 +543,12 @@ const PurchasesPage: React.FC = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => append({ item_id: '' as any, quantity: 0, price: 0 })} className="h-9 text-xs">
+                  <Plus className="h-3 w-3 mr-1" /> Add Item
+                </Button>
               </div>
             </div>
 
@@ -595,3 +596,7 @@ const PurchasesPage: React.FC = () => {
 };
 
 export default PurchasesPage;
+
+
+
+

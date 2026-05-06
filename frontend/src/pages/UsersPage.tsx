@@ -79,7 +79,7 @@ const UsersPage: React.FC = () => {
   });
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(userSchema) as any,
   });
 
   const mutation = useMutation({
@@ -171,24 +171,24 @@ const UsersPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: () => <div className="text-right px-4">Actions</div>,
+      header: "Actions",
       cell: info => (
         <div className="flex justify-end gap-2 px-4">
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => handleView(info.row.original)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Eye className="w-4 h-4 text-blue-600" />
+            View
           </Button>
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => handleOpen(info.row.original)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Edit className="w-4 h-4 text-primary" />
+            Edit
           </Button>
           <Button 
             variant="ghost" 
@@ -199,9 +199,9 @@ const UsersPage: React.FC = () => {
                 deleteMutation.mutate(info.row.original.id);
               }
             }}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Trash2 className="w-4 h-4 text-red-600" />
+            Delete
           </Button>
         </div>
       ),
@@ -216,8 +216,7 @@ const UsersPage: React.FC = () => {
             <Users className="w-8 h-8 text-primary" />
           </div>
           <div>
-            <h2 className="text-text-main">User Management</h2>
-            <p className="text-sm text-text-main/70">Manage system users and their roles.</p>
+            <h2 className="text-text-main">User Management</h2>
           </div>
         </div>
         <Button 
@@ -397,3 +396,6 @@ const UsersPage: React.FC = () => {
 };
 
 export default UsersPage;
+
+
+

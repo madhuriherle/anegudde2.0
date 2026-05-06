@@ -61,18 +61,18 @@ const ChefsPage: React.FC = () => {
     queryFn: async () => {
       const params: any = { q: search, page_size: pageSize };
       if (status !== 'all') params.status = status === 'active' ? 1 : 0;
-      const res = await api.get('/chefs', { params });
+      const res = await api.get('/chefs/list_chefs', { params });
       return res.data;
     },
   });
 
   const { data: users } = useQuery({
     queryKey: ['users-list-minimal'],
-    queryFn: async () => (await api.get('/users', { params: { page_size: 1000 } })).data,
+    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
   });
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ChefFormValues>({
-    resolver: zodResolver(chefSchema),
+    resolver: zodResolver(chefSchema) as any,
   });
 
   const mutation = useMutation({
@@ -84,7 +84,7 @@ const ChefsPage: React.FC = () => {
         specialization: data.specialization || null,
       };
       if (editingChef) return api.put(`/chefs/${editingChef.id}`, payload);
-      return api.post('/chefs', payload);
+      return api.post('/chefs/create_chef', payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chefs'] });
@@ -172,24 +172,24 @@ const ChefsPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: () => <div className="text-right">Actions</div>,
+      header: "Actions",
       cell: info => (
         <div className="flex items-center justify-end gap-2">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => handleView(info.row.original)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Eye className="h-4 w-4" />
+            View
           </Button>
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => handleOpen(info.row.original)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Edit className="h-4 w-4 text-blue-600" />
+            Edit
           </Button>
           <Button 
             variant="ghost" 
@@ -200,9 +200,9 @@ const ChefsPage: React.FC = () => {
                 deleteMutation.mutate(info.row.original.id);
               }
             }}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Trash2 className="h-4 w-4 text-red-600" />
+            Delete
           </Button>
         </div>
       )
@@ -213,8 +213,7 @@ const ChefsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main text-2xl font-semibold">Chefs Management</h2>
-          <p className="text-text-main/70">Manage chef profiles and specializations.</p>
+          <h2 className="text-text-main text-2xl font-semibold">Chefs Management</h2>
         </div>
         <Button onClick={() => handleOpen()} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -376,3 +375,7 @@ const ChefsPage: React.FC = () => {
 };
 
 export default ChefsPage;
+
+
+
+

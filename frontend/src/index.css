@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #C26A2D;
-  --color-primary-light: #D97706;
-  --color-primary-dark: #A95A24;
-  --color-secondary: #5D4037;
+  --color-primary: #D05E2D;
+  --color-primary-light: #D05E2D;
+  --color-primary-dark: #D05E2D;
+  --color-secondary: #472B20;
   --color-secondary-light: #8D6E63;
   --color-secondary-dark: #3E2723;
   --color-error: #C62828;
@@ -14,10 +14,13 @@
   --color-text-normal: #5D4037;
   --color-text-light: #8D6E63;
   --color-border-temple: #E7D5C3;
+  --color-sidebar-active: #a0785a;
+  --color-sidebar-hover: rgba(160, 120, 90, 0.15);
 
   --font-serif: "Merriweather", serif;
   --font-sans: "Inter", sans-serif;
 }
+
 
 @layer components {
   .temple-form {
@@ -56,7 +59,13 @@
     letter-spacing: normal !important;
   }
 
-  span, div, p, label, input, select, textarea, button {
+  h2 {
+    font-size: 30px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+  }
+
+  p, label, input, select, textarea {
     font-size: 14px !important;
     font-weight: 400 !important;
     color: var(--color-text-main) !important;

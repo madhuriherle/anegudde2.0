@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft,
   Calendar,
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
@@ -30,7 +29,7 @@ const TokenHistoryPage: React.FC = () => {
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
       
-      const res = await api.get('/tokens/history', { params });
+      const res = await api.get('/tokens/view_history_ledger', { params });
       return res.data;
     },
   });
@@ -97,13 +96,6 @@ const TokenHistoryPage: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/tokens')} 
-            className="h-9 w-9 p-0"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
           <h2 className="text-text-main">Token Issuance Ledger</h2>
         </div>
       </div>
@@ -157,3 +149,4 @@ const TokenHistoryPage: React.FC = () => {
 };
 
 export default TokenHistoryPage;
+

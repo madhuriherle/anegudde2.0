@@ -124,8 +124,7 @@ const MonthlyPerformanceReportPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main text-2xl font-semibold font-temple">Monthly Performance</h2>
-          <p className="text-text-main/70">Analyze monthly inventory trends and stock valuations.</p>
+          <h2 className="text-text-main text-2xl font-semibold font-temple">Monthly Performance</h2>
         </div>
         <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
           <Download className="h-4 w-4" />
@@ -169,3 +168,4 @@ const MonthlyPerformanceReportPage: React.FC = () => {
 };
 
 export default MonthlyPerformanceReportPage;
+

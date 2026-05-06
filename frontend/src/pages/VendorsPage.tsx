@@ -1,22 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Search, 
-  Eye,
-  Phone,
-  Store,
-  MapPin,
-} from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
-import { cn } from '../utils/cn';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
@@ -27,8 +16,7 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogFooter,
-  DialogDescription
+  DialogFooter
 } from '../components/ui/Dialog';
 import { Select } from '../components/ui/Select';
 import { Switch } from '../components/ui/Switch';
@@ -272,7 +260,7 @@ const VendorsPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: () => <div className="text-left">Actions</div>,
+      header: "Actions",
       cell: info => (
         <div className="flex items-center gap-4">
           <button 
@@ -308,11 +296,10 @@ const VendorsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div>
-            <h2 className="text-text-main">Vendor Management</h2>
-            <p className="text-text-main">Manage vendor profiles and monitor outstanding balances.</p>
+            <h2 className="text-text-main">Vendor Management</h2>
           </div>
         </div>
-        <Button onClick={() => handleOpen()} className="text-text-main">
+        <Button onClick={() => handleOpen()} className="bg-primary hover:bg-secondary text-white">
           Add New Vendor
         </Button>
       </div>
@@ -556,3 +543,5 @@ const VendorsPage: React.FC = () => {
 };
 
 export default VendorsPage;
+
+

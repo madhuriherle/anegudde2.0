@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  ArrowLeft, 
   ShoppingCart, 
   Utensils, 
   Settings2, 
@@ -11,11 +10,11 @@ import {
 import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
 import { Button } from '../components/ui/Button';
-import { Card, CardContent } from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 
-const txnTypes: Record<number, { label: string; icon: any; variant: "default" | "secondary" | "outline" | "ghost" | "error" }> = {
+const txnTypes: Record<number, { label: string; icon: any; variant: "default" | "secondary" | "outline" | "error" }> = {
   1: { label: 'Purchase', icon: <ShoppingCart className="h-3 w-3 mr-1" />, variant: 'default' },
   2: { label: 'Consumption', icon: <Utensils className="h-3 w-3 mr-1" />, variant: 'error' },
   3: { label: 'Wastage', icon: <HelpCircle className="h-3 w-3 mr-1" />, variant: 'secondary' },
@@ -133,19 +132,10 @@ const ItemHistoryPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => navigate('/items')}
-          className="rounded-full h-10 w-10 p-0"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
         <div>
           <h2 className="text-text-main text-2xl font-semibold font-temple">
             {item?.item_name || 'Loading...'}
-          </h2>
-          <p className="text-text-main/70">Inventory transaction history and running balance.</p>
+          </h2>
         </div>
       </div>
 
@@ -161,3 +151,4 @@ const ItemHistoryPage: React.FC = () => {
 };
 
 export default ItemHistoryPage;
+

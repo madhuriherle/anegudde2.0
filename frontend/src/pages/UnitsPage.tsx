@@ -7,7 +7,6 @@ import {
   Search, 
   Eye,
   Save,
-  Ruler,
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
@@ -61,7 +60,7 @@ const UnitsPage: React.FC = () => {
     queryFn: async () => {
       const params: any = { q: search, page_size: pageSize };
       if (status !== 'all') params.status = status === 'active' ? 1 : 0;
-      const res = await api.get('/units', { params });
+      const res = await api.get('/units/list_units', { params });
       return res.data;
     },
   });
@@ -72,13 +71,13 @@ const UnitsPage: React.FC = () => {
   });
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<UnitFormValues>({
-    resolver: zodResolver(unitSchema),
+    resolver: zodResolver(unitSchema) as any,
   });
 
   const mutation = useMutation({
     mutationFn: async (data: UnitFormValues) => {
       if (editingUnit) return api.put(`/units/${editingUnit.id}`, data);
-      return api.post('/units', data);
+      return api.post('/units/', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
@@ -149,24 +148,24 @@ const UnitsPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: () => <div className="text-right px-4">Actions</div>,
+      header: "Actions",
       cell: info => (
         <div className="flex justify-end gap-2 px-4">
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => handleView(info.row.original)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Eye className="w-4 h-4 text-blue-600" />
+            View
           </Button>
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => handleOpen(info.row.original)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Edit className="w-4 h-4 text-primary" />
+            Edit
           </Button>
           <Button 
             variant="ghost" 
@@ -177,9 +176,9 @@ const UnitsPage: React.FC = () => {
                 deleteMutation.mutate(info.row.original.id);
               }
             }}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Trash2 className="w-4 h-4 text-red-600" />
+            Delete
           </Button>
         </div>
       ),
@@ -189,14 +188,8 @@ const UnitsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 rounded-xl">
-            <Ruler className="w-8 h-8 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-text-main">Units of Measurement</h2>
-            <p className="text-sm text-text-main/70">Manage units for inventory items.</p>
-          </div>
+        <div>
+          <h2 className="text-text-main">Units of Measurement</h2>
         </div>
         <Button 
           onClick={() => handleOpen()}
@@ -350,3 +343,7 @@ const UnitsPage: React.FC = () => {
 };
 
 export default UnitsPage;
+
+
+
+

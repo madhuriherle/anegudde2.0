@@ -1,21 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Search, 
-  History as HistoryIcon, 
-  Eye,
-} from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
-import { cn } from '../utils/cn';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
@@ -230,24 +221,24 @@ const ItemsPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: () => <div className="text-left">Actions</div>,
+      header: "Actions",
       cell: info => (
         <div className="flex items-center gap-4">
           <button 
             onClick={() => handleView(info.row.original)}
-            className="text-text-main"
+            className="text-text-main hover:text-primary transition-colors"
           >
             View
           </button>
           <button 
             onClick={() => navigate(`/items/${info.row.original.id}/history`)}
-            className="text-text-main"
+            className="text-text-main hover:text-primary transition-colors"
           >
             History
           </button>
           <button 
             onClick={() => handleOpen(info.row.original)}
-            className="text-text-main"
+            className="text-text-main hover:text-primary transition-colors"
           >
             Edit
           </button>
@@ -258,7 +249,7 @@ const ItemsPage: React.FC = () => {
                 deleteMutation.mutate(info.row.original.id);
               }
             }}
-            className="text-text-main"
+            className="text-text-main hover:text-primary transition-colors"
           >
             Delete
           </button>
@@ -470,6 +461,7 @@ const ItemsPage: React.FC = () => {
 };
 
 export default ItemsPage;
+
 
 
 

@@ -132,14 +132,8 @@ const VendorOutstandingReportPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 rounded-xl">
-            <FileText className="w-8 h-8 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-text-main">Vendor Outstanding & Aging</h2>
-            <p className="text-sm text-text-main/70">Monitor unpaid balances and credit limits.</p>
-          </div>
+        <div>
+          <h2 className="text-text-main">Vendor Outstanding & Aging</h2>
         </div>
         <Button 
           variant="outline" 
@@ -178,3 +172,4 @@ const VendorOutstandingReportPage: React.FC = () => {
 };
 
 export default VendorOutstandingReportPage;
+

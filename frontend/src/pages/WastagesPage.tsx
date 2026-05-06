@@ -4,11 +4,10 @@ import {
   Plus, 
   Edit, 
   Trash2, 
-  Search, 
   Eye,
   Save,
   Trash,
-  Loader2
+  Search
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
@@ -21,7 +20,6 @@ import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
-import { Badge } from '../components/ui/Badge';
 import { 
   Dialog, 
   DialogContent, 
@@ -70,23 +68,18 @@ const WastagesPage: React.FC = () => {
       };
       if (status !== 'all') params.status = status === 'active' ? 1 : 0;
       
-      const res = await api.get('/wastages', { params });
+      const res = await api.get('/wastages/list_wastages', { params });
       return res.data;
     },
   });
 
   const { data: menuItems } = useQuery({
     queryKey: ['menu-items-list'],
-    queryFn: async () => (await api.get('/menu_items/list_menu_items')).data,
-  });
-
-  const { data: users } = useQuery({
-    queryKey: ['users-list-minimal'],
-    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
+    queryFn: async () => (await api.get('/menu-items/list_menu_items')).data,
   });
 
   const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<WastageFormValues>({
-    resolver: zodResolver(wastageSchema),
+    resolver: zodResolver(wastageSchema) as any,
     defaultValues: {
         items: [{ menu_item_id: '' as any, quantity: 0 }]
     }
@@ -134,7 +127,7 @@ const mutation = useMutation({
   const handleOpen = async (wastage: any = null) => {
     if (wastage) {
       try {
-        const res = await api.get(`/wastages/${wastage.id}`);
+        const res = await api.get(`/wastages/get_wastage/${wastage.id}`);
         const fullData = res.data;
         setEditingWastage(fullData);
         reset({
@@ -167,7 +160,7 @@ const mutation = useMutation({
 
   const handleView = async (wastage: any) => {
     try {
-      const res = await api.get('/wastages/' + wastage.id);
+      const res = await api.get('/wastages/get_wastage/' + wastage.id);
       setViewingWastage(res.data);
       setViewDialogOpen(true);
     } catch (err) {
@@ -237,24 +230,24 @@ const mutation = useMutation({
     },
     {
       id: 'actions',
-      header: () => <div className="text-right px-4">Actions</div>,
+      header: "Actions",
       cell: info => (
         <div className="flex justify-end gap-2 px-4">
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => handleView(info.row.original.raw_wastage)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Eye className="w-4 h-4 text-blue-600" />
+            View
           </Button>
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => handleOpen(info.row.original.raw_wastage)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Edit className="w-4 h-4 text-primary" />
+            Edit
           </Button>
           <Button 
             variant="ghost" 
@@ -265,9 +258,9 @@ const mutation = useMutation({
                 deleteMutation.mutate(info.row.original.entryId);
               }
             }}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Trash2 className="w-4 h-4 text-red-600" />
+            Delete
           </Button>
         </div>
       ),
@@ -282,8 +275,7 @@ const mutation = useMutation({
             <Trash className="w-8 h-8 text-primary" />
           </div>
           <div>
-            <h2 className="text-text-main">Wastage Records (Prepared Dishes)</h2>
-            <p className="text-sm text-text-main/70">Record and monitor food wastage from the kitchen.</p>
+            <h2 className="text-text-main">Wastage Records (Prepared Dishes)</h2>
           </div>
         </div>
         <Button 
@@ -485,3 +477,7 @@ const mutation = useMutation({
 };
 
 export default WastagesPage;
+
+
+
+

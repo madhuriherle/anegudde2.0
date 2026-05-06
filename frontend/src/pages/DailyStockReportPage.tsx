@@ -151,8 +151,7 @@ const DailyStockReportPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main text-2xl font-semibold font-temple">Daily Closing Stock Report</h2>
-          <p className="text-text-main/70">Review inventory status and daily movement for any date.</p>
+          <h2 className="text-text-main text-2xl font-semibold font-temple">Daily Closing Stock Report</h2>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
@@ -229,3 +228,4 @@ const DailyStockReportPage: React.FC = () => {
 };
 
 export default DailyStockReportPage;
+

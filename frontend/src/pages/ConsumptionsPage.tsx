@@ -1,14 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  Plus, 
-  Trash2, 
-  Search, 
-  Eye, 
-  Edit, 
-  PlusCircle,
-  UtensilsCrossed,
-  Utensils
+  Trash2,
+  Plus
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -251,7 +245,7 @@ const ConsumptionsPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: () => <div className="text-left">Actions</div>,
+      header: "Actions",
       cell: info => (
         <div className="flex items-center gap-4">
           <button 
@@ -459,9 +453,6 @@ const ConsumptionsPage: React.FC = () => {
                 <h4 className="temple-section-header flex items-center gap-2 mt-0">
                   Consumed Items List
                 </h4>
-                <Button type="button" size="sm" variant="outline" onClick={() => append({ item_id: 0, quantity_used: 0 })} className="h-9 gap-2 font-bold text-xs rounded-xl border-primary/20 text-primary hover:bg-primary/5">
-                  Add Item
-                </Button>
               </div>
 
               <div className="space-y-3">
@@ -503,6 +494,13 @@ const ConsumptionsPage: React.FC = () => {
                   </div>
                 ))}
               </div>
+
+              <div className="flex justify-end px-1 pt-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => append({ item_id: 0, quantity_used: 0 })} className="h-9 gap-2 font-bold text-xs rounded-xl border-primary/20 text-primary hover:bg-primary/5">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              </div>
             </div>
 
             <DialogFooter className="pt-4 gap-3">
@@ -521,6 +519,7 @@ const ConsumptionsPage: React.FC = () => {
 };
 
 export default ConsumptionsPage;
+
 
 
 

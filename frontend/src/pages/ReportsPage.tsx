@@ -123,8 +123,7 @@ const ReportsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main">Stock & Financial Reports</h2>
-          <p className="text-text-main text-sm">Analyze stock movements and financial implications.</p>
+          <h2 className="text-text-main">Stock & Financial Reports</h2>
         </div>
         <div className="flex items-center gap-2">
           <Button 
@@ -273,3 +272,4 @@ const ReportsPage: React.FC = () => {
 };
 
 export default ReportsPage;
+

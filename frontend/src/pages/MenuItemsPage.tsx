@@ -64,30 +64,30 @@ const MenuItemsPage: React.FC = () => {
       };
       if (status !== 'all') params.status = status === 'active' ? 1 : 0;
       
-      const res = await api.get('/menu-items', { params });
+      const res = await api.get('/menu-items/list_menu_items', { params });
       return res.data;
     },
   });
 
   const { data: units } = useQuery({
     queryKey: ['units-list'],
-    queryFn: async () => (await api.get('/units')).data,
+    queryFn: async () => (await api.get('/units/list_units')).data,
   });
 
   const { data: users } = useQuery({
     queryKey: ['users-list-minimal'],
-    queryFn: async () => (await api.get('/users', { params: { page_size: 1000 } })).data,
+    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
   });
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<MenuItemFormValues>({
-    resolver: zodResolver(menuItemSchema),
+    resolver: zodResolver(menuItemSchema) as any,
   });
 
   // Mutations
   const mutation = useMutation({
     mutationFn: async (data: MenuItemFormValues) => {
       if (editingMenuItem) return api.put(`/menu-items/${editingMenuItem.id}`, data);
-      return api.post('/menu-items', data);
+      return api.post('/menu-items/create_menu_item', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['menu-items'] });
@@ -170,24 +170,24 @@ const MenuItemsPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: () => <div className="text-right">Actions</div>,
+      header: "Actions",
       cell: info => (
         <div className="flex items-center justify-end gap-2">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => handleView(info.row.original)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Eye className="h-4 w-4" />
+            View
           </Button>
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => handleOpen(info.row.original)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Edit className="h-4 w-4 text-blue-600" />
+            Edit
           </Button>
           <Button 
             variant="ghost" 
@@ -198,9 +198,9 @@ const MenuItemsPage: React.FC = () => {
                 deleteMutation.mutate(info.row.original.id);
               }
             }}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2"
           >
-            <Trash2 className="h-4 w-4 text-red-600" />
+            Delete
           </Button>
         </div>
       )
@@ -211,8 +211,7 @@ const MenuItemsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main text-2xl font-semibold font-temple">Menu Items (Prepared Dishes)</h2>
-          <p className="text-text-main/70">Manage dishes prepared in the kitchen and their tracking units.</p>
+          <h2 className="text-text-main text-2xl font-semibold font-temple">Menu Items (Prepared Dishes)</h2>
         </div>
         <Button onClick={() => handleOpen()} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -375,3 +374,7 @@ const MenuItemsPage: React.FC = () => {
 };
 
 export default MenuItemsPage;
+
+
+
+

@@ -1,17 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowRight, 
-  TrendingUp,
-  Users,
-  Package,
-  ShoppingCart,
-  UtensilsCrossed,
-  Trash2
-} from 'lucide-react';
 import api from '../api/axios';
-import { cn } from '../utils/cn';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 
