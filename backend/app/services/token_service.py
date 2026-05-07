@@ -1,20 +1,46 @@
 from datetime import datetime, timezone, date
 from fastapi import HTTPException
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import TokenGeneration, TokenDetail, User
+from app.db.models import TokenGeneration, TokenDetail, User, FinancialYear
 from app.schemas.token import TokenDetailCreate
 
-def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
+def _ensure_token_partition_for_timestamp(db: Session, ts: datetime) -> None:
+    year = ts.year
+    month = ts.month
+    partition_name = f"token_details_{year}_{month:02d}"
+    start_date = f"{year}-{month:02d}-01"
+    if month == 12:
+        end_date = f"{year + 1}-01-01"
+    else:
+        end_date = f"{year}-{month + 1:02d}-01"
+
+    db.execute(
+        text(
+            f"""
+            CREATE TABLE IF NOT EXISTS {partition_name}
+            PARTITION OF token_details
+            FOR VALUES FROM ('{start_date}') TO ('{end_date}');
+            """
+        )
+    )
+
+def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User, financial_year: FinancialYear):
     now = datetime.now(timezone.utc)
     today = now.date()
+    _ensure_token_partition_for_timestamp(db, now)
 
     # 1. Get or Create TokenGeneration for today
-    generation = db.query(TokenGeneration).filter(TokenGeneration.date == today).first()
+    generation = db.query(TokenGeneration).filter(
+        TokenGeneration.date == today,
+        TokenGeneration.financial_year_id == financial_year.id
+    ).first()
+    
     if not generation:
         generation = TokenGeneration(
             date=today,
             total_tokens=0,
+            financial_year_id=financial_year.id,
             created_at=now,
             updated_at=now,
             created_by=current_user.id,
@@ -27,7 +53,7 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     max_id = db.query(func.max(TokenDetail.id)).scalar() or 0
     next_id = max_id + 1
 
-    # 3. Save TokenDetail
+    # 3. Save TokenDetail (Batch entry)
     new_detail = TokenDetail(
         id=next_id,
         generation_id=generation.id,
@@ -48,8 +74,10 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     return new_detail
 
 
-def list_token_generations(db: Session, page: int = 1, page_size: int = 20):
-    query = db.query(TokenGeneration).options(joinedload(TokenGeneration.creator)).order_by(TokenGeneration.date.desc())
+def list_token_generations(db: Session, financial_year: FinancialYear, page: int = 1, page_size: int = 20):
+    query = db.query(TokenGeneration).filter(
+        TokenGeneration.financial_year_id == financial_year.id
+    ).options(joinedload(TokenGeneration.creator)).order_by(TokenGeneration.date.desc())
     return query.offset((page - 1) * page_size).limit(page_size).all()
 
 def get_token_details_by_date(target_date: date, db: Session, page: int = 1, page_size: int = 20):

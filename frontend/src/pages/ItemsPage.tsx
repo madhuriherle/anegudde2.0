@@ -29,8 +29,8 @@ const itemSchema = z.object({
   item_name: z.string().min(1, 'Name is required'),
   category_id: z.coerce.number().min(1, 'Category is required'),
   unit_id: z.coerce.number().min(1, 'Unit is required'),
-  opening_stock: z.coerce.number().min(0, 'Cannot be negative'),
-  current_stock: z.coerce.number().min(0, 'Cannot be negative'),
+  opening_stock: z.coerce.string().regex(/^\d*\.?\d*$/, 'Must be a valid number').default('0'),
+  current_stock: z.coerce.string().regex(/^\d*\.?\d*$/, 'Must be a valid number').default('0'),
   default_price: z.coerce.number().min(0, 'Cannot be negative'),
   min_stock_level: z.coerce.number().min(0, 'Cannot be negative'),
   max_stock_level: z.coerce.number().min(0, 'Cannot be negative'),
@@ -45,9 +45,8 @@ const ItemsPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
-  const [status, setStatus] = useState<string>('all');
-  const [categoryId, setCategoryId] = useState<string>('all');
-  const [searchField, setSearchField] = useState<string>('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [search, setSearch] = useState('');
 
   const [open, setOpen] = useState(false);
@@ -58,15 +57,14 @@ const ItemsPage: React.FC = () => {
 
   // Fetch Data
   const { data: items, isLoading: itemsLoading } = useQuery({
-    queryKey: ['items', search, status, categoryId, searchField],
+    queryKey: ['items', search, fromDate, toDate],
     queryFn: async () => {
       const params: any = { 
         q: search, 
         page_size: 1000,
       };
-      if (status !== 'all') params.status = status === 'active' ? 1 : 0;
-      if (categoryId !== 'all') params.category_id = categoryId;
-      if (searchField !== 'all') params.search_field = searchField;
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
       
       const res = await api.get('/items/list_items', { params });
       return res.data;
@@ -181,14 +179,14 @@ const ItemsPage: React.FC = () => {
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
-      accessorKey: 'id',
-      header: 'ID',
-      cell: info => <span className="text-text-main">{info.getValue() as string}</span>,
+      accessorKey: 'created_at',
+      header: 'Date',
+      cell: info => <span className="text-text-main">{new Date(info.getValue() as string).toLocaleDateString()}</span>,
     },
     {
       accessorKey: 'item_name',
       header: 'Item Name',
-      cell: info => <span className="text-text-main">{info.getValue() as string}</span>,
+      cell: info => <span className="text-text-main font-medium">{info.getValue() as string}</span>,
     },
     {
       accessorKey: 'category_id',
@@ -199,25 +197,25 @@ const ItemsPage: React.FC = () => {
       }
     },
     {
+      accessorKey: 'default_price',
+      header: 'Standard Price',
+      cell: info => <span className="text-text-main">₹{(Number(info.getValue() || 0)).toLocaleString()}</span>,
+    },
+    {
       accessorKey: 'current_stock',
-      header: 'Stock',
+      header: 'Current Stock',
       cell: info => {
         const row = info.row.original;
         const unit = units?.find((u: any) => u.id === row.unit_id);
         return (
           <div className="flex items-center gap-1.5">
             <span className="text-text-main">
-              {info.getValue() as number}
+              {info.getValue() as string}
             </span>
-            <span className="text-text-main">{unit?.unit_code}</span>
+            <span className="text-text-main text-xs text-secondary/70">{unit?.unit_code}</span>
           </div>
         );
       }
-    },
-    {
-      accessorKey: 'default_price',
-      header: 'Price',
-      cell: info => <span className="text-text-main">₹{(info.getValue() as number).toLocaleString()}</span>,
     },
     {
       accessorKey: 'status',
@@ -267,43 +265,34 @@ const ItemsPage: React.FC = () => {
 
       <Card className="border-border-temple">
         <CardContent className="p-4 sm:p-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-             <div className="space-y-1.5">
-              <Label className="text-text-main">Status</Label>
-              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="disabled">Disabled</option>
-              </Select>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="space-y-1.5 w-full sm:w-44">
+              <Label className="text-text-main font-medium">From Date</Label>
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="text-text-main"
+              />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-text-main">Category</Label>
-              <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                <option value="all">All Categories</option>
-                {categories?.map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.category_name}</option>
-                ))}
-              </Select>
+            <div className="space-y-1.5 w-full sm:w-44">
+              <Label className="text-text-main font-medium">To Date</Label>
+              <Input
+                type="date"
+                value={toDate}
+                min={fromDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="text-text-main"
+              />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-text-main">Search Type</Label>
-              <Select value={searchField} onChange={(e) => setSearchField(e.target.value)}>
-                <option value="all">All Fields</option>
-                <option value="name">Item Name</option>
-                <option value="id">Item ID</option>
-                <option value="category">Category</option>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-text-main">Search</Label>
-              <div className="relative">
-                <Input 
-                  placeholder="Type to search..." 
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="text-text-main"
-                />
-              </div>
+            <div className="space-y-1.5 w-full sm:w-72">
+              <Label className="text-text-main font-medium">Search</Label>
+              <Input
+                placeholder="Item name, Category, or ID..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="text-text-main"
+              />
             </div>
           </div>
         </CardContent>
@@ -349,13 +338,7 @@ const ItemsPage: React.FC = () => {
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="temple-form">
             <div className="temple-form-section">
-              <div className="space-y-2">
-                <Label className="temple-label">Item Name *</Label>
-                <Input {...register('item_name')} className="temple-input" placeholder="e.g. Basmati Rice" />
-                {errors.item_name && <p className="text-xs font-medium text-error ml-1">{errors.item_name.message}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="temple-label">Category *</Label>
                   <Controller
@@ -372,6 +355,13 @@ const ItemsPage: React.FC = () => {
                   />
                   {errors.category_id && <p className="text-xs font-medium text-error ml-1">{errors.category_id.message}</p>}
                 </div>
+
+                <div className="space-y-2">
+                  <Label className="temple-label">Item Name *</Label>
+                  <Input {...register('item_name')} className="temple-input" placeholder="e.g. Basmati Rice" />
+                  {errors.item_name && <p className="text-xs font-medium text-error ml-1">{errors.item_name.message}</p>}
+                </div>
+
                 <div className="space-y-2">
                   <Label className="temple-label">Unit *</Label>
                   <Controller
@@ -390,47 +380,34 @@ const ItemsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="space-y-2">
                   <Label className="temple-label">Opening Stock</Label>
-                  <Input type="number" {...register('opening_stock')} className="temple-input" />
+                  <Input type="text" {...register('opening_stock')} className="temple-input" />
+                  {errors.opening_stock && <p className="text-xs font-medium text-error ml-1">{errors.opening_stock.message}</p>}
                 </div>
-                <div className="space-y-2">
-                  <Label className="temple-label">Current Stock</Label>
-                  <Input type="number" {...register('current_stock')} className="temple-input" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="temple-label">Min Stock Alert Level</Label>
                   <Input type="number" {...register('min_stock_level')} className="temple-input" />
                 </div>
-                <div className="space-y-2">
-                  <Label className="temple-label">Standard Price (₹)</Label>
-                  <Input type="number" {...register('default_price')} className="temple-input" />
-                </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#F1E3D3]">
-                 <div className="space-y-0.5">
-                    <Label className="temple-label mb-0">Active Status</Label>
-                    <p className="text-xs text-secondary/60">Whether this item is currently available for use.</p>
-                 </div>
-                 <Controller
-                  name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <Switch 
-                      checked={field.value === 1} 
-                      onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)} 
-                    />
-                  )}
-                />
-              </div>
+              {editingItem && (
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="space-y-2">
+                    <Label className="temple-label">Current Stock</Label>
+                    <Input type="text" {...register('current_stock')} className="temple-input" disabled />
+                    {errors.current_stock && <p className="text-xs font-medium text-error ml-1">{errors.current_stock.message}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="temple-label">Standard Price (₹)</Label>
+                    <Input type="number" {...register('default_price')} className="temple-input" />
+                  </div>
+                </div>
+              )}
             </div>
 
-            <DialogFooter className="gap-3">
+            <DialogFooter className="gap-3 mt-6">
               <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>

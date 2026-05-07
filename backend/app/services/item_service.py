@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import String
 from sqlalchemy.orm import Session, joinedload
 
-from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit, ItemType
+from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit, ItemType, ItemPrice, PurchaseEntry, Vendor, FinancialYear
 from app.schemas.item import ItemCreate, ItemUpdate
 
 
@@ -25,15 +25,21 @@ def validate_fk(db: Session, payload: ItemCreate | ItemUpdate, type_id: int | No
             raise HTTPException(status_code=400, detail="Invalid unit_id")
 
 
-def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: int | None = None) -> Item:
+def create_item(payload: ItemCreate, db: Session, current_user: User, financial_year: FinancialYear, type_id: int | None = None) -> Item:
     validate_fk(db, payload, type_id)
     exists = db.query(Item).filter(Item.item_name == payload.item_name).first()
     if exists:
         raise HTTPException(status_code=400, detail="item_name already exists")
 
     now = datetime.now(timezone.utc)
+    
+    # Automatically assign financial_year_id if not provided
+    data = payload.model_dump()
+    if not data.get("financial_year_id"):
+        data["financial_year_id"] = financial_year.id
+        
     item = Item(
-        **payload.model_dump(),
+        **data,
         created_at=now,
         updated_at=now,
         created_by=current_user.id,
@@ -47,6 +53,7 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: i
 
 def list_items(
     db: Session, 
+    financial_year: FinancialYear,
     page: int, 
     page_size: int, 
     q: str | None, 
@@ -55,9 +62,11 @@ def list_items(
     type_id: int | None = None,
     search_field: str | None = None,
     sort_by: str = "id", 
-    sort_order: str = "desc"
+    sort_order: str = "desc",
+    from_date: str | None = None,
+    to_date: str | None = None
 ) -> list[Item]:
-    query = db.query(Item).join(ItemCategory, Item.category_id == ItemCategory.id).options(
+    query = db.query(Item).filter(Item.financial_year_id == financial_year.id).join(ItemCategory, Item.category_id == ItemCategory.id).options(
         joinedload(Item.category),
         joinedload(Item.unit)
     )
@@ -69,6 +78,11 @@ def list_items(
         query = query.filter(Item.category_id == category_id)
     if type_id is not None:
         query = query.filter(ItemCategory.type_id == type_id)
+
+    if from_date:
+        query = query.filter(Item.created_at >= from_date)
+    if to_date:
+        query = query.filter(Item.created_at <= f"{to_date} 23:59:59")
 
     if q:
         like = f"%{q}%"
@@ -88,8 +102,13 @@ def list_items(
                 (Unit.unit_name.ilike(like))
             )
             
-    sort_col = getattr(Item, sort_by, Item.id)
-    query = query.order_by(sort_col.asc() if sort_order.lower() == "asc" else sort_col.desc())
+    # Default sorting: Status (Active first), then Item Name (A-Z)
+    if sort_by == "id" and sort_order == "desc":
+        query = query.order_by(Item.status.desc(), Item.item_name.asc())
+    else:
+        sort_col = getattr(Item, sort_by, Item.id)
+        query = query.order_by(sort_col.asc() if sort_order.lower() == "asc" else sort_col.desc())
+    
     offset = (page - 1) * page_size
     return query.offset(offset).limit(page_size).all()
 
@@ -148,3 +167,35 @@ def get_item_ledger(item_id: int, db: Session) -> list[StockLedger]:
         .limit(100)
         .all()
     )
+
+
+def get_price_history(item_id: int, db: Session) -> list[dict]:
+    _ = get_item(item_id, db)
+    # Fetch all prices ordered by date desc
+    prices = (
+        db.query(ItemPrice)
+        .outerjoin(PurchaseEntry, ItemPrice.purchase_entry_id == PurchaseEntry.id)
+        .outerjoin(Vendor, PurchaseEntry.vendor_id == Vendor.id)
+        .filter(ItemPrice.item_id == item_id)
+        .order_by(ItemPrice.created_at.desc())
+        .all()
+    )
+    
+    unique_prices = []
+    seen_prices = set()
+    
+    for p in prices:
+        # Round to avoid precision issues in unique check
+        price_val = float(round(p.price, 2))
+        if price_val not in seen_prices:
+            unique_prices.append({
+                "id": p.id,
+                "price": p.price,
+                "created_at": p.created_at,
+                "purchase_date": p.purchase.purchase_date if p.purchase else p.created_at.date(),
+                "vendor_name": p.purchase.vendor.vendor_name if p.purchase and p.purchase.vendor else "Manual/Opening",
+                "bill_no": p.purchase.bill_no if p.purchase else "-"
+            })
+            seen_prices.add(price_val)
+            
+    return unique_prices

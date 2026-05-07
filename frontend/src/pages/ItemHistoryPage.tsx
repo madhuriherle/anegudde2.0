@@ -5,7 +5,9 @@ import {
   ShoppingCart, 
   Utensils, 
   Settings2, 
-  HelpCircle 
+  HelpCircle,
+  History,
+  ArrowLeft
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
@@ -131,12 +133,23 @@ const ItemHistoryPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/items')} className="p-0 h-8 w-8 rounded-full">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <h2 className="text-text-main text-2xl font-semibold font-temple">
             {item?.item_name || 'Loading...'}
-          </h2>
+          </h2>
         </div>
+        <Button 
+          onClick={() => navigate(`/items/${id}/price-history`)} 
+          variant="outline"
+          className="flex items-center gap-2 border-primary-main/20 text-primary-main hover:bg-primary-main/5"
+        >
+          <History className="h-4 w-4" />
+          Price History
+        </Button>
       </div>
 
       <Card className="border-border-temple overflow-hidden bg-white shadow-sm">
@@ -151,4 +164,3 @@ const ItemHistoryPage: React.FC = () => {
 };
 
 export default ItemHistoryPage;
-

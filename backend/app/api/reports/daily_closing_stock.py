@@ -3,18 +3,26 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
-from app.db.models import DailyStockSummary, Item, User
+from app.api.deps import get_current_user, get_db, get_financial_year
+from app.db.models import DailyStockSummary, Item, User, FinancialYear
 
 router = APIRouter()
 
 
 @router.get("/daily-closing-stock")
-def get_daily_closing_stock(target_date: date = Query(...), db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def get_daily_closing_stock(
+    target_date: date = Query(...), 
+    db: Session = Depends(get_db), 
+    _: User = Depends(get_current_user),
+    financial_year: FinancialYear = Depends(get_financial_year)
+):
     results = (
         db.query(DailyStockSummary, Item.item_name)
         .join(Item, Item.id == DailyStockSummary.item_id)
-        .filter(DailyStockSummary.summary_date == target_date)
+        .filter(
+            DailyStockSummary.summary_date == target_date,
+            DailyStockSummary.financial_year_id == financial_year.id
+        )
         .all()
     )
     return [

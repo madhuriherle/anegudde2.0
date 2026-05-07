@@ -5,7 +5,7 @@ from decimal import Decimal
 from sqlalchemy import func, case
 from sqlalchemy.orm import Session
 
-from app.db.models import DailyStockSummary, Item, StockLedger, MonthlyStockSummary, Notification
+from app.db.models import DailyStockSummary, Item, StockLedger, MonthlyStockSummary
 from app.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -101,6 +101,7 @@ def generate_daily_stock_summary(summary_date: date):
                 db.add(DailyStockSummary(
                     summary_date=summary_date,
                     item_id=item.id,
+                    financial_year_id=item.financial_year_id, # Inherit from item
                     opening_stock=opening_stock,
                     purchased_qty=purchased_qty,
                     consumed_qty=consumed_qty,
@@ -209,6 +210,7 @@ def generate_monthly_stock_summary(summary_month: date):
                 db.add(MonthlyStockSummary(
                     summary_month=start_date,
                     item_id=item.id,
+                    financial_year_id=item.financial_year_id, # Inherit from item
                     opening_stock=opening_stock,
                     total_purchased_qty=summary_data.total_purchased or 0,
                     total_consumed_qty=summary_data.total_consumed or 0,
@@ -258,18 +260,6 @@ def audit_stock_integrity():
                     mismatches.append(f"{item.item_name}: Live={item.current_stock}, Snapshot={last_summary.closing_stock}")
         
         if mismatches:
-            msg = "Stock discrepancies found during audit:\n" + "\n".join(mismatches[:10])
-            if len(mismatches) > 10:
-                msg += f"\n...and {len(mismatches) - 10} more."
-                
-            db.add(Notification(
-                title="Stock Integrity Warning",
-                message=msg,
-                notification_type="warning",
-                is_read=0,
-                created_at=datetime.now()
-            ))
-            db.commit()
             logger.warning(f"Stock integrity audit found {len(mismatches)} discrepancies.")
         else:
             logger.info("Stock integrity audit passed.")

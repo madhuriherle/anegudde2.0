@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from app.api.deps import get_current_user, get_db
-from app.db.models import Unit, User
+from app.api.deps import get_current_user, get_db, get_financial_year
+from app.db.models import Unit, User, FinancialYear
 from app.schemas.unit import UnitOut
 
 router = APIRouter()
@@ -10,12 +10,13 @@ router = APIRouter()
 def list_units(
     db: Session = Depends(get_db), 
     _: User = Depends(get_current_user),
+    financial_year: FinancialYear = Depends(get_financial_year),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=1000),
     q: str | None = Query(None),
     search_field: str | None = Query(None),
 ):
-    query = db.query(Unit)
+    query = db.query(Unit).filter(Unit.financial_year_id == financial_year.id)
     if q:
         like = f"%{q}%"
         if search_field == "name":

@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   LayoutDashboard, 
   Users, 
   Package, 
   ShoppingCart, 
   UtensilsCrossed, 
-  Trash2, 
   BarChart3, 
   LogOut, 
-  Bell, 
   Menu as MenuIcon, 
   User,
-  Ticket,
   UserCog,
   Tags,
   Ruler
@@ -21,7 +17,6 @@ import {
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Avatar from '@radix-ui/react-avatar';
 import { useAuth } from '../context/AuthContext';
-import api from '../api/axios';
 import { cn } from '../utils/cn';
 
 const templeLogoSrc = '/temple-logo-banner.webp';
@@ -31,14 +26,11 @@ const menuItems = [
   { text: 'Vendors', icon: Users, path: '/vendors' },
   { text: 'Items', icon: Package, path: '/items' },
   { text: 'Purchases', icon: ShoppingCart, path: '/purchases' },
-  { text: 'Tokens', icon: Ticket, path: '/tokens' },
   { text: 'Consumption', icon: UtensilsCrossed, path: '/consumptions' },
-  { text: 'Wastage', icon: Trash2, path: '/wastages' },
   { text: 'Reports', icon: BarChart3, path: '/reports' },
 ];
 
 const masterSettings = [
-  { text: 'Chefs', icon: UtensilsCrossed, path: '/settings/chefs' },
   { text: 'Categories', icon: Tags, path: '/settings/categories' },
   { text: 'Units', icon: Ruler, path: '/settings/units' },
   { text: 'Menu Items', icon: UtensilsCrossed, path: '/settings/menu-items' },
@@ -49,34 +41,11 @@ const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const queryClient = useQueryClient();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  // Fetch Unread Notifications
-  const { data: notifications = [] } = useQuery({
-    queryKey: ['notifications', 'unread'],
-    queryFn: async () => {
-      const res = await api.get('/notifications/list_notifications', { params: { unread_only: true } });
-      return res.data;
-    },
-    refetchInterval: 30000,
-  });
-
-  const markAsReadMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/notifications/mark_read/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-  });
 
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const handleNotificationClick = (notif: any) => {
-    markAsReadMutation.mutate(notif.id);
-    if (notif.link) navigate(notif.link);
   };
 
   const SidebarContent = () => (
@@ -173,68 +142,6 @@ const MainLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Notifications - Hidden for now
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <button className="relative p-2 text-secondary-light hover:bg-secondary/5 rounded-full transition-all focus:outline-none">
-                  <Bell className="w-5 h-5" />
-                  {notifications.length > 0 && (
-                    <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white ring-2 ring-bg-cream shadow-sm">
-                      {notifications.length}
-                    </span>
-                  )}
-                </button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content 
-                  className="z-50 min-w-[320px] bg-white rounded-lg shadow-xl border border-gray-200 p-1 animate-in fade-in zoom-in duration-200"
-                  align="end"
-                  sideOffset={8}
-                >
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 mb-1">
-                    <span className="text-sm font-bold text-gray-900">Notifications</span>
-                    {notifications.length > 0 && (
-                      <button 
-                        className="text-[10px] font-medium text-primary hover:underline"
-                        onClick={() => {
-                          api.post('/notifications/mark_all_read').then(() => {
-                            queryClient.invalidateQueries({ queryKey: ['notifications'] });
-                          });
-                        }}
-                      >
-                        Mark all as read
-                      </button>
-                    )}
-                  </div>
-                  <div className="max-h-[400px] overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <div className="px-4 py-8 text-center">
-                        <p className="text-xs text-gray-500">No new notifications</p>
-                      </div>
-                    ) : (
-                      notifications.map((notif: any) => (
-                        <DropdownMenu.Item 
-                          key={notif.id}
-                          className="flex items-start gap-3 px-3 py-2 rounded-md hover:bg-gray-50 outline-none cursor-pointer"
-                          onClick={() => handleNotificationClick(notif)}
-                        >
-                          <div className={cn(
-                            "w-2 h-2 mt-1.5 rounded-full flex-shrink-0",
-                            notif.notification_type === 'warning' ? "bg-amber-500" : "bg-blue-500"
-                          )} />
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-xs font-bold text-gray-900">{notif.title}</span>
-                            <span className="text-[10px] text-gray-500 leading-tight">{notif.message}</span>
-                          </div>
-                        </DropdownMenu.Item>
-                      ))
-                    )}
-                  </div>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
-            */}
-
             <span className="hidden sm:block text-xs font-medium text-gray-700 ml-2">
               {user?.full_name}
             </span>

@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
-from app.db.models import StockLedger, User, VendorPayment
+from app.api.deps import get_current_user, get_db, get_financial_year
+from app.db.models import StockLedger, User, VendorPayment, FinancialYear
 from app.schemas.report import StockFinanceCardRow
 from .common import period_expr
 
@@ -20,6 +20,7 @@ def stock_finance_card(
     group_by: str = Query("day"),
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
+    financial_year: FinancialYear = Depends(get_financial_year)
 ):
     if group_by not in {"day", "month"}:
         raise HTTPException(status_code=400, detail="group_by must be day or month")
@@ -37,7 +38,11 @@ def stock_finance_card(
             func.coalesce(func.sum(case((StockLedger.txn_type == 2, StockLedger.value_out), else_=0)), 0).label("consumption_value"),
             func.coalesce(func.sum(case((StockLedger.txn_type == 3, StockLedger.value_out), else_=0)), 0).label("wastage_value"),
         )
-        .filter(StockLedger.txn_date >= from_date, StockLedger.txn_date <= to_date)
+        .filter(
+            StockLedger.txn_date >= from_date, 
+            StockLedger.txn_date <= to_date,
+            StockLedger.financial_year_id == financial_year.id
+        )
         .group_by(period_stock)
         .order_by(period_stock)
         .all()
@@ -46,7 +51,11 @@ def stock_finance_card(
     period_pay = period_expr(group_by, VendorPayment.payment_date)
     pay_rows = (
         db.query(period_pay.label("period"), func.coalesce(func.sum(VendorPayment.amount), 0).label("payment_value"))
-        .filter(VendorPayment.payment_date >= from_date, VendorPayment.payment_date <= to_date)
+        .filter(
+            VendorPayment.payment_date >= from_date, 
+            VendorPayment.payment_date <= to_date,
+            VendorPayment.financial_year_id == financial_year.id
+        )
         .group_by(period_pay)
         .all()
     )

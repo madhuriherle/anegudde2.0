@@ -4,20 +4,27 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 import logging
 
-from app.api.deps import get_current_user, get_db
-from app.db.models import DailyStockSummary, User
+from app.api.deps import get_current_user, get_db, get_financial_year
+from app.db.models import DailyStockSummary, User, FinancialYear
 
 router = APIRouter()
 
 @router.get("/stock-trend")
-def stock_trend(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def stock_trend(
+    db: Session = Depends(get_db), 
+    _: User = Depends(get_current_user),
+    financial_year: FinancialYear = Depends(get_financial_year)
+):
     thirty_days_ago = date.today() - timedelta(days=30)
     results = (
         db.query(
             DailyStockSummary.summary_date,
             func.sum(DailyStockSummary.stock_value).label("total_value"),
         )
-        .filter(DailyStockSummary.summary_date >= thirty_days_ago)
+        .filter(
+            DailyStockSummary.summary_date >= thirty_days_ago,
+            DailyStockSummary.financial_year_id == financial_year.id
+        )
         .group_by(DailyStockSummary.summary_date)
         .order_by(DailyStockSummary.summary_date.asc())
         .all()

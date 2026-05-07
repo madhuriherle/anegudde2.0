@@ -4,7 +4,7 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 from app.db.models import (
     Vendor, Unit, ItemCategory, Item, User, PurchaseEntry, PurchaseItem, 
-    ConsumptionEntry, ConsumptionItem, StockLedger, VendorPayment, Chef, WastageEntry, WastageItem
+    ConsumptionEntry, ConsumptionItem, StockLedger, VendorPayment, WastageEntry, WastageItem
 )
 from app.db.session import SessionLocal
 
@@ -178,10 +178,9 @@ def bulk_seed(db: Session):
     print("Seeding Consumptions...")
     for i in range(80):
         txn_date = start_date + timedelta(days=random.randint(0, 30))
-        chef_id = random.choice(chef_ids)
         
         c_entry = ConsumptionEntry(
-            usage_date=txn_date, chef_id=chef_id,
+            usage_date=txn_date, 
             people_served=random.randint(100, 1000),
             user_id=admin_id, status=1, created_at=now, updated_at=now
         )

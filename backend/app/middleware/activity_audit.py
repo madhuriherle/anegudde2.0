@@ -19,52 +19,60 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith(("/docs", "/openapi.json", "/redoc")):
             return response
 
-        token = self._extract_bearer_token(request)
-        user_id = self._get_user_id_from_token(token)
-        if user_id is None:
-            return response
-
-        action = f"{request.method} {request.url.path}"
-        activity_status = "SUCCESS" if response.status_code < 400 else "FAILED"
-        reason = None if activity_status == "SUCCESS" else f"HTTP {response.status_code}"
-
-        client_ip = request.client.host if request.client else None
-        user_agent = request.headers.get("user-agent")
-        request_id = response.headers.get("X-Request-ID")
-        route_template = self._get_route_template(request)
-        error_code = None if response.status_code < 400 else f"HTTP_{response.status_code}"
-        meta = {
-            "query_params": dict(request.query_params),
-            "path_params": request.path_params,
-            "status_family": f"{response.status_code // 100}xx",
-        }
-
-        db = SessionLocal()
         try:
-            log_activity_event(
-                db,
-                user_id=user_id,
-                method=request.method,
-                endpoint=request.url.path,
-                action=action,
-                activity_status=activity_status,
-                reason=reason,
-                http_status_code=response.status_code,
-                ip_address=client_ip,
-                user_agent=user_agent,
-                request_id=request_id,
-                route_template=route_template,
-                duration_ms=duration_ms,
-                error_code=error_code,
-                meta=meta,
-                created_by=user_id,
-                updated_by=user_id,
-            )
-            db.commit()
+            token = self._extract_bearer_token(request)
+            user_info = self._get_user_info_from_token(token)
+            if user_info is None:
+                return response
+
+            user_id, session_id = user_info
+
+            action = f"{request.method} {request.url.path}"
+            activity_status = "SUCCESS" if response.status_code < 400 else "FAILED"
+            reason = None if activity_status == "SUCCESS" else f"HTTP {response.status_code}"
+
+            client_ip = request.client.host if request.client else None
+            user_agent = request.headers.get("user-agent")
+            request_id = response.headers.get("X-Request-ID")
+            route_template = self._get_route_template(request)
+            error_code = None if response.status_code < 400 else f"HTTP_{response.status_code}"
+            meta = {
+                "query_params": dict(request.query_params),
+                "path_params": request.path_params,
+                "status_family": f"{response.status_code // 100}xx",
+            }
+
+            db = SessionLocal()
+            try:
+                log_activity_event(
+                    db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    method=request.method,
+                    endpoint=request.url.path,
+                    action=action,
+                    activity_status=activity_status,
+                    reason=reason,
+                    http_status_code=response.status_code,
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    request_id=request_id,
+                    route_template=route_template,
+                    duration_ms=duration_ms,
+                    error_code=error_code,
+                    meta=meta,
+                    created_by=user_id,
+                    updated_by=user_id,
+                )
+                db.commit()
+
+            except Exception:
+                db.rollback()
+            finally:
+                db.close()
         except Exception:
-            db.rollback()
-        finally:
-            db.close()
+            # Audit failure should not break the main request
+            pass
 
         return response
 
@@ -85,7 +93,7 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
         return template or request.url.path
 
     @staticmethod
-    def _get_user_id_from_token(token: str | None) -> int | None:
+    def _get_user_info_from_token(token: str | None) -> tuple[int, str | None] | None:
         if not token:
             return None
 
@@ -95,6 +103,7 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
         try:
             payload = jwt.decode(token, secret_key, algorithms=[algorithm])
             username = payload.get("sub")
+            session_id = payload.get("sid")
             if not username:
                 return None
         except JWTError:
@@ -103,6 +112,8 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
         db = SessionLocal()
         try:
             user = db.query(User).filter(User.username == username, User.status == 1).first()
-            return user.id if user else None
+            if not user:
+                return None
+            return user.id, session_id
         finally:
             db.close()

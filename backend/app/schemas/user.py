@@ -14,6 +14,8 @@ class UserBase(BaseModel):
     email: str | None = None
     phone: str | None = None
 
+    model_config = ConfigDict(from_attributes=True)
+
 class UserCreate(UserBase):
     password: str
 
@@ -25,6 +27,8 @@ class UserUpdate(BaseModel):
     phone: str | None = None
     password: str | None = None
     status: int | None = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 class UserOut(UserBase):
     id: int

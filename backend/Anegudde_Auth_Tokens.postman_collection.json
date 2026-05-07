@@ -1,0 +1,216 @@
+{
+    "info":  {
+                 "_postman_id":  "6f410f0d-8e80-4f8a-8b08-4f66f7da61c0",
+                 "name":  "Anegudde Auth + Tokens",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "item":  [
+                 {
+                     "name":  "Auth",
+                     "item":  [
+                                  {
+                                      "name":  "Login",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const json = pm.response.json();",
+                                                                                    "if (json \u0026\u0026 json.access_token) {",
+                                                                                    "  pm.collectionVariables.set(\u0027token\u0027, json.access_token);",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auth/login",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              }
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Tokens",
+                     "item":  [
+                                  {
+                                      "name":  "Create Token",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"date\": \"2026-05-07\",\n  \"token_type\": \"adult\",\n  \"quantity\": 10,\n  \"amount\": 100.0,\n  \"notes\": \"sample\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/tokens/create_token",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "tokens",
+                                                                               "create_token"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "List Generations",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/tokens/list_generations?page=1\u0026page_size=20",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "tokens",
+                                                                               "list_generations"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "page",
+                                                                                    "value":  "1"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "page_size",
+                                                                                    "value":  "20"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Details By Date",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/tokens/get_details_by_date/{{target_date}}?page=1\u0026page_size=20",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "tokens",
+                                                                               "get_details_by_date",
+                                                                               "{{target_date}}"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "page",
+                                                                                    "value":  "1"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "page_size",
+                                                                                    "value":  "20"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "View History Ledger",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/tokens/view_history_ledger?start_date={{start_date}}\u0026end_date={{end_date}}\u0026page=1\u0026page_size=50",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "tokens",
+                                                                               "view_history_ledger"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "start_date",
+                                                                                    "value":  "{{start_date}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "end_date",
+                                                                                    "value":  "{{end_date}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "page",
+                                                                                    "value":  "1"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "page_size",
+                                                                                    "value":  "50"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  }
+                                  }
+                              ]
+                 }
+             ],
+    "variable":  [
+                     {
+                         "key":  "base_url",
+                         "value":  "http://127.0.0.1:8006"
+                     },
+                     {
+                         "key":  "token",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "target_date",
+                         "value":  "2026-05-07"
+                     },
+                     {
+                         "key":  "start_date",
+                         "value":  "2026-05-01"
+                     },
+                     {
+                         "key":  "end_date",
+                         "value":  "2026-05-07"
+                     }
+                 ]
+}

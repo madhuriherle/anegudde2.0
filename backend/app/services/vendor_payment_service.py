@@ -1,23 +1,25 @@
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from app.db.models import User, Vendor, VendorPayment
+from app.db.models import User, Vendor, VendorPayment, FinancialYear
 
-def list_vendor_payments(db: Session, page: int = 1, page_size: int = 20, vendor_id: int = None):
-    query = db.query(VendorPayment)
+def list_vendor_payments(db: Session, financial_year: FinancialYear, page: int = 1, page_size: int = 20, vendor_id: int = None):
+    query = db.query(VendorPayment).filter(VendorPayment.financial_year_id == financial_year.id)
     if vendor_id:
         query = query.filter(VendorPayment.vendor_id == vendor_id)
     return query.order_by(VendorPayment.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
 
-def create_vendor_payment(payload, db: Session, current_user: User) -> VendorPayment:
+def create_vendor_payment(payload, db: Session, current_user: User, financial_year: FinancialYear) -> VendorPayment:
     vendor = db.query(Vendor).filter(Vendor.id == payload.vendor_id).first()
     if not vendor:
         raise HTTPException(status_code=400, detail="Invalid vendor_id")
 
     now = datetime.now(timezone.utc)
+    fy_id = getattr(payload, "financial_year_id", None) or financial_year.id
     
     payment = VendorPayment(
         vendor_id=payload.vendor_id,
+        financial_year_id=fy_id,
         payment_date=payload.payment_date,
         amount=payload.amount,
         payment_mode=payload.payment_mode,

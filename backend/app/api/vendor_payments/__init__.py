@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_current_user, get_db
-from app.db.models import User
+from app.api.deps import get_current_user, get_db, get_financial_year
+from app.db.models import User, FinancialYear
 from app.schemas.vendor_payment import VendorPaymentCreate, VendorPaymentOut
 from app.services import vendor_payment_service
 
@@ -13,17 +13,19 @@ def list_vendor_payments(
     page: int = 1,
     page_size: int = 20,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    financial_year: FinancialYear = Depends(get_financial_year)
 ):
-    return vendor_payment_service.list_vendor_payments(db, page, page_size, vendor_id)
+    return vendor_payment_service.list_vendor_payments(db, financial_year, page, page_size, vendor_id)
 
 @router.post("/create_vendor_payment", response_model=VendorPaymentOut, status_code=status.HTTP_201_CREATED)
 def create_vendor_payment(
     payload: VendorPaymentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    financial_year: FinancialYear = Depends(get_financial_year)
 ):
-    return vendor_payment_service.create_vendor_payment(payload, db, current_user)
+    return vendor_payment_service.create_vendor_payment(payload, db, current_user, financial_year)
 
 @router.delete("/delete_vendor_payment/{payment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_vendor_payment(

@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 class ItemTypeBase(BaseModel):
     type_name: str
+    financial_year_id: int | None = None
     status: int = 1
 
 

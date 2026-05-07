@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
-from app.db.models import User, Vendor
+from app.api.deps import get_current_user, get_db, get_financial_year
+from app.db.models import User, Vendor, FinancialYear
 from app.schemas.vendor import VendorOut
 
 router = APIRouter()
@@ -12,6 +12,7 @@ router = APIRouter()
 def list_vendors(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
+    financial_year: FinancialYear = Depends(get_financial_year),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=1000),
     q: str | None = Query(None),
@@ -22,7 +23,7 @@ def list_vendors(
     sort_by: str = Query("id"),
     sort_order: str = Query("desc"),
 ):
-    query = db.query(Vendor)
+    query = db.query(Vendor).filter(Vendor.financial_year_id == financial_year.id)
     
     if status is not None:
         query = query.filter(Vendor.status == status)
@@ -41,21 +42,22 @@ def list_vendors(
             query = query.filter(Vendor.vendor_code.ilike(like))
         elif search_field == "contact":
             query = query.filter(Vendor.contact_number.ilike(like))
-        elif search_field == "gst":
-            query = query.filter(Vendor.gst_number.ilike(like))
         elif search_field == "city":
             query = query.filter(Vendor.city.ilike(like))
         else:
             query = query.filter(
-                (Vendor.vendor_name.ilike(like)) | 
-                (Vendor.vendor_code.ilike(like)) | 
+                (Vendor.vendor_name.ilike(like)) |
+                (Vendor.vendor_code.ilike(like)) |
                 (Vendor.contact_number.ilike(like)) |
-                (Vendor.gst_number.ilike(like)) |
                 (Vendor.city.ilike(like))
             )
-
-    sort_col = getattr(Vendor, sort_by, Vendor.id)
-    query = query.order_by(sort_col.asc() if sort_order.lower() == "asc" else sort_col.desc())
+    # Default sorting: Status (Active first), then Vendor Name (A-Z)
+    if sort_by == "id" and sort_order == "desc":
+        query = query.order_by(Vendor.status.desc(), Vendor.vendor_name.asc())
+    else:
+        sort_col = getattr(Vendor, sort_by, Vendor.id)
+        query = query.order_by(sort_col.asc() if sort_order.lower() == "asc" else sort_col.desc())
+    
     offset = (page - 1) * page_size
     return query.offset(offset).limit(page_size).all()
 

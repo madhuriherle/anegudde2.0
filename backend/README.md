@@ -47,11 +47,11 @@ Default admin:
 
 ## Run Server
 ```powershell
-uvicorn app.main:app --reload --port 8005
+uvicorn app.main:app --reload --port 8006
 ```
 
 Swagger:
-- http://127.0.0.1:8005/docs
+- http://127.0.0.1:8006/docs
 
 ## Modules
 - Auth: `/auth/*`
@@ -81,7 +81,7 @@ Use collection file:
 - `AneguddeTemple_FULL.postman_collection.json`
 
 Set collection variables:
-- `base_url = http://127.0.0.1:8005`
+- `base_url = http://127.0.0.1:8006`
 - `token = <JWT from /auth/login>`
 
 ## Notes

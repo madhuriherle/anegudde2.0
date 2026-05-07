@@ -12,6 +12,7 @@ class WastageItemIn(BaseModel):
 class WastageEntryCreate(BaseModel):
     wastage_date: date
     reason: str | None = None
+    financial_year_id: int | None = None
     user_id: int | None = None
     status: int = 1
     items: list[WastageItemIn]
@@ -21,6 +22,7 @@ class WastageEntryOut(BaseModel):
     id: int
     wastage_date: date
     reason: str | None = None
+    financial_year_id: int | None = None
     user_id: int
     status: int
     created_at: datetime
@@ -44,6 +46,7 @@ class WastageItemOut(BaseModel):
 class WastageEntryUpdate(BaseModel):
     wastage_date: date
     reason: str | None = None
+    financial_year_id: int | None = None
     items: list[WastageItemIn]
 
 

@@ -1,7 +1,7 @@
 from datetime import datetime, date, timezone
 from decimal import Decimal
 from sqlalchemy.orm import Session
-from app.db.models import Vendor, Unit, ItemCategory, Item, User, PurchaseEntry, PurchaseItem, ConsumptionEntry, ConsumptionItem, StockLedger, VendorPayment, Chef
+from app.db.models import Vendor, Unit, ItemCategory, Item, User, PurchaseEntry, PurchaseItem, ConsumptionEntry, ConsumptionItem, StockLedger, VendorPayment
 from app.db.session import SessionLocal
 
 def seed_test_data(db: Session):
@@ -96,13 +96,6 @@ def seed_test_data(db: Session):
             db.add(item)
             db.flush()
         item_map[i_data["item_name"]] = item
-
-    # 5. Seed Chef
-    chef = db.query(Chef).filter(Chef.chef_name == "Head Chef Ram").first()
-    if not chef:
-        chef = Chef(user_id=admin_id, chef_name="Head Chef Ram", phone="9988776655", created_at=now, updated_at=now)
-        db.add(chef)
-        db.flush()
 
     # 6. Seed Purchase Transactions
     # Check if a purchase exists to prevent duplicating transactions

@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
-from app.db.models import StockLedger, User
+from app.api.deps import get_current_user, get_db, get_financial_year
+from app.db.models import StockLedger, User, FinancialYear
 from app.schemas.report import StockReportRow
 from .common import period_expr
 
@@ -13,7 +13,14 @@ router = APIRouter()
 
 
 @router.get("/stock-summary", response_model=list[StockReportRow])
-def stock_summary_report(from_date: date = Query(...), to_date: date = Query(...), group_by: str = Query("day"), db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def stock_summary_report(
+    from_date: date = Query(...), 
+    to_date: date = Query(...), 
+    group_by: str = Query("day"), 
+    db: Session = Depends(get_db), 
+    _: User = Depends(get_current_user),
+    financial_year: FinancialYear = Depends(get_financial_year)
+):
     period = period_expr(group_by, StockLedger.txn_date)
     rows = (
         db.query(
@@ -23,7 +30,11 @@ def stock_summary_report(from_date: date = Query(...), to_date: date = Query(...
             func.coalesce(func.sum(StockLedger.value_in), 0).label("value_in"),
             func.coalesce(func.sum(StockLedger.value_out), 0).label("value_out"),
         )
-        .filter(StockLedger.txn_date >= from_date, StockLedger.txn_date <= to_date)
+        .filter(
+            StockLedger.txn_date >= from_date, 
+            StockLedger.txn_date <= to_date,
+            StockLedger.financial_year_id == financial_year.id
+        )
         .group_by(period)
         .order_by(period)
         .all()

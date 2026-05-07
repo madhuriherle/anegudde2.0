@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 class UnitBase(BaseModel):
     unit_name: str
     unit_code: str
+    financial_year_id: int | None = None
     status: int = 1
 
 
@@ -15,6 +16,7 @@ class UnitCreate(UnitBase):
 class UnitUpdate(BaseModel):
     unit_name: str | None = None
     unit_code: str | None = None
+    financial_year_id: int | None = None
     status: int | None = None
 
 

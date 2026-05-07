@@ -1,17 +1,22 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
-from app.db.models import Item, MonthlyStockSummary, User
+from app.api.deps import get_current_user, get_db, get_financial_year
+from app.db.models import Item, MonthlyStockSummary, User, FinancialYear
 
 router = APIRouter()
 
 
 @router.get("/monthly-performance")
-def monthly_performance_report(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def monthly_performance_report(
+    db: Session = Depends(get_db), 
+    _: User = Depends(get_current_user),
+    financial_year: FinancialYear = Depends(get_financial_year)
+):
     results = (
         db.query(MonthlyStockSummary, Item.item_name)
         .join(Item, Item.id == MonthlyStockSummary.item_id)
+        .filter(MonthlyStockSummary.financial_year_id == financial_year.id)
         .order_by(MonthlyStockSummary.summary_month.desc(), Item.item_name.asc())
         .all()
     )

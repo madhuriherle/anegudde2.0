@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
@@ -26,7 +27,8 @@ def login_user(payload: LoginRequest, db: Session) -> Token:
         db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
 
-    token = create_access_token(subject=user.username)
+    session_id = str(uuid.uuid4())
+    token = create_access_token(subject=user.username, session_id=session_id)
 
     db.add(
         LoginHistory(
@@ -35,6 +37,7 @@ def login_user(payload: LoginRequest, db: Session) -> Token:
             login_status="SUCCESS",
             logged_in_at=now,
             session_token=token,
+            session_id=session_id,
             created_at=now,
         )
     )

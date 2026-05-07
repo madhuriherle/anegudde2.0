@@ -1,0 +1,161 @@
+{
+	"info": {
+		"_postman_id": "8b2d4e10-c91a-4b2d-9c01-f41c2ab9d8e7",
+		"name": "Anegudde Token System - URL ONLY",
+		"description": "Simplified collection where all data is passed in the URL (Query Params).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Login (Get Token)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"if (jsonData.access_token) {",
+							"    pm.collectionVariables.set(\"jwt_token\", jsonData.access_token);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "username",
+							"value": "admin",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "admin123",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/auth/login",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"auth",
+						"login"
+					]
+				},
+				"description": "Login once to get the Bearer token. It will automatically save to the collection variables."
+			},
+			"response": []
+		},
+		{
+			"name": "2. Create Token Hit (URL ONLY)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{jwt_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/tokens/create?count=10",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"tokens",
+						"create"
+					],
+					"query": [
+						{
+							"key": "count",
+							"value": "10"
+						}
+					]
+				},
+				"description": "Issue tokens by simply changing the 'count' number in the URL."
+			},
+			"response": []
+		},
+		{
+			"name": "3. View Detailed History",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{jwt_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/tokens/view_history_ledger",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"tokens",
+						"view_history_ledger"
+					]
+				},
+				"description": "Shows the hit-by-hit list of all tokens issued."
+			},
+			"response": []
+		},
+		{
+			"name": "4. View Daily Totals",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{jwt_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/tokens/list_generations",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"tokens",
+						"list_generations"
+					]
+				},
+				"description": "Shows summary totals for each date."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8006"
+		},
+		{
+			"key": "jwt_token",
+			"value": ""
+		}
+	]
+}

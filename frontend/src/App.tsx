@@ -6,16 +6,14 @@ import DashboardPage from './pages/DashboardPage';
 import VendorsPage from './pages/VendorsPage';
 import ItemsPage from './pages/ItemsPage';
 import ItemHistoryPage from './pages/ItemHistoryPage';
+import ItemPriceHistoryPage from './pages/ItemPriceHistoryPage';
 import PurchasesPage from './pages/PurchasesPage';
 import ConsumptionsPage from './pages/ConsumptionsPage';
 import UsersPage from './pages/UsersPage';
-import ChefsPage from './pages/ChefsPage';
 import ItemCategoriesPage from './pages/ItemCategoriesPage';
 import UnitsPage from './pages/UnitsPage';
 import MenuItemsPage from './pages/MenuItemsPage';
 import WastagesPage from './pages/WastagesPage';
-import TokensPage from './pages/TokensPage';
-import TokenHistoryPage from './pages/TokenHistoryPage';
 import ReportsPage from './pages/ReportsPage';
 import ProfilePage from './pages/ProfilePage';
 import DailyStockReportPage from './pages/DailyStockReportPage';
@@ -32,9 +30,8 @@ function App() {
         <Route path="/vendors" element={<VendorsPage />} />
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/items/:id/history" element={<ItemHistoryPage />} />
+        <Route path="/items/:id/price-history" element={<ItemPriceHistoryPage />} />
         <Route path="/purchases" element={<PurchasesPage />} />
-        <Route path="/tokens" element={<TokensPage />} />
-        <Route path="/tokens/history" element={<TokenHistoryPage />} />
         <Route path="/consumptions" element={<ConsumptionsPage />} />
         <Route path="/wastages" element={<WastagesPage />} />
         <Route path="/reports" element={<ReportsPage />} />
@@ -42,7 +39,6 @@ function App() {
         <Route path="/reports/monthly-performance" element={<MonthlyPerformanceReportPage />} />
         <Route path="/reports/vendor-outstanding" element={<VendorOutstandingReportPage />} />
         <Route path="/users" element={<UsersPage />} />
-        <Route path="/settings/chefs" element={<ChefsPage />} />
         <Route path="/settings/categories" element={<ItemCategoriesPage />} />
         <Route path="/settings/units" element={<UnitsPage />} />
         <Route path="/settings/menu-items" element={<MenuItemsPage />} />

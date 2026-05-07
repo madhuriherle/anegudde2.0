@@ -1,11 +1,11 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import MenuItem, User, WastageEntry, WastageItem
+from app.db.models import MenuItem, User, WastageEntry, WastageItem, FinancialYear
 from app.schemas.wastage import WastageEntryCreate, WastageEntryUpdate
 
-def list_wastages(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
-    query = db.query(WastageEntry).options(
+def list_wastages(db: Session, financial_year: FinancialYear, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
+    query = db.query(WastageEntry).filter(WastageEntry.financial_year_id == financial_year.id).options(
         joinedload(WastageEntry.items).joinedload(WastageItem.menu_item), 
         joinedload(WastageEntry.user)
     )
@@ -24,12 +24,14 @@ def list_wastages(db: Session, page: int = 1, page_size: int = 20, q: str = None
 
     return query.order_by(WastageEntry.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
 
-def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User) -> WastageEntry:
+def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User, financial_year: FinancialYear) -> WastageEntry:
     now = datetime.now(timezone.utc)
+    fy_id = payload.financial_year_id or financial_year.id
     
     entry = WastageEntry(
         wastage_date=payload.wastage_date, 
         reason=payload.reason, 
+        financial_year_id=fy_id,
         user_id=payload.user_id, 
         status=payload.status, 
         created_at=now, 
@@ -71,7 +73,7 @@ def delete_wastage(wastage_id: int, db: Session, current_user: User) -> None:
     db.query(WastageItem).filter(WastageItem.wastage_entry_id == wastage_id).delete()
     db.delete(entry); db.commit()
 
-def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, current_user: User) -> dict:
+def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, current_user: User, financial_year: FinancialYear) -> WastageEntry:
     delete_wastage(wastage_id, db, current_user)
-    new_entry = create_wastage(payload, db, current_user)
+    new_entry = create_wastage(payload, db, current_user, financial_year)
     return get_wastage_full(new_entry.id, db)
