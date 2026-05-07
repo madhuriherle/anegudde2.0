@@ -92,8 +92,12 @@ const ItemsPage: React.FC = () => {
 
   // Mutations
   const mutation = useMutation({
-    mutationFn: async (data: ItemFormValues) => {
-      if (editingItem) return api.put(`/items/update_item/${editingItem.id}`, data);
+    mutationFn: async (payload: ItemFormValues & { id?: number; isEditMode?: boolean }) => {
+      const { id, isEditMode, ...data } = payload;
+      if (isEditMode && !id) {
+        throw new Error('Missing item ID for update');
+      }
+      if (id) return api.put(`/items/update_item/${id}`, data);
       return api.post('/items/create_item', data);
     },
     onSuccess: () => {
@@ -158,7 +162,7 @@ const ItemsPage: React.FC = () => {
 
   const handleView = async (item: any) => {
     try {
-      const res = await api.get('/items/' + item.id);
+      const res = await api.get('/items/get_item/' + item.id);
       setViewingItem(res.data);
       setViewDialogOpen(true);
     } catch (err) {
@@ -173,7 +177,7 @@ const ItemsPage: React.FC = () => {
     );
 
     if (confirmed) {
-      mutation.mutate(data);
+      mutation.mutate({ ...data, id: editingItem?.id, isEditMode: Boolean(editingItem) });
     }
   };
 

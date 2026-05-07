@@ -112,10 +112,14 @@ const VendorsPage: React.FC = () => {
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: VendorFormValues) => {
+    mutationFn: async (payloadWithId: VendorFormValues & { id?: number; isEditMode?: boolean }) => {
+      const { id, isEditMode, ...data } = payloadWithId;
+      if (isEditMode && !id) {
+        throw new Error('Missing vendor ID for update');
+      }
       const payload = buildVendorPayload(data);
-      if (editingVendor) {
-        return api.put(`/vendors/update_vendor/${editingVendor.id}`, payload);
+      if (id) {
+        return api.put(`/vendors/update_vendor/${id}`, payload);
       }
       return api.post('/vendors/create_vendor', payload);
     },
@@ -194,7 +198,7 @@ const VendorsPage: React.FC = () => {
     );
 
     if (confirmed) {
-      mutation.mutate(data);
+      mutation.mutate({ ...data, id: editingVendor?.id, isEditMode: Boolean(editingVendor) });
     }
   };
 

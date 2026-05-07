@@ -74,9 +74,13 @@ const UnitsPage: React.FC = () => {
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: UnitFormValues) => {
-      if (editingUnit) return api.put(`/units/${editingUnit.id}`, data);
-      return api.post('/units/', data);
+    mutationFn: async (payload: UnitFormValues & { id?: number; isEditMode?: boolean }) => {
+      const { id, isEditMode, ...data } = payload;
+      if (isEditMode && !id) {
+        throw new Error('Missing unit ID for update');
+      }
+      if (id) return api.put(`/units/update_unit/${id}`, data);
+      return api.post('/units/create_unit', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
@@ -87,7 +91,7 @@ const UnitsPage: React.FC = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => api.delete(`/units/${id}`),
+    mutationFn: async (id: number) => api.delete(`/units/delete_unit/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
       showSuccess('Unit deleted');
@@ -96,7 +100,7 @@ const UnitsPage: React.FC = () => {
   });
 
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/units/${id}`, { status }),
+    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/units/update_unit/${id}`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
       showSuccess('Status updated successfully');
@@ -128,7 +132,7 @@ const UnitsPage: React.FC = () => {
     );
 
     if (confirmed) {
-      mutation.mutate(data);
+      mutation.mutate({ ...data, id: editingUnit?.id, isEditMode: Boolean(editingUnit) });
     }
   };
 
@@ -272,24 +276,9 @@ const UnitsPage: React.FC = () => {
                 <Label className="text-text-main">Unit Code *</Label>
                 <Input {...register('unit_code')} placeholder="e.g. KG" className="text-text-main" />
                 {errors.unit_code && <p className="text-xs text-red-500">{errors.unit_code.message}</p>}
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-bg-temple border border-border-temple rounded-md">
-                <Label className="text-text-main font-bold">Active Status</Label>
-                <Controller
-                  name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <Switch 
-                      checked={field.value === 1} 
-                      onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)} 
-                    />
-                  )}
-                />
-              </div>
-            </div>
-            <DialogFooter className="gap-3">
-              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
+                </div>
+                </div>
+                <DialogFooter className="gap-3">              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>
               <Button 

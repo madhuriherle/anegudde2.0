@@ -123,13 +123,17 @@ const PurchasesPage: React.FC = () => {
   }, [totalAmount, isManualInvoiceAmount, setValue]);
 
   const mutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (payload: any) => {
+      const { id, isEditMode, ...data } = payload;
+      if (isEditMode && !id) {
+        throw new Error('Missing purchase ID for update');
+      }
       const cleanData = {
         ...data,
         items: data.items.map(({ search_id, ...rest }: any) => rest)
       };
-      if (editingPurchase) {
-        return api.put(`/purchases/${editingPurchase.id}`, { ...cleanData, user_id: user?.id, status: 1 });
+      if (id) {
+        return api.put(`/purchases/update_purchase/${id}`, { ...cleanData, user_id: user?.id, status: 1 });
       }
       return api.post('/purchases/create_purchase', { ...cleanData, user_id: user?.id, status: 1 });
     },
@@ -146,7 +150,7 @@ const PurchasesPage: React.FC = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => api.delete(`/purchases/${id}`),
+    mutationFn: async (id: number) => api.delete(`/purchases/delete_purchase/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
       queryClient.invalidateQueries({ queryKey: ['items'] });
@@ -160,7 +164,7 @@ const PurchasesPage: React.FC = () => {
     setIsManualInvoiceAmount(false);
     if (purchase) {
       try {
-        const res = await api.get(`/purchases/${purchase.id}`);
+        const res = await api.get(`/purchases/get_purchase/${purchase.id}`);
         const fullData = res.data;
         
         // Check if the saved invoice_amount is manual (different from items sum)
@@ -199,7 +203,7 @@ const PurchasesPage: React.FC = () => {
 
   const handleView = async (purchase: any) => {
     try {
-      const res = await api.get(`/purchases/${purchase.id}`);
+      const res = await api.get(`/purchases/get_purchase/${purchase.id}`);
       setViewingPurchase(res.data);
       setViewDialogOpen(true);
     } catch (err) {
@@ -219,7 +223,7 @@ const PurchasesPage: React.FC = () => {
     );
 
     if (confirmed) {
-      mutation.mutate(data);
+      mutation.mutate({ ...data, id: editingPurchase?.id, isEditMode: Boolean(editingPurchase) });
     }
   };
 

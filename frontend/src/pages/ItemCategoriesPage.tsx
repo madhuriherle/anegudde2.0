@@ -73,11 +73,17 @@ const ItemCategoriesPage: React.FC = () => {
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: CategoryFormValues) => {
-      if (editingCategory) return api.put(`/item-categories/${editingCategory.id}`, data);
-      return api.post('/item-categories', data);
+    mutationFn: async (payload: CategoryFormValues & { id?: number; isEditMode?: boolean }) => {
+      const { id, isEditMode, ...data } = payload;
+      if (isEditMode && !id) {
+        throw new Error('Missing category ID for update');
+      }
+      if (id) {
+        return api.put(`/item-categories/update_category/${id}`, data);
+      }
+      return api.post('/item-categories/create_category', data);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['item-categories'] });
       showSuccess(editingCategory ? 'Category updated' : 'Category added');
       handleClose();
@@ -86,7 +92,7 @@ const ItemCategoriesPage: React.FC = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => api.delete(`/item-categories/${id}`),
+    mutationFn: async (id: number) => api.delete(`/item-categories/delete_category/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item-categories'] });
       showSuccess('Category deleted');
@@ -95,7 +101,7 @@ const ItemCategoriesPage: React.FC = () => {
   });
 
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/item-categories/${id}`, { status }),
+    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/item-categories/update_category/${id}`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item-categories'] });
       showSuccess('Status updated successfully');
@@ -127,7 +133,7 @@ const ItemCategoriesPage: React.FC = () => {
     );
 
     if (confirmed) {
-      mutation.mutate(data);
+      mutation.mutate({ ...data, id: editingCategory?.id, isEditMode: Boolean(editingCategory) });
     }
   };
 
@@ -259,28 +265,13 @@ const ItemCategoriesPage: React.FC = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-4">
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-text-main font-medium">Category Name *</Label>
-                <Input {...register('category_name')} placeholder="Enter category name" />
-                {errors.category_name && <p className="text-xs text-red-500 font-medium">{errors.category_name.message}</p>}
+               <Label className="text-text-main font-medium">Category Name *</Label>
+               <Input {...register('category_name')} placeholder="Enter category name" />
+               {errors.category_name && <p className="text-xs text-red-500 font-medium">{errors.category_name.message}</p>}
+              </div>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-bg-temple/30 rounded-lg border border-border-temple/20">
-                <Label className="text-text-main font-medium">Active Status</Label>
-                <Controller
-                  name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <Switch 
-                      checked={field.value === 1} 
-                      onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)} 
-                    />
-                  )}
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="gap-3">
-              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
+              <DialogFooter className="gap-3">              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>
               <Button type="submit" disabled={mutation.isPending} className="w-28 h-10 text-text-main">

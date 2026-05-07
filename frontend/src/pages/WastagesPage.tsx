@@ -93,12 +93,16 @@ const WastagesPage: React.FC = () => {
 
 // Mutations
 const mutation = useMutation({
-  mutationFn: async (data: WastageFormValues) => {
+  mutationFn: async (payloadWithId: WastageFormValues & { id?: number; isEditMode?: boolean }) => {
+    const { id, isEditMode, ...data } = payloadWithId;
+    if (isEditMode && !id) {
+      throw new Error('Missing wastage ID for update');
+    }
     const payload = {
       ...data,
       status: 1,
     };
-    if (editingWastage) return api.put(`/wastages/${editingWastage.id}`, payload);
+    if (id) return api.put(`/wastages/update_wastage/${id}`, payload);
     return api.post('/wastages/create_wastage', payload);
   },
   onSuccess: () => {    queryClient.invalidateQueries({ queryKey: ['wastages'] });
@@ -107,16 +111,15 @@ const mutation = useMutation({
   },
   onError: (err: any) => {
     const detail = err.response?.data?.detail;
-    const message = typeof detail === 'string' 
-      ? detail 
+    const message = typeof detail === 'string'
+      ? detail
       : (Array.isArray(detail) ? detail[0]?.msg : 'Operation failed');
     showError(message);
   }
-});
+  });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => api.delete(`/wastages/${id}`),
-    onSuccess: () => {
+    mutationFn: async (id: number) => api.delete(`/wastages/delete_wastage/${id}`),    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wastages'] });
       showSuccess('Wastage deleted');
     },
@@ -174,7 +177,7 @@ const mutation = useMutation({
     );
 
     if (confirmed) {
-      mutation.mutate(data);
+      mutation.mutate({ ...data, id: editingWastage?.id, isEditMode: Boolean(editingWastage) });
     }
   };
 

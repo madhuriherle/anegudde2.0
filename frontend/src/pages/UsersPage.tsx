@@ -72,7 +72,7 @@ const UsersPage: React.FC = () => {
   const { data: roles } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
-      const res = await api.get('/users/roles');
+      const res = await api.get('/users/list_roles');
       return res.data;
     },
   });
@@ -82,9 +82,13 @@ const UsersPage: React.FC = () => {
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: UserFormValues) => {
-      if (editingUser) {
-        return api.put(`/users/${editingUser.id}`, data);
+    mutationFn: async (payload: UserFormValues & { id?: number; isEditMode?: boolean }) => {
+      const { id, isEditMode, ...data } = payload;
+      if (isEditMode && !id) {
+        throw new Error('Missing user ID for update');
+      }
+      if (id) {
+        return api.put(`/users/update_user/${id}`, data);
       }
       return api.post('/users/create_user', data);
     },
@@ -99,7 +103,7 @@ const UsersPage: React.FC = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => api.delete(`/users/${id}`),
+    mutationFn: async (id: number) => api.delete(`/users/delete_user/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       showSuccess('User deleted');
@@ -108,7 +112,7 @@ const UsersPage: React.FC = () => {
   });
 
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/users/${id}`, { status }),
+    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/users/update_user/${id}`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       showSuccess('Status updated successfully');
@@ -143,7 +147,7 @@ const UsersPage: React.FC = () => {
     );
 
     if (confirmed) {
-      mutation.mutate(data);
+      mutation.mutate({ ...data, id: editingUser?.id, isEditMode: Boolean(editingUser) });
     }
   };
 
@@ -334,20 +338,6 @@ const UsersPage: React.FC = () => {
                   )}
                 />
                 {errors.role_id && <p className="text-xs text-red-500">{errors.role_id.message}</p>}
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-bg-temple border border-border-temple rounded-md md:col-span-2">
-                <Label className="text-text-main font-bold">Active Status</Label>
-                <Controller
-                  name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <Switch 
-                      checked={field.value === 1} 
-                      onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)} 
-                    />
-                  )}
-                />
               </div>
             </div>
             <DialogFooter className="gap-3">

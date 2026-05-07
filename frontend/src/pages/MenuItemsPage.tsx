@@ -84,8 +84,12 @@ const MenuItemsPage: React.FC = () => {
 
   // Mutations
   const mutation = useMutation({
-    mutationFn: async (data: MenuItemFormValues) => {
-      if (editingMenuItem) return api.put(`/menu-items/${editingMenuItem.id}`, data);
+    mutationFn: async (payload: MenuItemFormValues & { id?: number; isEditMode?: boolean }) => {
+      const { id, isEditMode, ...data } = payload;
+      if (isEditMode && !id) {
+        throw new Error('Missing menu item ID for update');
+      }
+      if (id) return api.put(`/menu-items/${id}`, data);
       return api.post('/menu-items/create_menu_item', data);
     },
     onSuccess: () => {
@@ -144,7 +148,7 @@ const MenuItemsPage: React.FC = () => {
     );
 
     if (confirmed) {
-      mutation.mutate(data);
+      mutation.mutate({ ...data, id: editingMenuItem?.id, isEditMode: Boolean(editingMenuItem) });
     }
   };
 
@@ -305,25 +309,10 @@ const MenuItemsPage: React.FC = () => {
                   )}
                 />
                 {errors.unit_id && <p className="text-xs text-red-500 font-medium">{errors.unit_id.message}</p>}
-              </div>
+                </div>
+                </div>
 
-              <div className="flex items-center justify-between p-3 bg-bg-temple/30 rounded-lg border border-border-temple/20">
-                <Label className="text-text-main font-medium">Active Status</Label>
-                <Controller
-                  name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <Switch 
-                      checked={field.value === 1} 
-                      onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)} 
-                    />
-                  )}
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="gap-3">
-              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
+                <DialogFooter className="gap-3">              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>
               <Button type="submit" disabled={mutation.isPending} className="w-28 h-10 text-text-main">
