@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict
+from .financial_year import FinancialYear as FinancialYearSchema
 
 
 class Token(BaseModel):
@@ -18,6 +19,7 @@ class UserOut(BaseModel):
     role_id: int
     email: str | None = None
     phone: str | None = None
+    active_financial_year: FinancialYearSchema | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

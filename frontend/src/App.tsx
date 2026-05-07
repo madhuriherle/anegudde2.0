@@ -2,7 +2,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
+import ModulesPage from './pages/ModulesPage';
+import CanteenDashboardPage from './pages/CanteenDashboardPage';
+import OfficePage from './pages/OfficePage';
 import VendorsPage from './pages/VendorsPage';
 import ItemsPage from './pages/ItemsPage';
 import ItemHistoryPage from './pages/ItemHistoryPage';
@@ -26,7 +28,9 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
 
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route path="/" element={<DashboardPage />} />
+        <Route path="/" element={<ModulesPage />} />
+        <Route path="/canteen" element={<CanteenDashboardPage />} />
+        <Route path="/office" element={<OfficePage />} />
         <Route path="/vendors" element={<VendorsPage />} />
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/items/:id/history" element={<ItemHistoryPage />} />

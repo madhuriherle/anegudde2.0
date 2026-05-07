@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
-import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
+  Home, 
+  UtensilsCrossed, 
+  Briefcase, 
   Users, 
+  BarChart3, 
+  Settings,
   Package, 
   ShoppingCart, 
-  UtensilsCrossed, 
-  BarChart3, 
   LogOut, 
   Menu as MenuIcon, 
   User,
-  UserCog,
-  Tags,
-  Ruler
+  ChevronDown,
+  ChevronRight,
+  ArrowLeft,
+  FileText
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Avatar from '@radix-ui/react-avatar';
@@ -21,31 +24,154 @@ import { cn } from '../utils/cn';
 
 const templeLogoSrc = '/temple-logo-banner.webp';
 
-const menuItems = [
-  { text: 'Dashboard', icon: LayoutDashboard, path: '/' },
-  { text: 'Vendors', icon: Users, path: '/vendors' },
-  { text: 'Items', icon: Package, path: '/items' },
-  { text: 'Purchases', icon: ShoppingCart, path: '/purchases' },
-  { text: 'Consumption', icon: UtensilsCrossed, path: '/consumptions' },
-  { text: 'Reports', icon: BarChart3, path: '/reports' },
-];
-
-const masterSettings = [
-  { text: 'Categories', icon: Tags, path: '/settings/categories' },
-  { text: 'Units', icon: Ruler, path: '/settings/units' },
-  { text: 'Menu Items', icon: UtensilsCrossed, path: '/settings/menu-items' },
-  { text: 'Users', icon: UserCog, path: '/users' },
-];
+type MenuItem = {
+  text: string;
+  icon?: any;
+  path?: string;
+  children?: MenuItem[];
+  action?: () => void;
+};
 
 const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeModule, setActiveModule] = useState<'main' | 'canteen'>('main');
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const path = location.pathname;
+    const canteenPaths = ['/canteen', '/purchases', '/consumptions', '/wastages'];
+    if (canteenPaths.some(p => path.startsWith(p))) {
+      setActiveModule('canteen');
+    } else if (path === '/') {
+      setActiveModule('main');
+    }
+  }, [location.pathname]);
+
+  const toggleExpand = (key: string) => {
+    setExpandedMenus(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const mainMenuItems: MenuItem[] = [
+    { text: 'Home', icon: Home, path: '/', action: () => setActiveModule('main') },
+    { text: 'Canteen', icon: UtensilsCrossed, path: '/canteen', action: () => setActiveModule('canteen') },
+    { text: 'Office', icon: Briefcase, path: '/office' },
+    { text: 'Users', icon: Users, path: '/users' },
+    { text: 'Reports', icon: BarChart3, path: '/reports' },
+    { 
+      text: 'Master Settings', 
+      icon: Settings,
+      children: [
+        { text: 'Vendors', path: '/vendors' },
+        { 
+          text: 'Items',
+          children: [
+            { text: 'Category', path: '/settings/categories' },
+            { text: 'Menu Item', path: '/settings/menu-items' },
+            { text: 'Raw Item', path: '/items' },
+          ]
+        }
+      ]
+    },
+  ];
+
+  const canteenMenuItems: MenuItem[] = [
+    { text: 'Home', icon: Home, path: '/', action: () => setActiveModule('main') },
+    { text: 'Dashboard', icon: UtensilsCrossed, path: '/canteen' },
+    { text: 'Purchase', icon: ShoppingCart, path: '/purchases' },
+    { 
+      text: 'Consumption & Wastage', 
+      icon: Package,
+      children: [
+        { text: 'Consumption', path: '/consumptions' },
+        { text: 'Wastage', path: '/wastages' },
+      ]
+    },
+    { text: 'Vendors', icon: Users, path: '/vendors' },
+    { 
+      text: 'Items', 
+      icon: Package,
+      children: [
+        { text: 'Category', path: '/settings/categories' },
+        { text: 'Menu Item', path: '/settings/menu-items' },
+        { text: 'Raw Item', path: '/items' },
+      ]
+    },
+    {
+      text: 'Reports',
+      icon: BarChart3,
+      children: [
+        { text: 'Consumption Report', path: '/reports' },
+        { text: 'Daily Report', path: '/reports/daily-closing' },
+        { text: 'Stock Report', path: '/reports/daily-closing' },
+        { text: 'Token Report', path: '/reports' },
+      ]
+    },
+    { text: 'Back', icon: ArrowLeft, path: '/', action: () => setActiveModule('main') },
+  ];
+
+  const renderMenuItem = (item: MenuItem, depth = 0) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedMenus[item.text];
+    const isActive = item.path && location.pathname === item.path;
+
+    const content = (
+      <div 
+        className={cn(
+          "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+          isActive 
+            ? "bg-sidebar-active text-white shadow-sm" 
+            : "text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white",
+          depth > 0 && "ml-4 py-1.5"
+        )}
+        onClick={() => {
+          if (hasChildren) {
+            toggleExpand(item.text);
+          } else {
+            if (item.action) item.action();
+            if (item.path) {
+              navigate(item.path);
+              setIsSidebarOpen(false);
+            }
+          }
+        }}
+      >
+        {item.icon && <item.icon className={cn("w-5 h-5", isActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />}
+        <span className="flex-1">{item.text}</span>
+        {hasChildren && (
+          isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+        )}
+      </div>
+    );
+
+    return (
+      <div key={item.text} className="space-y-1">
+        {content}
+        {hasChildren && isExpanded && (
+          <div className="space-y-1 mt-1">
+            {item.children!.map(child => renderMenuItem(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const getFallbackFinancialYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-indexed, April is 3
+    if (month >= 3) { // April or later
+      return `${year}-${(year + 1).toString().slice(-2)}`;
+    } else {
+      return `${year - 1}-${year.toString().slice(-2)}`;
+    }
   };
 
   const SidebarContent = () => (
@@ -61,50 +187,18 @@ const MainLayout: React.FC = () => {
       </div>
 
       <nav className="flex-1 overflow-y-auto no-scrollbar py-4 px-3 space-y-1">
-        {menuItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            onClick={() => setIsSidebarOpen(false)}
-              className={cn(
-                "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300",
-                location.pathname === item.path
-                  ? "bg-sidebar-active text-white shadow-sm scale-[1.02]"
-                  : "text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white hover:translate-x-1"
-              )}
-          >
-            <item.icon className={cn("w-5 h-5 transition-colors", location.pathname === item.path ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />
-            {item.text}
-          </Link>
-        ))}
-
-        <div className="pt-8 pb-2">
-          <span className="px-3 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] font-serif">Master Settings</span>
+        <div className="pb-2 px-3">
+          <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] font-serif">
+            {activeModule === 'canteen' ? 'Canteen Module' : 'Main Menu'}
+          </span>
         </div>
-
-        {masterSettings.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            onClick={() => setIsSidebarOpen(false)}
-              className={cn(
-                "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300",
-                location.pathname === item.path
-                  ? "bg-sidebar-active text-white shadow-sm scale-[1.02]"
-                  : "text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white hover:translate-x-1"
-              )}
-          >
-            <item.icon className={cn("w-5 h-5 transition-colors", location.pathname === item.path ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />
-            {item.text}
-          </Link>
-        ))}
+        {(activeModule === 'canteen' ? canteenMenuItems : mainMenuItems).map(item => renderMenuItem(item))}
       </nav>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-bg-temple">
-      {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 z-40 bg-secondary-dark/60 lg:hidden backdrop-blur-sm" 
@@ -112,12 +206,10 @@ const MainLayout: React.FC = () => {
         />
       )}
 
-      {/* Sidebar - Desktop */}
-      <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 lg:block">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 lg:block shadow-xl">
         <SidebarContent />
       </aside>
 
-      {/* Sidebar - Mobile */}
       <aside className={cn(
         "fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-300 transform lg:hidden shadow-2xl",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -125,10 +217,8 @@ const MainLayout: React.FC = () => {
         <SidebarContent />
       </aside>
 
-      {/* Main Content */}
       <div className="lg:pl-64 flex flex-col min-h-screen">
-        {/* Header */}
-        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 bg-bg-cream border-b border-border-temple sm:px-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 bg-bg-cream border-b border-border-temple sm:px-6 shadow-sm">
           <div className="flex items-center gap-4">
             <button 
               className="p-2 text-secondary hover:bg-secondary/5 rounded-md transition-colors lg:hidden"
@@ -136,20 +226,21 @@ const MainLayout: React.FC = () => {
             >
               <MenuIcon className="w-6 h-6" />
             </button>
-            <div className="flex items-center gap-3 lg:hidden">
-               <span className="text-lg font-bold text-secondary font-serif">Anegudde Temple</span>
+            <div className="bg-[#F8E6D1] border border-[#B08968] px-4 py-2 rounded-[10px] shadow-[0_2px_6px_rgba(90,46,31,0.08)]">
+               <span className="text-sm font-bold text-[#5C2E1F] leading-none block whitespace-nowrap">
+                  Financial Year : {user?.active_financial_year?.name || getFallbackFinancialYear()}
+               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="hidden sm:block text-xs font-medium text-gray-700 ml-2">
+            <span className="hidden sm:block text-xs font-medium text-gray-700 mr-2">
               {user?.full_name}
             </span>
 
-            {/* User Profile */}
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
-                <button className="p-1 rounded-full hover:bg-gray-100 transition-colors focus:outline-none ml-1">
+                <button className="p-1 rounded-full hover:bg-gray-100 transition-colors focus:outline-none">
                   <Avatar.Root className="inline-flex items-center justify-center align-middle overflow-hidden select-none w-8 h-8 rounded-full bg-secondary">
                     <Avatar.Fallback className="w-full h-full flex items-center justify-center text-white text-xs font-medium uppercase">
                       {user?.full_name?.[0]}
@@ -184,7 +275,6 @@ const MainLayout: React.FC = () => {
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
           <Outlet />
         </main>
@@ -194,4 +284,3 @@ const MainLayout: React.FC = () => {
 };
 
 export default MainLayout;
-

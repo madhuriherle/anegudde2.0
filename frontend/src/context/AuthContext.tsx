@@ -6,6 +6,10 @@ interface User {
   username: string;
   full_name: string;
   role_id: number;
+  active_financial_year?: {
+    id: number;
+    name: string;
+  };
 }
 
 interface AuthContextType {
