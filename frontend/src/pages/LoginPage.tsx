@@ -55,8 +55,11 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-temple p-4">
-      <div className="w-full max-w-md animate-in fade-in zoom-in duration-300">
+    <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat relative p-4" style={{ backgroundImage: 'url("/login-bg.jpg")' }}>
+      {/* Background Overlay */}
+      <div className="absolute inset-0 bg-secondary-dark/40 backdrop-blur-[2px]"></div>
+
+      <div className="w-full max-w-md animate-in fade-in zoom-in duration-500 relative z-10">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center px-3 py-2 rounded-2xl bg-white border border-border-temple mb-4 shadow-sm">
              <img 
