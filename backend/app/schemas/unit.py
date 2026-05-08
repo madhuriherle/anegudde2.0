@@ -28,3 +28,7 @@ class UnitOut(UnitBase):
     updated_by: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+UnitCreate.model_rebuild()
+UnitUpdate.model_rebuild()
+UnitOut.model_rebuild()

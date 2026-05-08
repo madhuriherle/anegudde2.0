@@ -162,9 +162,9 @@ const UnitsPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: "Actions",
+      header: () => <div className="text-center">Actions</div>,
       cell: info => (
-        <div className="flex items-center justify-end gap-2 px-4">
+        <div className="flex items-center justify-center gap-2">
           <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
           <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
           <button
@@ -179,21 +179,21 @@ const UnitsPage: React.FC = () => {
             Delete
           </button>
         </div>
-      ),
-    },
+      )
+    }
   ], [deleteMutation, showConfirm, statusMutation]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main">Units of Measurement</h2>
+          <h2 className="page-title">Units of Measurement</h2>
         </div>
         <Button 
           onClick={() => handleOpen()}
           className="text-text-main font-bold px-6"
         >
-          <Plus className="w-4 h-4 mr-2" />
+       
           Add Unit
         </Button>
       </div>
@@ -265,7 +265,7 @@ const UnitsPage: React.FC = () => {
               {editingUnit ? 'Edit Unit' : 'New Unit'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4 pb-0">
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-text-main">Unit Name *</Label>
@@ -276,9 +276,9 @@ const UnitsPage: React.FC = () => {
                 <Label className="text-text-main">Unit Code *</Label>
                 <Input {...register('unit_code')} placeholder="e.g. KG" className="text-text-main" />
                 {errors.unit_code && <p className="text-xs text-red-500">{errors.unit_code.message}</p>}
-                </div>
-                </div>
-                <DialogFooter className="gap-3">              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
+              </div>
+            </div>
+            <DialogFooter className="gap-3">              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>
               <Button 
@@ -297,6 +297,7 @@ const UnitsPage: React.FC = () => {
 };
 
 export default UnitsPage;
+
 
 
 

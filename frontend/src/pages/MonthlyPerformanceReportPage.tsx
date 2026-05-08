@@ -11,6 +11,8 @@ import api from '../api/axios';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
+import { formatDate } from '../utils/date';
+import { formatCurrency } from '../utils/currency';
 
 const MonthlyPerformanceReportPage: React.FC = () => {
   const { data: monthlyData, isLoading } = useQuery({
@@ -75,7 +77,7 @@ const MonthlyPerformanceReportPage: React.FC = () => {
       header: 'Month',
       cell: info => (
         <span className="text-text-main font-semibold">
-          {new Date(info.getValue() as string).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+          {formatDate(info.getValue())}
         </span>
       ),
     },
@@ -114,7 +116,7 @@ const MonthlyPerformanceReportPage: React.FC = () => {
       header: () => <div className="text-right">Est. Value</div>,
       cell: info => (
         <div className="text-right text-text-main font-medium">
-          ₹{Number(info.getValue() || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          {formatCurrency(info.getValue())}
         </div>
       ),
     },
@@ -124,7 +126,7 @@ const MonthlyPerformanceReportPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main text-2xl font-semibold font-temple">Monthly Performance</h2>
+          <h2 className="page-title">Monthly Performance</h2>
         </div>
         <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
           <Download className="h-4 w-4" />
@@ -140,7 +142,7 @@ const MonthlyPerformanceReportPage: React.FC = () => {
               <Calendar className="h-3.5 w-3.5" />
             </div>
             <div className="text-3xl font-bold text-white">
-              ₹{totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatCurrency(totalStockValue)}
             </div>
             <p className="text-xs text-white/60 mt-2 flex items-center gap-1">
               <ChevronRight className="h-3 w-3" />
@@ -168,4 +170,5 @@ const MonthlyPerformanceReportPage: React.FC = () => {
 };
 
 export default MonthlyPerformanceReportPage;
+
 

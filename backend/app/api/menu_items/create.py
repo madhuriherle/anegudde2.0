@@ -14,8 +14,15 @@ def create_menu_item(
     current_user: User = Depends(get_current_user),
     financial_year: FinancialYear = Depends(get_financial_year)
 ):
-    # Check for duplicate dish name
-    existing = db.query(MenuItem).filter(MenuItem.dish_name.ilike(payload.dish_name)).first()
+    # Check duplicates only inside the active financial year (same scope as list API)
+    existing = (
+        db.query(MenuItem)
+        .filter(
+            MenuItem.financial_year_id == financial_year.id,
+            MenuItem.dish_name.ilike(payload.dish_name),
+        )
+        .first()
+    )
     if existing:
         raise HTTPException(status_code=400, detail="Dish name already exists")
 

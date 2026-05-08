@@ -9,11 +9,11 @@ from app.services.item_service import get_item as get_item_service, get_price_hi
 router = APIRouter()
 
 
-@router.get("/{item_id}", response_model=ItemOut)
+@router.get("/get_item/{item_id}", response_model=ItemOut)
 def get_item(item_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     return get_item_service(item_id, db)
 
 
-@router.get("/{item_id}/price_history")
+@router.get("/get_price_history/{item_id}")
 def get_price_history(item_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     return get_price_history_service(item_id, db)

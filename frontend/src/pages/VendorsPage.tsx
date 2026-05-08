@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ColumnDef } from '@tanstack/react-table';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
@@ -21,12 +21,8 @@ import {
 import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 import { DetailItem } from '../components/ui/DetailItem';
-
-const formatDateTime = (value: unknown) => {
-  if (!value) return '-';
-  const d = new Date(String(value));
-  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString();
-};
+import { formatDate } from '../utils/date';
+import { formatCurrency } from '../utils/currency';
 
 const vendorSchema = z.object({
   vendor_code: z.string().optional().or(z.literal('')).or(z.null()),
@@ -75,8 +71,6 @@ const VendorsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
 
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
   const [search, setSearch] = useState('');
 
   const [open, setOpen] = useState(false);
@@ -86,14 +80,12 @@ const VendorsPage: React.FC = () => {
   const [viewingVendor, setViewingVendor] = useState<any>(null);
 
   const { data: vendors, isLoading: vendorsLoading } = useQuery({
-    queryKey: ['vendors', search, fromDate, toDate],
+    queryKey: ['vendors', search],
     queryFn: async () => {
       const params: any = {
         q: search,
         page_size: 1000,
       };
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
 
       const res = await api.get('/vendors/list_vendors', { params });
       return res.data;
@@ -105,7 +97,7 @@ const VendorsPage: React.FC = () => {
     queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
   });
 
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<VendorFormValues>({
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<VendorFormValues>({
     resolver: zodResolver(vendorSchema) as any,
     mode: 'onChange',
     reValidateMode: 'onChange',
@@ -206,7 +198,7 @@ const VendorsPage: React.FC = () => {
     {
       accessorKey: 'created_at',
       header: 'Date',
-      cell: info => <span className="text-text-main">{info.getValue() ? new Date(info.getValue() as string).toLocaleDateString() : '-'}</span>,
+      cell: info => <span className="text-text-main">{formatDate(info.getValue())}</span>,
     },
     {
       accessorKey: 'vendor_name',
@@ -253,9 +245,9 @@ const VendorsPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: () => <div className="text-center">Actions</div>,
       cell: info => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
           <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
           <button
@@ -273,8 +265,8 @@ const VendorsPage: React.FC = () => {
   ], [deleteMutation, showConfirm, statusMutation]);
 
   const sortedVendors = useMemo(() => {
-    if (!vendors) return [];
-    return [...vendors].sort((a, b) => {
+    const vendorList = vendors?.items || [];
+    return [...vendorList].sort((a, b) => {
       // First sort by status: Active (1) before Disabled (0)
       if (a.status !== b.status) {
         return b.status - a.status;
@@ -289,7 +281,7 @@ const VendorsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div>
-            <h2 className="text-text-main">Vendor Management</h2>
+            <h2 className="page-title">Vendor Management</h2>
           </div>
         </div>
         <Button onClick={() => handleOpen()} className="bg-primary hover:bg-secondary text-white">Add New Vendor</Button>
@@ -298,25 +290,6 @@ const VendorsPage: React.FC = () => {
       <Card className="border-border-temple">
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-wrap gap-4 items-end">
-            <div className="space-y-1.5 w-full sm:w-44">
-              <Label className="text-text-main">From Date</Label>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="text-text-main"
-              />
-            </div>
-            <div className="space-y-1.5 w-full sm:w-44">
-              <Label className="text-text-main">To Date</Label>
-              <Input
-                type="date"
-                value={toDate}
-                min={fromDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="text-text-main"
-              />
-            </div>
             <div className="space-y-1.5 w-full sm:w-72">
               <Label className="text-text-main">Search</Label>
               <Input
@@ -337,11 +310,11 @@ const VendorsPage: React.FC = () => {
           <DialogHeader className="border-b border-border-temple/40 pb-4">
             <DialogTitle className="text-text-main">Vendor Profile</DialogTitle>
           </DialogHeader>
-          <div className="space-y-0 mt-4">
+          <div className="space-y-0 mt-6 px-2">
             <DetailItem label="Vendor Name" value={viewingVendor?.vendor_name} />
             <DetailItem label="Contact Person" value={viewingVendor?.contact_person} />
             <DetailItem label="Primary Contact" value={viewingVendor?.contact_number} />
-            <DetailItem label="Opening Balance" value={viewingVendor?.opening_balance} />
+            <DetailItem label="Opening Balance" value={formatCurrency(viewingVendor?.opening_balance)} />
             <DetailItem 
               label="Address" 
               value={[
@@ -366,52 +339,63 @@ const VendorsPage: React.FC = () => {
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="bg-white" autoComplete="off">
-            <div className="space-y-6 px-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-              <div>
-                <Label className="text-text-main">Vendor Name (Shop Name) *</Label>
-                <Input {...register('vendor_name')} placeholder="e.g. Laxmi Traders" className="text-text-main" />
-                {errors.vendor_name && <p className="text-text-main">{errors.vendor_name.message}</p>}
-              </div>
+            <div className="space-y-4 px-6 pt-4 pb-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <Label className="text-text-main">Vendor Name (Shop Name) *</Label>
+                  <Input {...register('vendor_name')} placeholder="e.g. Laxmi Traders" className="text-text-main" />
+                  {errors.vendor_name && <p className="text-xs text-red-500">{errors.vendor_name.message}</p>}
+                </div>
 
-              <div>
-                <Label className="text-text-main">Contact Person</Label>
-                <Input {...register('contact_person')} placeholder="Individual Name" className="text-text-main" />
-              </div>
+                <div>
+                  <Label className="text-text-main">Contact Person</Label>
+                  <Input {...register('contact_person')} placeholder="Individual Name" className="text-text-main" />
+                </div>
 
-              <div>
-                <Label className="text-text-main">Primary Contact *</Label>
-                <Input {...register('contact_number')} placeholder="10-digit mobile number" className="text-text-main" />
-                {errors.contact_number && <p className="text-text-main">{errors.contact_number.message}</p>}
-              </div>
+                <div>
+                  <Label className="text-text-main">Primary Contact *</Label>
+                  <Input {...register('contact_number')} placeholder="10-digit mobile number" className="text-text-main" />
+                  {errors.contact_number && <p className="text-xs text-red-500">{errors.contact_number.message}</p>}
+                </div>
 
-              <div>
-                <Label className="text-text-main">Opening Balance *</Label>
-                <Input type="text" inputMode="decimal" {...register('opening_balance')} className="text-text-main" />
-                {errors.opening_balance && <p className="text-text-main">{errors.opening_balance.message}</p>}
-              </div>
-            </div>
+                <div>
+                  <Label className="text-text-main">Opening Balance *</Label>
+                  <Input 
+                    type="text" 
+                    inputMode="decimal" 
+                    {...register('opening_balance')} 
+                    className="text-text-main" 
+                    onFocus={(e) => {
+                      if (!editingVendor && (e.target.value === '0' || e.target.value === 0)) {
+                        setValue('opening_balance', '' as any);
+                      }
+                    }}
+                  />
+                  {errors.opening_balance && <p className="text-xs text-red-500">{errors.opening_balance.message}</p>}
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-              <div>
-                <Label className="text-text-main">Address Line 1 *</Label>
-                <Input {...register('address_line1')} className="text-text-main" />
-                {errors.address_line1 && <p className="text-text-main">{errors.address_line1.message}</p>}
+                <div className="md:col-span-2">
+                  <Label className="text-text-main">Address Line 1 *</Label>
+                  <Input {...register('address_line1')} className="text-text-main" />
+                  {errors.address_line1 && <p className="text-xs text-red-500">{errors.address_line1.message}</p>}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 md:col-span-2 gap-4">
+                  <div>
+                    <Label className="text-text-main">City</Label>
+                    <Input {...register('city')} className="text-text-main" />
+                  </div>
+                  <div>
+                    <Label className="text-text-main">State</Label>
+                    <Input {...register('state')} className="text-text-main" />
+                  </div>
+                  <div>
+                    <Label className="text-text-main">Postal Code</Label>
+                    <Input {...register('postal_code')} className="text-text-main" />
+                    {errors.postal_code && <p className="text-xs text-red-500">{errors.postal_code.message}</p>}
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label className="text-text-main">City</Label>
-                <Input {...register('city')} className="text-text-main" />
-              </div>
-              <div>
-                <Label className="text-text-main">State</Label>
-                <Input {...register('state')} className="text-text-main" />
-              </div>
-              <div>
-                <Label className="text-text-main">Postal Code</Label>
-                <Input {...register('postal_code')} className="text-text-main" />
-                {errors.postal_code && <p className="text-text-main">{errors.postal_code.message}</p>}
-              </div>
-            </div>
             </div>
 
             <DialogFooter className="gap-3">
@@ -430,3 +414,4 @@ const VendorsPage: React.FC = () => {
 };
 
 export default VendorsPage;
+

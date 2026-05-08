@@ -20,15 +20,6 @@ class FinancialYear(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, nullable=True)
 
-class FinancialYearMixin:
-    @declared_attr
-    def financial_year_id(cls):
-        return Column(Integer, ForeignKey("financial_years.id"), nullable=True)
-    
-    @declared_attr
-    def financial_year(cls):
-        return relationship("FinancialYear")
-
 # ==========================================
 # 1. MASTER TABLES (STANDARD - NOT PARTITIONED)
 # ==========================================
@@ -78,10 +69,10 @@ class RolePrivilege(Base):
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(Integer, nullable=True)
+    updated_by = Column(Integer, nullable=True)
 
-class Vendor(Base, FinancialYearMixin):
+class Vendor(Base):
     __tablename__ = "vendors"
     id = Column(Integer, primary_key=True)
     vendor_code = Column(String(30), unique=True, nullable=False)
@@ -105,7 +96,7 @@ class Vendor(Base, FinancialYearMixin):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-class Unit(Base, FinancialYearMixin):
+class Unit(Base):
     __tablename__ = "units"
     id = Column(Integer, primary_key=True)
     unit_name = Column(String(50), nullable=False)
@@ -116,7 +107,7 @@ class Unit(Base, FinancialYearMixin):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-class ItemType(Base, FinancialYearMixin):
+class ItemType(Base):
     __tablename__ = "item_types"
     id = Column(Integer, primary_key=True)
     type_name = Column(String(100), unique=True, nullable=False)
@@ -126,7 +117,7 @@ class ItemType(Base, FinancialYearMixin):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-class MenuItem(Base, FinancialYearMixin):
+class MenuItem(Base):
     __tablename__ = "menu_items"
     id = Column(Integer, primary_key=True)
     dish_name = Column(String(150), nullable=False)
@@ -142,7 +133,7 @@ class MenuItem(Base, FinancialYearMixin):
     creator = relationship("User", foreign_keys=[created_by])
     updater = relationship("User", foreign_keys=[updated_by])
 
-class ItemCategory(Base, FinancialYearMixin):
+class ItemCategory(Base):
     __tablename__ = "item_categories"
     id = Column(Integer, primary_key=True)
     type_id = Column(Integer, ForeignKey("item_types.id"), nullable=False)
@@ -154,7 +145,7 @@ class ItemCategory(Base, FinancialYearMixin):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     item_type = relationship("ItemType", foreign_keys=[type_id])
 
-class Item(Base, FinancialYearMixin):
+class Item(Base):
     __tablename__ = "items"
     id = Column(Integer, primary_key=True)
     item_name = Column(String(150), unique=True, nullable=False)
@@ -172,6 +163,17 @@ class Item(Base, FinancialYearMixin):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     category = relationship("ItemCategory", foreign_keys=[category_id])
     unit = relationship("Unit", foreign_keys=[unit_id])
+    serial_numbers = relationship("ItemSerialNumber", back_populates="item", cascade="all, delete-orphan")
+
+class ItemSerialNumber(Base):
+    __tablename__ = "item_serial_numbers"
+    id = Column(Integer, primary_key=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    serial_number = Column(String(50), unique=True, nullable=False)
+    status = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    
+    item = relationship("Item", back_populates="serial_numbers")
 
 class ItemPrice(Base):
     __tablename__ = "item_prices"
@@ -189,7 +191,7 @@ class ItemPrice(Base):
 # 2. TRANSACTION TABLES (PARTITIONED)
 # ==========================================
 
-class PurchaseEntry(Base, FinancialYearMixin):
+class PurchaseEntry(Base):
     __tablename__ = "purchase_entries"
     id = Column(Integer, primary_key=True)
     purchase_date = Column(Date, nullable=False)
@@ -206,6 +208,18 @@ class PurchaseEntry(Base, FinancialYearMixin):
     vendor = relationship("Vendor", foreign_keys=[vendor_id])
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("PurchaseItem", back_populates="purchase_entry", cascade="all, delete-orphan")
+    bills = relationship("PurchaseBill", back_populates="purchase_entry", cascade="all, delete-orphan")
+
+class PurchaseBill(Base):
+    __tablename__ = "purchase_bills"
+    id = Column(Integer, primary_key=True)
+    purchase_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=False)
+    file_name = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_type = Column(String(100), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    
+    purchase_entry = relationship("PurchaseEntry", back_populates="bills")
 
 class PurchaseItem(Base):
     __tablename__ = "purchase_items"
@@ -224,7 +238,7 @@ class PurchaseItem(Base):
     item = relationship("Item", foreign_keys=[item_id])
     purchase_entry = relationship("PurchaseEntry", back_populates="items")
 
-class ConsumptionEntry(Base, FinancialYearMixin):
+class ConsumptionEntry(Base):
     __tablename__ = "consumption_entries"
     id = Column(Integer, primary_key=True)
     usage_date = Column(Date, nullable=False)
@@ -232,14 +246,14 @@ class ConsumptionEntry(Base, FinancialYearMixin):
     remarks = Column(Text, nullable=True)
     regular_cooking_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
     additional_cooking_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    total_cooking_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
     regular_cleaning_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
     additional_cleaning_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    total_cleaning_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
     regular_serving_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
     additional_serving_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
-    anna_remained = Column(Numeric(15, 3), nullable=False, default=0, server_default=text("0"))
-    saru_remained = Column(Numeric(15, 3), nullable=False, default=0, server_default=text("0"))
-    huli_remained = Column(Numeric(15, 3), nullable=False, default=0, server_default=text("0"))
-    payas_remained = Column(Numeric(15, 3), nullable=False, default=0, server_default=text("0"))
+    total_serving_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    times_cooked = Column(Integer, nullable=False, default=0, server_default=text("0"))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -248,6 +262,7 @@ class ConsumptionEntry(Base, FinancialYearMixin):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("ConsumptionItem", back_populates="consumption_entry", cascade="all, delete-orphan")
+    wastage_items = relationship("WastageItem", back_populates="consumption_entry", cascade="all, delete-orphan")
 
 class ConsumptionItem(Base):
     __tablename__ = "consumption_items"
@@ -267,10 +282,11 @@ class ConsumptionItem(Base):
     item = relationship("Item", foreign_keys=[item_id])
     consumption_entry = relationship("ConsumptionEntry", back_populates="items")
 
-class WastageEntry(Base, FinancialYearMixin):
+class WastageEntry(Base):
     __tablename__ = "wastage_entries"
     id = Column(Integer, primary_key=True)
     wastage_date = Column(Date, nullable=False)
+    times_cooked = Column(Integer, nullable=False, default=0, server_default=text("0"))
     reason = Column(Text, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(Integer, nullable=False, default=1)
@@ -284,18 +300,23 @@ class WastageEntry(Base, FinancialYearMixin):
 class WastageItem(Base):
     __tablename__ = "wastage_items"
     id = Column(Integer, primary_key=True)
-    wastage_entry_id = Column(Integer, ForeignKey("wastage_entries.id"), nullable=False)
+    wastage_entry_id = Column(Integer, ForeignKey("wastage_entries.id"), nullable=True)
+    consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=True)
     wastage_date = Column(Date, nullable=False)
-    menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=False)
+    menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=True)
     quantity = Column(Numeric(15, 3), nullable=False)
+    approx_amount = Column(Numeric(15, 3), nullable=False, default=0, server_default=text("0"))
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     menu_item = relationship("MenuItem")
+    item = relationship("Item")
     wastage_entry = relationship("WastageEntry", back_populates="items")
+    consumption_entry = relationship("ConsumptionEntry", back_populates="wastage_items")
 
-class StockAdjustment(Base, FinancialYearMixin):
+class StockAdjustment(Base):
     __tablename__ = "stock_adjustments"
     id = Column(Integer, primary_key=True)
     adjustment_date = Column(Date, nullable=False)
@@ -306,7 +327,7 @@ class StockAdjustment(Base, FinancialYearMixin):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-class VendorPayment(Base, FinancialYearMixin):
+class VendorPayment(Base):
     __tablename__ = "vendor_payments"
     id = Column(Integer, primary_key=True)
     payment_date = Column(Date, nullable=False)
@@ -322,7 +343,7 @@ class VendorPayment(Base, FinancialYearMixin):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-class StockLedger(Base, FinancialYearMixin):
+class StockLedger(Base):
     __tablename__ = "stock_ledger"
     id = Column(Integer, primary_key=True)
     txn_date = Column(Date, nullable=False)
@@ -336,6 +357,7 @@ class StockLedger(Base, FinancialYearMixin):
     value_in = Column(Numeric(15, 3), nullable=False, default=0)
     value_out = Column(Numeric(15, 3), nullable=False, default=0)
     balance = Column(Numeric(15, 3), nullable=False, default=0)
+    current_value = Column(Numeric(15, 3), nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -385,7 +407,7 @@ class ActivityLog(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-class DailyStockSummary(Base, FinancialYearMixin):
+class DailyStockSummary(Base):
     __tablename__ = "daily_stock_summary"
     id = Column(Integer, primary_key=True)
     summary_date = Column(Date, nullable=False)
@@ -401,7 +423,7 @@ class DailyStockSummary(Base, FinancialYearMixin):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
 
-class MonthlyStockSummary(Base, FinancialYearMixin):
+class MonthlyStockSummary(Base):
     __tablename__ = "monthly_stock_summary"
     id = Column(Integer, primary_key=True)
     summary_month = Column(Date, nullable=False)
@@ -421,7 +443,7 @@ class MonthlyStockSummary(Base, FinancialYearMixin):
 # 4. TOKEN SYSTEM (PARTITIONED)
 # ==========================================
 
-class TokenGeneration(Base, FinancialYearMixin):
+class TokenGeneration(Base):
     __tablename__ = "token_generations"
     id = Column(Integer, primary_key=True)
     date = Column(Date, unique=True, nullable=False)

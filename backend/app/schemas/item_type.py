@@ -20,3 +20,6 @@ class ItemTypeOut(ItemTypeBase):
     updated_by: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+ItemTypeCreate.model_rebuild()
+ItemTypeOut.model_rebuild()

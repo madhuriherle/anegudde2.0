@@ -1,6 +1,12 @@
+import os
 import logging
 from dotenv import load_dotenv
-load_dotenv(override=True)
+
+# Find the absolute path to backend/.env
+current_file_path = os.path.abspath(__file__)
+backend_dir = os.path.dirname(os.path.dirname(current_file_path))
+env_path = os.path.join(backend_dir, ".env")
+load_dotenv(dotenv_path=env_path, override=True)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,14 +39,16 @@ app.add_middleware(ActivityAuditMiddleware)
 # STANDARDIZED CORS - ALLOWS FRONTEND ORIGINS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5175",
-        "http://127.0.0.1:5175",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+allow_origins=[
+    "http://localhost:5176",
+    "http://127.0.0.1:5176",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

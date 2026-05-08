@@ -6,22 +6,21 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from xhtml2pdf import pisa
 
-from app.api.deps import get_current_user, get_db, get_financial_year
-from app.db.models import User, FinancialYear
+from app.api.deps import get_current_user, get_db
+from app.db.models import User
 from .stock_finance_card import stock_finance_card
 
 router = APIRouter()
 
 
-@router.get("/stock-finance-pdf")
+@router.get("/get_stock_finance_pdf")
 def stock_finance_pdf(
     from_date: date = Query(...),
     to_date: date = Query(...),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    _: User = Depends(get_current_user)
 ):
-    data = stock_finance_card(from_date=from_date, to_date=to_date, group_by="day", db=db, _=_, financial_year=financial_year)
+    data = stock_finance_card(from_date=from_date, to_date=to_date, group_by="day", db=db, _=_)
 
     html_content = f"""
     <html>

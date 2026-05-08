@@ -1,13 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Search, 
-  Eye,
-  Users,
-} from 'lucide-react';
+import { Search } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,8 +21,6 @@ import {
   DialogFooter 
 } from '../components/ui/Dialog';
 import { Select } from '../components/ui/Select';
-import { Switch } from '../components/ui/Switch';
-import { DetailItem } from '../components/ui/DetailItem';
 
 const userSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -48,15 +39,12 @@ const UsersPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
-  const [pageSize, setPageSize] = useState(20);
-  const [status, setStatus] = useState<string>('all');
+  const pageSize = 20;
+  const status = 'all';
   const [search, setSearch] = useState('');
 
   const [open, setOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
-
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [viewingUser, setViewingUser] = useState<any>(null);
 
   // Fetch Data
   const { data: users, isLoading } = useQuery({
@@ -135,11 +123,6 @@ const UsersPage: React.FC = () => {
     setEditingUser(null);
   };
 
-  const handleView = (userData: any) => {
-    setViewingUser(userData);
-    setViewDialogOpen(true);
-  };
-
   const onSubmit = async (data: UserFormValues) => {
     const confirmed = await showConfirm(
       editingUser ? "Confirm Update" : "Confirm Save",
@@ -153,16 +136,20 @@ const UsersPage: React.FC = () => {
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     { 
-      accessorKey: 'id', 
-      header: 'ID', 
-    },
-    { 
       accessorKey: 'username', 
       header: 'Username', 
     },
     { 
       accessorKey: 'full_name', 
       header: 'Full Name', 
+    },
+    {
+      accessorKey: 'email',
+      header: 'Email',
+    },
+    {
+      accessorKey: 'phone',
+      header: 'Phone',
     },
     { 
       accessorKey: 'role_id', 
@@ -185,10 +172,9 @@ const UsersPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: "Actions",
+      header: () => <div className="text-center">Actions</div>,
       cell: info => (
-        <div className="flex items-center justify-end gap-2 px-4">
-          <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
+        <div className="flex items-center justify-center gap-2 px-4">
           <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
           <button
             onClick={async () => {
@@ -204,48 +190,26 @@ const UsersPage: React.FC = () => {
         </div>
       ),
     },
-  ], [roles, deleteMutation, showConfirm, statusMutation]);
+  ], [roles, showConfirm, statusMutation]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 rounded-xl">
-            <Users className="w-8 h-8 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-text-main">User Management</h2>
-          </div>
+        <div>
+          <h2 className="page-title">UserManagement</h2>
         </div>
         <Button 
           onClick={() => handleOpen()}
           className="text-text-main font-bold px-6"
         >
-          <Plus className="w-4 h-4 mr-2" />
           Add New User
         </Button>
       </div>
 
       <Card className="border-border-temple">
         <CardContent className="p-4 sm:p-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-            <div className="space-y-1.5">
-              <Label className="text-text-main">Rows</Label>
-              <Select value={pageSize.toString()} onChange={(e) => setPageSize(Number(e.target.value))}>
-                {[10, 20, 50, 100].map((size) => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-text-main">Status Filter</Label>
-              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="disabled">Disabled</option>
-              </Select>
-            </div>
-            <div className="space-y-1.5 lg:col-span-2">
+          <div className="grid gap-4">
+            <div className="space-y-1.5 w-full sm:max-w-xs">
               <Label className="text-text-main">Quick Search</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -263,30 +227,9 @@ const UsersPage: React.FC = () => {
 
       <DataTable
         columns={columns}
-        data={users || []}
+        data={users?.items || []}
         loading={isLoading}
       />
-
-      {/* View Details Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-md border-border-temple">
-          <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <DialogTitle className="text-text-main">User Details</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-0 mt-4">
-            <DetailItem label="Username" value={viewingUser?.username} />
-            <DetailItem label="Full Name" value={viewingUser?.full_name} />
-            <DetailItem label="Email" value={viewingUser?.email} />
-            <DetailItem label="Phone" value={viewingUser?.phone} />
-            <DetailItem label="Role" value={roles?.find((r: any) => r.id === viewingUser?.role_id)?.role_name} />
-          </div>
-          <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Add/Edit Dialog */}
       <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
@@ -296,15 +239,15 @@ const UsersPage: React.FC = () => {
               {editingUser ? 'Edit User' : 'New User'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4 pb-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-text-main">Username *</Label>
                 <Input {...register('username')} placeholder="e.g. johndoe" className="text-text-main" disabled={!!editingUser} />
                 {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-text-main">{editingUser ? "Password (Leave blank to keep same)" : "Password *"}</Label>
+                <Label className="text-text-main">{editingUser ? "Password" : "Password *"}</Label>
                 <Input {...register('password')} type="password" placeholder="••••••••" className="text-text-main" />
                 {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
               </div>
@@ -316,28 +259,25 @@ const UsersPage: React.FC = () => {
               <div className="space-y-1.5">
                 <Label className="text-text-main">Email Address</Label>
                 <Input {...register('email')} type="email" placeholder="john@example.com" className="text-text-main" />
-                {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Phone Number</Label>
-                <Input {...register('phone')} placeholder="e.g. 9876543210" className="text-text-main" />
-                {errors.phone && <p className="text-xs text-red-500">{errors.phone.message}</p>}
+                <Input {...register('phone')} placeholder="9876543210" className="text-text-main" />
               </div>
-              <div className="space-y-1.5 md:col-span-2">
+              <div className="md:col-span-2">
                 <Label className="text-text-main">Role *</Label>
                 <Controller
                   name="role_id"
                   control={control}
                   render={({ field }) => (
                     <Select value={field.value?.toString()} onChange={(e) => field.onChange(Number(e.target.value))}>
-                      <option value="">Select a role</option>
+                      <option value="" disabled hidden>Select a role</option>
                       {roles?.map((r: any) => (
                         <option key={r.id} value={r.id}>{r.role_name}</option>
                       ))}
                     </Select>
                   )}
                 />
-                {errors.role_id && <p className="text-xs text-red-500">{errors.role_id.message}</p>}
               </div>
             </div>
             <DialogFooter className="gap-3">
@@ -360,6 +300,7 @@ const UsersPage: React.FC = () => {
 };
 
 export default UsersPage;
+
 
 
 

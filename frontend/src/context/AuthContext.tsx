@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUser = async () => {
     try {
-      const response = await api.get('/auth/me');
+      const response = await api.get('/auth/get_current_user_profile');
       setUser(response.data);
     } catch (error: any) {
       console.error('Failed to fetch user', error);

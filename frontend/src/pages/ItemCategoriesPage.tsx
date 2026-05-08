@@ -5,10 +5,11 @@ import {
   Edit, 
   Trash2, 
   Search, 
-  Eye,
+  Save,
+  Loader2
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
@@ -18,17 +19,7 @@ import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter,
-} from '../components/ui/Dialog';
-import { Select } from '../components/ui/Select';
-import { Switch } from '../components/ui/Switch';
 import { Label } from '../components/ui/Label';
-import { DetailItem } from '../components/ui/DetailItem';
 
 const categorySchema = z.object({
   category_name: z.string().min(1, 'Name is required'),
@@ -43,32 +34,23 @@ const ItemCategoriesPage: React.FC = () => {
   
   // Filter States
   const [pageSize, setPageSize] = useState(20);
-  const [status, setStatus] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
 
-  const [open, setOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
-
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [viewingCategory, setViewingCategory] = useState<any>(null);
 
   // Fetch Data
   const { data: categories, isLoading } = useQuery({
-    queryKey: ['item-categories', search, pageSize, status],
+    queryKey: ['item-categories', search, pageSize, statusFilter],
     queryFn: async () => {
       const params: any = { q: search, page_size: pageSize };
-      if (status !== 'all') params.status = status === 'active' ? 1 : 0;
+      if (statusFilter !== 'all') params.status = statusFilter === 'active' ? 1 : 0;
       const res = await api.get('/item-categories/list_categories', { params });
       return res.data;
     },
   });
 
-  const { data: users } = useQuery({
-    queryKey: ['users-list-minimal'],
-    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
-  });
-
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<CategoryFormValues>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema) as any,
   });
 
@@ -83,10 +65,10 @@ const ItemCategoriesPage: React.FC = () => {
       }
       return api.post('/item-categories/create_category', data);
     },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item-categories'] });
       showSuccess(editingCategory ? 'Category updated' : 'Category added');
-      handleClose();
+      handleCancel();
     },
     onError: (err: any) => showError(err.response?.data?.detail || 'Operation failed'),
   });
@@ -104,45 +86,29 @@ const ItemCategoriesPage: React.FC = () => {
     mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/item-categories/update_category/${id}`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item-categories'] });
-      showSuccess('Status updated successfully');
+      showSuccess('Status updated');
     },
     onError: (err: any) => showError(err.response?.data?.detail || 'Status update failed'),
   });
 
-  const handleOpen = (category: any = null) => {
+  const handleEdit = (category: any) => {
     setEditingCategory(category);
-    if (category) reset(category);
-    else reset({ category_name: '', status: 1 });
-    setOpen(true);
+    reset({
+      category_name: category.category_name,
+      status: category.status,
+    });
   };
 
-  const handleClose = () => {
-    setOpen(false);
+  const handleCancel = () => {
     setEditingCategory(null);
-  };
-
-  const handleView = (category: any) => {
-    setViewingCategory(category);
-    setViewDialogOpen(true);
+    reset({ category_name: '', status: 1 });
   };
 
   const onSubmit = async (data: CategoryFormValues) => {
-    const confirmed = await showConfirm(
-      editingCategory ? "Confirm Update" : "Confirm Save",
-      `Are you sure you want to ${editingCategory ? 'update' : 'save'} this category?`
-    );
-
-    if (confirmed) {
-      mutation.mutate({ ...data, id: editingCategory?.id, isEditMode: Boolean(editingCategory) });
-    }
+    mutation.mutate({ ...data, id: editingCategory?.id, isEditMode: Boolean(editingCategory) });
   };
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
-    {
-      accessorKey: 'id',
-      header: 'ID',
-      cell: info => <span className="text-text-main">{info.getValue() as string}</span>,
-    },
     {
       accessorKey: 'category_name',
       header: 'Category Name',
@@ -161,14 +127,13 @@ const ItemCategoriesPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: "Actions",
+      header: () => <div className="text-center">Actions</div>,
       cell: info => (
-        <div className="flex items-center justify-end gap-2">
-          <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
-          <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
+        <div className="flex items-center justify-center gap-2">
+          <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>
           <button
             onClick={async () => {
-              const confirmed = await showConfirm('Delete Category', `Are you sure you want to delete category "${info.row.original.category_name}"?`);
+              const confirmed = await showConfirm('Delete Category', `Are you sure?`);
               if (confirmed) {
                 deleteMutation.mutate(info.row.original.id);
               }
@@ -182,111 +147,96 @@ const ItemCategoriesPage: React.FC = () => {
     }
   ], [deleteMutation, showConfirm, statusMutation]);
 
+  const sortedCategories = useMemo(() => {
+    const categoryList = categories?.items || [];
+    return [...categoryList].sort((a, b) => {
+      // First sort by status: Active (1) before Disabled (0)
+      if (a.status !== b.status) {
+        return b.status - a.status;
+      }
+      // Then sort by category_name (A-Z)
+      return a.category_name.localeCompare(b.category_name);
+    });
+  }, [categories]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-text-main text-2xl font-semibold font-temple">Item Categories</h2>
+        <h2 className="page-title">Manage Item Categories</h2>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Side: Form (30%) */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="border-border-temple sticky top-6">
+            <CardContent className="p-6">
+              <div className="flex flex-col space-y-1.5 bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-6 select-none rounded-t-lg">
+                <h3 className="text-[18px] font-bold leading-[1.25] text-[#2F1F14] m-0">
+                  {editingCategory ? 'Edit Category' : 'Add New Category'}
+                </h3>
+              </div>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-text-main font-medium">Category Name *</Label>
+                  <Input 
+                    {...register('category_name')} 
+                    placeholder="e.g. Vegetables, Grains..." 
+                    className="border-border-temple/50 focus:border-primary"
+                  />
+                  {errors.category_name && <p className="text-xs text-red-500 font-medium">{errors.category_name.message}</p>}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button 
+                    type="submit" 
+                    disabled={mutation.isPending}
+                    className={editingCategory ? 'flex-1 h-10 text-text-main font-bold' : 'w-full h-10 text-text-main font-bold'}
+                  >
+                    {mutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                      
+                        {editingCategory ? 'Save' : 'Save'}
+                      </>
+                    )}
+                  </Button>
+                  
+                  {editingCategory && (
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      onClick={handleCancel}
+                      className="flex-1 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
-        <Button onClick={() => handleOpen()} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add Category
-        </Button>
+
+        {/* Right Side: List (70%) */}
+        <div className="lg:col-span-8 space-y-4">
+          <Card className="border-border-temple shadow-sm overflow-hidden">
+            <div className="bg-white">
+              <DataTable 
+                columns={columns} 
+                data={sortedCategories} 
+                loading={isLoading} 
+              />
+            </div>
+          </Card>
+        </div>
       </div>
-
-      <Card className="border-border-temple">
-        <CardContent className="p-4 sm:p-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-             <div className="space-y-1.5">
-              <Label className="text-text-main font-medium">Rows</Label>
-              <Select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
-                {[10, 20, 50, 100].map((size) => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-text-main font-medium">Status Filter</Label>
-              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="disabled">Disabled</option>
-              </Select>
-            </div>
-            <div className="space-y-1.5 lg:col-span-2">
-              <Label className="text-text-main font-medium">Quick Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-main/50" />
-                <Input 
-                  placeholder="Search categories..." 
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="rounded-xl border border-border-temple overflow-hidden bg-white">
-        <DataTable 
-          columns={columns} 
-          data={categories || []} 
-          loading={isLoading} 
-        />
-      </div>
-
-      {/* View Details Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-md border-border-temple">
-          <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <DialogTitle className="text-text-main">Category Details</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-1 mt-4">
-            <DetailItem label="Category Name" value={viewingCategory?.category_name} />
-          </div>
-          <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
-        <DialogContent className="max-w-md border-border-temple">
-          <DialogHeader>
-            <DialogTitle className="text-text-main font-temple">
-              {editingCategory ? 'Edit Category' : 'New Category'}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-4">
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-               <Label className="text-text-main font-medium">Category Name *</Label>
-               <Input {...register('category_name')} placeholder="Enter category name" />
-               {errors.category_name && <p className="text-xs text-red-500 font-medium">{errors.category_name.message}</p>}
-              </div>
-              </div>
-
-              <DialogFooter className="gap-3">              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
-                Cancel
-              </Button>
-              <Button type="submit" disabled={mutation.isPending} className="w-28 h-10 text-text-main">
-                {mutation.isPending ? 'Saving...' : 'Save'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
 
 export default ItemCategoriesPage;
-
-
-
 

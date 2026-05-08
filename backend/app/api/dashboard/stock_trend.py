@@ -4,16 +4,15 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 import logging
 
-from app.api.deps import get_current_user, get_db, get_financial_year
-from app.db.models import DailyStockSummary, User, FinancialYear
+from app.api.deps import get_current_user, get_db
+from app.db.models import DailyStockSummary, User
 
 router = APIRouter()
 
-@router.get("/stock-trend")
+@router.get("/get_stock_trend")
 def stock_trend(
     db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    _: User = Depends(get_current_user)
 ):
     thirty_days_ago = date.today() - timedelta(days=30)
     results = (
@@ -22,8 +21,7 @@ def stock_trend(
             func.sum(DailyStockSummary.stock_value).label("total_value"),
         )
         .filter(
-            DailyStockSummary.summary_date >= thirty_days_ago,
-            DailyStockSummary.financial_year_id == financial_year.id
+            DailyStockSummary.summary_date >= thirty_days_ago
         )
         .group_by(DailyStockSummary.summary_date)
         .order_by(DailyStockSummary.summary_date.asc())
@@ -35,7 +33,7 @@ def stock_trend(
         
     return [{"date": r.summary_date, "value": r.total_value} for r in results]
 
-@router.post("/backfill-trend")
+@router.post("/backfill_stock_trend")
 def backfill_trend(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     from app.utils.tasks import generate_daily_stock_summary
     from datetime import date, timedelta

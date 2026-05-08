@@ -13,6 +13,7 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 import { Card, CardContent } from '../components/ui/Card';
+import { formatCurrency } from '../utils/currency';
 
 const ReportsPage: React.FC = () => {
   const { showSuccess, showError } = useNotification();
@@ -83,7 +84,7 @@ const ReportsPage: React.FC = () => {
 
   const handleExportPDF = async () => {
     try {
-      const response = await api.get('/reports/stock-finance-pdf', {
+      const response = await api.get('/reports/get_stock_finance_pdf', {
         params: { from_date: fromDate, to_date: toDate },
         responseType: 'blob',
       });
@@ -123,7 +124,7 @@ const ReportsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main">Stock & Financial Reports</h2>
+          <h2 className="page-title">Stock & Financial Reports</h2>
         </div>
         <div className="flex items-center gap-2">
           <Button 
@@ -224,9 +225,9 @@ const ReportsPage: React.FC = () => {
                     <td className="px-4 py-3 text-right text-red-600 font-medium">-{Number(row.consumed_qty).toFixed(2)}</td>
                     <td className="px-4 py-3 text-right text-orange-600 font-medium">-{Number(row.wastage_qty).toFixed(2)}</td>
                     <td className="px-4 py-3 text-right font-bold text-text-main">{Number(row.closing_stock).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-text-main">₹{Number(row.purchase_value).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right text-text-main">{formatCurrency(row.purchase_value)}</td>
                     <td className={`px-4 py-3 text-right font-bold ${row.net_financial_balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      ₹{Number(row.net_financial_balance).toLocaleString()}
+                      {formatCurrency(row.net_financial_balance)}
                     </td>
                   </tr>
                 ))
@@ -252,10 +253,10 @@ const ReportsPage: React.FC = () => {
                     {Number(reportData[reportData.length - 1]?.closing_stock || 0).toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-right font-black text-text-main">
-                    ₹{Number(totals.purchase_value).toLocaleString()}
+                    {formatCurrency(totals.purchase_value)}
                   </td>
                   <td className={`px-4 py-3 text-right font-black ${totals.net_financial_balance > 0 ? 'text-red-700' : 'text-green-700'}`}>
-                    ₹{Number(totals.net_financial_balance).toLocaleString()}
+                    {formatCurrency(totals.net_financial_balance)}
                   </td>
                 </tr>
               </tfoot>
@@ -272,4 +273,5 @@ const ReportsPage: React.FC = () => {
 };
 
 export default ReportsPage;
+
 

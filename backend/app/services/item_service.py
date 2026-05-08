@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from decimal import Decimal
+import math
 
 from fastapi import HTTPException
 from sqlalchemy import String
@@ -53,7 +54,6 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, financial_
 
 def list_items(
     db: Session, 
-    financial_year: FinancialYear,
     page: int, 
     page_size: int, 
     q: str | None, 
@@ -62,13 +62,13 @@ def list_items(
     type_id: int | None = None,
     search_field: str | None = None,
     sort_by: str = "id", 
-    sort_order: str = "desc",
-    from_date: str | None = None,
-    to_date: str | None = None
-) -> list[Item]:
-    query = db.query(Item).filter(Item.financial_year_id == financial_year.id).join(ItemCategory, Item.category_id == ItemCategory.id).options(
+    sort_order: str = "desc"
+) -> dict:
+    import re
+    query = db.query(Item).join(ItemCategory, Item.category_id == ItemCategory.id).options(
         joinedload(Item.category),
-        joinedload(Item.unit)
+        joinedload(Item.unit),
+        joinedload(Item.serial_numbers)
     )
     
     if status is not None:
@@ -78,6 +78,19 @@ def list_items(
         query = query.filter(Item.category_id == category_id)
     if type_id is not None:
         query = query.filter(ItemCategory.type_id == type_id)
+
+    # Smart Search: Extract dates from q if present
+    from_date, to_date = None, None
+    if q:
+        # Look for YYYY-MM-DD patterns
+        date_patterns = re.findall(r"\d{4}-\d{2}-\d{2}", q)
+        if len(date_patterns) >= 2:
+            from_date, to_date = date_patterns[0], date_patterns[1]
+            # Remove dates from q to avoid searching them as text
+            q = re.sub(r"\d{4}-\d{2}-\d{2}", "", q).strip()
+        elif len(date_patterns) == 1:
+            from_date = to_date = date_patterns[0]
+            q = re.sub(r"\d{4}-\d{2}-\d{2}", "", q).strip()
 
     if from_date:
         query = query.filter(Item.created_at >= from_date)
@@ -90,14 +103,17 @@ def list_items(
             query = query.filter(Item.item_name.ilike(like))
         elif search_field == "id":
             query = query.filter(Item.id.cast(String).ilike(like))
+        elif search_field == "serial":
+            query = query.join(Item.serial_numbers).filter(ItemSerialNumber.serial_number.ilike(like))
         elif search_field == "category":
             query = query.join(ItemCategory).filter(ItemCategory.category_name.ilike(like))
         elif search_field == "unit":
             query = query.join(Unit).filter(Unit.unit_name.ilike(like))
         else:
-            query = query.outerjoin(ItemCategory).outerjoin(Unit).filter(
+            query = query.outerjoin(Item.serial_numbers).outerjoin(ItemCategory).outerjoin(Unit).filter(
                 (Item.item_name.ilike(like)) |
                 (Item.id.cast(String).ilike(like)) |
+                (ItemSerialNumber.serial_number.ilike(like)) |
                 (ItemCategory.category_name.ilike(like)) |
                 (Unit.unit_name.ilike(like))
             )
@@ -109,12 +125,21 @@ def list_items(
         sort_col = getattr(Item, sort_by, Item.id)
         query = query.order_by(sort_col.asc() if sort_order.lower() == "asc" else sort_col.desc())
     
+    total = query.count()
     offset = (page - 1) * page_size
-    return query.offset(offset).limit(page_size).all()
+    items = query.offset(offset).limit(page_size).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+    }
 
 
 def get_item(item_id: int, db: Session) -> Item:
-    item = db.query(Item).filter(Item.id == item_id).first()
+    item = db.query(Item).options(joinedload(Item.unit)).filter(Item.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     return item
@@ -158,15 +183,27 @@ def get_item_last_price(item_id: int, db: Session) -> Decimal:
     return Decimal("0")
 
 
-def get_item_ledger(item_id: int, db: Session) -> list[StockLedger]:
+def get_item_ledger(item_id: int, db: Session, page: int = 1, page_size: int = 20) -> dict:
     _ = get_item(item_id, db)
-    return (
-        db.query(StockLedger)
-        .filter(StockLedger.item_id == item_id)
-        .order_by(StockLedger.txn_date.desc(), StockLedger.id.desc())
-        .limit(100)
+    query = db.query(StockLedger).filter(StockLedger.item_id == item_id)
+    
+    total = query.count()
+    offset = (page - 1) * page_size
+    
+    items = (
+        query.order_by(StockLedger.txn_date.desc(), StockLedger.id.desc())
+        .offset(offset)
+        .limit(page_size)
         .all()
     )
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+    }
 
 
 def get_price_history(item_id: int, db: Session) -> list[dict]:

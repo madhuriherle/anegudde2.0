@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ColumnDef } from '@tanstack/react-table';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
@@ -15,6 +15,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
 import { DetailItem } from '../components/ui/DetailItem';
+import { formatDate } from '../utils/date';
+import { formatCurrency } from '../utils/currency';
+import { Plus, Trash2 } from 'lucide-react';
 
 const formSchema = z.object({
   usage_date: z.string().min(1, 'Date is required'),
@@ -24,6 +27,7 @@ const formSchema = z.object({
   additional_cleaning_persons: z.coerce.number().min(0).default(0),
   regular_serving_persons: z.coerce.number().min(0).default(0),
   additional_serving_persons: z.coerce.number().min(0).default(0),
+  times_cooked: z.coerce.number().min(0).default(0),
   raw_items: z.record(
     z.string(),
     z.object({
@@ -31,12 +35,24 @@ const formSchema = z.object({
       qty_returned: z.coerce.number().min(0).default(0),
     })
   ).default({}),
-  wastage_items: z.record(z.string(), z.coerce.number().min(0).default(0)).default({}),
+  wastage_items: z.record(
+    z.string(),
+    z.object({
+      quantity: z.coerce.number().min(0).default(0),
+      approx_amount: z.coerce.number().min(0).default(0),
+    })
+  ).default({}),
+  raw_wastage_items: z.array(z.object({
+    serial_id: z.string().optional().default(''),
+    item_id: z.coerce.number().min(1, 'Item is required'),
+    quantity: z.coerce.number().min(0.001, 'Quantity is required'),
+  })).default([]),
 }).superRefine((data, ctx) => {
   const hasRaw = Object.values(data.raw_items || {}).some((v: any) => Number(v.quantity_used || 0) > 0 || Number(v.qty_returned || 0) > 0);
-  const hasWastage = Object.values(data.wastage_items || {}).some((v: any) => Number(v || 0) > 0);
-  if (!hasRaw && !hasWastage) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter at least one raw quantity or one wastage quantity', path: ['raw_items'] });
+  const hasWastage = Object.values(data.wastage_items || {}).some((v: any) => Number(v?.quantity || 0) > 0);
+  const hasRawWastage = (data.raw_wastage_items || []).some((v: any) => Number(v?.quantity || 0) > 0);
+  if (!hasRaw && !hasWastage && !hasRawWastage) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter at least one quantity', path: ['raw_items'] });
   }
   Object.entries(data.raw_items || {}).forEach(([id, row]: any) => {
     if (Number(row.qty_returned || 0) > Number(row.quantity_used || 0)) {
@@ -54,36 +70,79 @@ const ConsumptionsPage: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingConsumption, setViewingConsumption] = useState<any>(null);
-  const [status, setStatus] = useState<string>('all');
-  const [searchField, setSearchField] = useState<string>('all');
-  const [search, setSearch] = useState('');
+  const [viewingWastages, setViewingWastages] = useState<any[]>([]);
+  const [editingConsumption, setEditingConsumption] = useState<any>(null);
+  const [dateFilter, setDateFilter] = useState<string>('all');
+  const [customDate, setCustomDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const { data: consumptions, isLoading: consumptionsLoading } = useQuery({
-    queryKey: ['consumptions', search, status, searchField],
+    queryKey: ['consumptions'],
     queryFn: async () => {
-      const params: any = { q: search, page_size: 1000 };
-      if (status !== 'all') params.status = status === 'active' ? 1 : 0;
-      if (searchField !== 'all') params.search_field = searchField;
+      const params: any = { page_size: 1000 };
       return (await api.get('/consumptions/list_consumptions', { params })).data;
     },
   });
+  const filteredConsumptions = useMemo(() => {
+    const rows = Array.isArray(consumptions) ? consumptions : (consumptions?.items || []);
+    if (dateFilter === 'all') return rows;
 
-  const { data: items } = useQuery({
+    const now = new Date();
+    const toYmd = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    let targetDate = '';
+    if (dateFilter === 'today') targetDate = toYmd(now);
+    if (dateFilter === 'yesterday') {
+      const d = new Date(now);
+      d.setDate(d.getDate() - 1);
+      targetDate = toYmd(d);
+    }
+    if (dateFilter === 'tomorrow') {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 1);
+      targetDate = toYmd(d);
+    }
+    if (dateFilter === 'custom') targetDate = customDate;
+
+    return rows.filter((r: any) => r.usage_date === targetDate);
+  }, [consumptions, dateFilter, customDate]);
+
+  const { data: itemsData } = useQuery({
     queryKey: ['items-list'],
-    queryFn: async () => (await api.get('/items/list_items')).data,
+    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data,
   });
+  const items = useMemo(
+    () => (Array.isArray(itemsData) ? itemsData : (itemsData?.items || [])),
+    [itemsData]
+  );
+  const activeItems = useMemo(() => (items || []).filter((i: any) => i.status === 1), [items]);
+  const serialToItemIdMap = useMemo(() => {
+    const map = new Map<string, number>();
+    activeItems.forEach((i: any) => {
+      (i.serial_numbers || []).forEach((s: any) => {
+        const serial = String(s?.serial_number || '').trim().toLowerCase();
+        if (serial) map.set(serial, i.id);
+      });
+    });
+    return map;
+  }, [activeItems]);
 
-  const { data: menuItems } = useQuery({
+  const { data: menuItemsData } = useQuery({
     queryKey: ['menu-items-list'],
     queryFn: async () => (await api.get('/menu-items/list_menu_items')).data,
   });
+  const menuItems = useMemo(() => Array.isArray(menuItemsData) ? menuItemsData : (menuItemsData?.items || []), [menuItemsData]);
 
   const buildRawDefaults = () =>
-    Object.fromEntries((items || []).map((it: any) => [String(it.id), { quantity_used: 0, qty_returned: 0 }]));
+    Object.fromEntries((items).map((it: any) => [String(it.id), { quantity_used: 0, qty_returned: 0 }]));
   const buildWastageDefaults = () =>
-    Object.fromEntries((menuItems || []).map((it: any) => [String(it.id), 0]));
+    Object.fromEntries((menuItems).map((it: any) => [String(it.id), { quantity: 0, approx_amount: 0 }]));
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
       usage_date: new Date().toISOString().split('T')[0],
@@ -93,9 +152,16 @@ const ConsumptionsPage: React.FC = () => {
       additional_cleaning_persons: 0,
       regular_serving_persons: 0,
       additional_serving_persons: 0,
+      times_cooked: 0,
       raw_items: {},
       wastage_items: {},
+      raw_wastage_items: []
     },
+  });
+
+  const { fields: rawWastageFields, append: appendRawWastage, remove: removeRawWastage } = useFieldArray({
+    control,
+    name: "raw_wastage_items"
   });
 
   const saveMutation = useMutation({
@@ -109,11 +175,41 @@ const ConsumptionsPage: React.FC = () => {
         .filter((r) => r.quantity_used > 0 || r.qty_returned > 0);
 
       const wastageRows = Object.entries(data.wastage_items || {})
-        .map(([id, qty]) => ({
+        .map(([id, row]: any) => ({
           menu_item_id: Number(id),
-          quantity: Number(qty || 0),
+          quantity: Number(row?.quantity || 0),
+          approx_amount: Number(row?.approx_amount || 0),
         }))
         .filter((r) => r.quantity > 0);
+
+      const rawWastageRows = (data.raw_wastage_items || [])
+        .filter((r) => r.quantity > 0 && r.item_id > 0)
+        .map((r) => ({
+          item_id: Number(r.item_id),
+          quantity: Number(r.quantity),
+        }));
+
+      if (editingConsumption?.id) {
+        await api.put(`/consumptions/update_consumption/${editingConsumption.id}`, {
+          usage_date: data.usage_date,
+          regular_cooking_persons: Number(data.regular_cooking_persons || 0),
+          additional_cooking_persons: Number(data.additional_cooking_persons || 0),
+          regular_cleaning_persons: Number(data.regular_cleaning_persons || 0),
+          additional_cleaning_persons: Number(data.additional_cleaning_persons || 0),
+          regular_serving_persons: Number(data.regular_serving_persons || 0),
+          additional_serving_persons: Number(data.additional_serving_persons || 0),
+          times_cooked: Number(data.times_cooked || 0),
+          anna_remained: 0,
+          saru_remained: 0,
+          huli_remained: 0,
+          payas_remained: 0,
+          people_served: null,
+          items: rawRows,
+          user_id: user?.id,
+          status: 1,
+        });
+        return;
+      }
 
       const calls: Promise<any>[] = [];
       if (rawRows.length > 0) {
@@ -125,6 +221,7 @@ const ConsumptionsPage: React.FC = () => {
           additional_cleaning_persons: Number(data.additional_cleaning_persons || 0),
           regular_serving_persons: Number(data.regular_serving_persons || 0),
           additional_serving_persons: Number(data.additional_serving_persons || 0),
+          times_cooked: Number(data.times_cooked || 0),
           anna_remained: 0,
           saru_remained: 0,
           huli_remained: 0,
@@ -135,13 +232,20 @@ const ConsumptionsPage: React.FC = () => {
           status: 1,
         }));
       }
-      if (wastageRows.length > 0) {
+
+      const allWastageItems = [
+        ...wastageRows,
+        ...rawWastageRows
+      ];
+
+      if (allWastageItems.length > 0) {
         calls.push(api.post('/wastages/create_wastage', {
           wastage_date: data.usage_date,
           reason: 'Combined consumption entry',
+          times_cooked: Number(data.times_cooked || 0),
           user_id: user?.id,
           status: 1,
-          items: wastageRows,
+          items: allWastageItems,
         }));
       }
       await Promise.all(calls);
@@ -151,8 +255,9 @@ const ConsumptionsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['wastages'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
       queryClient.invalidateQueries({ queryKey: ['items'] });
-      showSuccess('Combined entry saved');
+      showSuccess(editingConsumption ? 'Entry updated' : 'Combined entry saved');
       setOpen(false);
+      setEditingConsumption(null);
       reset({
         usage_date: new Date().toISOString().split('T')[0],
         regular_cooking_persons: 0,
@@ -161,8 +266,10 @@ const ConsumptionsPage: React.FC = () => {
         additional_cleaning_persons: 0,
         regular_serving_persons: 0,
         additional_serving_persons: 0,
+        times_cooked: 0,
         raw_items: buildRawDefaults(),
         wastage_items: buildWastageDefaults(),
+        raw_wastage_items: []
       });
     },
     onError: (err: any) => {
@@ -181,6 +288,7 @@ const ConsumptionsPage: React.FC = () => {
   });
 
   const openNew = () => {
+    setEditingConsumption(null);
     reset({
       usage_date: new Date().toISOString().split('T')[0],
       regular_cooking_persons: 0,
@@ -189,16 +297,71 @@ const ConsumptionsPage: React.FC = () => {
       additional_cleaning_persons: 0,
       regular_serving_persons: 0,
       additional_serving_persons: 0,
+      times_cooked: 0,
       raw_items: buildRawDefaults(),
       wastage_items: buildWastageDefaults(),
+      raw_wastage_items: []
     });
     setOpen(true);
   };
 
-  const handleView = async (consumption: any) => {
+  const handleEdit = async (consumption: any) => {
     try {
       const res = await api.get(`/consumptions/get_consumption/${consumption.id}`);
-      setViewingConsumption(res.data);
+      const full = res.data;
+      const rawDefaults = buildRawDefaults();
+      (full.items || []).forEach((it: any) => {
+        rawDefaults[String(it.item_id)] = {
+          quantity_used: Number(it.quantity_used || 0),
+          qty_returned: Number(it.qty_returned || 0),
+        };
+      });
+
+      setEditingConsumption(full);
+      reset({
+        usage_date: full.usage_date,
+        regular_cooking_persons: Number(full.regular_cooking_persons || 0),
+        additional_cooking_persons: Number(full.additional_cooking_persons || 0),
+        regular_cleaning_persons: Number(full.regular_cleaning_persons || 0),
+        additional_cleaning_persons: Number(full.additional_cleaning_persons || 0),
+        regular_serving_persons: Number(full.regular_serving_persons || 0),
+        additional_serving_persons: Number(full.additional_serving_persons || 0),
+        times_cooked: Number(full.times_cooked || 0),
+        raw_items: rawDefaults,
+        wastage_items: buildWastageDefaults(),
+        raw_wastage_items: []
+      });
+      setOpen(true);
+    } catch {
+      showError('Failed to fetch record for edit');
+    }
+  };
+
+  const handleView = async (consumption: any) => {
+    try {
+      const [consumptionRes, wastageRes] = await Promise.all([
+        api.get(`/consumptions/get_consumption/${consumption.id}`),
+        api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
+      ]);
+      const fullConsumption = consumptionRes.data;
+      const wastageRows = Array.isArray(wastageRes.data)
+        ? wastageRes.data
+        : (wastageRes.data?.items || []);
+      const matchedWastages = wastageRows
+        .filter((w: any) =>
+          w.wastage_date === fullConsumption.usage_date &&
+          (w.reason || '').toLowerCase() === 'combined consumption entry'
+        )
+        .flatMap((w: any) => (w.items || []).map((it: any) => ({
+          entryId: w.id,
+          menu_item_name: it.menu_item?.dish_name || it.item?.item_name || `Item #${it.menu_item_id || it.item_id}`,
+          unit_code: it.menu_item?.unit?.unit_code || it.item?.unit?.unit_code || '',
+          quantity: it.quantity,
+          approx_amount: it.approx_amount,
+        })));
+
+      setViewingConsumption(fullConsumption);
+      setViewingWastages(matchedWastages);
       setViewDialogOpen(true);
     } catch {
       showError('Failed to fetch record details');
@@ -211,74 +374,189 @@ const ConsumptionsPage: React.FC = () => {
   };
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
-    { accessorKey: 'id', header: 'ID' },
-    { accessorKey: 'usage_date', header: 'Date' },
-    { id: 'raw_count', header: 'Raw Rows', cell: (i) => i.row.original.items?.length || 0 },
+    {
+      accessorKey: 'usage_date',
+      header: 'Date',
+      cell: (i) => formatDate(i.getValue()),
+    },
+    {
+      id: 'total_cooking',
+      header: 'Total Cooking Persons',
+      cell: (i) =>
+        Number(i.row.original.regular_cooking_persons || 0) +
+        Number(i.row.original.additional_cooking_persons || 0),
+    },
+    {
+      id: 'total_cleaning',
+      header: 'Total Cleaning Persons',
+      cell: (i) =>
+        Number(i.row.original.regular_cleaning_persons || 0) +
+        Number(i.row.original.additional_cleaning_persons || 0),
+    },
+    {
+      id: 'total_serving',
+      header: 'Total Serving Persons',
+      cell: (i) =>
+        Number(i.row.original.regular_serving_persons || 0) +
+        Number(i.row.original.additional_serving_persons || 0),
+    },
     {
       id: 'actions',
-      header: 'Actions',
-      cell: (info) => (
-        <div className="flex items-center gap-2">
+      header: () => <div className="text-center">Actions</div>,
+      cell: info => (
+        <div className="flex items-center justify-center gap-2">
           <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
+          <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>
           <button
             onClick={async () => {
-              const ok = await showConfirm('Delete Record', 'Delete this usage record?');
-              if (ok) deleteMutation.mutate(info.row.original.id);
+              const confirmed = await showConfirm('Delete Entry', `Are you sure? This cannot be undone.`);
+              if (confirmed) deleteMutation.mutate(info.row.original.id);
             }}
             className="action-btn-delete"
           >
             Delete
           </button>
         </div>
-      ),
-    },
+      )
+    }
   ], [deleteMutation, showConfirm]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-text-main">Consumption Logs</h2>
-        <Button onClick={openNew} className="text-text-main">New Combined Entry</Button>
+        <h2 className="page-title">Daily Usage Entry</h2>
+        <Button onClick={openNew} className="text-text-main">Add Usage Entry</Button>
       </div>
 
       <Card className="border-border-temple">
         <CardContent className="p-4 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
             <div className="space-y-1.5">
-              <Label className="text-text-main">Status</Label>
-              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="disabled">Disabled</option>
+              <Label className="text-text-main">Date Filter</Label>
+              <Select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
+                <option value="all">All Dates</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="tomorrow">Tomorrow</option>
+                <option value="custom">Custom Date</option>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-text-main">Search Type</Label>
-              <Select value={searchField} onChange={(e) => setSearchField(e.target.value)}>
-                <option value="all">All Fields</option>
-                <option value="item">Item Name</option>
-                <option value="id">Record ID</option>
-              </Select>
-            </div>
-            <div className="space-y-1.5 lg:col-span-2">
-              <Label className="text-text-main">Search</Label>
-              <Input placeholder="Search usage records..." value={search} onChange={(e) => setSearch(e.target.value)} className="text-text-main" />
+              <Label className="text-text-main">Date</Label>
+              <Input
+                type="date"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                className="text-text-main"
+                disabled={dateFilter !== 'custom'}
+              />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <DataTable columns={columns} data={consumptions || []} loading={consumptionsLoading} />
+      <DataTable
+        columns={columns}
+        data={filteredConsumptions}
+        loading={consumptionsLoading}
+      />
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh] border-border-temple">
+        <DialogContent className="max-w-[92vw] overflow-y-auto max-h-[92vh] border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
             <DialogTitle className="text-text-main">Usage Summary</DialogTitle>
             <DialogDescription className="sr-only">Consumption details</DialogDescription>
           </DialogHeader>
-          <div className="space-y-0 mt-4 px-2">
-            <DetailItem label="Usage Date" value={viewingConsumption?.usage_date} />
-            <DetailItem label="Recorded By" value={viewingConsumption?.user?.full_name} />
+          <div className="mt-4 grid grid-cols-1 xl:grid-cols-10 gap-4 px-2 items-start">
+            <div className="temple-form-section h-full xl:col-span-4">
+              <div className="grid grid-cols-[260px_20px_1fr] gap-y-3 text-text-main">
+                <div className="font-semibold whitespace-nowrap">Usage Date</div><div>:</div><div className="whitespace-nowrap">{formatDate(viewingConsumption?.usage_date)}</div>
+                <div className="font-semibold whitespace-nowrap">Regular Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cooking_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Additional Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Total Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cooking_persons || 0) + Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Regular Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cleaning_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Additional Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Total Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cleaning_persons || 0) + Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Regular Serving Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_serving_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Additional Serving Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_serving_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Total Serving Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_serving_persons || 0) + Number(viewingConsumption?.additional_serving_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">No. of times cooked</div><div>:</div><div>{viewingConsumption?.times_cooked ?? 0}</div>
+              </div>
+            </div>
+
+            <div className="temple-form-section h-full xl:col-span-3">
+              <div className="pb-2">
+                <span className="text-sm font-bold text-text-main">Raw Consumption Items</span>
+              </div>
+              <div className="rounded-md border border-border-temple overflow-hidden mt-1">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-bg-temple text-text-main uppercase text-[11px] font-bold tracking-wider">
+                    <tr>
+                      <th className="px-4 py-3 border-b border-border-temple">Item</th>
+                      <th className="px-4 py-3 border-b border-border-temple text-right">Used</th>
+                      <th className="px-4 py-3 border-b border-border-temple text-right">Returned</th>
+                      <th className="px-4 py-3 border-b border-border-temple text-right">Net</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-temple/40">
+                    {(viewingConsumption?.items || []).filter((item: any) => Number(item.quantity_used || 0) > 0 || Number(item.qty_returned || 0) > 0).length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-3 text-text-main/60 text-center">No raw items</td>
+                      </tr>
+                    ) : (
+                      (viewingConsumption?.items || [])
+                        .filter((item: any) => Number(item.quantity_used || 0) > 0 || Number(item.qty_returned || 0) > 0)
+                        .map((item: any) => (
+                        <tr key={item.id} className="hover:bg-bg-temple/30">
+                          <td className="px-4 py-3 text-text-main">{item.item?.item_name || items?.find((it: any) => it.id === item.item_id)?.item_name || `Unknown Item (${item.item_id})`}</td>
+                          <td className="px-4 py-3 text-right text-text-main">{Number(item.quantity_used || 0).toFixed(3)}</td>
+                          <td className="px-4 py-3 text-right text-text-main">{Number(item.qty_returned || 0).toFixed(3)}</td>
+                          <td className="px-4 py-3 text-right font-bold text-text-main">{Number(item.net_quantity || 0).toFixed(3)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="temple-form-section h-full xl:col-span-3">
+              <div className="pb-2">
+                <span className="text-sm font-bold text-text-main">Wastage Entries</span>
+              </div>
+              <div className="rounded-md border border-border-temple overflow-hidden mt-1">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-bg-temple text-text-main uppercase text-[11px] font-bold tracking-wider">
+                    <tr>
+                      <th className="px-4 py-3 border-b border-border-temple">Item / Dish</th>
+                      <th className="px-4 py-3 border-b border-border-temple text-right">Qty</th>
+                      <th className="px-4 py-3 border-b border-border-temple text-right">Approx Amt</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-temple/40">
+                    {viewingWastages.filter((w: any) => Number(w.quantity || 0) > 0).length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center">No linked wastage rows</td>
+                      </tr>
+                    ) : (
+                      viewingWastages
+                        .filter((w: any) => Number(w.quantity || 0) > 0)
+                        .map((w: any, idx: number) => (
+                        <tr key={`${w.entryId}-${idx}`} className="hover:bg-bg-temple/30">
+                          <td className="px-4 py-3 text-text-main">
+                            {w.menu_item_name}{w.unit_code ? ` (${w.unit_code})` : ''}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-text-main">{Number(w.quantity || 0).toFixed(3)}</td>
+                          <td className="px-4 py-3 text-right font-bold text-text-main">
+                            {w.approx_amount != null ? formatCurrency(Number(w.approx_amount || 0)) : '-'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
           <DialogFooter className="mt-6">
             <Button onClick={() => setViewDialogOpen(false)} className="text-text-main">Close</Button>
@@ -287,78 +565,271 @@ const ConsumptionsPage: React.FC = () => {
       </Dialog>
 
       <Dialog open={open} onOpenChange={(val) => !val && setOpen(false)}>
-        <DialogContent className="max-w-6xl overflow-y-auto max-h-[90vh]">
+        <DialogContent className="max-w-[92vw] overflow-y-auto max-h-[92vh]">
           <DialogHeader>
-            <DialogTitle>New Combined Entry</DialogTitle>
+            <DialogTitle>{editingConsumption ? 'Edit Usage Entry' : 'Add Usage Entry'}</DialogTitle>
             <DialogDescription className="sr-only">Create consumption and wastage entry</DialogDescription>
           </DialogHeader>
 
+          <div className="bg-white -mx-6 px-6 pt-4">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="temple-form-section">
-              <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-                <div className="space-y-1">
-                  <Label className="temple-label">Usage Date *</Label>
-                  <Input type="date" {...register('usage_date')} className="h-8 text-xs" />
+            <div className="grid grid-cols-1 xl:grid-cols-10 gap-4 items-start">
+              <div className="temple-form-section h-full xl:col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                  <Label className="temple-label whitespace-nowrap">Date *</Label>
+                  <Input type="date" {...register('usage_date')} readOnly className="h-8 text-xs bg-gray-100 cursor-not-allowed" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label">Regular Cooking</Label>
-                  <Input type="text" {...register('regular_cooking_persons')} className="h-8 text-xs" />
+                  <Label className="temple-label whitespace-nowrap">No. of times cooked</Label>
+                  <Input 
+                    type="text" 
+                    {...register('times_cooked')} 
+                    className="h-8 text-xs" 
+                    onFocus={(e) => {
+                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                        setValue('times_cooked', '' as any);
+                      }
+                    }}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label">Additional Cooking</Label>
-                  <Input type="text" {...register('additional_cooking_persons')} className="h-8 text-xs" />
+                  <Label className="temple-label whitespace-nowrap">Regular Cooking Persons</Label>
+                  <Input 
+                    type="text" 
+                    {...register('regular_cooking_persons')} 
+                    className="h-8 text-xs" 
+                    onFocus={(e) => {
+                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                        setValue('regular_cooking_persons', '' as any);
+                      }
+                    }}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label">Regular Cleaning</Label>
-                  <Input type="text" {...register('regular_cleaning_persons')} className="h-8 text-xs" />
+                  <Label className="temple-label whitespace-nowrap">Additional Cooking Persons</Label>
+                  <Input 
+                    type="text" 
+                    {...register('additional_cooking_persons')} 
+                    className="h-8 text-xs" 
+                    onFocus={(e) => {
+                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                        setValue('additional_cooking_persons', '' as any);
+                      }
+                    }}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label">Additional Cleaning</Label>
-                  <Input type="text" {...register('additional_cleaning_persons')} className="h-8 text-xs" />
+                  <Label className="temple-label whitespace-nowrap">Regular Cleaning Persons</Label>
+                  <Input 
+                    type="text" 
+                    {...register('regular_cleaning_persons')} 
+                    className="h-8 text-xs" 
+                    onFocus={(e) => {
+                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                        setValue('regular_cleaning_persons', '' as any);
+                      }
+                    }}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label">Regular Serving</Label>
-                  <Input type="text" {...register('regular_serving_persons')} className="h-8 text-xs" />
+                  <Label className="temple-label whitespace-nowrap">Additional Cleaning Persons</Label>
+                  <Input 
+                    type="text" 
+                    {...register('additional_cleaning_persons')} 
+                    className="h-8 text-xs" 
+                    onFocus={(e) => {
+                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                        setValue('additional_cleaning_persons', '' as any);
+                      }
+                    }}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label">Additional Serving</Label>
-                  <Input type="text" {...register('additional_serving_persons')} className="h-8 text-xs" />
+                  <Label className="temple-label whitespace-nowrap">Regular Serving Persons</Label>
+                  <Input 
+                    type="text" 
+                    {...register('regular_serving_persons')} 
+                    className="h-8 text-xs" 
+                    onFocus={(e) => {
+                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                        setValue('regular_serving_persons', '' as any);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="temple-label whitespace-nowrap">Additional Serving Persons</Label>
+                  <Input 
+                    type="text" 
+                    {...register('additional_serving_persons')} 
+                    className="h-8 text-xs" 
+                    onFocus={(e) => {
+                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                        setValue('additional_serving_persons', '' as any);
+                      }
+                    }}
+                  />
+                </div>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="temple-form-section">
-                <h4 className="temple-section-header mt-0">Raw Items (From DB)</h4>
+              <div className="temple-form-section h-full xl:col-span-3">
+                <h4 className="temple-section-header mt-0 uppercase tracking-wider">Item consumption</h4>
                 <div className="max-h-[45vh] overflow-y-auto pr-2 space-y-2">
                   {(items || []).filter((i: any) => i.status === 1).map((item: any) => (
-                    <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
-                      <div className="col-span-6 text-xs text-text-main">{item.item_name} ({item.unit?.unit_code})</div>
+                    <div key={item.id} className="grid grid-cols-12 gap-2 items-center min-h-[42px]">
+                      <div className="col-span-6 text-sm font-medium text-text-main leading-5">
+                        {item.item_name}{item.unit?.unit_code ? ` (${item.unit.unit_code})` : ''}
+                      </div>
                       <div className="col-span-3">
                         <Label className="text-[10px]">Used</Label>
-                        <Input type="text" className="h-8 text-xs" {...register(`raw_items.${item.id}.quantity_used` as const)} />
+                        <Input 
+                          type="text" 
+                          className="h-8 text-xs" 
+                          {...register(`raw_items.${item.id}.quantity_used` as const)} 
+                          onFocus={(e) => {
+                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                              setValue(`raw_items.${item.id}.quantity_used` as any, '' as any);
+                            }
+                          }}
+                        />
                       </div>
                       <div className="col-span-3">
                         <Label className="text-[10px]">Returned</Label>
-                        <Input type="text" className="h-8 text-xs" {...register(`raw_items.${item.id}.qty_returned` as const)} />
+                        <Input 
+                          type="text" 
+                          className="h-8 text-xs" 
+                          {...register(`raw_items.${item.id}.qty_returned` as const)} 
+                          onFocus={(e) => {
+                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                              setValue(`raw_items.${item.id}.qty_returned` as any, '' as any);
+                            }
+                          }}
+                        />
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="temple-form-section">
-                <h4 className="temple-section-header mt-0">Wastage Menu Items (From DB)</h4>
-                <div className="max-h-[45vh] overflow-y-auto pr-2 space-y-2">
-                  {(menuItems || []).filter((m: any) => m.status === 1).map((menu: any) => (
-                    <div key={menu.id} className="grid grid-cols-12 gap-2 items-end">
-                      <div className="col-span-8 text-xs text-text-main">{menu.dish_name} ({menu.unit?.unit_code})</div>
-                      <div className="col-span-4">
-                        <Label className="text-[10px]">Qty</Label>
-                        <Input type="text" className="h-8 text-xs" {...register(`wastage_items.${menu.id}` as const)} />
+              <div className="temple-form-section h-full xl:col-span-4">
+                <h4 className="temple-section-header mt-0 uppercase tracking-wider">item wasted</h4>
+                <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-3">
+                  {/* Menu Items Wastage */}
+                  <div className="space-y-2">
+                    {(menuItems || []).filter((m: any) => m.status === 1).map((menu: any) => (
+                      <div key={menu.id} className="grid grid-cols-12 gap-2 items-center min-h-[42px]">
+                        <div className="col-span-6 text-sm font-medium text-text-main leading-5">
+                          {menu.dish_name}{menu.unit?.unit_code ? ` (${menu.unit.unit_code})` : ''}
+                        </div>
+                        <div className="col-span-3">
+                          <Label className="text-[10px]">Qty</Label>
+                          <Input 
+                            type="text" 
+                            className="h-8 text-xs" 
+                            {...register(`wastage_items.${menu.id}.quantity` as const)} 
+                            onFocus={(e) => {
+                              if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                                setValue(`wastage_items.${menu.id}.quantity` as any, '' as any);
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Label className="text-[10px]">Approx Amt</Label>
+                          <Input 
+                            type="text" 
+                            className="h-8 text-xs" 
+                            {...register(`wastage_items.${menu.id}.approx_amount` as const)} 
+                            onFocus={(e) => {
+                              if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                                setValue(`wastage_items.${menu.id}.approx_amount` as any, '' as any);
+                              }
+                            }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+
+                  {/* Raw Items Wastage */}
+                  <div className="space-y-2 pt-2">
+                    {rawWastageFields.map((field, index) => (
+                      <div key={field.id} className="grid grid-cols-12 gap-2 items-center bg-bg-temple/20 p-2 rounded border border-border-temple/20 min-h-[42px]">
+                        <div className="col-span-4">
+                          <Label className="text-[10px] mb-1 block">Serial ID</Label>
+                          <Input
+                            type="text"
+                            className="h-8 text-[11px] bg-white"
+                            placeholder="Enter serial id"
+                            {...register(`raw_wastage_items.${index}.serial_id` as const)}
+                            onChange={(e) => {
+                              const serialRaw = e.target.value || '';
+                              const normalized = serialRaw.trim().toLowerCase();
+                              const matchedItemId = serialToItemIdMap.get(normalized) || 0;
+                              setValue(`raw_wastage_items.${index}.serial_id` as const, serialRaw, { shouldDirty: true });
+                              if (matchedItemId > 0) {
+                                setValue(`raw_wastage_items.${index}.item_id` as const, matchedItemId, { shouldDirty: true, shouldValidate: true });
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <Label className="text-[10px] mb-1 block">Item Name</Label>
+                          <Controller
+                            name={`raw_wastage_items.${index}.item_id` as const}
+                            control={control}
+                            render={({ field: selectField }) => (
+                              <Select 
+                                {...selectField} 
+                                className="h-8 text-[11px] bg-white"
+                              >
+                                <option value={0}>Select Item</option>
+                                {activeItems.map((i: any) => {
+                                  const serial = i.serial_numbers?.[0]?.serial_number;
+                                  const label = serial ? `${i.item_name} (${serial})` : i.item_name;
+                                  return <option key={i.id} value={i.id}>{label}</option>
+                                })}
+                              </Select>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Label className="text-[10px] mb-1 block">Wastage Qty</Label>
+                          <Input 
+                            type="text" 
+                            className="h-8 w-[120px] text-xs bg-white" 
+                            {...register(`raw_wastage_items.${index}.quantity` as const)} 
+                          />
+                        </div>
+                        <div className="col-span-1 flex justify-end pt-5">
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => removeRawWastage(index)}
+                            className="h-8 w-8 p-0 text-error hover:bg-error/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-2">
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => appendRawWastage({ serial_id: '', item_id: 0, quantity: 0 })}
+                      className="h-8 px-3 text-xs bg-primary-main/20 text-primary-main hover:bg-primary-main/30 border border-primary-main/30 font-bold"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Raw Item
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -373,6 +844,7 @@ const ConsumptionsPage: React.FC = () => {
               </Button>
             </DialogFooter>
           </form>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

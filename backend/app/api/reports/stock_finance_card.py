@@ -5,22 +5,21 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db, get_financial_year
-from app.db.models import StockLedger, User, VendorPayment, FinancialYear
+from app.api.deps import get_current_user, get_db
+from app.db.models import StockLedger, User, VendorPayment
 from app.schemas.report import StockFinanceCardRow
 from .common import period_expr
 
 router = APIRouter()
 
 
-@router.get("/stock-finance-card", response_model=list[StockFinanceCardRow])
+@router.get("/get_stock_finance_card", response_model=list[StockFinanceCardRow])
 def stock_finance_card(
     from_date: date = Query(...),
     to_date: date = Query(...),
     group_by: str = Query("day"),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    _: User = Depends(get_current_user)
 ):
     if group_by not in {"day", "month"}:
         raise HTTPException(status_code=400, detail="group_by must be day or month")
@@ -40,8 +39,7 @@ def stock_finance_card(
         )
         .filter(
             StockLedger.txn_date >= from_date, 
-            StockLedger.txn_date <= to_date,
-            StockLedger.financial_year_id == financial_year.id
+            StockLedger.txn_date <= to_date
         )
         .group_by(period_stock)
         .order_by(period_stock)
@@ -53,8 +51,7 @@ def stock_finance_card(
         db.query(period_pay.label("period"), func.coalesce(func.sum(VendorPayment.amount), 0).label("payment_value"))
         .filter(
             VendorPayment.payment_date >= from_date, 
-            VendorPayment.payment_date <= to_date,
-            VendorPayment.financial_year_id == financial_year.id
+            VendorPayment.payment_date <= to_date
         )
         .group_by(period_pay)
         .all()

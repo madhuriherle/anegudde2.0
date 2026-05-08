@@ -1,13 +1,48 @@
 from datetime import datetime, timezone
+import math
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.db.models import User, Vendor, VendorPayment, FinancialYear
 
-def list_vendor_payments(db: Session, financial_year: FinancialYear, page: int = 1, page_size: int = 20, vendor_id: int = None):
-    query = db.query(VendorPayment).filter(VendorPayment.financial_year_id == financial_year.id)
-    if vendor_id:
-        query = query.filter(VendorPayment.vendor_id == vendor_id)
-    return query.order_by(VendorPayment.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+def list_vendor_payments(db: Session, page: int = 1, page_size: int = 20, q: str = None):
+    import re
+    query = db.query(VendorPayment).join(Vendor, VendorPayment.vendor_id == Vendor.id)
+    
+    # Smart Search: Extract dates from q if present
+    from_date, to_date = None, None
+    if q:
+        date_patterns = re.findall(r"\d{4}-\d{2}-\d{2}", q)
+        if len(date_patterns) >= 2:
+            from_date, to_date = date_patterns[0], date_patterns[1]
+            q = re.sub(r"\d{4}-\d{2}-\d{2}", "", q).strip()
+        elif len(date_patterns) == 1:
+            from_date = to_date = date_patterns[0]
+            q = re.sub(r"\d{4}-\d{2}-\d{2}", "", q).strip()
+
+    if from_date:
+        query = query.filter(VendorPayment.payment_date >= from_date)
+    if to_date:
+        query = query.filter(VendorPayment.payment_date <= to_date)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (Vendor.vendor_name.ilike(like)) |
+            (VendorPayment.reference_no.ilike(like)) |
+            (VendorPayment.remarks.ilike(like))
+        )
+    
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(VendorPayment.id.desc()).offset(offset).limit(page_size).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+    }
 
 def create_vendor_payment(payload, db: Session, current_user: User, financial_year: FinancialYear) -> VendorPayment:
     vendor = db.query(Vendor).filter(Vendor.id == payload.vendor_id).first()

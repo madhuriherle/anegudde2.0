@@ -17,6 +17,41 @@ class StockReportRow(BaseModel):
     value_out: Decimal
 
 
+class DetailedStockSummaryRow(BaseModel):
+    item_id: int
+    item_name: str
+    unit: str
+    rate: Decimal
+    opening_balance: Decimal
+    purchase_qty: Decimal
+    issue_qty: Decimal
+    issue_value: Decimal
+    purchase_return_qty: Decimal
+    stock_adjustment_qty: Decimal
+    closing_stock: Decimal
+    closing_value: Decimal
+
+
+class StockSummaryFooter(BaseModel):
+    mahaprasada_devotees: int
+    times_cooked: int
+    cooking_persons: int
+    serving_persons: int
+    cleaning_persons: int
+    rice_remained: Decimal
+    anna_remained: Decimal
+    saru_remained: Decimal
+    huli_remained: Decimal
+    payasam_remained: Decimal
+
+
+class DetailedStockSummaryResponse(BaseModel):
+    from_date: date
+    to_date: date
+    rows: list[DetailedStockSummaryRow]
+    footer: StockSummaryFooter | None = None
+
+
 class StockFinanceCardRow(BaseModel):
     period: str
     opening_stock: Decimal

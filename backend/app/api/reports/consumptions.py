@@ -4,30 +4,28 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db, get_financial_year
-from app.db.models import ConsumptionEntry, StockLedger, User, FinancialYear
+from app.api.deps import get_current_user, get_db
+from app.db.models import ConsumptionEntry, StockLedger, User
 from app.schemas.report import ReportRow
 from .common import period_expr
 
 router = APIRouter()
 
 
-@router.get("/consumptions", response_model=list[ReportRow])
+@router.get("/get_consumptions_report", response_model=list[ReportRow])
 def consumptions_report(
     from_date: date = Query(...), 
     to_date: date = Query(...), 
     group_by: str = Query("day"), 
     db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    _: User = Depends(get_current_user)
 ):
     period = period_expr(group_by, ConsumptionEntry.usage_date)
     rows = (
         db.query(period.label("period"), func.coalesce(func.sum(ConsumptionEntry.people_served), 0).label("total_amount"), func.count(ConsumptionEntry.id).label("total_count"))
         .filter(
             ConsumptionEntry.usage_date >= from_date, 
-            ConsumptionEntry.usage_date <= to_date,
-            ConsumptionEntry.financial_year_id == financial_year.id
+            ConsumptionEntry.usage_date <= to_date
         )
         .group_by(period)
         .order_by(period)
@@ -36,13 +34,12 @@ def consumptions_report(
     return [ReportRow(period=r.period, total_amount=r.total_amount, total_count=r.total_count) for r in rows]
 
 
-@router.get("/cooked_remained_totals")
+@router.get("/get_cooked_remained_totals")
 def cooked_remained_totals(
     from_date: date = Query(...), 
     to_date: date = Query(...), 
     db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    _: User = Depends(get_current_user)
 ):
     row = (
         db.query(
@@ -54,8 +51,7 @@ def cooked_remained_totals(
         )
         .filter(
             ConsumptionEntry.usage_date >= from_date, 
-            ConsumptionEntry.usage_date <= to_date,
-            ConsumptionEntry.financial_year_id == financial_year.id
+            ConsumptionEntry.usage_date <= to_date
         )
         .first()
     )
@@ -70,21 +66,19 @@ def cooked_remained_totals(
     }
 
 
-@router.get("/raw_stock_movement")
+@router.get("/get_raw_stock_movement")
 def raw_stock_movement(
     from_date: date = Query(...), 
     to_date: date = Query(...), 
     db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    _: User = Depends(get_current_user)
 ):
     issue_qty = (
         db.query(func.coalesce(func.sum(StockLedger.qty_out), 0))
         .filter(
             StockLedger.txn_date >= from_date,
             StockLedger.txn_date <= to_date,
-            StockLedger.ref_table == "consumption_entries:RAW_ISSUE",
-            StockLedger.financial_year_id == financial_year.id
+            StockLedger.ref_table == "consumption_entries:RAW_ISSUE"
         )
         .scalar()
     )
@@ -93,8 +87,7 @@ def raw_stock_movement(
         .filter(
             StockLedger.txn_date >= from_date,
             StockLedger.txn_date <= to_date,
-            StockLedger.ref_table == "consumption_entries:RAW_RETURN",
-            StockLedger.financial_year_id == financial_year.id
+            StockLedger.ref_table == "consumption_entries:RAW_RETURN"
         )
         .scalar()
     )

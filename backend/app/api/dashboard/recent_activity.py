@@ -1,25 +1,23 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db, get_financial_year
-from app.db.models import ConsumptionEntry, PurchaseEntry, User, Vendor, VendorPayment, WastageEntry, FinancialYear
+from app.api.deps import get_current_user, get_db
+from app.db.models import ConsumptionEntry, PurchaseEntry, User, Vendor, VendorPayment, WastageEntry
 from app.schemas.dashboard import RecentActivityRow
 
 router = APIRouter()
 
 
-@router.get("/recent-activity", response_model=list[RecentActivityRow])
+@router.get("/get_recent_activity", response_model=list[RecentActivityRow])
 def recent_activity(
     db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    _: User = Depends(get_current_user)
 ):
     activities: list[RecentActivityRow] = []
 
     purchases = (
         db.query(PurchaseEntry, Vendor.vendor_name)
         .join(Vendor)
-        .filter(PurchaseEntry.financial_year_id == financial_year.id)
         .order_by(PurchaseEntry.created_at.desc())
         .limit(10)
         .all()
@@ -29,7 +27,6 @@ def recent_activity(
 
     consumptions = (
         db.query(ConsumptionEntry)
-        .filter(ConsumptionEntry.financial_year_id == financial_year.id)
         .order_by(ConsumptionEntry.created_at.desc())
         .limit(10)
         .all()
@@ -39,7 +36,6 @@ def recent_activity(
 
     wastages = (
         db.query(WastageEntry)
-        .filter(WastageEntry.financial_year_id == financial_year.id)
         .order_by(WastageEntry.created_at.desc())
         .limit(10)
         .all()
@@ -50,7 +46,6 @@ def recent_activity(
     payments = (
         db.query(VendorPayment, Vendor.vendor_name)
         .join(Vendor)
-        .filter(VendorPayment.financial_year_id == financial_year.id)
         .order_by(VendorPayment.created_at.desc())
         .limit(10)
         .all()

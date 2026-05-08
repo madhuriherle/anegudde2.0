@@ -1,15 +1,34 @@
 from datetime import datetime, timezone
 from decimal import Decimal
+import math
 from fastapi import HTTPException
 from sqlalchemy import String, or_
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import ConsumptionEntry, ConsumptionItem, Item, StockLedger, User, FinancialYear
+from app.db.models import ConsumptionEntry, ConsumptionItem, Item, StockLedger, User
 from app.schemas.consumption import ConsumptionEntryCreate, ConsumptionEntryUpdate
 from app.services.item_service import get_item_last_price
 
-def list_consumptions(db: Session, financial_year: FinancialYear, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
-    query = db.query(ConsumptionEntry).filter(ConsumptionEntry.financial_year_id == financial_year.id).options(joinedload(ConsumptionEntry.items), joinedload(ConsumptionEntry.user))
+def list_consumptions(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
+    import re
+    query = db.query(ConsumptionEntry).options(joinedload(ConsumptionEntry.items), joinedload(ConsumptionEntry.user))
     if status is not None: query = query.filter(ConsumptionEntry.status == status)
+    
+    # Smart Search: Extract dates from q if present
+    from_date, to_date = None, None
+    if q:
+        date_patterns = re.findall(r"\d{4}-\d{2}-\d{2}", q)
+        if len(date_patterns) >= 2:
+            from_date, to_date = date_patterns[0], date_patterns[1]
+            q = re.sub(r"\d{4}-\d{2}-\d{2}", "", q).strip()
+        elif len(date_patterns) == 1:
+            from_date = to_date = date_patterns[0]
+            q = re.sub(r"\d{4}-\d{2}-\d{2}", "", q).strip()
+
+    if from_date:
+        query = query.filter(ConsumptionEntry.usage_date >= from_date)
+    if to_date:
+        query = query.filter(ConsumptionEntry.usage_date <= to_date)
+
     if q:
         like = f"%{q}%"
         if search_field == "id":
@@ -24,7 +43,18 @@ def list_consumptions(db: Session, financial_year: FinancialYear, page: int = 1,
                     ConsumptionEntry.remarks.ilike(like),
                 )
             ).distinct()
-    return query.order_by(ConsumptionEntry.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(ConsumptionEntry.id.desc()).offset(offset).limit(page_size).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+    }
 
 def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_user: User, financial_year: FinancialYear) -> ConsumptionEntry:
     now = datetime.now(timezone.utc)
@@ -40,6 +70,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
         payload.additional_cleaning_persons,
         payload.regular_serving_persons,
         payload.additional_serving_persons,
+        payload.times_cooked,
     ]:
         if manpower_value < 0:
             raise HTTPException(status_code=422, detail="Manpower fields must be >= 0")
@@ -58,6 +89,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
         additional_cleaning_persons=payload.additional_cleaning_persons,
         regular_serving_persons=payload.regular_serving_persons,
         additional_serving_persons=payload.additional_serving_persons,
+        times_cooked=payload.times_cooked,
         anna_remained=payload.anna_remained,
         saru_remained=payload.saru_remained,
         huli_remained=payload.huli_remained,
@@ -117,9 +149,10 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
                 value_in=0,
                 value_out=(it.quantity_used * unit_cost),
                 balance=issue_balance,
-                created_at=now,
-                updated_at=now,
-                created_by=current_user.id,
+                current_value=issue_balance * unit_cost,
+                created_at=now, 
+                updated_at=now, 
+                created_by=current_user.id, 
                 updated_by=current_user.id
             ))
             if it.qty_returned > 0:
@@ -136,6 +169,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
                     value_in=(it.qty_returned * unit_cost),
                     value_out=0,
                     balance=return_balance,
+                    current_value=return_balance * unit_cost,
                     created_at=now,
                     updated_at=now,
                     created_by=current_user.id,
@@ -169,6 +203,27 @@ def delete_consumption(consumption_id: int, db: Session, current_user: User) -> 
     db.delete(entry); db.commit()
 
 def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db: Session, current_user: User, financial_year: FinancialYear) -> ConsumptionEntry:
+    existing = get_consumption(consumption_id, db)
+    payload_create = ConsumptionEntryCreate(
+        usage_date=payload.usage_date,
+        people_served=payload.people_served,
+        remarks=payload.remarks,
+        regular_cooking_persons=payload.regular_cooking_persons,
+        additional_cooking_persons=payload.additional_cooking_persons,
+        regular_cleaning_persons=payload.regular_cleaning_persons,
+        additional_cleaning_persons=payload.additional_cleaning_persons,
+        regular_serving_persons=payload.regular_serving_persons,
+        additional_serving_persons=payload.additional_serving_persons,
+        times_cooked=payload.times_cooked,
+        anna_remained=payload.anna_remained,
+        saru_remained=payload.saru_remained,
+        huli_remained=payload.huli_remained,
+        payas_remained=payload.payas_remained,
+        financial_year_id=payload.financial_year_id,
+        user_id=existing.user_id,
+        status=existing.status,
+        items=payload.items,
+    )
     delete_consumption(consumption_id, db, current_user)
-    new_entry = create_consumption(payload, db, current_user, financial_year)
+    new_entry = create_consumption(payload_create, db, current_user, financial_year)
     return get_consumption_full(new_entry.id, db)

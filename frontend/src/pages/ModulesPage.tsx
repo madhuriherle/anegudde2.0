@@ -24,9 +24,8 @@ const ModulesPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-12 py-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-secondary font-serif" style={{ fontSize: '40px' }}>Anegudde Shree Vinayaka Devasthana</h1>
-        <p className="text-xl text-text-normal font-medium">Inventory & Management System</p>
+      <div className="text-center space-y-3">
+        <h1 className="text-2xl font-bold text-secondary font-serif" style={{ fontSize: '24px' }}>Anegudde Inventory Management System (AIMS)</h1>
         <div className="w-24 h-1 bg-primary mx-auto rounded-full"></div>
       </div>
 
@@ -42,9 +41,9 @@ const ModulesPage: React.FC = () => {
                 <div className={`p-6 rounded-3xl ${module.bg} ${module.color} group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-sm`}>
                   <module.icon className="w-12 h-12" />
                 </div>
-                <div className="text-center space-y-2">
-                  <h3 className="text-2xl font-bold text-secondary font-serif" style={{ fontSize: '24px' }}>{module.title}</h3>
-                  <p className="text-sm text-text-light font-medium">Access {module.title} module</p>
+                <div className="text-center space-y-1.5">
+                  <h3 className="text-lg font-bold text-secondary font-serif" style={{ fontSize: '16px' }}>{module.title}</h3>
+                  <p className="text-[11px] text-text-light font-medium">Access {module.title} module</p>
                 </div>
               </CardContent>
             </Card>

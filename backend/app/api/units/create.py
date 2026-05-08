@@ -5,7 +5,7 @@ from app.api.deps import get_current_user, get_db, get_financial_year
 from app.db.models import Unit, User, FinancialYear
 from app.schemas.unit import UnitCreate, UnitOut
 router = APIRouter()
-@router.post("/", response_model=UnitOut, status_code=status.HTTP_201_CREATED)
+@router.post("/create_unit", response_model=UnitOut, status_code=status.HTTP_201_CREATED)
 def create_unit(
     payload: UnitCreate, 
     db: Session = Depends(get_db), 

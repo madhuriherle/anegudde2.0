@@ -10,7 +10,7 @@ from app.schemas.item_type import ItemTypeCreate, ItemTypeOut
 router = APIRouter()
 
 
-@router.post("/", response_model=ItemTypeOut, status_code=status.HTTP_201_CREATED)
+@router.post("/create_item_type", response_model=ItemTypeOut, status_code=status.HTTP_201_CREATED)
 def create_item_type(
     payload: ItemTypeCreate,
     db: Session = Depends(get_db),

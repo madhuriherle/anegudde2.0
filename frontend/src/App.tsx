@@ -19,8 +19,10 @@ import WastagesPage from './pages/WastagesPage';
 import ReportsPage from './pages/ReportsPage';
 import ProfilePage from './pages/ProfilePage';
 import DailyStockReportPage from './pages/DailyStockReportPage';
+import StockSummaryPage from './pages/StockSummaryPage';
 import MonthlyPerformanceReportPage from './pages/MonthlyPerformanceReportPage';
 import VendorOutstandingReportPage from './pages/VendorOutstandingReportPage';
+import TokenReportPage from './pages/TokenReportPage';
 
 function App() {
   return (
@@ -39,7 +41,9 @@ function App() {
         <Route path="/consumptions" element={<ConsumptionsPage />} />
         <Route path="/wastages" element={<WastagesPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/reports/tokens" element={<TokenReportPage />} />
         <Route path="/reports/daily-closing" element={<DailyStockReportPage />} />
+        <Route path="/reports/stock-summary" element={<StockSummaryPage />} />
         <Route path="/reports/monthly-performance" element={<MonthlyPerformanceReportPage />} />
         <Route path="/reports/vendor-outstanding" element={<VendorOutstandingReportPage />} />
         <Route path="/users" element={<UsersPage />} />

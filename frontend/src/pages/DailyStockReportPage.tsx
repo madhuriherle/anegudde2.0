@@ -15,6 +15,8 @@ import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { Label } from '../components/ui/Label';
+import { formatDate } from '../utils/date';
+import { formatCurrency } from '../utils/currency';
 
 const DailyStockReportPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
@@ -82,7 +84,7 @@ const DailyStockReportPage: React.FC = () => {
     );
     if (!confirmed) return;
     try {
-      await api.post(`/reports/generate-daily-summary?target_date=${targetDate}`);
+      await api.post(`/reports/generate_daily_summary?target_date=${targetDate}`);
       showSuccess('Snapshot generation triggered successfully.');
       refetch();
     } catch (error) {
@@ -141,7 +143,7 @@ const DailyStockReportPage: React.FC = () => {
       header: () => <div className="text-right">Est. Value</div>,
       cell: info => (
         <div className="text-right text-text-main font-medium">
-          ₹{Number(info.getValue() || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          {formatCurrency(info.getValue())}
         </div>
       ),
     },
@@ -151,7 +153,7 @@ const DailyStockReportPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main text-2xl font-semibold font-temple">Daily Closing Stock Report</h2>
+          <h2 className="page-title">Daily Closing Stock Report</h2>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
@@ -173,11 +175,11 @@ const DailyStockReportPage: React.FC = () => {
               <Info className="h-3.5 w-3.5" />
             </div>
             <div className="text-3xl font-bold text-white">
-              ₹{totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatCurrency(totalStockValue)}
             </div>
             <p className="text-xs text-white/60 mt-2 flex items-center gap-1">
               <ChevronRight className="h-3 w-3" />
-              Based on item prices as of {targetDate}
+              Based on item prices as of {formatDate(targetDate)}
             </p>
           </CardContent>
         </Card>
@@ -228,4 +230,7 @@ const DailyStockReportPage: React.FC = () => {
 };
 
 export default DailyStockReportPage;
+
+
+
 

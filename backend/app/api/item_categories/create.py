@@ -5,7 +5,7 @@ from app.api.deps import get_current_user, get_db, get_financial_year
 from app.db.models import ItemCategory, ItemType, User, FinancialYear
 from app.schemas.item_category import ItemCategoryCreate, ItemCategoryOut
 router = APIRouter()
-@router.post("/", response_model=ItemCategoryOut, status_code=status.HTTP_201_CREATED)
+@router.post("/create_category", response_model=ItemCategoryOut, status_code=status.HTTP_201_CREATED)
 def create_category(
     payload: ItemCategoryCreate, 
     db: Session = Depends(get_db), 

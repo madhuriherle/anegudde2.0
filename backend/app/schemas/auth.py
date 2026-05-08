@@ -12,7 +12,7 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class UserOut(BaseModel):
+class AuthUserOut(BaseModel):
     id: int
     username: str
     full_name: str

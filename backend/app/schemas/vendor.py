@@ -42,3 +42,7 @@ class VendorOut(VendorBase):
     updated_by: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+VendorCreate.model_rebuild()
+VendorUpdate.model_rebuild()
+VendorOut.model_rebuild()

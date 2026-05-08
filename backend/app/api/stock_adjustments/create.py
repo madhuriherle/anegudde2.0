@@ -17,7 +17,25 @@ def create_adjustment(payload: StockAdjustmentCreate, db: Session = Depends(get_
     db.add(adjustment); db.flush()
     
     item.current_stock = str(Decimal(item.current_stock or "0") + payload.adjusted_qty); item.updated_at = now; item.updated_by = current_user.id
-    db.add(StockLedger(item_id=item.id, financial_year_id=fy_id, txn_date=payload.adjustment_date, txn_type=4, ref_table="stock_adjustments", ref_id=adjustment.id, qty_in=payload.adjusted_qty if payload.adjusted_qty > 0 else 0, qty_out=abs(payload.adjusted_qty) if payload.adjusted_qty < 0 else 0, unit_cost=item.default_price or 0, value_in=(payload.adjusted_qty * (item.default_price or 0)) if payload.adjusted_qty > 0 else 0, value_out=(abs(payload.adjusted_qty) * (item.default_price or 0)) if payload.adjusted_qty < 0 else 0, balance=Decimal(item.current_stock), created_at=now, updated_at=now, created_by=current_user.id, updated_by=current_user.id))
+    db.add(StockLedger(
+        item_id=item.id, 
+        financial_year_id=fy_id, 
+        txn_date=payload.adjustment_date, 
+        txn_type=4, 
+        ref_table="stock_adjustments", 
+        ref_id=adjustment.id, 
+        qty_in=payload.adjusted_qty if payload.adjusted_qty > 0 else 0, 
+        qty_out=abs(payload.adjusted_qty) if payload.adjusted_qty < 0 else 0, 
+        unit_cost=item.default_price or 0, 
+        value_in=(payload.adjusted_qty * (item.default_price or 0)) if payload.adjusted_qty > 0 else 0, 
+        value_out=(abs(payload.adjusted_qty) * (item.default_price or 0)) if payload.adjusted_qty < 0 else 0, 
+        balance=Decimal(item.current_stock), 
+        current_value=Decimal(item.current_stock) * (item.default_price or 0),
+        created_at=now, 
+        updated_at=now, 
+        created_by=current_user.id, 
+        updated_by=current_user.id
+    ))
     db.commit()
     return StockAdjustmentOut(
         id=adjustment.id,

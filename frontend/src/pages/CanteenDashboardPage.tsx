@@ -4,33 +4,22 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-
-const inr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
+import { formatCurrency } from '../utils/currency';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const { data: overview, isLoading: overviewLoading } = useQuery({
-    queryKey: ['dashboard-overview'],
-    queryFn: async () => (await api.get('/dashboard/overview')).data,
-  });
-
   const { data: today, isLoading: todayLoading } = useQuery({
     queryKey: ['dashboard-today'],
-    queryFn: async () => (await api.get('/dashboard/today')).data,
+    queryFn: async () => (await api.get('/dashboard/get_today_summary')).data,
   });
 
   const { data: lowStock, isLoading: lowStockLoading } = useQuery({
     queryKey: ['dashboard-low-stock'],
-    queryFn: async () => (await api.get('/dashboard/low-stock')).data,
+    queryFn: async () => (await api.get('/dashboard/get_low_stock')).data,
   });
 
-  const { data: activities, isLoading: activitiesLoading } = useQuery({
-    queryKey: ['dashboard-recent-activity'],
-    queryFn: async () => (await api.get('/dashboard/recent-activity')).data,
-  });
-
-  if (overviewLoading || todayLoading || lowStockLoading || activitiesLoading) {
+  if (todayLoading || lowStockLoading) {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -38,7 +27,7 @@ const DashboardPage: React.FC = () => {
     );
   }
 
-  if (!overview || !today || !Array.isArray(lowStock) || !Array.isArray(activities)) {
+  if (!today || !Array.isArray(lowStock)) {
     return (
       <div className="p-8 text-center text-error font-medium">
         Failed to load dashboard data.
@@ -47,149 +36,191 @@ const DashboardPage: React.FC = () => {
   }
 
   const todayCards = [
-    { title: "Today's Purchase", value: `\u20B9${inr.format(Number(today.purchase_amount || 0))}`, to: '/purchases' },
+    { title: "Today's Purchase", value: formatCurrency(today.purchase_amount), to: '/purchases' },
     { title: "Today's Consumption", value: today.consumption_entries, to: '/consumptions' },
-    { title: 'Wastage', value: today.wastage_entries, to: '/wastages' },
-  ];
-
-  const summaryCards = [
-    { title: 'Current Stock', value: `\u20B9${inr.format(Number(overview.total_stock_value || 0))}`, to: '/items' },
-    { title: 'Financial Balance', value: `\u20B9${inr.format(Number(overview.total_outstanding_balance || 0))}`, to: '/vendors' },
-    { title: 'Total Vendors', value: overview.total_vendors, to: '/vendors' },
-    { title: 'Total Items', value: overview.total_items, to: '/items' },
+    { title: "Today's Wastage", value: today.wastage_entries, to: '/wastages' },
+    { title: "Tokens Issued Today", value: today.tokens_issued, to: '/tokens' },
   ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-text-main">Dashboard Overview</h2>
+        <h2 className="page-title">Canteen Dashboard</h2>
       </div>
 
-      <section className="space-y-4">
-        <h3 className="text-text-main">Today's Metrics</h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {todayCards.map((card) => (
-            <button
-              key={card.title}
-              onClick={() => navigate(card.to)}
-              className="flex flex-col p-6 border border-border-temple bg-white text-left"
-            >
-              <span className="text-text-main mb-1">{card.title}</span>
-              <span className="text-text-main">{card.value}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="text-text-main">Overall Summary</h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {summaryCards.map((card) => (
-            <button
-              key={card.title}
-              onClick={() => navigate(card.to)}
-              className="flex flex-col p-6 border border-border-temple bg-white text-left"
-            >
-              <span className="text-text-main mb-1">{card.title}</span>
-              <span className="text-text-main">{card.value}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Low Stock Alerts */}
-        <Card className="flex flex-col border-border-temple">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-bg-temple">
-            <div className="space-y-1">
-              <CardTitle className="text-text-main">Low Stock Alerts</CardTitle>
-              <div className="flex items-center gap-2">
-                <span className="text-text-main">
-                  {lowStock.length} items below threshold
-                </span>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/items')} className="text-text-main">
-              View items
-            </Button>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Today's Purchase Card */}
+        <Card className="group border-border-temple flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30">
+          <CardHeader className="pb-2 border-b border-bg-temple bg-gray-50/50 transition-colors group-hover:bg-primary/5">
+            <span className="text-text-main text-sm opacity-70 uppercase font-semibold">Today's Purchase</span>
+            <CardTitle className="text-text-main text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{formatCurrency(today.purchase_amount)}</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1">
-            <div className="space-y-3 mt-4">
-              {lowStock.length > 0 ? (
-                lowStock.map((item: any) => (
-                  <div 
-                    key={item.item_id}
-                    className="flex items-center justify-between p-3 border border-border-temple"
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-text-main">{item.item_name}</span>
-                      <div className="flex items-center gap-2">
-                         <span className="text-text-main">Current: {item.current_stock}</span>
-                         <span className="text-text-main">Min: {item.min_stock_level}</span>
+          <CardContent className="flex-1 p-0 overflow-hidden">
+            <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
+              {today.purchase_details.length > 0 ? (
+                <div className="divide-y divide-border-temple">
+                  {today.purchase_details.map((item: any, idx: number) => (
+                    <div key={idx} className="p-3 text-xs hover:bg-primary/5 transition-colors cursor-default">
+                      <div className="flex justify-between font-medium text-text-main">
+                        <span className="truncate mr-2">{item.item_name}</span>
+                        <span className="text-primary font-bold">{formatCurrency(item.amount)}</span>
+                      </div>
+                      <div className="text-text-main opacity-60">
+                        {Number(item.quantity).toLocaleString()} {item.unit_name}
                       </div>
                     </div>
-                    <span className="text-text-main">Low</span>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-text-main">
-                  <p>No low stock items. All good!</p>
+                <div className="p-6 text-center text-text-main opacity-40 italic text-xs">
+                  No purchases today
                 </div>
               )}
             </div>
           </CardContent>
+          <div className="p-2 border-t border-border-temple bg-gray-50/30 text-center">
+             <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-[10px] h-6 hover:bg-primary hover:text-white transition-all" 
+                onClick={() => navigate('/purchases')}
+              >
+                View All
+              </Button>
+          </div>
         </Card>
 
-        {/* Recent Activity */}
-        <Card className="flex flex-col border-border-temple">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-bg-temple">
-            <div className="space-y-1">
-              <CardTitle className="text-text-main">Recent System Activity</CardTitle>
-              <div className="flex items-center gap-2">
-                <span className="text-text-main">
-                  {activities.length} recent events
-                </span>
-              </div>
-            </div>
+        {/* Today's Consumption Card */}
+        <Card className="group border-border-temple flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-secondary/30">
+          <CardHeader className="pb-2 border-b border-bg-temple bg-gray-50/50 transition-colors group-hover:bg-secondary/5">
+            <span className="text-text-main text-sm opacity-70 uppercase font-semibold">Today's Consumption</span>
+            <CardTitle className="text-text-main text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{today.consumption_entries}</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1">
-             <div className="space-y-3 mt-4">
-              {activities.length > 0 ? (
-                activities.map((act: any, idx: number) => (
-                  <div 
-                    key={idx}
-                    className="flex items-start gap-4 p-3 border border-transparent"
-                  >
-                    <div className="w-2 h-2 mt-1.5 rounded-full flex-shrink-0 bg-text-main" />
-                    <div className="flex-1 flex flex-col gap-0.5 min-w-0">
-                      <span className="text-text-main truncate">{act.title}</span>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-text-main truncate">{act.description}</span>
-                        <span className="text-text-main whitespace-nowrap">
-                          {new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+          <CardContent className="flex-1 p-0 overflow-hidden">
+            <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
+              {today.consumption_details.length > 0 ? (
+                <div className="divide-y divide-border-temple">
+                  {today.consumption_details.map((item: any, idx: number) => (
+                    <div key={idx} className="p-3 text-xs hover:bg-secondary/5 transition-colors cursor-default">
+                      <div className="flex justify-between font-medium text-text-main">
+                        <span className="truncate mr-2">{item.item_name}</span>
+                        <span className="text-secondary font-bold">{formatCurrency(item.amount)}</span>
+                      </div>
+                      <div className="text-text-main opacity-60">
+                        {Number(item.quantity).toLocaleString()} {item.unit_name}
                       </div>
                     </div>
-                    {act.amount && (
-                      <span className="text-text-main whitespace-nowrap">
-                        {act.activity_type === 'payment' ? '-' : '+'}\u20B9{inr.format(Number(act.amount))}
-                      </span>
-                    )}
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-text-main">
-                  <p>No recent activities logged today.</p>
+                <div className="p-6 text-center text-text-main opacity-40 italic text-xs">
+                  No consumption today
                 </div>
               )}
             </div>
           </CardContent>
+          <div className="p-2 border-t border-border-temple bg-gray-50/30 text-center">
+             <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-[10px] h-6 hover:bg-secondary hover:text-white transition-all" 
+                onClick={() => navigate('/consumptions')}
+              >
+                View All
+              </Button>
+          </div>
+        </Card>
+
+        {/* Today's Wastage Card */}
+        <Card className="group border-border-temple flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-error/30">
+          <CardHeader className="pb-2 border-b border-bg-temple bg-gray-50/50 transition-colors group-hover:bg-error/5">
+            <span className="text-text-main text-sm opacity-70 uppercase font-semibold">Today's Wastage</span>
+            <CardTitle className="text-text-main text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{today.wastage_entries}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 p-0 overflow-hidden">
+            <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
+              {today.wastage_details.length > 0 ? (
+                <div className="divide-y divide-border-temple">
+                  {today.wastage_details.map((item: any, idx: number) => (
+                    <div key={idx} className="p-3 text-xs hover:bg-error/5 transition-colors cursor-default">
+                      <div className="font-medium text-text-main truncate group-hover:text-error transition-colors">
+                        {item.menu_item_name}
+                      </div>
+                      <div className="text-text-main opacity-60">
+                        {Number(item.quantity).toLocaleString()} {item.unit_name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center text-text-main opacity-40 italic text-xs">
+                  No wastage today
+                </div>
+              )}
+            </div>
+          </CardContent>
+          <div className="p-2 border-t border-border-temple bg-gray-50/30 text-center">
+             <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-[10px] h-6 hover:bg-error hover:text-white transition-all" 
+                onClick={() => navigate('/wastages')}
+              >
+                View All
+              </Button>
+          </div>
+        </Card>
+
+        {/* Tokens Issued Today Card */}
+        <Card className="group border-border-temple flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30">
+          <CardHeader className="pb-2 border-b border-bg-temple bg-gray-50/50 transition-colors group-hover:bg-primary/5">
+            <span className="text-text-main text-sm opacity-70 uppercase font-semibold">Tokens Issued</span>
+            <CardTitle className="text-text-main text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{today.tokens_issued}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex items-center justify-center p-6 bg-white transition-colors group-hover:bg-gray-50/30">
+            <div className="text-center space-y-2 transition-transform duration-500 group-hover:scale-110">
+              <div className="text-4xl font-bold text-primary opacity-20 group-hover:opacity-40 transition-opacity">#</div>
+              <p className="text-xs text-text-main opacity-60">Total tokens generated for today's distribution.</p>
+            </div>
+          </CardContent>
+          <div className="p-2 border-t border-border-temple bg-gray-50/30 text-center">
+             <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-[10px] h-6 hover:bg-primary hover:text-white transition-all" 
+                onClick={() => navigate('/tokens')}
+              >
+                View History
+              </Button>
+          </div>
         </Card>
       </div>
+
+      {/* Low Stock Alerts - Kept as a smaller footer section */}
+      {lowStock.length > 0 && (
+        <section className="mt-12">
+           <div className="flex items-center justify-between mb-4">
+              <h3 className="text-text-main font-semibold flex items-center gap-2">
+                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                 Low Stock Alerts
+              </h3>
+              <Button variant="link" size="sm" onClick={() => navigate('/items')} className="text-xs text-primary">View Inventory</Button>
+           </div>
+           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {lowStock.slice(0, 4).map((item: any) => (
+                <div key={item.item_id} className="p-3 bg-red-50 border border-red-100 rounded-lg flex justify-between items-center">
+                   <span className="text-xs font-medium text-red-900">{item.item_name}</span>
+                   <span className="text-[10px] bg-red-200 text-red-800 px-2 py-0.5 rounded-full font-bold">{item.current_stock} Left</span>
+                </div>
+              ))}
+           </div>
+        </section>
+      )}
     </div>
   );
 };
 
 export default DashboardPage;
+
 
 

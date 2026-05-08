@@ -21,6 +21,23 @@ class DashboardToday(BaseModel):
     wastage_entries: int
     wastage_value: Decimal
     vendor_payment_amount: Decimal
+    tokens_issued: int
+    purchase_details: list["DailyItemDetail"]
+    consumption_details: list["DailyItemDetail"]
+    wastage_details: list["DailyWastageDetail"]
+
+
+class DailyItemDetail(BaseModel):
+    item_name: str
+    unit_name: str
+    quantity: Decimal
+    amount: Decimal
+
+
+class DailyWastageDetail(BaseModel):
+    menu_item_name: str
+    unit_name: str
+    quantity: Decimal
 
 
 class LowStockRow(BaseModel):

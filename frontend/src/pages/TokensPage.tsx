@@ -24,6 +24,7 @@ import {
   DialogTitle, 
   DialogFooter 
 } from '../components/ui/Dialog';
+import { formatDate, formatDateTime } from '../utils/date';
 
 const tokenSchema = z.object({
   token_count: z.coerce.number().min(1, 'Token count must be at least 1'),
@@ -43,26 +44,28 @@ const TokensPage: React.FC = () => {
   const [viewingDate, setViewingDate] = useState<string | null>(null);
 
   // Fetch Generations (Daily Summaries)
-  const { data: generations, isLoading: generationsLoading } = useQuery({
+  const { data: generationsData, isLoading: generationsLoading } = useQuery({
     queryKey: ['token-generations', pageSize],
     queryFn: async () => {
       const res = await api.get('/tokens/list_generations', { params: { page_size: pageSize } });
       return res.data;
     },
   });
+  const generations = useMemo(() => generationsData?.items || [], [generationsData]);
 
   // Fetch Details for a specific date
-  const { data: details, isLoading: detailsLoading } = useQuery({
+  const { data: detailsData, isLoading: detailsLoading } = useQuery({
     queryKey: ['token-details', viewingDate],
     queryFn: async () => {
-      if (!viewingDate) return [];
+      if (!viewingDate) return { items: [] };
       const res = await api.get(`/tokens/get_details_by_date/${viewingDate}`);
       return res.data;
     },
     enabled: !!viewingDate,
   });
+  const details = useMemo(() => detailsData?.items || [], [detailsData]);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<TokenFormValues>({
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<TokenFormValues>({
     resolver: zodResolver(tokenSchema) as any,
     defaultValues: {
         token_count: 0
@@ -112,7 +115,8 @@ const TokensPage: React.FC = () => {
   const columns = useMemo<ColumnDef<any>[]>(() => [
     { 
       accessorKey: 'date', 
-      header: 'Date', 
+      header: 'Date',
+      cell: info => <span className="text-text-main">{formatDate(info.getValue())}</span>,
     },
     { 
       accessorKey: 'total_tokens', 
@@ -128,14 +132,14 @@ const TokensPage: React.FC = () => {
       header: 'First Token At', 
       cell: info => {
         const val = info.getValue() as string;
-        return val ? new Date(val).toLocaleString() : '-';
+        return formatDateTime(val);
       }
     },
     {
       id: 'actions',
-      header: "Actions",
+      header: () => <div className="text-center">Actions</div>,
       cell: info => (
-        <div className="flex justify-end px-4">
+        <div className="flex items-center justify-center gap-2">
           <Button 
             variant="outline"
             size="sm"
@@ -145,15 +149,15 @@ const TokensPage: React.FC = () => {
             Details
           </Button>
         </div>
-      ),
-    },
+      )
+    }
   ], []);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main">Token Management</h2>
+          <h2 className="page-title">Token Management</h2>
           <button 
             onClick={() => navigate('/tokens/history')}
             className="text-sm text-primary hover:underline"
@@ -165,7 +169,7 @@ const TokensPage: React.FC = () => {
           onClick={handleOpen}
           className="text-text-main font-bold px-6"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          
           Issue New Tokens
         </Button>
       </div>
@@ -182,7 +186,7 @@ const TokensPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="text-text-main">Issue New Tokens</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4 pb-0">
             <div className="space-y-4">
               <p className="text-sm text-text-main/70">
                 Enter the number of tokens being issued right now. This will be added to today's total.
@@ -196,6 +200,11 @@ const TokensPage: React.FC = () => {
                     autoFocus
                     className="text-text-main"
                     placeholder="e.g. 10"
+                    onFocus={(e) => {
+                      if (e.target.value === '0' || e.target.value === 0) {
+                        setValue('token_count', '' as any);
+                      }
+                    }}
                   />
                 </div>
                 {errors.token_count && <p className="text-xs text-red-500">{errors.token_count.message}</p>}
@@ -222,7 +231,7 @@ const TokensPage: React.FC = () => {
         <DialogContent className="max-w-xl border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
             <DialogTitle className="text-text-main">
-              Token Details for {viewingDate}
+              Token Details for {formatDate(viewingDate)}
             </DialogTitle>
           </DialogHeader>
           <div className="mt-4">
@@ -252,7 +261,7 @@ const TokensPage: React.FC = () => {
                     details?.map((detail: any) => (
                       <tr key={detail.id} className="hover:bg-bg-temple/30">
                         <td className="px-4 py-3 text-text-main">
-                          {new Date(detail.created_at).toLocaleTimeString()}
+                          {formatDateTime(detail.created_at)}
                         </td>
                         <td className="px-4 py-3 text-right font-bold text-primary">
                           {detail.token_count}
@@ -279,6 +288,7 @@ const TokensPage: React.FC = () => {
 };
 
 export default TokensPage;
+
 
 
 

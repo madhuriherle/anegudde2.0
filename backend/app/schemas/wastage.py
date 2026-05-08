@@ -2,15 +2,19 @@ from datetime import date, datetime
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
 from app.schemas.menu_item import MenuItemOut
+from app.schemas.item import ItemOut
 
 
 class WastageItemIn(BaseModel):
-    menu_item_id: int
+    menu_item_id: int | None = None
+    item_id: int | None = None
     quantity: Decimal
+    approx_amount: Decimal = Decimal("0")
 
 
 class WastageEntryCreate(BaseModel):
     wastage_date: date
+    times_cooked: int = 0
     reason: str | None = None
     financial_year_id: int | None = None
     user_id: int | None = None
@@ -21,6 +25,7 @@ class WastageEntryCreate(BaseModel):
 class WastageEntryOut(BaseModel):
     id: int
     wastage_date: date
+    times_cooked: int = 0
     reason: str | None = None
     financial_year_id: int | None = None
     user_id: int
@@ -36,15 +41,19 @@ class WastageEntryOut(BaseModel):
 class WastageItemOut(BaseModel):
     id: int
     wastage_entry_id: int
-    menu_item_id: int
+    menu_item_id: int | None = None
+    item_id: int | None = None
     quantity: Decimal
+    approx_amount: Decimal
     menu_item: MenuItemOut | None = None
+    item: ItemOut | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class WastageEntryUpdate(BaseModel):
     wastage_date: date
+    times_cooked: int = 0
     reason: str | None = None
     financial_year_id: int | None = None
     items: list[WastageItemIn]
@@ -61,3 +70,9 @@ class UserMinimal(BaseModel):
 class WastageEntryFullOut(WastageEntryOut):
     items: list[WastageItemOut]
     user: UserMinimal | None = None
+
+WastageEntryCreate.model_rebuild()
+WastageEntryOut.model_rebuild()
+WastageItemOut.model_rebuild()
+WastageEntryUpdate.model_rebuild()
+WastageEntryFullOut.model_rebuild()

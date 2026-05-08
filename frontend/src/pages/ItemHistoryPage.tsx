@@ -15,6 +15,8 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
+import { formatDate } from '../utils/date';
+import { formatCurrency } from '../utils/currency';
 
 const txnTypes: Record<number, { label: string; icon: any; variant: "default" | "secondary" | "outline" | "error" }> = {
   1: { label: 'Purchase', icon: <ShoppingCart className="h-3 w-3 mr-1" />, variant: 'default' },
@@ -30,7 +32,7 @@ const ItemHistoryPage: React.FC = () => {
   const { data: item } = useQuery({
     queryKey: ['item', id],
     queryFn: async () => {
-      const res = await api.get(`/items/${id}`);
+      const res = await api.get(`/items/get_item/${id}`);
       return res.data;
     },
   });
@@ -38,25 +40,20 @@ const ItemHistoryPage: React.FC = () => {
   const { data: ledger, isLoading } = useQuery({
     queryKey: ['item-ledger', id],
     queryFn: async () => {
-      const res = await api.get(`/items/${id}/ledger`);
-      return res.data;
+      const ledgerRes = await api.get(`/items/get_stock_ledger/${id}`);
+      return ledgerRes.data;
     },
   });
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
-      accessorKey: 'id',
-      header: 'Ledger ID',
-      cell: info => <span className="text-text-main font-mono">{info.getValue() as string}</span>,
-    },
-    {
       accessorKey: 'txn_date',
       header: 'Date',
-      cell: info => <span className="text-text-main">{info.getValue() as string}</span>,
+      cell: info => <span className="text-text-main">{formatDate(info.getValue())}</span>,
     },
     {
       accessorKey: 'txn_type',
-      header: 'Type',
+      header: 'Action',
       cell: info => {
         const type = txnTypes[info.getValue() as number] || { label: 'Unknown', variant: 'outline', icon: null };
         return (
@@ -68,68 +65,73 @@ const ItemHistoryPage: React.FC = () => {
       }
     },
     {
-      accessorKey: 'ref_info',
-      header: 'Reference',
-      cell: info => {
-        const row = info.row.original;
-        return <span className="text-text-main text-sm">{row.ref_table} #{row.ref_id}</span>;
-      }
-    },
-    {
       accessorKey: 'qty_in',
-      header: () => <div className="text-right">Qty In</div>,
+      header: () => <div className="text-right">Stocks Added (+)</div>,
       cell: info => {
         const val = Number(info.getValue());
         return (
           <div className={`text-right font-bold ${val > 0 ? 'text-green-600' : 'text-text-main/30'}`}>
             {val > 0 ? `+${val}` : '-'}
+            {val > 0 && item?.unit?.unit_code && <span className="ml-1 text-[10px] opacity-60 font-normal text-text-main">{item.unit.unit_code}</span>}
           </div>
         );
       }
     },
     {
       accessorKey: 'qty_out',
-      header: () => <div className="text-right">Qty Out</div>,
+      header: () => <div className="text-right">Stocks Used (-)</div>,
       cell: info => {
         const val = Number(info.getValue());
         return (
           <div className={`text-right font-bold ${val > 0 ? 'text-red-600' : 'text-text-main/30'}`}>
             {val > 0 ? `-${val}` : '-'}
+            {val > 0 && item?.unit?.unit_code && <span className="ml-1 text-[10px] opacity-60 font-normal text-text-main">{item.unit.unit_code}</span>}
+          </div>
+        );
+      }
+    },
+    {
+      accessorKey: 'balance',
+      header: () => <div className="text-right">Current Stock</div>,
+      cell: info => {
+        return (
+          <div className="text-right font-bold text-primary-main">
+            {info.getValue() as string}
+            {item?.unit?.unit_code && <span className="ml-1 text-[10px] opacity-60 font-normal">{item.unit.unit_code}</span>}
           </div>
         );
       }
     },
     {
       accessorKey: 'unit_cost',
-      header: () => <div className="text-right">Unit Cost</div>,
-      cell: info => <div className="text-right text-text-main">₹{Number(info.getValue()).toLocaleString()}</div>
+      header: () => <div className="text-right">Rate</div>,
+      cell: info => <div className="text-right text-text-main">{formatCurrency(info.getValue())}</div>
     },
     {
       accessorKey: 'value_in',
-      header: () => <div className="text-right">Value In</div>,
+      header: () => <div className="text-right">Added Cost</div>,
       cell: info => {
         const val = Number(info.getValue());
-        return <div className="text-right text-text-main">{val > 0 ? `₹${val.toLocaleString()}` : '-'}</div>;
+        return <div className="text-right text-text-main">{val > 0 ? formatCurrency(val) : '-'}</div>;
       }
     },
     {
       accessorKey: 'value_out',
-      header: () => <div className="text-right">Value Out</div>,
+      header: () => <div className="text-right">Usage Cost</div>,
       cell: info => {
         const val = Number(info.getValue());
-        return <div className="text-right text-text-main">{val > 0 ? `₹${val.toLocaleString()}` : '-'}</div>;
+        return <div className="text-right text-text-main font-medium text-orange-600">{val > 0 ? formatCurrency(val) : '-'}</div>;
       }
     },
     {
-      accessorKey: 'balance',
-      header: () => <div className="text-right">Running Balance</div>,
-      cell: info => (
-        <div className="text-right font-bold text-primary-main">
-          {info.getValue() as string}
-        </div>
-      )
+      accessorKey: 'current_value',
+      header: () => <div className="text-right">Current Value</div>,
+      cell: info => {
+        const val = Number(info.getValue());
+        return <div className="text-right text-primary-main font-bold">{formatCurrency(val)}</div>;
+      }
     },
-  ], []);
+  ], [item]);
 
   return (
     <div className="space-y-6">
@@ -138,14 +140,16 @@ const ItemHistoryPage: React.FC = () => {
           <Button variant="ghost" size="sm" onClick={() => navigate('/items')} className="p-0 h-8 w-8 rounded-full">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h2 className="text-text-main text-2xl font-semibold font-temple">
-            {item?.item_name || 'Loading...'}
-          </h2>
+          <div>
+            <h2 className="page-title leading-tight">
+              Usage Record: {item?.item_name || 'Loading...'}
+            </h2>
+          </div>
         </div>
         <Button 
           onClick={() => navigate(`/items/${id}/price-history`)} 
           variant="outline"
-          className="flex items-center gap-2 border-primary-main/20 text-primary-main hover:bg-primary-main/5"
+          className="flex items-center gap-2 border-secondary/20 text-secondary hover:bg-secondary hover:text-white transition-colors"
         >
           <History className="h-4 w-4" />
           Price History
@@ -155,7 +159,7 @@ const ItemHistoryPage: React.FC = () => {
       <Card className="border-border-temple overflow-hidden bg-white shadow-sm">
         <DataTable 
           columns={columns} 
-          data={ledger || []} 
+          data={ledger?.items || []} 
           loading={isLoading}
         />
       </Card>
@@ -164,3 +168,4 @@ const ItemHistoryPage: React.FC = () => {
 };
 
 export default ItemHistoryPage;
+

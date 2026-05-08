@@ -17,12 +17,12 @@ const DetailItem: React.FC<DetailItemProps> = ({
   valueClassName,
 }) => {
   return (
-    <div className={cn("flex py-2.5 border-b border-border-temple/40 last:border-0 items-center", className)}>
-      <span className={cn("text-sm font-normal text-gray-700 w-1/3", labelClassName)}>{label}</span>
-      <span className={cn("text-sm font-normal text-gray-700 w-2/3", valueClassName)}>{value ?? "-"}</span>
+    <div className={cn("grid grid-cols-[180px_20px_1fr] items-start text-sm py-1.5", className)}>
+      <span className={cn("font-bold text-text-main", labelClassName)}>{label}</span>
+      <span className="text-text-main/40">:</span>
+      <span className={cn("text-text-main break-words", valueClassName)}>{value || "-"}</span>
     </div>
   )
 }
 
 export { DetailItem }
-

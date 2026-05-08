@@ -1,16 +1,36 @@
 from datetime import datetime, timezone
 from decimal import Decimal
+import math
+import os
+from pathlib import Path
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import Item, PurchaseEntry, PurchaseItem, StockLedger, User, Vendor, ItemPrice, FinancialYear
+from app.db.models import Item, PurchaseEntry, PurchaseItem, StockLedger, User, Vendor, ItemPrice, FinancialYear, PurchaseBill
 from app.schemas.purchase import PurchaseEntryCreate, PurchaseEntryUpdate
 
-def list_purchases(db: Session, financial_year: FinancialYear, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None, from_date: str = None, to_date: str = None):
-    query = db.query(PurchaseEntry).filter(PurchaseEntry.financial_year_id == financial_year.id).options(joinedload(PurchaseEntry.items), joinedload(PurchaseEntry.vendor), joinedload(PurchaseEntry.user))
+def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
+    import re
+    query = db.query(PurchaseEntry).options(
+        joinedload(PurchaseEntry.items), 
+        joinedload(PurchaseEntry.vendor), 
+        joinedload(PurchaseEntry.user),
+        joinedload(PurchaseEntry.bills)
+    )
     
     if status is not None: 
         query = query.filter(PurchaseEntry.status == status)
+
+    # Smart Search: Extract dates from q if present
+    from_date, to_date = None, None
+    if q:
+        date_patterns = re.findall(r"\d{4}-\d{2}-\d{2}", q)
+        if len(date_patterns) >= 2:
+            from_date, to_date = date_patterns[0], date_patterns[1]
+            q = re.sub(r"\d{4}-\d{2}-\d{2}", "", q).strip()
+        elif len(date_patterns) == 1:
+            from_date = to_date = date_patterns[0]
+            q = re.sub(r"\d{4}-\d{2}-\d{2}", "", q).strip()
 
     if from_date:
         query = query.filter(PurchaseEntry.purchase_date >= from_date)
@@ -27,7 +47,17 @@ def list_purchases(db: Session, financial_year: FinancialYear, page: int = 1, pa
             (Item.item_name.ilike(like))
         ).distinct()
 
-    return query.order_by(PurchaseEntry.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(PurchaseEntry.id.desc()).offset(offset).limit(page_size).all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+    }
 
 def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: User, financial_year: FinancialYear) -> PurchaseEntry:
     now = datetime.now(timezone.utc)
@@ -103,6 +133,7 @@ def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: Use
                 value_in=line_total, 
                 value_out=0, 
                 balance=Decimal(item.current_stock), 
+                current_value=Decimal(item.current_stock) * it.price,
                 created_at=now, 
                 updated_at=now, 
                 created_by=current_user.id, 
@@ -121,7 +152,7 @@ def get_purchase(purchase_id: int, db: Session) -> PurchaseEntry:
 def get_purchase_full(purchase_id: int, db: Session) -> PurchaseEntry:
     entry = (
         db.query(PurchaseEntry)
-        .options(joinedload(PurchaseEntry.user), joinedload(PurchaseEntry.items))
+        .options(joinedload(PurchaseEntry.user), joinedload(PurchaseEntry.items), joinedload(PurchaseEntry.bills))
         .filter(PurchaseEntry.id == purchase_id)
         .first()
     )
@@ -130,7 +161,25 @@ def get_purchase_full(purchase_id: int, db: Session) -> PurchaseEntry:
     return entry
 
 def delete_purchase(purchase_id: int, db: Session, current_user: User) -> None:
-    entry = get_purchase(purchase_id, db)
+    entry = (
+        db.query(PurchaseEntry)
+        .options(joinedload(PurchaseEntry.bills))
+        .filter(PurchaseEntry.id == purchase_id)
+        .first()
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="Not found")
+        
+    base_dir = Path(__file__).resolve().parents[2]
+    for bill in entry.bills:
+        if bill.file_path:
+            file_path = base_dir / bill.file_path
+            if file_path.exists() and file_path.is_file():
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass
+    
     # We should also handle stock reversal here if needed, but for now we just delete records.
     db.query(PurchaseItem).filter(PurchaseItem.purchase_entry_id == purchase_id).delete()
     db.query(StockLedger).filter(StockLedger.ref_table == "purchase_entries", StockLedger.ref_id == purchase_id).delete()

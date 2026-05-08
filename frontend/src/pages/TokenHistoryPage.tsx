@@ -12,6 +12,7 @@ import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
+import { formatDateTime } from '../utils/date';
 
 const TokenHistoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -44,13 +45,7 @@ const TokenHistoryPage: React.FC = () => {
       header: 'Date & Time', 
       cell: info => {
         const val = info.getValue() as string;
-        if (!val) return '-';
-        const date = new Date(val);
-        return (
-          <span className="text-text-main">
-            {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        );
+        return <span className="text-text-main">{formatDateTime(val)}</span>;
       }
     },
     { 
@@ -96,7 +91,7 @@ const TokenHistoryPage: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          <h2 className="text-text-main">Token Issuance Ledger</h2>
+          <h2 className="page-title">Token Issuance Ledger</h2>
         </div>
       </div>
 
@@ -141,7 +136,7 @@ const TokenHistoryPage: React.FC = () => {
 
       <DataTable
         columns={columns}
-        data={history || []}
+        data={history?.items || []}
         loading={isLoading}
       />
     </div>
@@ -149,4 +144,5 @@ const TokenHistoryPage: React.FC = () => {
 };
 
 export default TokenHistoryPage;
+
 

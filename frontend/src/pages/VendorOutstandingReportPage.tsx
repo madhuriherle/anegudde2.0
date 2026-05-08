@@ -14,14 +14,11 @@ import { Label } from '../components/ui/Label';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
+import { formatCurrency } from '../utils/currency';
 
 const VendorOutstandingReportPage: React.FC = () => {
   const [search, setSearch] = useState('');
-  const formatAmount = (value: unknown) => {
-    const num = Number(value ?? 0);
-    if (!Number.isFinite(num)) return '₹0';
-    return `₹${num.toLocaleString()}`;
-  };
+  const formatAmount = (value: unknown) => formatCurrency(value);
 
   const { data: vendorData, isLoading } = useQuery({
     queryKey: ['vendor-outstanding'],
@@ -138,7 +135,7 @@ const VendorOutstandingReportPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-text-main">Vendor Outstanding & Aging</h2>
+          <h2 className="page-title">Vendor Outstanding & Aging</h2>
         </div>
         <Button 
           variant="outline" 
@@ -177,4 +174,6 @@ const VendorOutstandingReportPage: React.FC = () => {
 };
 
 export default VendorOutstandingReportPage;
+
+
 

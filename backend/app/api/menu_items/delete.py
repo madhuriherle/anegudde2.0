@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user
@@ -15,6 +16,8 @@ def delete_menu_item(
     if not db_item:
         raise HTTPException(status_code=404, detail="Menu item not found")
 
-    db.delete(db_item)
+    db_item.status = 0
+    db_item.updated_at = datetime.now(timezone.utc)
+    db_item.updated_by = current_user.id
     db.commit()
     return None

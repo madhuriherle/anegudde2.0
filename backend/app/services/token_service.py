@@ -1,8 +1,9 @@
 from datetime import datetime, timezone, date
+import math
 from fastapi import HTTPException
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import TokenGeneration, TokenDetail, User, FinancialYear
+from app.db.models import TokenGeneration, TokenDetail, User
 from app.schemas.token import TokenDetailCreate
 
 def _ensure_token_partition_for_timestamp(db: Session, ts: datetime) -> None:
@@ -32,8 +33,7 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User, f
 
     # 1. Get or Create TokenGeneration for today
     generation = db.query(TokenGeneration).filter(
-        TokenGeneration.date == today,
-        TokenGeneration.financial_year_id == financial_year.id
+        TokenGeneration.date == today
     ).first()
     
     if not generation:
@@ -74,18 +74,44 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User, f
     return new_detail
 
 
-def list_token_generations(db: Session, financial_year: FinancialYear, page: int = 1, page_size: int = 20):
-    query = db.query(TokenGeneration).filter(
-        TokenGeneration.financial_year_id == financial_year.id
-    ).options(joinedload(TokenGeneration.creator)).order_by(TokenGeneration.date.desc())
-    return query.offset((page - 1) * page_size).limit(page_size).all()
+def list_token_generations(db: Session, page: int = 1, page_size: int = 20):
+    query = db.query(TokenGeneration).options(joinedload(TokenGeneration.creator))
+    
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(TokenGeneration.date.desc()).offset(offset).limit(page_size).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+    }
 
 def get_token_details_by_date(target_date: date, db: Session, page: int = 1, page_size: int = 20):
     generation = db.query(TokenGeneration).filter(TokenGeneration.date == target_date).first()
     if not generation:
-        return []
+        return {
+            "items": [],
+            "total": 0,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": 0
+        }
     
-    return db.query(TokenDetail).options(joinedload(TokenDetail.creator)).filter(TokenDetail.generation_id == generation.id).order_by(TokenDetail.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    query = db.query(TokenDetail).options(joinedload(TokenDetail.creator)).filter(TokenDetail.generation_id == generation.id)
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(TokenDetail.created_at.desc()).offset(offset).limit(page_size).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+    }
 
 def list_all_token_details(db: Session, page: int = 1, page_size: int = 50, start_date: date = None, end_date: date = None):
     query = db.query(TokenDetail).options(joinedload(TokenDetail.creator))
@@ -100,7 +126,17 @@ def list_all_token_details(db: Session, page: int = 1, page_size: int = 50, star
         end_dt = datetime.combine(end_date, datetime.max.time())
         query = query.filter(TokenDetail.created_at <= end_dt)
         
-    return query.order_by(TokenDetail.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(TokenDetail.created_at.desc()).offset(offset).limit(page_size).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+    }
 
 
 

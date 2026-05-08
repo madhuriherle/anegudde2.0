@@ -29,3 +29,7 @@ class ItemCategoryOut(ItemCategoryBase):
     updated_by: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+ItemCategoryCreate.model_rebuild()
+ItemCategoryUpdate.model_rebuild()
+ItemCategoryOut.model_rebuild()

@@ -15,7 +15,7 @@ def create_tokens(
 ):
     return token_service.create_tokens(payload, db, current_user, financial_year)
 
-@router.get("/create", response_model=TokenDetailResponse)
+@router.get("/generate_tokens", response_model=TokenDetailResponse)
 def create_tokens_get(
     count: int, 
     db: Session = Depends(get_db), 

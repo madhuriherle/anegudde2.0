@@ -1,14 +1,20 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
-from app.schemas.stock_ledger import StockLedgerOut
+from app.schemas.stock_ledger import PaginatedStockLedgerOut
 from app.services.item_service import get_item_ledger as get_item_ledger_service
 
 router = APIRouter()
 
 
-@router.get("/{item_id}/ledger", response_model=list[StockLedgerOut])
-def get_item_ledger(item_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
-    return get_item_ledger_service(item_id, db)
+@router.get("/get_stock_ledger/{item_id}", response_model=PaginatedStockLedgerOut)
+def get_item_ledger(
+    item_id: int, 
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=1000),
+    db: Session = Depends(get_db), 
+    _: User = Depends(get_current_user)
+):
+    return get_item_ledger_service(item_id, db, page, page_size)

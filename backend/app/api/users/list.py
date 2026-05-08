@@ -4,11 +4,13 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
 from app.schemas.user import UserOut
+from app.schemas.base import PaginatedResponse
+import math
 
 router = APIRouter()
 
 
-@router.get("/list_users", response_model=list[UserOut])
+@router.get("/list_users", response_model=PaginatedResponse[UserOut])
 def list_users(
     db: Session = Depends(get_db), 
     _: User = Depends(get_current_user), 
@@ -34,7 +36,15 @@ def list_users(
         else:
             query = query.filter(User.username.ilike(like) | User.full_name.ilike(like) | User.email.ilike(like) | User.role.ilike(like))
     
-    query = query.order_by(User.id.desc())
+    total = query.count()
     offset = (page - 1) * page_size
-    return query.offset(offset).limit(page_size).all()
+    items = query.order_by(User.id.desc()).offset(offset).limit(page_size).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+    }
 

@@ -28,14 +28,18 @@ import {
 } from '../components/ui/Dialog';
 import { Select } from '../components/ui/Select';
 import { DetailItem } from '../components/ui/DetailItem';
+import { formatDate } from '../utils/date';
+import { formatCurrency } from '../utils/currency';
 
 const wastageItemSchema = z.object({
   menu_item_id: z.coerce.number().min(1, 'Dish is required'),
   quantity: z.coerce.number().min(0.001, 'Quantity is required'),
+  approx_amount: z.coerce.number().min(0).default(0),
 });
 
 const wastageSchema = z.object({
   wastage_date: z.string().min(1, 'Date is required'),
+  times_cooked: z.coerce.number().min(0).default(0),
   reason: z.string().min(1, 'Reason is required'),
   items: z.array(wastageItemSchema).min(1, 'At least one item is required'),
 });
@@ -72,15 +76,16 @@ const WastagesPage: React.FC = () => {
     },
   });
 
-  const { data: menuItems } = useQuery({
+  const { data: menuItemsData } = useQuery({
     queryKey: ['menu-items-list'],
     queryFn: async () => (await api.get('/menu-items/list_menu_items')).data,
   });
+  const menuItems = useMemo(() => Array.isArray(menuItemsData) ? menuItemsData : (menuItemsData?.items || []), [menuItemsData]);
 
-  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<WastageFormValues>({
+  const { register, handleSubmit, reset, control, watch, setValue, formState: { errors } } = useForm<WastageFormValues>({
     resolver: zodResolver(wastageSchema) as any,
     defaultValues: {
-        items: [{ menu_item_id: '' as any, quantity: 0 }]
+        items: [{ menu_item_id: '' as any, quantity: 0, approx_amount: 0 }]
     }
   });
 
@@ -134,10 +139,12 @@ const mutation = useMutation({
         setEditingWastage(fullData);
         reset({
           wastage_date: fullData.wastage_date,
+          times_cooked: Number(fullData.times_cooked || 0),
           reason: fullData.reason || '',
           items: fullData.items.map((item: any) => ({
             menu_item_id: item.menu_item_id,
             quantity: item.quantity,
+            approx_amount: Number(item.approx_amount || 0),
           })),
         });
       } catch (err) {
@@ -148,8 +155,9 @@ const mutation = useMutation({
       setEditingWastage(null);
       reset({
         wastage_date: new Date().toISOString().split('T')[0],
+        times_cooked: 0,
         reason: '',
-        items: [{ menu_item_id: '' as any, quantity: 0 }],
+        items: [{ menu_item_id: '' as any, quantity: 0, approx_amount: 0 }],
       });
     }
     setOpen(true);
@@ -183,9 +191,9 @@ const mutation = useMutation({
 
   // Flattened items for DataTable
   const flattenedRows = useMemo(() => {
-    if (!wastages) return [];
+    const wastageList = Array.isArray(wastages) ? wastages : (wastages?.items || []);
     const rows: any[] = [];
-    wastages.forEach((w: any) => {
+    wastageList.forEach((w: any) => {
       w.items.forEach((item: any) => {
         rows.push({
           id: `${w.id}-${item.id}`,
@@ -194,6 +202,7 @@ const mutation = useMutation({
           menu_item_id: item.menu_item_id,
           dish_name: item.menu_item?.dish_name || 'Unknown',
           quantity: item.quantity,
+          approx_amount: item.approx_amount,
           unit: item.menu_item?.unit?.unit_code || '',
           reason: w.reason,
           status: w.status,
@@ -211,7 +220,8 @@ const mutation = useMutation({
     },
     { 
       accessorKey: 'wastage_date', 
-      header: 'Date', 
+      header: 'Date',
+      cell: info => formatDate(info.getValue()),
     },
     { 
       accessorKey: 'dish_name', 
@@ -226,15 +236,24 @@ const mutation = useMutation({
         </span>
       )
     },
+    {
+      accessorKey: 'approx_amount',
+      header: 'Approx Amt',
+      cell: info => (
+        <span className="font-semibold text-text-main">
+          {formatCurrency(Number(info.getValue() || 0))}
+        </span>
+      )
+    },
     { 
       accessorKey: 'reason', 
       header: 'Reason', 
     },
     {
       id: 'actions',
-      header: "Actions",
+      header: () => <div className="text-center">Actions</div>,
       cell: info => (
-        <div className="flex items-center justify-end gap-2 px-4">
+        <div className="flex items-center justify-center gap-2">
           <button onClick={() => handleView(info.row.original.raw_wastage)} className="action-btn-view">View</button>
           <button onClick={() => handleOpen(info.row.original.raw_wastage)} className="action-btn-edit">Edit</button>
           <button
@@ -261,14 +280,14 @@ const mutation = useMutation({
             <Trash className="w-8 h-8 text-primary" />
           </div>
           <div>
-            <h2 className="text-text-main">Wastage Records (Prepared Dishes)</h2>
+            <h2 className="page-title">Wastage Records (Prepared Dishes)</h2>
           </div>
         </div>
         <Button 
           onClick={() => handleOpen()}
           className="text-text-main font-bold px-6"
         >
-          <Plus className="w-4 h-4 mr-2" />
+         
           Record Wastage
         </Button>
       </div>
@@ -321,27 +340,31 @@ const mutation = useMutation({
             <DialogTitle className="text-text-main">Wastage Details</DialogTitle>
           </DialogHeader>
           <div className="space-y-0 mt-4">
-            <DetailItem label="Wastage Date" value={viewingWastage?.wastage_date} />
+            <DetailItem label="Wastage Date" value={formatDate(viewingWastage?.wastage_date)} />
             <DetailItem label="Reason" value={viewingWastage?.reason} />
             <DetailItem label="Recorded By" value={viewingWastage?.user?.full_name} />
 
             <div className="pt-6 pb-2">
               <span className="text-sm font-bold text-text-main">Wasted Dishes List</span>
             </div>
-            <div className="rounded-md border border-border-temple overflow-hidden mt-1">
-              <table className="w-full text-sm text-left">
+            <div className="mt-1 max-w-[560px] rounded-md border border-border-temple overflow-hidden">
+              <table className="w-full text-xs text-left">
                 <thead className="bg-bg-temple text-text-main uppercase text-[11px] font-bold tracking-wider">
                   <tr>
-                    <th className="px-4 py-3 border-b border-border-temple">Dish Name</th>
-                    <th className="px-4 py-3 border-b border-border-temple text-right">Quantity</th>
+                    <th className="px-3 py-2 border-b border-border-temple">Dish Name</th>
+                    <th className="px-3 py-2 border-b border-border-temple text-right">Quantity</th>
+                    <th className="px-3 py-2 border-b border-border-temple text-right">Approx Amt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-temple/40">
                   {viewingWastage?.items.map((item: any) => (
                     <tr key={item.id} className="hover:bg-bg-temple/30">
-                      <td className="px-4 py-3 text-text-main">{item.menu_item?.dish_name}</td>
-                      <td className="px-4 py-3 text-right font-bold text-red-600">
+                      <td className="px-3 py-2 text-text-main">{item.menu_item?.dish_name}</td>
+                      <td className="px-3 py-2 text-right text-red-600">
                         {item.quantity} {item.menu_item?.unit?.unit_code}
+                      </td>
+                      <td className="px-3 py-2 text-right text-text-main">
+                        {formatCurrency(Number(item.approx_amount || 0))}
                       </td>
                     </tr>
                   ))}
@@ -365,13 +388,30 @@ const mutation = useMutation({
               {editingWastage ? 'Edit Wastage Record' : 'Record New Wastage'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4 pb-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-text-main">Date *</Label>
                 <Input {...register('wastage_date')} type="date" className="text-text-main" />
                 {errors.wastage_date && <p className="text-xs text-red-500">{errors.wastage_date.message}</p>}
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main">No. of times cooked</Label>
+                <Input 
+                  {...register('times_cooked')} 
+                  type="number" 
+                  min="0" 
+                  className="text-text-main" 
+                  onFocus={(e) => {
+                    if (!editingWastage && (e.target.value === '0' || e.target.value === 0)) {
+                      setValue('times_cooked', '' as any);
+                    }
+                  }}
+                />
+                {errors.times_cooked && <p className="text-xs text-red-500">{errors.times_cooked.message}</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-text-main">Reason/Remarks *</Label>
                 <Input {...register('reason')} placeholder="e.g. Spilled, Burnt" className="text-text-main" />
@@ -411,11 +451,32 @@ const mutation = useMutation({
                           step="0.001"
                           placeholder="0.00"
                           className="pr-10 text-text-main"
+                          onFocus={(e) => {
+                            if (!editingWastage && (e.target.value === '0' || e.target.value === 0)) {
+                              setValue(`items.${index}.quantity`, '' as any);
+                            }
+                          }}
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold">
                           {menuItems?.find((mi: any) => mi.id === watchedItems?.[index]?.menu_item_id)?.unit?.unit_code || ''}
                         </span>
                       </div>
+                    </div>
+                    <div className="w-full sm:w-36 space-y-1.5">
+                      <Label className="text-[11px] text-text-main uppercase">{index === 0 && "Approx Amt"}</Label>
+                      <Input
+                        {...register(`items.${index}.approx_amount` as const)}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        className="text-text-main"
+                        onFocus={(e) => {
+                          if (!editingWastage && (e.target.value === '0' || e.target.value === 0)) {
+                            setValue(`items.${index}.approx_amount`, '' as any);
+                          }
+                        }}
+                      />
                     </div>
                     <Button 
                       type="button"
@@ -433,10 +494,10 @@ const mutation = useMutation({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => append({ menu_item_id: '' as any, quantity: 0 })}
+                  onClick={() => append({ menu_item_id: '' as any, quantity: 0, approx_amount: 0 })}
                   className="text-primary border-primary/20 hover:bg-primary/5"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
+                 
                   Add Another Dish
                 </Button>
               </div>
@@ -462,6 +523,7 @@ const mutation = useMutation({
 };
 
 export default WastagesPage;
+
 
 
 

@@ -1,19 +1,17 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db, get_financial_year
-from app.db.models import User, FinancialYear
-from app.schemas.auth import UserOut
+from app.api.deps import get_current_user, get_db
+from app.db.models import User
+from app.schemas.auth import AuthUserOut
 
 router = APIRouter()
 
 
-@router.get("/me", response_model=UserOut)
+@router.get("/get_current_user_profile", response_model=AuthUserOut)
 def me(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    db: Session = Depends(get_db)
 ):
-    user_out = UserOut.model_validate(current_user)
-    user_out.active_financial_year = financial_year
+    user_out = AuthUserOut.model_validate(current_user)
     return user_out

@@ -34,6 +34,7 @@
 
   --font-serif: "Merriweather", serif;
   --font-sans: "Inter", sans-serif;
+  --font-temple: "Merriweather", serif;
 }
 
 
@@ -58,8 +59,12 @@
     @apply text-xs font-bold text-primary uppercase tracking-[0.2em] mb-4 mt-6;
   }
 
+  .page-title {
+    @apply text-text-main text-2xl font-semibold font-temple;
+  }
+
   .action-btn-view {
-    @apply px-3 py-1.5 rounded-md text-xs font-semibold bg-action-view-bg text-action-view-text hover:bg-action-view-hover transition-colors;
+    @apply px-3 py-1.5 rounded-md text-xs font-semibold bg-action-view-bg text-action-view-text hover:bg-secondary hover:text-white transition-colors;
   }
 
   .action-btn-edit {
@@ -80,22 +85,22 @@
 
   h1, h2, h3, h4, h5, h6 {
     @apply text-text-main font-sans;
-    font-size: 14px !important;
-    font-weight: 400 !important;
-    text-transform: none !important;
-    letter-spacing: normal !important;
+    font-size: 14px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
   }
 
   h2 {
-    font-size: 30px !important;
-    font-weight: 700 !important;
-    line-height: 1.2 !important;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.2;
   }
 
   p, label, input, select, textarea {
     font-size: 14px !important;
     font-weight: 400 !important;
-    color: var(--color-text-main) !important;
+    color: var(--color-text-main);
   }
 }
 

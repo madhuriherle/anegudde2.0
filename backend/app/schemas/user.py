@@ -1,3 +1,4 @@
+from __future__ import annotations
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
@@ -39,3 +40,7 @@ class UserOut(UserBase):
     updated_by: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+UserCreate.model_rebuild()
+UserUpdate.model_rebuild()
+UserOut.model_rebuild()

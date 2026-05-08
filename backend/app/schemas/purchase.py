@@ -9,6 +9,17 @@ class PurchaseItemIn(BaseModel):
     price: Decimal
 
 
+class PurchaseBillOut(BaseModel):
+    id: int
+    purchase_id: int
+    file_name: str
+    file_path: str
+    file_type: str | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class PurchaseEntryCreate(BaseModel):
     vendor_id: int
     financial_year_id: int | None = None
@@ -52,6 +63,7 @@ class PurchaseEntryOut(BaseModel):
     updated_at: datetime
     created_by: int | None = None
     updated_by: int | None = None
+    bills: list[PurchaseBillOut] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -83,3 +95,9 @@ class UserMinimal(BaseModel):
 class PurchaseEntryFullOut(PurchaseEntryOut):
     items: list[PurchaseItemOut]
     user: UserMinimal | None = None
+
+PurchaseEntryCreate.model_rebuild()
+PurchaseItemOut.model_rebuild()
+PurchaseEntryOut.model_rebuild()
+PurchaseEntryUpdate.model_rebuild()
+PurchaseEntryFullOut.model_rebuild()

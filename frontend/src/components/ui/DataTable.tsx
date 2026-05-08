@@ -45,12 +45,16 @@ export function DataTable<TData, TValue>({
           </div>
         )}
         <table className="w-full text-sm text-left">
-          <thead className="bg-primary text-white uppercase text-[11px] font-bold tracking-wider">
+          <thead className="bg-primary text-white text-xs font-bold uppercase tracking-wider">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <th key={header.id} className="px-4 py-3 border-b border-primary/20">
+                    <th 
+                      key={header.id} 
+                      className="px-3 py-2.5 border-b border-primary/20"
+                      style={{ width: header.column.columnDef.size !== 150 ? header.column.columnDef.size : undefined }}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -71,7 +75,11 @@ export function DataTable<TData, TValue>({
                   className="hover:bg-gray-50/80 transition-colors"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 text-sm text-text-main">
+                    <td 
+                      key={cell.id} 
+                      className="px-3 py-2.5 text-sm text-text-main"
+                      style={{ width: cell.column.columnDef.size !== 150 ? cell.column.columnDef.size : undefined }}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

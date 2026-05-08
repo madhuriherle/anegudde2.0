@@ -20,6 +20,7 @@ class ConsumptionEntryCreate(BaseModel):
     additional_cleaning_persons: int = 0
     regular_serving_persons: int = 0
     additional_serving_persons: int = 0
+    times_cooked: int = 0
     anna_remained: Decimal = Decimal("0")
     saru_remained: Decimal = Decimal("0")
     huli_remained: Decimal = Decimal("0")
@@ -41,6 +42,7 @@ class ConsumptionEntryOut(BaseModel):
     additional_cleaning_persons: int = 0
     regular_serving_persons: int = 0
     additional_serving_persons: int = 0
+    times_cooked: int = 0
     anna_remained: Decimal = Decimal("0")
     saru_remained: Decimal = Decimal("0")
     huli_remained: Decimal = Decimal("0")
@@ -79,6 +81,7 @@ class ConsumptionEntryUpdate(BaseModel):
     additional_cleaning_persons: int = 0
     regular_serving_persons: int = 0
     additional_serving_persons: int = 0
+    times_cooked: int = 0
     anna_remained: Decimal = Decimal("0")
     saru_remained: Decimal = Decimal("0")
     huli_remained: Decimal = Decimal("0")
@@ -98,3 +101,9 @@ class UserMinimal(BaseModel):
 class ConsumptionEntryFullOut(ConsumptionEntryOut):
     items: list[ConsumptionItemOut]
     user: UserMinimal | None = None
+
+ConsumptionEntryCreate.model_rebuild()
+ConsumptionEntryOut.model_rebuild()
+ConsumptionItemOut.model_rebuild()
+ConsumptionEntryUpdate.model_rebuild()
+ConsumptionEntryFullOut.model_rebuild()

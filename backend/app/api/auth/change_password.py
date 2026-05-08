@@ -9,7 +9,7 @@ from app.schemas.auth import PasswordChangeRequest
 router = APIRouter()
 
 
-@router.post("/change-password")
+@router.post("/change_password")
 def change_password(
     payload: PasswordChangeRequest,
     current_user: User = Depends(get_current_user),

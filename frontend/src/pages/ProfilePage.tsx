@@ -41,7 +41,7 @@ const ProfilePage: React.FC = () => {
 
     setLoading(true);
     try {
-      await api.post('/auth/change-password', {
+      await api.post('/auth/change_password', {
         current_password: currentPassword,
         new_password: newPassword,
       });
@@ -59,7 +59,7 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
-        <h2 className="text-text-main text-2xl font-semibold font-temple">Account Settings</h2>
+        <h2 className="page-title">Account Settings</h2>
       </div>
 
       <Card className="border-border-temple overflow-hidden shadow-md">
@@ -166,4 +166,5 @@ const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
+
 

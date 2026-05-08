@@ -21,6 +21,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Avatar from '@radix-ui/react-avatar';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../utils/cn';
+import Footer from '../components/Footer';
 
 const templeLogoSrc = '/temple-logo-banner.webp';
 
@@ -42,7 +43,7 @@ const MainLayout: React.FC = () => {
 
   useEffect(() => {
     const path = location.pathname;
-    const canteenPaths = ['/canteen', '/purchases', '/consumptions', '/wastages'];
+    const canteenPaths = ['/canteen', '/purchases', '/consumptions'];
     if (canteenPaths.some(p => path.startsWith(p))) {
       setActiveModule('canteen');
     } else if (path === '/') {
@@ -64,7 +65,18 @@ const MainLayout: React.FC = () => {
     { text: 'Canteen', icon: UtensilsCrossed, path: '/canteen', action: () => setActiveModule('canteen') },
     { text: 'Office', icon: Briefcase, path: '/office' },
     { text: 'Users', icon: Users, path: '/users' },
-    { text: 'Reports', icon: BarChart3, path: '/reports' },
+    { 
+      text: 'Reports', 
+      icon: BarChart3,
+      children: [
+        { text: 'Stock Summary', path: '/reports/stock-summary' },
+        { text: 'Token Issued Report', path: '/reports/tokens' },
+        { text: 'Financial Report', path: '/reports' },
+        { text: 'Stock Snapshot', path: '/reports/daily-closing' },
+        { text: 'Monthly Performance', path: '/reports/monthly-performance' },
+        { text: 'Vendor Outstanding', path: '/reports/vendor-outstanding' },
+      ]
+    },
     { 
       text: 'Master Settings', 
       icon: Settings,
@@ -87,12 +99,9 @@ const MainLayout: React.FC = () => {
     { text: 'Dashboard', icon: UtensilsCrossed, path: '/canteen' },
     { text: 'Purchase', icon: ShoppingCart, path: '/purchases' },
     { 
-      text: 'Consumption & Wastage', 
+      text: 'Consumption', 
       icon: Package,
-      children: [
-        { text: 'Consumption', path: '/consumptions' },
-        { text: 'Wastage', path: '/wastages' },
-      ]
+      path: '/consumptions'
     },
     { text: 'Vendors', icon: Users, path: '/vendors' },
     { 
@@ -108,10 +117,11 @@ const MainLayout: React.FC = () => {
       text: 'Reports',
       icon: BarChart3,
       children: [
-        { text: 'Consumption Report', path: '/reports' },
-        { text: 'Daily Report', path: '/reports/daily-closing' },
-        { text: 'Stock Report', path: '/reports/daily-closing' },
-        { text: 'Token Report', path: '/reports' },
+        { text: 'Stock Summary', path: '/reports/stock-summary' },
+        { text: 'Token Issued Report', path: '/reports/tokens' },
+        { text: 'Financial Report', path: '/reports' },
+        { text: 'Stock Snapshot', path: '/reports/daily-closing' },
+        { text: 'Monthly Performance', path: '/reports/monthly-performance' },
       ]
     },
     { text: 'Back', icon: ArrowLeft, path: '/', action: () => setActiveModule('main') },
@@ -121,6 +131,8 @@ const MainLayout: React.FC = () => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedMenus[item.text];
     const isActive = item.path && location.pathname === item.path;
+    const shouldHideSubmenusInMain = activeModule === 'main';
+    const canExpandChildren = hasChildren && !shouldHideSubmenusInMain;
 
     const content = (
       <div 
@@ -132,7 +144,7 @@ const MainLayout: React.FC = () => {
           depth > 0 && "ml-4 py-1.5"
         )}
         onClick={() => {
-          if (hasChildren) {
+          if (canExpandChildren) {
             toggleExpand(item.text);
           } else {
             if (item.action) item.action();
@@ -145,7 +157,7 @@ const MainLayout: React.FC = () => {
       >
         {item.icon && <item.icon className={cn("w-5 h-5", isActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />}
         <span className="flex-1">{item.text}</span>
-        {hasChildren && (
+        {canExpandChildren && (
           isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
         )}
       </div>
@@ -154,7 +166,7 @@ const MainLayout: React.FC = () => {
     return (
       <div key={item.text} className="space-y-1">
         {content}
-        {hasChildren && isExpanded && (
+        {canExpandChildren && isExpanded && (
           <div className="space-y-1 mt-1">
             {item.children!.map(child => renderMenuItem(child, depth + 1))}
           </div>
@@ -240,9 +252,9 @@ const MainLayout: React.FC = () => {
 
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
-                <button className="p-1 rounded-full hover:bg-gray-100 transition-colors focus:outline-none">
-                  <Avatar.Root className="inline-flex items-center justify-center align-middle overflow-hidden select-none w-8 h-8 rounded-full bg-secondary">
-                    <Avatar.Fallback className="w-full h-full flex items-center justify-center text-white text-xs font-medium uppercase">
+                <button className="flex items-center gap-3 p-1 rounded-full hover:bg-black/5 transition-all focus:outline-none group">
+                  <Avatar.Root className="inline-flex items-center justify-center align-middle overflow-hidden select-none w-9 h-9 rounded-full bg-secondary border-2 border-border-temple/30 group-hover:border-primary/50 transition-colors shadow-sm">
+                    <Avatar.Fallback className="w-full h-full flex items-center justify-center bg-secondary text-white text-sm font-bold uppercase tracking-wider">
                       {user?.full_name?.[0]}
                     </Avatar.Fallback>
                   </Avatar.Root>
@@ -278,6 +290,7 @@ const MainLayout: React.FC = () => {
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
           <Outlet />
         </main>
+        <Footer />
       </div>
     </div>
   );
