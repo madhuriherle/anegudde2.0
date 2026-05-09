@@ -4,9 +4,11 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.db.models import User, Vendor, VendorPayment
 
-def list_vendor_payments(db: Session, page: int = 1, page_size: int = 20, q: str = None):
+def list_vendor_payments(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int | None = 1):
     import re
     query = db.query(VendorPayment).join(Vendor, VendorPayment.vendor_id == Vendor.id)
+    if status is not None:
+        query = query.filter(VendorPayment.status == status)
     
     # Smart Search: Extract dates from q if present
     from_date, to_date = None, None

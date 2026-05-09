@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime, date
 from dotenv import load_dotenv
 
 # Find the absolute path to backend/.env
@@ -10,6 +11,7 @@ load_dotenv(dotenv_path=env_path, override=True)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.api.auth import router as auth_router
 from app.api.usage_entries import router as usage_entries_router
@@ -26,9 +28,12 @@ from app.api.vendors import router as vendors_router
 from app.api.menu_items import router as menu_items_router
 from app.api.wastages import router as wastages_router
 from app.api.tokens import router as tokens_router
+from app.api.debug import router as system_router
 from app.middleware.exception_handlers import register_exception_handlers
 from app.middleware.activity_audit import ActivityAuditMiddleware
 from app.utils.tasks import run_daily_snapshot_task, run_monthly_summary_task, audit_stock_integrity
+from app.db.session import SessionLocal
+from app.db.models import FinancialYear
 from apscheduler.schedulers.background import BackgroundScheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -55,8 +60,78 @@ allow_origins=[
 )
 
 scheduler = BackgroundScheduler()
+
+def _get_financial_year_bounds(today: date) -> tuple[str, date, date]:
+    if today.month >= 4:
+        start_year = today.year
+    else:
+        start_year = today.year - 1
+    end_year = start_year + 1
+    name = f"{start_year}-{str(end_year)[-2:]}"
+    return name, date(start_year, 4, 1), date(end_year, 3, 31)
+
+def _ensure_active_financial_year() -> None:
+    db = SessionLocal()
+    try:
+        fy_name, fy_start, fy_end = _get_financial_year_bounds(date.today())
+        target = db.query(FinancialYear).filter(FinancialYear.name == fy_name).first()
+
+        if not target:
+            target = FinancialYear(
+                name=fy_name,
+                start_date=fy_start,
+                end_date=fy_end,
+                is_active=True,
+                status=1,
+            )
+            db.add(target)
+            db.flush()
+
+        # Keep current FY active and enabled
+        target.start_date = fy_start
+        target.end_date = fy_end
+        target.status = 1
+
+        # Ensure exactly one active FY
+        db.query(FinancialYear).update({FinancialYear.is_active: False}, synchronize_session=False)
+        target.is_active = True
+        db.commit()
+    except Exception:
+        db.rollback()
+        logging.exception("Failed to auto-rollover financial year")
+    finally:
+        db.close()
+
+def _ensure_token_partitions(years_ahead: int = 1) -> None:
+    db = SessionLocal()
+    try:
+        table_exists = db.execute(text("SELECT to_regclass('public.token_details')")).scalar()
+        if not table_exists:
+            return
+
+        current_year = datetime.now().year
+        for year in range(current_year, current_year + years_ahead + 1):
+            for month in range(1, 13):
+                partition_name = f"token_details_{year}_{month:02d}"
+                start_date = f"{year}-{month:02d}-01"
+                end_date = f"{year + 1}-01-01" if month == 12 else f"{year}-{month + 1:02d}-01"
+                db.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS {partition_name}
+                    PARTITION OF token_details
+                    FOR VALUES FROM ('{start_date}') TO ('{end_date}');
+                """))
+        db.commit()
+    except Exception:
+        db.rollback()
+        logging.exception("Failed to ensure token partitions on startup")
+    finally:
+        db.close()
+
 @app.on_event('startup')
 def startup_event():
+    _ensure_active_financial_year()
+    _ensure_token_partitions(years_ahead=1)
+    scheduler.add_job(_ensure_active_financial_year, trigger='cron', hour=0, minute=1, id='fy-rollover', replace_existing=True)
     scheduler.start()
 
 @app.on_event('shutdown')
@@ -83,3 +158,4 @@ app.include_router(users_router)
 app.include_router(reports_router)
 app.include_router(dashboard_router)
 app.include_router(tokens_router)
+app.include_router(system_router)

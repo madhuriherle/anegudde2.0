@@ -14,7 +14,6 @@ import { DataTable } from '../components/ui/DataTable';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/Dialog';
 import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
-import { DetailItem } from '../components/ui/DetailItem';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { Plus, Trash2 } from 'lucide-react';
@@ -73,19 +72,20 @@ const UsageEntriesPage: React.FC = () => {
   const [viewingWastages, setViewingWastages] = useState<any[]>([]);
   const [editingConsumption, setEditingConsumption] = useState<any>(null);
   const [customDate, setCustomDate] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
 
-  const { data: consumptions, isLoading: consumptionsLoading } = useQuery({
-    queryKey: ['consumptions', customDate],
+  const { data: consumptionsData, isLoading: consumptionsLoading } = useQuery({
+    queryKey: ['consumptions', customDate, page, pageSize],
     queryFn: async () => {
-      const params: any = { page_size: 1000 };
+      const params: any = { page, page_size: pageSize };
       if (customDate) params.q = customDate;
       return (await api.get('/daily-usage/list_consumptions', { params })).data;
     },
   });
   const filteredConsumptions = useMemo(() => {
-    const rows = Array.isArray(consumptions) ? consumptions : (consumptions?.items || []);
-    return rows;
-  }, [consumptions]);
+    return consumptionsData?.items || [];
+  }, [consumptionsData]);
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-list'],
@@ -141,7 +141,8 @@ const UsageEntriesPage: React.FC = () => {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: FormValues) => {
+    mutationFn: async (payload: FormValues & { isEditMode?: boolean }) => {
+      const { isEditMode: _isEditMode, ...data } = payload;
       const rawRows = Object.entries(data.raw_items || {})
         .map(([id, row]: any) => ({
           item_id: Number(id),
@@ -163,75 +164,53 @@ const UsageEntriesPage: React.FC = () => {
         .map((r) => ({
           item_id: Number(r.item_id),
           quantity: Number(r.quantity),
+          approx_amount: 0,
         }));
-
-      if (editingConsumption?.id) {
-        await api.put(`/daily-usage/update_consumption/${editingConsumption.id}`, {
-          usage_date: data.usage_date,
-          regular_cooking_persons: Number(data.regular_cooking_persons || 0),
-          additional_cooking_persons: Number(data.additional_cooking_persons || 0),
-          regular_cleaning_persons: Number(data.regular_cleaning_persons || 0),
-          additional_cleaning_persons: Number(data.additional_cleaning_persons || 0),
-          regular_serving_persons: Number(data.regular_serving_persons || 0),
-          additional_serving_persons: Number(data.additional_serving_persons || 0),
-          times_cooked: Number(data.times_cooked || 0),
-          anna_remained: 0,
-          saru_remained: 0,
-          huli_remained: 0,
-          payas_remained: 0,
-          people_served: null,
-          items: rawRows,
-          user_id: user?.id,
-          status: 1,
-        });
-        return;
-      }
-
-      const calls: Promise<any>[] = [];
-      if (rawRows.length > 0) {
-        calls.push(api.post('/daily-usage/create_consumption', {
-          usage_date: data.usage_date,
-          regular_cooking_persons: Number(data.regular_cooking_persons || 0),
-          additional_cooking_persons: Number(data.additional_cooking_persons || 0),
-          regular_cleaning_persons: Number(data.regular_cleaning_persons || 0),
-          additional_cleaning_persons: Number(data.additional_cleaning_persons || 0),
-          regular_serving_persons: Number(data.regular_serving_persons || 0),
-          additional_serving_persons: Number(data.additional_serving_persons || 0),
-          times_cooked: Number(data.times_cooked || 0),
-          anna_remained: 0,
-          saru_remained: 0,
-          huli_remained: 0,
-          payas_remained: 0,
-          people_served: null,
-          items: rawRows,
-          user_id: user?.id,
-          status: 1,
-        }));
-      }
 
       const allWastageItems = [
         ...wastageRows,
         ...rawWastageRows
       ];
 
+      let saveRes;
+      const commonPayload = {
+        usage_date: data.usage_date,
+        regular_cooking_persons: Number(data.regular_cooking_persons || 0),
+        additional_cooking_persons: Number(data.additional_cooking_persons || 0),
+        regular_cleaning_persons: Number(data.regular_cleaning_persons || 0),
+        additional_cleaning_persons: Number(data.additional_cleaning_persons || 0),
+        regular_serving_persons: Number(data.regular_serving_persons || 0),
+        additional_serving_persons: Number(data.additional_serving_persons || 0),
+        times_cooked: Number(data.times_cooked || 0),
+        user_id: user?.id,
+        status: 1,
+        items: rawRows,
+      };
+
+      if (editingConsumption?.id) {
+        saveRes = await api.put(`/daily-usage/update_consumption/${editingConsumption.id}`, commonPayload);
+      } else {
+        saveRes = await api.post('/daily-usage/create_consumption', commonPayload);
+      }
+
       if (allWastageItems.length > 0) {
-        calls.push(api.post('/wastages/create_wastage', {
+        await api.post('/wastages/create_wastage', {
           wastage_date: data.usage_date,
+          consumption_entry_id: saveRes.data.id,
           reason: 'Combined consumption entry',
           times_cooked: Number(data.times_cooked || 0),
           user_id: user?.id,
           status: 1,
           items: allWastageItems,
-        }));
+        });
       }
-      await Promise.all(calls);
     },
-    onSuccess: () => {
+    onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ['consumptions'] });
       queryClient.invalidateQueries({ queryKey: ['wastages'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
       queryClient.invalidateQueries({ queryKey: ['items'] });
-      showSuccess(editingConsumption ? 'Entry updated' : 'Combined entry saved');
+      showSuccess(variables?.isEditMode ? 'Entry updated' : 'Combined entry saved');
       setOpen(false);
       setEditingConsumption(null);
       reset({
@@ -287,14 +266,44 @@ const UsageEntriesPage: React.FC = () => {
 
   const handleEdit = async (consumption: any) => {
     try {
-      const res = await api.get(`/daily-usage/get_consumption/${consumption.id}`);
-      const full = res.data;
+      const [consumptionRes, wastageRes] = await Promise.all([
+        api.get(`/daily-usage/get_consumption/${consumption.id}`),
+        api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
+      ]);
+      
+      const full = consumptionRes.data;
+      const wastageRows = Array.isArray(wastageRes.data)
+        ? wastageRes.data
+        : (wastageRes.data?.items || []);
+      
+      const matchedWastages = wastageRows.filter((w: any) => w.consumption_entry_id === full.id);
+      
       const rawDefaults = buildRawDefaults();
       (full.items || []).forEach((it: any) => {
         rawDefaults[String(it.item_id)] = {
           quantity_used: Number(it.quantity_used || 0),
           qty_returned: Number(it.qty_returned || 0),
         };
+      });
+
+      const wastageDefaults = buildWastageDefaults();
+      const rawWastageToLoad: any[] = [];
+      
+      matchedWastages.forEach((w: any) => {
+        (w.items || []).forEach((it: any) => {
+          if (it.menu_item_id) {
+            wastageDefaults[String(it.menu_item_id)] = {
+              quantity: Number(it.quantity || 0),
+              approx_amount: Number(it.approx_amount || 0),
+            };
+          } else if (it.item_id) {
+            rawWastageToLoad.push({
+              item_id: it.item_id,
+              quantity: Number(it.quantity || 0),
+              serial_id: items?.find((ri: any) => ri.id === it.item_id)?.serial_numbers?.[0]?.serial_number || ''
+            });
+          }
+        });
       });
 
       setEditingConsumption(full);
@@ -308,8 +317,8 @@ const UsageEntriesPage: React.FC = () => {
         additional_serving_persons: Number(full.additional_serving_persons || 0),
         times_cooked: Number(full.times_cooked || 0),
         raw_items: rawDefaults,
-        wastage_items: buildWastageDefaults(),
-        raw_wastage_items: []
+        wastage_items: wastageDefaults,
+        raw_wastage_items: rawWastageToLoad
       });
       setOpen(true);
     } catch {
@@ -328,10 +337,7 @@ const UsageEntriesPage: React.FC = () => {
         ? wastageRes.data
         : (wastageRes.data?.items || []);
       const matchedWastages = wastageRows
-        .filter((w: any) =>
-          w.wastage_date === fullConsumption.usage_date &&
-          (w.reason || '').toLowerCase() === 'combined consumption entry'
-        )
+        .filter((w: any) => w.consumption_entry_id === fullConsumption.id)
         .flatMap((w: any) => (w.items || []).map((it: any) => ({
           entryId: w.id,
           menu_item_name: it.menu_item?.dish_name || it.item?.item_name || `Item #${it.menu_item_id || it.item_id}`,
@@ -350,14 +356,14 @@ const UsageEntriesPage: React.FC = () => {
 
   const onSubmit = async (data: FormValues) => {
     const confirmed = await showConfirm('Confirm Save', 'Save this combined consumption + wastage entry?');
-    if (confirmed) saveMutation.mutate(data);
+    if (confirmed) saveMutation.mutate({ ...data, isEditMode: Boolean(editingConsumption) });
   };
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
       accessorKey: 'usage_date',
       header: 'Date',
-      cell: (i) => formatDate(i.getValue()),
+      cell: (i) => formatDate(i.getValue() as string),
     },
     {
       id: 'total_cooking',
@@ -428,6 +434,12 @@ const UsageEntriesPage: React.FC = () => {
         columns={columns}
         data={filteredConsumptions}
         loading={consumptionsLoading}
+        manualPagination
+        pageCount={consumptionsData?.total_pages || 0}
+        pageIndex={page - 1}
+        pageSize={pageSize}
+        onPageChange={(p) => setPage(p)}
+        totalCount={consumptionsData?.total || 0}
       />
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
@@ -455,11 +467,11 @@ const UsageEntriesPage: React.FC = () => {
 
             <div className="temple-form-section h-full">
               <div className="pb-2">
-                <span className="text-sm font-bold text-text-main">Raw Usage Items</span>
+                <span className="text-base font-bold text-text-main">Raw Usage Items</span>
               </div>
               <div className="rounded-md border border-border-temple overflow-hidden mt-1">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-bg-temple text-text-main uppercase text-[11px] font-bold tracking-wider">
+                  <thead className="bg-bg-temple text-text-main uppercase text-xs font-bold tracking-wider">
                     <tr>
                       <th className="px-4 py-3 border-b border-border-temple">Item</th>
                       <th className="px-4 py-3 border-b border-border-temple text-right">Used</th>
@@ -486,7 +498,7 @@ const UsageEntriesPage: React.FC = () => {
                             {Number(item.qty_returned || 0).toFixed(3)}
                             {(item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code) ? ` ${item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code}` : ''}
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-text-main">
+                          <td className="px-4 py-3 text-right text-text-main">
                             {Number(item.net_quantity || 0).toFixed(3)}
                             {(item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code) ? ` ${item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code}` : ''}
                           </td>
@@ -500,11 +512,11 @@ const UsageEntriesPage: React.FC = () => {
 
             <div className="temple-form-section h-full">
               <div className="pb-2">
-                <span className="text-sm font-bold text-text-main">Wastage Entries</span>
+                <span className="text-base font-bold text-text-main">Wastage Entries</span>
               </div>
               <div className="rounded-md border border-border-temple overflow-hidden mt-1">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-bg-temple text-text-main uppercase text-[11px] font-bold tracking-wider">
+                  <thead className="bg-bg-temple text-text-main uppercase text-xs font-bold tracking-wider">
                     <tr>
                       <th className="px-4 py-3 border-b border-border-temple">Item / Dish</th>
                       <th className="px-4 py-3 border-b border-border-temple text-right">Qty</th>
@@ -524,10 +536,10 @@ const UsageEntriesPage: React.FC = () => {
                           <td className="px-4 py-3 text-text-main">
                             {w.menu_item_name}{w.unit_code ? ` (${w.unit_code})` : ''}
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-text-main">
+                          <td className="px-4 py-3 text-right text-text-main">
                             {Number(w.quantity || 0).toFixed(3)}{w.unit_code ? ` ${w.unit_code}` : ''}
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-text-main">
+                          <td className="px-4 py-3 text-right text-text-main">
                             {w.approx_amount != null ? formatCurrency(Number(w.approx_amount || 0)) : '-'}
                           </td>
                         </tr>
@@ -742,7 +754,7 @@ const UsageEntriesPage: React.FC = () => {
                           <Input
                             type="text"
                             className="h-8 text-[11px] bg-white"
-                            placeholder="Enter serial id"
+                           
                             {...register(`raw_wastage_items.${index}.serial_id` as const)}
                             onChange={(e) => {
                               const serialRaw = e.target.value || '';

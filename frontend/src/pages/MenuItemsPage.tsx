@@ -73,9 +73,9 @@ const MenuItemsPage: React.FC = () => {
       if (id) return api.put(`/menu-items/update_menu_item/${id}`, data);
       return api.post('/menu-items/create_menu_item', data);
     },
-    onSuccess: () => {
+    onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ['menu-items'] });
-      showSuccess(editingMenuItem ? 'Menu item updated' : 'Menu item added');
+      showSuccess(variables?.isEditMode ? 'Menu item updated' : 'Menu item added');
       handleCancel();
     },
     onError: (err: any) => {
@@ -210,7 +210,7 @@ const MenuItemsPage: React.FC = () => {
                   <Label className="text-text-main font-medium">Dish Name *</Label>
                   <Input 
                     {...register('dish_name')} 
-                    placeholder="Enter dish name" 
+                    
                     className="border-border-temple/50 focus:border-primary"
                   />
                   {errors.dish_name && <p className="text-xs text-red-500 font-medium">{errors.dish_name.message}</p>}
@@ -286,6 +286,7 @@ const MenuItemsPage: React.FC = () => {
 };
 
 export default MenuItemsPage;
+
 
 
 

@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ColumnDef } from '@tanstack/react-table';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -16,13 +17,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
+  DialogDescription
 } from '../components/ui/Dialog';
-import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 import { DetailItem } from '../components/ui/DetailItem';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
+import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
+import { Eye, Edit, Trash2 } from 'lucide-react';
 
 const vendorSchema = z.object({
   vendor_code: z.string().optional().or(z.literal('')).or(z.null()),
@@ -68,10 +71,12 @@ const buildVendorPayload = (data: VendorFormValues) => {
 };
 
 const VendorsPage: React.FC = () => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { showSuccess, showError, showConfirm } = useNotification();
-
+  const { showConfirm, showError, showSuccess } = useNotification();
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
 
   const [open, setOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<any>(null);
@@ -79,12 +84,18 @@ const VendorsPage: React.FC = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingVendor, setViewingVendor] = useState<any>(null);
 
-  const { data: vendors, isLoading: vendorsLoading } = useQuery({
-    queryKey: ['vendors', search],
+  const [deleteWarningOpen, setDeleteWarningOpen] = useState(false);
+  const [vendorToDelete, setVendorToDelete] = useState<any>(null);
+  const [usageDetails, setUsageDetails] = useState<string[]>([]);
+
+  const { data: vendorsData, isLoading: vendorsLoading } = useQuery({
+    queryKey: ['vendors', search, page, pageSize],
     queryFn: async () => {
       const params: any = {
         q: search,
-        page_size: 1000,
+        page,
+        page_size: pageSize,
+        status: 1,
       };
 
       const res = await api.get('/vendors/list_vendors', { params });
@@ -92,33 +103,26 @@ const VendorsPage: React.FC = () => {
     },
   });
 
-  const { data: users } = useQuery({
-    queryKey: ['users-list-minimal'],
-    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
-  });
+  const vendors = useMemo(() => vendorsData?.items ?? [], [vendorsData]);
 
-  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<VendorFormValues>({
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<VendorFormValues>({
     resolver: zodResolver(vendorSchema) as any,
     mode: 'onChange',
-    reValidateMode: 'onChange',
   });
 
   const mutation = useMutation({
     mutationFn: async (payloadWithId: VendorFormValues & { id?: number; isEditMode?: boolean }) => {
       const { id, isEditMode, ...data } = payloadWithId;
-      if (isEditMode && !id) {
-        throw new Error('Missing vendor ID for update');
-      }
       const payload = buildVendorPayload(data);
-      if (id) {
+      if (isEditMode && id) {
         return api.put(`/vendors/update_vendor/${id}`, payload);
       }
       return api.post('/vendors/create_vendor', payload);
     },
-    onSuccess: () => {
+    onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
-      showSuccess(editingVendor ? 'Vendor updated successfully' : 'Vendor added successfully');
-      handleClose();
+      showSuccess(variables?.isEditMode ? 'Vendor updated successfully' : 'Vendor added successfully');
+      setOpen(false);
     },
     onError: (err: any) => {
       showError(err.response?.data?.detail || 'Operation failed');
@@ -130,6 +134,7 @@ const VendorsPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
       showSuccess('Vendor deleted successfully');
+      setDeleteWarningOpen(false);
     },
     onError: (err: any) => showError(err.response?.data?.detail || 'Delete failed'),
   });
@@ -173,24 +178,27 @@ const VendorsPage: React.FC = () => {
     setOpen(true);
   };
 
-  const handleClose = () => {
-    setOpen(false);
-    setEditingVendor(null);
-  };
-
-  const handleView = (vendor: any) => {
-    setViewingVendor(vendor);
-    setViewDialogOpen(true);
-  };
-
-  const onSubmit = async (data: VendorFormValues) => {
-    const confirmed = await showConfirm(
-      editingVendor ? 'Confirm Update' : 'Confirm Save',
-      `Are you sure you want to ${editingVendor ? 'update' : 'save'} this vendor?`
-    );
-
-    if (confirmed) {
-      mutation.mutate({ ...data, id: editingVendor?.id, isEditMode: Boolean(editingVendor) });
+  const handleDeleteClick = async (vendor: any) => {
+    try {
+      const res = await api.get('/system/check_usage', {
+        params: { entity_type: 'vendor', entity_id: vendor.id }
+      });
+      
+      if (res.data.has_usage) {
+        setUsageDetails(res.data.details);
+        setVendorToDelete(vendor);
+        setDeleteWarningOpen(true);
+      } else {
+        const confirmed = await showConfirm(
+          'Delete Vendor',
+          `Are you sure you want to delete "${vendor.vendor_name}"?`
+        );
+        if (confirmed) {
+          deleteMutation.mutate(vendor.id);
+        }
+      }
+    } catch {
+      showError('Failed to check vendor usage');
     }
   };
 
@@ -198,34 +206,12 @@ const VendorsPage: React.FC = () => {
     {
       accessorKey: 'created_at',
       header: 'Date',
-      cell: info => <span className="text-text-main">{formatDate(info.getValue())}</span>,
+      cell: info => <span className="text-text-main">{formatDate(info.getValue() as string)}</span>,
     },
     {
       accessorKey: 'vendor_name',
       header: 'Vendor Name',
-      cell: info => (
-        <div className="flex flex-col">
-          <span className="text-text-main font-medium">{info.getValue() as string}</span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'address_line1',
-      header: 'Address',
-      cell: info => {
-        const row = info.row.original;
-        const fullAddress = [
-          row.address_line1,
-          row.city,
-          row.state,
-          row.postal_code
-        ].filter(Boolean).join(', ');
-        return (
-          <div className="max-w-[200px] whitespace-normal leading-tight">
-            <span className="text-text-main">{fullAddress}</span>
-          </div>
-        );
-      },
+      cell: info => <span className="text-text-main font-medium">{info.getValue() as string}</span>,
     },
     {
       accessorKey: 'contact_number',
@@ -248,43 +234,23 @@ const VendorsPage: React.FC = () => {
       header: () => <div className="text-center">Actions</div>,
       cell: info => (
         <div className="flex items-center justify-center gap-2">
-          <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
+          <button onClick={() => { setViewingVendor(info.row.original); setViewDialogOpen(true); }} className="action-btn-view">View</button>
           <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
-          <button
-            onClick={async () => {
-              const confirmed = await showConfirm('Delete Vendor', `Are you sure you want to delete "${info.row.original.vendor_name}"?`);
-              if (confirmed) deleteMutation.mutate(info.row.original.id);
-            }}
-            className="action-btn-delete"
-          >
-            Delete
-          </button>
+          <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>
         </div>
       )
     }
-  ], [deleteMutation, showConfirm, statusMutation]);
+  ], [statusMutation]);
 
   const sortedVendors = useMemo(() => {
-    const vendorList = vendors?.items || [];
-    return [...vendorList].sort((a, b) => {
-      // First sort by status: Active (1) before Disabled (0)
-      if (a.status !== b.status) {
-        return b.status - a.status;
-      }
-      // Then sort by vendor_name (A-Z)
-      return a.vendor_name.localeCompare(b.vendor_name);
-    });
+    return [...vendors].sort((a, b) => a.vendor_name.localeCompare(b.vendor_name));
   }, [vendors]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div>
-            <h2 className="page-title">Vendor Management</h2>
-          </div>
-        </div>
-        <Button onClick={() => handleOpen()} className="bg-primary hover:bg-secondary text-white">Add New Vendor</Button>
+        <h2 className="page-title">Vendor Management</h2>
+        <Button onClick={() => handleOpen()} className="bg-primary hover:bg-secondary text-white font-bold">Add New Vendor</Button>
       </div>
 
       <Card className="border-border-temple">
@@ -293,118 +259,78 @@ const VendorsPage: React.FC = () => {
             <div className="space-y-1.5 w-full sm:w-72">
               <Label className="text-text-main">Search</Label>
               <Input
-                placeholder="Type to search..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="text-text-main"
+                placeholder="Search vendors..."
               />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <DataTable columns={columns} data={sortedVendors} loading={vendorsLoading} />
+      <DataTable 
+        columns={columns} 
+        data={sortedVendors} 
+        loading={vendorsLoading} 
+        manualPagination
+        pageCount={vendorsData?.total_pages || 0}
+        pageIndex={page - 1}
+        pageSize={pageSize}
+        onPageChange={(p) => setPage(p)}
+        totalCount={vendorsData?.total || 0}
+      />
+
+      <DeletionWarningDialog 
+        open={deleteWarningOpen}
+        onOpenChange={setDeleteWarningOpen}
+        onConfirm={() => deleteMutation.mutate(vendorToDelete?.id)}
+        isPending={deleteMutation.isPending}
+        title="Delete Vendor with History?"
+        description={`"${vendorToDelete?.vendor_name}" has existing records in the system.`}
+        consequences={[
+          ...usageDetails,
+          "Historical purchase and payment records will be hidden from active lists.",
+          "Archiving this vendor will prevent new transactions while preserving old data for reports."
+        ]}
+      />
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh] border-border-temple">
-          <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <DialogTitle className="text-text-main">Vendor Profile</DialogTitle>
+        <DialogContent className="max-w-2xl border-border-temple">
+          <DialogHeader>
+            <DialogTitle>Vendor Profile</DialogTitle>
+            <DialogDescription className="sr-only">Vendor details</DialogDescription>
           </DialogHeader>
-          <div className="space-y-0 mt-6 px-2">
+          <div className="space-y-1 mt-4">
             <DetailItem label="Vendor Name" value={viewingVendor?.vendor_name} />
-            <DetailItem label="Contact Person" value={viewingVendor?.contact_person} />
-            <DetailItem label="Primary Contact" value={viewingVendor?.contact_number} />
-            <DetailItem label="Opening Balance" value={formatCurrency(viewingVendor?.opening_balance)} />
-            <DetailItem 
-              label="Address" 
-              value={[
-                viewingVendor?.address_line1,
-                viewingVendor?.city,
-                viewingVendor?.state,
-                viewingVendor?.postal_code
-              ].filter(Boolean).join(', ')} 
-            />
+            <DetailItem label="Contact" value={viewingVendor?.contact_number} />
+            <DetailItem label="Address" value={viewingVendor?.address_line1} />
           </div>
-          <DialogFooter className="mt-10 border-t border-border-temple/40 pt-6">
-            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">Close</Button>
+          <DialogFooter>
+            <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
-        <DialogContent className="max-w-2xl overflow-hidden max-h-[90vh] border-border-temple">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl border-border-temple">
           <DialogHeader>
-            <DialogTitle className="m-0 select-none text-text-main">
-              {editingVendor ? 'Edit Vendor Profile' : 'Add New Vendor'}
-            </DialogTitle>
+            <DialogTitle>{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</DialogTitle>
+            <DialogDescription className="sr-only">Vendor form</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="bg-white flex flex-col" autoComplete="off">
-            <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                <div>
-                  <Label className="text-text-main">Vendor Name (Shop Name) *</Label>
-                  <Input {...register('vendor_name')} placeholder="e.g. Laxmi Traders" className="text-text-main" />
-                  {errors.vendor_name && <p className="text-xs text-red-500">{errors.vendor_name.message}</p>}
-                </div>
-
-                <div>
-                  <Label className="text-text-main">Contact Person</Label>
-                  <Input {...register('contact_person')} placeholder="Individual Name" className="text-text-main" />
-                </div>
-
-                <div>
-                  <Label className="text-text-main">Primary Contact *</Label>
-                  <Input {...register('contact_number')} placeholder="10-digit mobile number" className="text-text-main" />
-                  {errors.contact_number && <p className="text-xs text-red-500">{errors.contact_number.message}</p>}
-                </div>
-
-                <div>
-                  <Label className="text-text-main">Opening Balance *</Label>
-                  <Input 
-                    type="text" 
-                    inputMode="decimal" 
-                    {...register('opening_balance')} 
-                    className="text-text-main" 
-                    onFocus={(e) => {
-                      if (!editingVendor && (e.target.value === '0' || e.target.value === 0)) {
-                        setValue('opening_balance', '' as any);
-                      }
-                    }}
-                  />
-                  {errors.opening_balance && <p className="text-xs text-red-500">{errors.opening_balance.message}</p>}
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label className="text-text-main">Address Line 1 *</Label>
-                  <Input {...register('address_line1')} className="text-text-main" />
-                  {errors.address_line1 && <p className="text-xs text-red-500">{errors.address_line1.message}</p>}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 md:col-span-2 gap-4">
-                  <div>
-                    <Label className="text-text-main">City</Label>
-                    <Input {...register('city')} className="text-text-main" />
-                  </div>
-                  <div>
-                    <Label className="text-text-main">State</Label>
-                    <Input {...register('state')} className="text-text-main" />
-                  </div>
-                  <div>
-                    <Label className="text-text-main">Postal Code</Label>
-                    <Input {...register('postal_code')} className="text-text-main" />
-                    {errors.postal_code && <p className="text-xs text-red-500">{errors.postal_code.message}</p>}
-                  </div>
-                </div>
-              </div>
+          <form onSubmit={handleSubmit((data) => mutation.mutate({ ...data, id: editingVendor?.id, isEditMode: !!editingVendor }))} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+               <div>
+                  <Label>Name</Label>
+                  <Input {...register('vendor_name')} />
+               </div>
+               <div>
+                  <Label>Phone</Label>
+                  <Input {...register('contact_number')} />
+               </div>
             </div>
-
-            <DialogFooter className="gap-3 shrink-0">
-              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
-                Cancel
-              </Button>
-              <Button type="submit" disabled={mutation.isPending} className="w-32 h-10 bg-primary hover:bg-secondary text-white font-bold">
-                {mutation.isPending ? 'Saving...' : 'Save'}
-              </Button>
+            <DialogFooter>
+               <Button type="submit">Save</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -414,4 +340,3 @@ const VendorsPage: React.FC = () => {
 };
 
 export default VendorsPage;
-

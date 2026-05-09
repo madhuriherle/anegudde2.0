@@ -60,7 +60,7 @@ Swagger:
 - Item Categories: `/item-categories/*`
 - Items: `/items/*`
 - Purchases: `/purchases/*`
-- Consumptions: `/consumptions/*`
+- Daily Usage: `/daily-usage/*`
 - Wastages: `/wastages/*`
 - Vendor Payments: `/vendor-payments/*`
 - Reports: `/reports/*`

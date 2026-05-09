@@ -199,7 +199,7 @@ const TokensPage: React.FC = () => {
                     type="number"
                     autoFocus
                     className="text-text-main"
-                    placeholder="e.g. 10"
+                   
                     onFocus={(e) => {
                       if (e.target.value === '0' || e.target.value === 0) {
                         setValue('token_count', '' as any);
@@ -288,6 +288,7 @@ const TokensPage: React.FC = () => {
 };
 
 export default TokensPage;
+
 
 
 

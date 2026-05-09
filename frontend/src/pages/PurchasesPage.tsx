@@ -63,6 +63,7 @@ const PurchasesPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
+  const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -80,11 +81,12 @@ const PurchasesPage: React.FC = () => {
   const viewCompareWrapRef = React.useRef<HTMLDivElement | null>(null);
   const [isManualInvoiceAmount, setIsManualInvoiceAmount] = useState(false);
   const [selectedBillFile, setSelectedBillFile] = useState<File | null>(null);
+  const [showVendorAddress, setShowVendorAddress] = useState(false);
   const MAX_BILL_FILE_SIZE = 20 * 1024 * 1024;
   const ALLOWED_BILL_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.pdf'];
 
-  const { data: purchases, isLoading: purchasesLoading } = useQuery({
-    queryKey: ['purchases', search, pageSize, fromDate, toDate],
+  const { data: purchasesData, isLoading: purchasesLoading } = useQuery({
+    queryKey: ['purchases', search, page, pageSize, fromDate, toDate],
     queryFn: async () => {
       const dateQ = fromDate && toDate
         ? `${fromDate} ${toDate}`
@@ -94,11 +96,13 @@ const PurchasesPage: React.FC = () => {
             ? `${toDate} ${toDate}`
             : '';
       const combinedQ = [search.trim(), dateQ].filter(Boolean).join(' ').trim();
-      const params: any = { q: combinedQ, page_size: pageSize };
+      const params: any = { q: combinedQ, page, page_size: pageSize };
       const res = await api.get('/purchases/list_purchases', { params });
       return res.data;
     },
   });
+
+  const purchases = useMemo(() => purchasesData?.items ?? [], [purchasesData]);
 
   const { data: vendorsData } = useQuery({
     queryKey: ['vendors-list'],
@@ -128,6 +132,63 @@ const PurchasesPage: React.FC = () => {
 
   const watchedItems = watch('items');
   const watchedInvoiceAmount = watch('invoice_amount');
+  const watchedVendorId = watch('vendor_id');
+  const watchedBillNo = watch('bill_no');
+  const selectedVendor = useMemo(
+    () => vendors?.find((v: any) => Number(v.id) === Number(watchedVendorId)),
+    [vendors, watchedVendorId]
+  );
+  const selectedVendorAddress = useMemo(() => {
+    if (!selectedVendor) return '';
+    return [
+      selectedVendor.address_line1,
+      selectedVendor.address_line2,
+      selectedVendor.city,
+      selectedVendor.state,
+      selectedVendor.postal_code,
+    ]
+      .filter((part: any) => String(part || '').trim().length > 0)
+      .join(', ');
+  }, [selectedVendor]);
+  const previousVendorIdRef = React.useRef<any>(undefined);
+  const vendorConfirmBaselineRef = React.useRef<any>(null);
+  React.useEffect(() => {
+    if (!watchedVendorId) {
+      previousVendorIdRef.current = watchedVendorId;
+      setShowVendorAddress(false);
+      vendorConfirmBaselineRef.current = null;
+      return;
+    }
+    if (previousVendorIdRef.current !== watchedVendorId) {
+      setShowVendorAddress(true);
+      previousVendorIdRef.current = watchedVendorId;
+      vendorConfirmBaselineRef.current = {
+        billNo: String(watchedBillNo || ''),
+        invoiceAmount: String(watchedInvoiceAmount ?? ''),
+        items: JSON.stringify(watchedItems || []),
+        fileName: selectedBillFile?.name || '',
+      };
+    }
+  }, [watchedVendorId, watchedBillNo, watchedInvoiceAmount, watchedItems, selectedBillFile]);
+
+  React.useEffect(() => {
+    if (!showVendorAddress || !vendorConfirmBaselineRef.current) return;
+    const current = {
+      billNo: String(watchedBillNo || ''),
+      invoiceAmount: String(watchedInvoiceAmount ?? ''),
+      items: JSON.stringify(watchedItems || []),
+      fileName: selectedBillFile?.name || '',
+    };
+    const baseline = vendorConfirmBaselineRef.current;
+    const changedSinceVendorPick =
+      current.billNo !== baseline.billNo ||
+      current.invoiceAmount !== baseline.invoiceAmount ||
+      current.items !== baseline.items ||
+      current.fileName !== baseline.fileName;
+    if (changedSinceVendorPick) {
+      setShowVendorAddress(false);
+    }
+  }, [showVendorAddress, watchedBillNo, watchedInvoiceAmount, watchedItems, selectedBillFile]);
   
   const totalAmount = (watchedItems || []).reduce((sum: number, item: any) => {
     const q = Number(item.quantity) || 0;
@@ -172,14 +233,15 @@ const PurchasesPage: React.FC = () => {
       }
       return { saveRes, billUploaded };
     },
-    onSuccess: (result: any) => {
+    onSuccess: (result: any, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
       queryClient.invalidateQueries({ queryKey: ['items'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
-      showSuccess(editingPurchase ? 'Purchase updated successfully' : 'Purchase recorded successfully');
-      if (result?.billUploaded) {
-        showSuccess('Bill file uploaded successfully');
-      }
+      
+      const actionText = variables?.isEditMode ? 'updated' : 'recorded';
+      const billText = result?.billUploaded ? ' with bill file' : '';
+      showSuccess(`Purchase ${actionText} successfully${billText}`);
+      
       handleClose();
     },
     onError: (err: any) => {
@@ -452,7 +514,7 @@ const PurchasesPage: React.FC = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-main/50" />
                 <Input
-                  placeholder="Bill No, Vendor, or Item..."
+                 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 text-text-main"
@@ -466,8 +528,14 @@ const PurchasesPage: React.FC = () => {
       <div className="rounded-xl border border-border-temple overflow-hidden bg-white">
         <DataTable 
           columns={columns} 
-          data={purchases?.items || []} 
+          data={purchasesData?.items || []} 
           loading={purchasesLoading} 
+          manualPagination
+          pageCount={purchasesData?.total_pages || 0}
+          pageIndex={page - 1}
+          pageSize={pageSize}
+          onPageChange={(p) => setPage(p)}
+          totalCount={purchasesData?.total || 0}
         />
       </div>
 
@@ -482,9 +550,9 @@ const PurchasesPage: React.FC = () => {
           <div
             ref={viewCompareWrapRef}
             className="mt-4 flex flex-col xl:flex-row xl:items-start"
-            style={{ ['--summary-width' as any]: `${viewSummaryPanelWidth}%` }}
+            style={{ ['--summary-width' as any]: viewingPurchase?.bills?.length > 0 ? `${viewSummaryPanelWidth}%` : '100%' }}
           >
-            <div className="space-y-4 w-full xl:w-[var(--summary-width)] xl:pr-3">
+            <div className={`space-y-4 w-full xl:w-[var(--summary-width)] ${viewingPurchase?.bills?.length > 0 ? 'xl:pr-3' : ''}`}>
               <div className="space-y-0">
                 <DetailItem label="Purchase Date" value={formatDate(viewingPurchase?.purchase_date)} />
                 <DetailItem label="Invoice No" value={viewingPurchase?.bill_no} />
@@ -529,46 +597,45 @@ const PurchasesPage: React.FC = () => {
               </Card>
             </div>
 
-            <div
-              className="hidden xl:flex w-3 cursor-col-resize select-none items-center justify-center"
-              onMouseDown={handleViewPanelResizeStart}
-              title="Drag to resize panels"
-            >
-              <div className="h-16 w-[2px] rounded bg-[#D9C8AF]" />
-            </div>
+            {viewingPurchase?.bills?.length > 0 && (
+              <>
+                <div
+                  className="hidden xl:flex w-3 cursor-col-resize select-none items-center justify-center"
+                  onMouseDown={handleViewPanelResizeStart}
+                  title="Drag to resize panels"
+                >
+                  <div className="h-16 w-[2px] rounded bg-[#D9C8AF]" />
+                </div>
 
-            <div className="rounded-lg border border-border-temple bg-white overflow-hidden h-[520px] w-full xl:w-[calc(100%-var(--summary-width))] xl:pl-3">
-              <div className="px-4 py-2 border-b border-border-temple bg-bg-temple/40 flex items-center justify-between">
-                <span className="text-sm font-bold text-primary uppercase tracking-wider">Uploaded Bill Preview</span>
-                {viewingPurchase?.bills?.length > 0 && (
-                  <button
-                    type="button"
-                    className="action-btn-view"
-                    onClick={() => handleDownloadBill(viewingPurchase.id, viewingPurchase.bills?.[0]?.file_name)}
-                  >
-                    Download
-                  </button>
-                )}
-              </div>
+                <div className="rounded-lg border border-border-temple bg-white overflow-hidden h-[520px] w-full xl:w-[calc(100%-var(--summary-width))] xl:pl-3">
+                  <div className="px-4 py-2 border-b border-border-temple bg-bg-temple/40 flex items-center justify-between">
+                    <span className="text-sm font-bold text-primary uppercase tracking-wider">Uploaded Bill Preview</span>
+                    <button
+                      type="button"
+                      className="action-btn-view"
+                      onClick={() => handleDownloadBill(viewingPurchase.id, viewingPurchase.bills?.[0]?.file_name)}
+                    >
+                      Download
+                    </button>
+                  </div>
 
-              <div className="h-[calc(100%-45px)] bg-[#FAF7F2]">
-                {viewBillPreviewLoading && (
-                  <div className="h-full flex items-center justify-center text-sm text-text-main/70">Loading preview...</div>
-                )}
-                {!viewBillPreviewLoading && !viewingPurchase?.bills?.length && (
-                  <div className="h-full flex items-center justify-center text-sm text-text-main/70">No bill uploaded</div>
-                )}
-                {!viewBillPreviewLoading && viewingPurchase?.bills?.length > 0 && !viewBillPreviewType && (
-                  <div className="h-full flex items-center justify-center text-sm text-text-main/70">Preview not supported for this file type</div>
-                )}
-                {!viewBillPreviewLoading && viewBillPreviewType === 'image' && viewBillPreviewUrl && (
-                  <img src={viewBillPreviewUrl} alt="Uploaded bill" className="w-full h-full object-contain" />
-                )}
-                {!viewBillPreviewLoading && viewBillPreviewType === 'pdf' && viewBillPreviewUrl && (
-                  <iframe src={viewBillPreviewUrl} title="Uploaded bill PDF" className="w-full h-full border-0" />
-                )}
-              </div>
-            </div>
+                  <div className="h-[calc(100%-45px)] bg-[#FAF7F2]">
+                    {viewBillPreviewLoading && (
+                      <div className="h-full flex items-center justify-center text-sm text-text-main/70">Loading preview...</div>
+                    )}
+                    {!viewBillPreviewLoading && !viewBillPreviewType && (
+                      <div className="h-full flex items-center justify-center text-sm text-text-main/70">Preview not supported for this file type</div>
+                    )}
+                    {!viewBillPreviewLoading && viewBillPreviewType === 'image' && viewBillPreviewUrl && (
+                      <img src={viewBillPreviewUrl} alt="Uploaded bill" className="w-full h-full object-contain" />
+                    )}
+                    {!viewBillPreviewLoading && viewBillPreviewType === 'pdf' && viewBillPreviewUrl && (
+                      <iframe src={viewBillPreviewUrl} title="Uploaded bill PDF" className="w-full h-full border-0" />
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter className="mt-8 border-t border-border-temple/40 pt-4">
@@ -597,12 +664,17 @@ const PurchasesPage: React.FC = () => {
                     <Select {...field} className="w-full h-10">
                       <option value="">Choose Vendor</option>
                       {vendors?.filter((v: any) => v.status === 1 || v.id === editingPurchase?.vendor_id).map((v: any) => (
-                        <option key={v.id} value={v.id}>{v.vendor_name} ({v.vendor_code})</option>
+                        <option key={v.id} value={v.id}>{v.vendor_name}</option>
                       ))}
                     </Select>
                   )}
                 />
                 {errors.vendor_id && <p className="text-xs text-red-500 font-medium">{errors.vendor_id.message}</p>}
+                {selectedVendorAddress && showVendorAddress && (
+                  <p className="text-[11px] text-text-main/70 leading-4">
+                    {selectedVendorAddress}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Purchase Date *</Label>
@@ -611,7 +683,7 @@ const PurchasesPage: React.FC = () => {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Invoice/Bill Number</Label>
-                <Input {...register('bill_no')} placeholder="e.g. INV-1234" className="h-10 text-text-main" />
+                <Input {...register('bill_no')} className="h-10 text-text-main" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main font-bold">Total Bill Amount</Label>
@@ -625,7 +697,7 @@ const PurchasesPage: React.FC = () => {
                         type="text" 
                         {...field} 
                         className="pl-8 h-10 text-text-main font-bold" 
-                        placeholder="0"
+                       
                         onChange={(e) => {
                           field.onChange(e);
                           setIsManualInvoiceAmount(true);
@@ -655,7 +727,7 @@ const PurchasesPage: React.FC = () => {
                       {index === 0 && <Label className="text-xs font-bold text-text-main">Serial No</Label>}
                       <Input 
                         type="text" 
-                        placeholder="SN"
+                       
                         className="h-9 text-sm text-center font-bold text-text-main border-primary/30"
                         {...register(`items.${index}.search_id` as const)}
                         onChange={async (e) => {
@@ -781,11 +853,11 @@ const PurchasesPage: React.FC = () => {
           Upload Invoice / Bill
         </p>
 
-        <p className="text-[11px] text-text-main/60 truncate">
-          {selectedBillFile
-            ? selectedBillFile.name
-            : 'Supported: .jpg, .jpeg, .png, .webp, .heic, .pdf (max 20MB)'}
-        </p>
+        {selectedBillFile && (
+          <p className="text-[11px] text-text-main/60 truncate">
+            {selectedBillFile.name}
+          </p>
+        )}
       </div>
     </div>
 
@@ -842,4 +914,5 @@ const PurchasesPage: React.FC = () => {
 };
 
 export default PurchasesPage;
+
 

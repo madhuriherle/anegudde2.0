@@ -4,7 +4,7 @@ import math
 import os
 from pathlib import Path
 from fastapi import HTTPException
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import Item, PurchaseEntry, PurchaseItem, StockLedger, User, Vendor, ItemPrice, PurchaseBill
 from app.schemas.purchase import PurchaseEntryCreate, PurchaseEntryUpdate
@@ -102,7 +102,7 @@ def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: Use
             ))
             
             # Update Item Stock and Price
-            item.current_stock = str(Decimal(item.current_stock or "0") + it.quantity)
+            item.current_stock = Decimal(item.current_stock or 0) + it.quantity
             item.default_price = it.price
             item.updated_at = now
             item.updated_by = current_user.id
@@ -156,33 +156,39 @@ def get_purchase_full(purchase_id: int, db: Session) -> PurchaseEntry:
     return entry
 
 def delete_purchase(purchase_id: int, db: Session, current_user: User) -> None:
-    entry = (
-        db.query(PurchaseEntry)
-        .options(joinedload(PurchaseEntry.bills))
-        .filter(PurchaseEntry.id == purchase_id)
-        .first()
-    )
+    entry = db.query(PurchaseEntry).filter(PurchaseEntry.id == purchase_id).first()
     if not entry:
         raise HTTPException(status_code=404, detail="Not found")
-        
-    base_dir = Path(__file__).resolve().parents[2]
-    for bill in entry.bills:
-        if bill.file_path:
-            file_path = base_dir / bill.file_path
-            if file_path.exists() and file_path.is_file():
-                try:
-                    os.remove(file_path)
-                except OSError:
-                    pass
     
-    # We should also handle stock reversal here if needed, but for now we just delete records.
-    db.query(PurchaseItem).filter(PurchaseItem.purchase_entry_id == purchase_id).delete()
-    db.query(StockLedger).filter(StockLedger.ref_table == "purchase_entries", StockLedger.ref_id == purchase_id).delete()
-    db.delete(entry)
+    # Soft Delete: Toggle status and save who deleted it
+    entry.status = 0
+    entry.updated_at = datetime.now(timezone.utc)
+    entry.updated_by = current_user.id
+    
+    # We should also reverse the stock impact since the transaction is 'gone'
+    for item in entry.items:
+        raw_item = db.query(Item).filter(Item.id == item.item_id).first()
+        if raw_item:
+            raw_item.current_stock = Decimal(raw_item.current_stock or 0) - Decimal(item.quantity or 0)
+    
+    # Mark associated ledger entries as inactive
+    db.execute(
+        text("UPDATE stock_ledger SET status = 0 WHERE ref_table = 'purchase_entries' AND ref_id = :rid"),
+        {"rid": purchase_id}
+    )
+    
     db.commit()
 
 def update_purchase(purchase_id: int, payload: PurchaseEntryUpdate, db: Session, current_user: User) -> PurchaseEntry:
-    # Simpler to delete and recreate for complex nested updates in this MVP
+    # 1. Map Update payload to Create schema to reuse logic
+    # Use current_user.id for user_id since it's missing in Update payload
+    create_payload = PurchaseEntryCreate(
+        **payload.model_dump(),
+        user_id=current_user.id
+    )
+
+    # 2. Perform safe update (delete and recreate for MVP consistency)
     delete_purchase(purchase_id, db, current_user)
-    new_entry = create_purchase(payload, db, current_user)
+    new_entry = create_purchase(create_payload, db, current_user)
+    
     return get_purchase_full(new_entry.id, db)

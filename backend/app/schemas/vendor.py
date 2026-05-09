@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
 
 
@@ -11,7 +12,7 @@ class VendorBase(BaseModel):
     city: str | None = None
     state: str | None = None
     postal_code: str | None = None
-    opening_balance: str = "0"
+    opening_balance: Decimal = Decimal("0")
     status: int = 1
 
 
@@ -28,7 +29,7 @@ class VendorUpdate(BaseModel):
     city: str | None = None
     state: str | None = None
     postal_code: str | None = None
-    opening_balance: str | None = None
+    opening_balance: Decimal | None = None
     status: int | None = None
 
 

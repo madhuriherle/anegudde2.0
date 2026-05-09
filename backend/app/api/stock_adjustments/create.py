@@ -14,7 +14,7 @@ def create_adjustment(payload: StockAdjustmentCreate, db: Session = Depends(get_
     adjustment = StockAdjustment(**payload.model_dump(), user_id=current_user.id, created_at=now, created_by=current_user.id)
     db.add(adjustment); db.flush()
     
-    item.current_stock = str(Decimal(item.current_stock or "0") + payload.adjusted_qty); item.updated_at = now; item.updated_by = current_user.id
+    item.current_stock = Decimal(item.current_stock or 0) + payload.adjusted_qty; item.updated_at = now; item.updated_by = current_user.id
     db.add(StockLedger(
         item_id=item.id, 
         txn_date=payload.adjustment_date, 

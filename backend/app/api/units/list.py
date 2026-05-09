@@ -11,9 +11,12 @@ def list_units(
     db: Session = Depends(get_db), 
     _: User = Depends(get_current_user),
     q: str | None = Query(None),
+    status: int | None = Query(1),
     search_field: str | None = Query(None),
 ):
     query = db.query(Unit)
+    if status is not None:
+        query = query.filter(Unit.status == status)
     if q:
         like = f"%{q}%"
         if search_field == "name":

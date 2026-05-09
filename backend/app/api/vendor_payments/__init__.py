@@ -13,10 +13,11 @@ def list_vendor_payments(
     page: int = 1,
     page_size: int = 20,
     q: str | None = Query(None),
+    status: int | None = Query(1),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return vendor_payment_service.list_vendor_payments(db, page, page_size, q)
+    return vendor_payment_service.list_vendor_payments(db, page, page_size, q, status)
 
 
 @router.post("/create_vendor_payment", response_model=VendorPaymentOut, status_code=status.HTTP_201_CREATED)

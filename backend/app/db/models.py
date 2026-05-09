@@ -87,7 +87,7 @@ class Vendor(Base):
     state = Column(String(100), nullable=True)
     postal_code = Column(String(20), nullable=True)
     pan_number = Column(String(20), nullable=True)
-    opening_balance = Column(Text, nullable=False, default="0")
+    opening_balance = Column(Numeric(15, 3), nullable=False, default=0)
     credit_limit = Column(Numeric(15, 3), nullable=True)
     notes = Column(Text, nullable=True)
     status = Column(Integer, nullable=False, default=1)
@@ -151,8 +151,8 @@ class Item(Base):
     item_name = Column(String(150), unique=True, nullable=False)
     category_id = Column(Integer, ForeignKey("item_categories.id"), nullable=False)
     unit_id = Column(Integer, ForeignKey("units.id"), nullable=False)
-    opening_stock = Column(String(50), nullable=False, default="0")
-    current_stock = Column(String(50), nullable=False, default="0")
+    opening_stock = Column(Numeric(15, 3), nullable=False, default=0)
+    current_stock = Column(Numeric(15, 3), nullable=False, default=0)
     default_price = Column(Numeric(15, 3), nullable=True)
     min_stock_level = Column(Numeric(15, 3), nullable=True)
     max_stock_level = Column(Numeric(15, 3), nullable=True)
@@ -263,6 +263,7 @@ class ConsumptionEntry(Base):
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("ConsumptionItem", back_populates="consumption_entry", cascade="all, delete-orphan")
     wastage_items = relationship("WastageItem", back_populates="consumption_entry", cascade="all, delete-orphan")
+    wastages = relationship("WastageEntry", back_populates="consumption_entry", cascade="all, delete-orphan")
 
 class ConsumptionItem(Base):
     __tablename__ = "consumption_items"
@@ -285,6 +286,7 @@ class ConsumptionItem(Base):
 class WastageEntry(Base):
     __tablename__ = "wastage_entries"
     id = Column(Integer, primary_key=True)
+    consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=True)
     wastage_date = Column(Date, nullable=False)
     times_cooked = Column(Integer, nullable=False, default=0, server_default=text("0"))
     reason = Column(Text, nullable=True)
@@ -296,6 +298,7 @@ class WastageEntry(Base):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("WastageItem", back_populates="wastage_entry", cascade="all, delete-orphan")
+    consumption_entry = relationship("ConsumptionEntry", back_populates="wastages")
 
 class WastageItem(Base):
     __tablename__ = "wastage_items"
@@ -358,6 +361,7 @@ class StockLedger(Base):
     value_out = Column(Numeric(15, 3), nullable=False, default=0)
     balance = Column(Numeric(15, 3), nullable=False, default=0)
     current_value = Column(Numeric(15, 3), nullable=False, default=0)
+    status = Column(Integer, nullable=False, default=1, server_default=text("1"))
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -459,6 +463,7 @@ class TokenDetail(Base):
     __tablename__ = "token_details"
     id = Column(Integer, primary_key=True)
     generation_id = Column(Integer, ForeignKey("token_generations.id"), nullable=False)
+    receipt_number = Column(Integer, nullable=False)
     token_count = Column(Integer, nullable=False)
     created_at = Column(DateTime, primary_key=True, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())

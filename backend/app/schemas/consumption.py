@@ -21,10 +21,6 @@ class ConsumptionEntryCreate(BaseModel):
     regular_serving_persons: int = 0
     additional_serving_persons: int = 0
     times_cooked: int = 0
-    anna_remained: Decimal = Decimal("0")
-    saru_remained: Decimal = Decimal("0")
-    huli_remained: Decimal = Decimal("0")
-    payas_remained: Decimal = Decimal("0")
     user_id: int
     status: int = 1
     items: list[ConsumptionItemIn] = []
@@ -42,10 +38,6 @@ class ConsumptionEntryOut(BaseModel):
     regular_serving_persons: int = 0
     additional_serving_persons: int = 0
     times_cooked: int = 0
-    anna_remained: Decimal = Decimal("0")
-    saru_remained: Decimal = Decimal("0")
-    huli_remained: Decimal = Decimal("0")
-    payas_remained: Decimal = Decimal("0")
     user_id: int
     status: int
     created_at: datetime
@@ -80,10 +72,6 @@ class ConsumptionEntryUpdate(BaseModel):
     regular_serving_persons: int = 0
     additional_serving_persons: int = 0
     times_cooked: int = 0
-    anna_remained: Decimal = Decimal("0")
-    saru_remained: Decimal = Decimal("0")
-    huli_remained: Decimal = Decimal("0")
-    payas_remained: Decimal = Decimal("0")
     items: list[ConsumptionItemIn] = []
 
 

@@ -39,10 +39,6 @@ class StockSummaryFooter(BaseModel):
     serving_persons: int
     cleaning_persons: int
     rice_remained: Decimal
-    anna_remained: Decimal
-    saru_remained: Decimal
-    huli_remained: Decimal
-    payasam_remained: Decimal
 
 
 class DetailedStockSummaryResponse(BaseModel):

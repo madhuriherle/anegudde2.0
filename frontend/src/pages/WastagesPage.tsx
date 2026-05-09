@@ -24,21 +24,27 @@ const WastagesPage: React.FC = () => {
   
   // Filter States
   const [customDate, setCustomDate] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
 
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingWastage, setViewingWastage] = useState<any>(null);
 
   // Fetch Data
-  const { data: wastages, isLoading: wastagesLoading } = useQuery({
-    queryKey: ['wastages'],
+  const { data: wastagesData, isLoading: wastagesLoading } = useQuery({
+    queryKey: ['wastages', customDate, page, pageSize],
     queryFn: async () => {
       const params: any = { 
-        page_size: 1000, 
+        page,
+        page_size: pageSize,
       };
+      if (customDate) params.q = customDate;
       const res = await api.get('/wastages/list_wastages', { params });
       return res.data;
     },
   });
+
+  const wastages = useMemo(() => wastagesData?.items ?? [], [wastagesData]);
 
   const handleView = async (wastage: any) => {
     try {
@@ -52,11 +58,8 @@ const WastagesPage: React.FC = () => {
 
   // Grouped rows (One per record)
   const displayRows = useMemo(() => {
-    const wastageList = Array.isArray(wastages) ? wastages : (wastages?.items || []);
-    
-    if (!customDate) return wastageList;
-    return wastageList.filter((w: any) => w.wastage_date === customDate);
-  }, [wastages, customDate]);
+    return wastages;
+  }, [wastages]);
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     { 
@@ -137,6 +140,12 @@ const WastagesPage: React.FC = () => {
         columns={columns}
         data={displayRows}
         loading={wastagesLoading}
+        manualPagination
+        pageCount={wastagesData?.total_pages || 0}
+        pageIndex={page - 1}
+        pageSize={pageSize}
+        onPageChange={(p) => setPage(p)}
+        totalCount={wastagesData?.total || 0}
       />
 
       {/* View Details Dialog */}

@@ -15,31 +15,56 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   loading?: boolean;
+  // Server-side pagination props
+  manualPagination?: boolean;
+  pageCount?: number;
+  pageIndex?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  totalCount?: number;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   loading,
+  manualPagination = false,
+  pageCount = 1,
+  pageIndex = 0,
+  pageSize = 50,
+  onPageChange,
+  totalCount,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
+  // Ensure data is always an array
+  const tableData = React.useMemo(() => data || [], [data]);
+
   const table = useReactTable({
-    data,
+    data: tableData,
     columns,
     state: {
       sorting,
+      pagination: {
+        pageIndex,
+        pageSize,
+      },
     },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 50,
-      },
-    },
+    manualPagination: true,
+    pageCount: Math.max(1, pageCount),
   });
+
+  const handlePageChange = (newPageIndex: number) => {
+    if (onPageChange) {
+      onPageChange(newPageIndex + 1);
+    }
+  };
+
+  const rows = table.getRowModel().rows;
 
   return (
     <div className="space-y-4">
@@ -73,8 +98,8 @@ export function DataTable<TData, TValue>({
             ))}
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+            {rows.length ? (
+              rows.map((row) => (
                 <tr
                   key={row.id}
                   className="hover:bg-gray-50/80 transition-colors"
@@ -93,7 +118,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <tr>
                 <td colSpan={columns.length} className="h-24 text-center text-gray-500">
-                  No results found.
+                  {loading ? 'Loading data...' : 'No results found.'}
                 </td>
               </tr>
             )}
@@ -101,56 +126,62 @@ export function DataTable<TData, TValue>({
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-2 py-1">
-        <div className="flex-1 text-xs text-gray-500 font-medium">
-          Showing {table.getFilteredRowModel().rows.length} results
-        </div>
-        <div className="flex items-center space-x-6 lg:space-x-8">
-          <div className="flex items-center space-x-2">
-            <p className="text-xs font-bold text-gray-700">Page {table.getState().pagination.pageIndex + 1} of{' '}
-              {table.getPageCount()}</p>
+      {/* Pagination Controls */}
+      {manualPagination && (
+        <div className="flex items-center justify-between px-2 py-1">
+          <div className="flex-1 text-xs text-gray-500 font-medium">
+            {totalCount !== undefined ? (
+              <>Showing {totalCount > 0 ? (pageIndex * pageSize) + 1 : 0} to {Math.min((pageIndex + 1) * pageSize, totalCount)} of {totalCount} results</>
+            ) : (
+              <>Showing {rows.length} results</>
+            )}
           </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <span className="sr-only">Go to first page</span>
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <span className="sr-only">Go to previous page</span>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <span className="sr-only">Go to next page</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-            >
-              <span className="sr-only">Go to last page</span>
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center space-x-6 lg:space-x-8">
+            <div className="flex items-center space-x-2">
+              <p className="text-xs font-bold text-gray-700">Page {pageIndex + 1} of{' '}
+                {Math.max(1, pageCount)}</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => handlePageChange(0)}
+                disabled={pageIndex === 0}
+              >
+                <span className="sr-only">Go to first page</span>
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => handlePageChange(pageIndex - 1)}
+                disabled={pageIndex === 0}
+              >
+                <span className="sr-only">Go to previous page</span>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => handlePageChange(pageIndex + 1)}
+                disabled={pageIndex + 1 >= pageCount}
+              >
+                <span className="sr-only">Go to next page</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => handlePageChange(pageCount - 1)}
+                disabled={pageIndex + 1 >= pageCount}
+              >
+                <span className="sr-only">Go to last page</span>
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,18 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Eye,
   Loader2,
-  Ticket,
-  Clock,
-  User as UserIcon,
-  X
+  Ticket
 } from 'lucide-react';
 import api from '../api/axios';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import { formatDate, formatDateTime } from '../utils/date';
+import { formatDate } from '../utils/date';
 
 interface TokenGeneration {
   id: number;
@@ -21,56 +19,26 @@ interface TokenGeneration {
   created_at: string;
 }
 
-interface TokenDetail {
-  id: number;
-  token_count: number;
-  created_at: string;
-  issued_by?: string;
-  creator?: {
-    id: number;
-    full_name: string;
-  };
-}
-
 const TokenReportPage: React.FC = () => {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
 
   // Fetch summary list
-  const { data: generations, isLoading: isLoadingSummary } = useQuery({
-    queryKey: ['token-generations'],
+  const { data: generationsData, isLoading: isLoadingSummary } = useQuery({
+    queryKey: ['token-generations', page, pageSize],
     queryFn: async () => {
       const res = await api.get('/tokens/list_generations', {
-        params: { page: 1, page_size: 100 } // Get recent 100 days
+        params: { page, page_size: pageSize }
       });
-      return res.data.items as TokenGeneration[];
+      return res.data;
     },
   });
 
-  // Fetch details for selected date
-  const { data: details, isLoading: isLoadingDetails } = useQuery({
-    queryKey: ['token-details', selectedDate],
-    queryFn: async () => {
-      if (!selectedDate) return [];
-      const res = await api.get(`/tokens/get_details_by_date/${selectedDate}`);
-      return res.data.items as TokenDetail[];
-    },
-    enabled: !!selectedDate,
-  });
-  const detailRows = React.useMemo(() => {
-    const raw = Array.isArray(details) ? details : [];
-    return raw.map((d: any, idx: number) => ({
-      id: d?.id ?? idx,
-      token_count: d?.token_count ?? d?.tokens_issued ?? 0,
-      created_at: d?.created_at ?? d?.time ?? d?.issued_at ?? '',
-      issued_by: d?.issued_by ?? d?.issuedBy ?? d?.creator?.full_name ?? 'System',
-      creator: d?.creator,
-    })) as TokenDetail[];
-  }, [details]);
+  const generations = useMemo(() => generationsData?.items ?? [], [generationsData]);
 
   const handleViewDetails = (date: string) => {
-    setSelectedDate(date);
-    setIsModalOpen(true);
+    navigate(`/reports/tokens/${date}`);
   };
 
   return (
@@ -138,77 +106,40 @@ const TokenReportPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {!isLoadingSummary && (generationsData?.total_pages || 0) > 1 && (
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+              <div className="text-xs text-text-main opacity-60 font-medium">
+                Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, generationsData?.total || 0)} of {generationsData?.total} days
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <div className="text-xs font-bold text-text-main px-2">
+                  Page {page} of {generationsData?.total_pages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.min(generationsData?.total_pages || 1, p + 1))}
+                  disabled={page === generationsData?.total_pages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* Details Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-bg-cream">
-              <h3 className="text-lg font-bold text-text-main">
-                Token Details: {selectedDate && formatDate(selectedDate)}
-              </h3>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            
-            <div className="p-6 max-h-[70vh] overflow-y-auto">
-              {isLoadingDetails ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-2">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm text-gray-500">Fetching detailed logs...</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider px-2">
-                    <div>Time</div>
-                    <div className="text-center">Tokens Issued</div>
-                    <div className="text-right">Issued By</div>
-                  </div>
-                  <div className="space-y-2">
-                    {detailRows.length === 0 ? (
-                      <div className="rounded-lg border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
-                        No token details found for this date.
-                      </div>
-                    ) : (
-                      detailRows.map((detail) => (
-                        <div 
-                          key={detail.id} 
-                          className="grid grid-cols-3 items-center p-3 rounded-lg border border-gray-100 hover:border-primary/20 hover:bg-primary/5 transition-all"
-                        >
-                          <div className="flex items-center gap-2 text-sm text-gray-700">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            {detail.created_at ? new Date(detail.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-                          </div>
-                          <div className="text-center">
-                            <span className="font-bold text-text-main">{detail.token_count}</span>
-                          </div>
-                          <div className="flex items-center justify-end gap-2 text-sm text-gray-600">
-                            <UserIcon className="w-4 h-4 text-gray-400" />
-                            {detail.issued_by || detail.creator?.full_name || 'System'}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-              <Button onClick={() => setIsModalOpen(false)}>Close</Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
 export default TokenReportPage;
-

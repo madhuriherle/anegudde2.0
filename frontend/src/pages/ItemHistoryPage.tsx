@@ -70,7 +70,7 @@ const ItemHistoryPage: React.FC = () => {
       cell: info => {
         const val = Number(info.getValue());
         return (
-          <div className={`text-right font-bold ${val > 0 ? 'text-green-600' : 'text-text-main/30'}`}>
+          <div className={`text-right ${val > 0 ? 'text-green-600' : 'text-text-main/30'}`}>
             {val > 0 ? `+${val}` : '-'}
             {val > 0 && item?.unit?.unit_code && <span className="ml-1 text-[10px] opacity-60 font-normal text-text-main">{item.unit.unit_code}</span>}
           </div>
@@ -83,7 +83,7 @@ const ItemHistoryPage: React.FC = () => {
       cell: info => {
         const val = Number(info.getValue());
         return (
-          <div className={`text-right font-bold ${val > 0 ? 'text-red-600' : 'text-text-main/30'}`}>
+          <div className={`text-right ${val > 0 ? 'text-red-600' : 'text-text-main/30'}`}>
             {val > 0 ? `-${val}` : '-'}
             {val > 0 && item?.unit?.unit_code && <span className="ml-1 text-[10px] opacity-60 font-normal text-text-main">{item.unit.unit_code}</span>}
           </div>
@@ -95,7 +95,7 @@ const ItemHistoryPage: React.FC = () => {
       header: () => <div className="text-right">Current Stock</div>,
       cell: info => {
         return (
-          <div className="text-right font-bold text-primary-main">
+          <div className="text-right text-primary-main">
             {info.getValue() as string}
             {item?.unit?.unit_code && <span className="ml-1 text-[10px] opacity-60 font-normal">{item.unit.unit_code}</span>}
           </div>
@@ -120,7 +120,7 @@ const ItemHistoryPage: React.FC = () => {
       header: () => <div className="text-right">Usage Cost</div>,
       cell: info => {
         const val = Number(info.getValue());
-        return <div className="text-right text-text-main font-medium text-orange-600">{val > 0 ? formatCurrency(val) : '-'}</div>;
+        return <div className="text-right text-text-main text-orange-600">{val > 0 ? formatCurrency(val) : '-'}</div>;
       }
     },
     {
@@ -128,7 +128,7 @@ const ItemHistoryPage: React.FC = () => {
       header: () => <div className="text-right">Current Value</div>,
       cell: info => {
         const val = Number(info.getValue());
-        return <div className="text-right text-primary-main font-bold">{formatCurrency(val)}</div>;
+        return <div className="text-right text-primary-main">{formatCurrency(val)}</div>;
       }
     },
   ], [item]);

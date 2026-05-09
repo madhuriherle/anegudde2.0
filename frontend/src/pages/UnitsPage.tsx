@@ -82,9 +82,9 @@ const UnitsPage: React.FC = () => {
       if (id) return api.put(`/units/update_unit/${id}`, data);
       return api.post('/units/create_unit', data);
     },
-    onSuccess: () => {
+    onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
-      showSuccess(editingUnit ? 'Unit updated' : 'Unit added');
+      showSuccess(variables?.isEditMode ? 'Unit updated' : 'Unit added');
       handleClose();
     },
     onError: (err: any) => showError(err.response?.data?.detail || 'Operation failed'),
@@ -222,7 +222,7 @@ const UnitsPage: React.FC = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  placeholder="Search units..."
+                 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 text-text-main"
@@ -269,12 +269,12 @@ const UnitsPage: React.FC = () => {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-text-main">Unit Name *</Label>
-                <Input {...register('unit_name')} placeholder="e.g. Kilogram" className="text-text-main" />
+                <Input {...register('unit_name')} className="text-text-main" />
                 {errors.unit_name && <p className="text-xs text-red-500">{errors.unit_name.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Unit Code *</Label>
-                <Input {...register('unit_code')} placeholder="e.g. KG" className="text-text-main" />
+                <Input {...register('unit_code')} className="text-text-main" />
                 {errors.unit_code && <p className="text-xs text-red-500">{errors.unit_code.message}</p>}
               </div>
             </div>
@@ -297,6 +297,7 @@ const UnitsPage: React.FC = () => {
 };
 
 export default UnitsPage;
+
 
 
 

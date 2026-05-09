@@ -10,8 +10,8 @@ class ItemBase(BaseModel):
     item_name: str
     category_id: int
     unit_id: int
-    opening_stock: str = "0"
-    current_stock: str = "0"
+    opening_stock: Decimal = Decimal("0")
+    current_stock: Decimal = Decimal("0")
     default_price: Decimal | None = None
     min_stock_level: Decimal | None = None
     max_stock_level: Decimal | None = None
@@ -26,8 +26,8 @@ class ItemUpdate(BaseModel):
     item_name: str | None = None
     category_id: int | None = None
     unit_id: int | None = None
-    opening_stock: str | None = None
-    current_stock: str | None = None
+    opening_stock: Decimal | None = None
+    current_stock: Decimal | None = None
     default_price: Decimal | None = None
     min_stock_level: Decimal | None = None
     max_stock_level: Decimal | None = None

@@ -94,7 +94,7 @@ const ProfilePage: React.FC = () => {
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   required
                   className="pl-10 pr-10 bg-white"
-                  placeholder="Enter your current password"
+                 
                 />
                 <button
                   type="button"
@@ -117,7 +117,7 @@ const ProfilePage: React.FC = () => {
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
                   className="bg-white"
-                  placeholder="New password"
+                 
                 />
               </div>
 
@@ -131,7 +131,7 @@ const ProfilePage: React.FC = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   className="bg-white"
-                  placeholder="Confirm new password"
+                 
                 />
               </div>
             </div>
@@ -166,5 +166,6 @@ const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
+
 
 

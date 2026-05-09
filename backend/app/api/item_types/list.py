@@ -12,7 +12,7 @@ router = APIRouter()
 def list_item_types(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
-    status: int | None = Query(None),
+    status: int | None = Query(1),
 ):
     query = db.query(ItemType)
     if status is not None:

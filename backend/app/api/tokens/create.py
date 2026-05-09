@@ -12,13 +12,9 @@ def create_tokens(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    return token_service.create_tokens(payload, db, current_user)
-
-@router.get("/generate_tokens", response_model=TokenDetailResponse)
-def create_tokens_get(
-    count: int, 
-    db: Session = Depends(get_db), 
-    current_user: User = Depends(get_current_user)
-):
-    payload = TokenDetailCreate(token_count=count)
+    """
+    Create a new token entry. 
+    If 'date' is provided in payload, it will be recorded for that date.
+    Otherwise, it defaults to today.
+    """
     return token_service.create_tokens(payload, db, current_user)

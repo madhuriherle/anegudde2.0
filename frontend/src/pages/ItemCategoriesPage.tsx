@@ -20,6 +20,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
 import { Label } from '../components/ui/Label';
+import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 
 const categorySchema = z.object({
   category_name: z.string().min(1, 'Name is required'),
@@ -38,6 +39,9 @@ const ItemCategoriesPage: React.FC = () => {
   const [search, setSearch] = useState('');
 
   const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [deleteWarningOpen, setDeleteWarningOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<any>(null);
+  const [usageDetails, setUsageDetails] = useState<string[]>([]);
 
   // Fetch Data
   const { data: categories, isLoading } = useQuery({
@@ -57,17 +61,12 @@ const ItemCategoriesPage: React.FC = () => {
   const mutation = useMutation({
     mutationFn: async (payload: CategoryFormValues & { id?: number; isEditMode?: boolean }) => {
       const { id, isEditMode, ...data } = payload;
-      if (isEditMode && !id) {
-        throw new Error('Missing category ID for update');
-      }
-      if (id) {
-        return api.put(`/item-categories/update_category/${id}`, data);
-      }
+      if (isEditMode && id) return api.put(`/item-categories/update_category/${id}`, data);
       return api.post('/item-categories/create_category', data);
     },
-    onSuccess: () => {
+    onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ['item-categories'] });
-      showSuccess(editingCategory ? 'Category updated' : 'Category added');
+      showSuccess(variables?.isEditMode ? 'Category updated' : 'Category added');
       handleCancel();
     },
     onError: (err: any) => showError(err.response?.data?.detail || 'Operation failed'),
@@ -78,6 +77,7 @@ const ItemCategoriesPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item-categories'] });
       showSuccess('Category deleted');
+      setDeleteWarningOpen(false);
     },
     onError: (err: any) => showError(err.response?.data?.detail || 'Delete failed'),
   });
@@ -104,8 +104,37 @@ const ItemCategoriesPage: React.FC = () => {
     reset({ category_name: '', status: 1 });
   };
 
+  const handleDeleteClick = async (category: any) => {
+    try {
+      const res = await api.get('/system/check_usage', {
+        params: { entity_type: 'category', entity_id: category.id }
+      });
+      
+      if (res.data.has_usage) {
+        setUsageDetails(res.data.details);
+        setCategoryToDelete(category);
+        setDeleteWarningOpen(true);
+      } else {
+        const confirmed = await showConfirm(
+          'Delete Category',
+          `Are you sure you want to delete "${category.category_name}"?`
+        );
+        if (confirmed) {
+          deleteMutation.mutate(category.id);
+        }
+      }
+    } catch {
+      showError('Failed to check category usage');
+    }
+  };
+
   const onSubmit = async (data: CategoryFormValues) => {
-    mutation.mutate({ ...data, id: editingCategory?.id, isEditMode: Boolean(editingCategory) });
+    const isEditMode = Boolean(editingCategory);
+    const confirmed = await showConfirm(
+      isEditMode ? 'Update Category' : 'Add Category',
+      isEditMode ? 'Are you sure?' : 'Add this category?'
+    );
+    if (confirmed) mutation.mutate({ ...data, id: editingCategory?.id, isEditMode });
   };
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
@@ -131,30 +160,16 @@ const ItemCategoriesPage: React.FC = () => {
       cell: info => (
         <div className="flex items-center justify-center gap-2">
           <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>
-          <button
-            onClick={async () => {
-              const confirmed = await showConfirm('Delete Category', `Are you sure?`);
-              if (confirmed) {
-                deleteMutation.mutate(info.row.original.id);
-              }
-            }}
-            className="action-btn-delete"
-          >
-            Delete
-          </button>
+          <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>
         </div>
       )
     }
-  ], [deleteMutation, showConfirm, statusMutation]);
+  ], [statusMutation]);
 
   const sortedCategories = useMemo(() => {
     const categoryList = categories?.items || [];
     return [...categoryList].sort((a, b) => {
-      // First sort by status: Active (1) before Disabled (0)
-      if (a.status !== b.status) {
-        return b.status - a.status;
-      }
-      // Then sort by category_name (A-Z)
+      if (a.status !== b.status) return b.status - a.status;
       return a.category_name.localeCompare(b.category_name);
     });
   }, [categories]);
@@ -166,54 +181,24 @@ const ItemCategoriesPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Side: Form (30%) */}
         <div className="lg:col-span-4 space-y-6">
           <Card className="border-border-temple sticky top-6">
             <CardContent className="p-6">
               <div className="flex flex-col space-y-1.5 bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-6 select-none rounded-t-lg">
-                <h3 className="text-[18px] font-bold leading-[1.25] text-[#2F1F14] m-0">
+                <h3 className="text-[18px] font-bold text-[#2F1F14] m-0">
                   {editingCategory ? 'Edit Category' : 'Add New Category'}
                 </h3>
               </div>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
                 <div className="space-y-2">
                   <Label className="text-text-main font-medium">Category Name *</Label>
-                  <Input 
-                    {...register('category_name')} 
-                    placeholder="e.g. Vegetables, Grains..." 
-                    className="border-border-temple/50 focus:border-primary"
-                  />
-                  {errors.category_name && <p className="text-xs text-red-500 font-medium">{errors.category_name.message}</p>}
+                  <Input {...register('category_name')} className="border-border-temple/50" />
+                  {errors.category_name && <p className="text-xs text-red-500">{errors.category_name.message}</p>}
                 </div>
-
                 <div className="flex gap-3 pt-2">
-                  <Button 
-                    type="submit" 
-                    disabled={mutation.isPending}
-                    className={editingCategory ? 'flex-1 h-10 text-text-main font-bold' : 'w-full h-10 text-text-main font-bold'}
-                  >
-                    {mutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                      
-                        {editingCategory ? 'Save' : 'Save'}
-                      </>
-                    )}
-                  </Button>
-                  
+                  <Button type="button" onClick={handleSubmit(onSubmit)} disabled={mutation.isPending} className="flex-1 font-bold">Save</Button>
                   {editingCategory && (
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      onClick={handleCancel}
-                      className="flex-1 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]"
-                    >
-                      Cancel
-                    </Button>
+                    <Button type="button" variant="ghost" onClick={handleCancel} className="flex-1 bg-white border border-[#D9C8AF]">Cancel</Button>
                   )}
                 </div>
               </form>
@@ -221,22 +206,28 @@ const ItemCategoriesPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Right Side: List (70%) */}
-        <div className="lg:col-span-8 space-y-4">
+        <div className="lg:col-span-8">
           <Card className="border-border-temple shadow-sm overflow-hidden">
-            <div className="bg-white">
-              <DataTable 
-                columns={columns} 
-                data={sortedCategories} 
-                loading={isLoading} 
-              />
-            </div>
+            <DataTable columns={columns} data={sortedCategories} loading={isLoading} />
           </Card>
         </div>
       </div>
+
+      <DeletionWarningDialog 
+        open={deleteWarningOpen}
+        onOpenChange={setDeleteWarningOpen}
+        onConfirm={() => deleteMutation.mutate(categoryToDelete?.id)}
+        isPending={deleteMutation.isPending}
+        title="Delete Category with Active Items?"
+        description={`"${categoryToDelete?.category_name}" currently contains items.`}
+        consequences={[
+          ...usageDetails,
+          "All items in this category will become uncategorized.",
+          "This will not delete the items themselves, but will affect your reports."
+        ]}
+      />
     </div>
   );
 };
 
 export default ItemCategoriesPage;
-

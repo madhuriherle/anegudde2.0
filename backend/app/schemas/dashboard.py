@@ -25,6 +25,7 @@ class DashboardToday(BaseModel):
     purchase_details: list["DailyItemDetail"]
     consumption_details: list["DailyItemDetail"]
     wastage_details: list["DailyWastageDetail"]
+    token_details: list["DailyTokenDetail"]
 
 
 class DailyItemDetail(BaseModel):
@@ -38,6 +39,13 @@ class DailyWastageDetail(BaseModel):
     menu_item_name: str
     unit_name: str
     quantity: Decimal
+
+
+class DailyTokenDetail(BaseModel):
+    receipt_no: int
+    token_count: int
+    issued_by: str | None = None
+    issued_at: datetime | None = None
 
 
 class LowStockRow(BaseModel):

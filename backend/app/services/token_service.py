@@ -28,17 +28,22 @@ def _ensure_token_partition_for_timestamp(db: Session, ts: datetime) -> None:
 
 def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     now = datetime.now(timezone.utc)
-    today = now.date()
-    _ensure_token_partition_for_timestamp(db, now)
+    # Use provided date or fallback to today
+    target_date = payload.date if payload.date else now.date()
+    
+    # Ensure partition exists for the target date's month
+    # We use a datetime for the partition check
+    partition_dt = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+    _ensure_token_partition_for_timestamp(db, partition_dt)
 
-    # 1. Get or Create TokenGeneration for today
+    # 1. Get or Create TokenGeneration for the target date
     generation = db.query(TokenGeneration).filter(
-        TokenGeneration.date == today
+        TokenGeneration.date == target_date
     ).first()
     
     if not generation:
         generation = TokenGeneration(
-            date=today,
+            date=target_date,
             total_tokens=0,
             created_at=now,
             updated_at=now,
@@ -52,10 +57,17 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     max_id = db.query(func.max(TokenDetail.id)).scalar() or 0
     next_id = max_id + 1
 
-    # 3. Save TokenDetail (Batch entry)
+    # 3. Calculate Receipt Number (Restarts from 1 each day/generation)
+    max_receipt = db.query(func.max(TokenDetail.receipt_number)).filter(
+        TokenDetail.generation_id == generation.id
+    ).scalar() or 0
+    next_receipt = max_receipt + 1
+
+    # 4. Save TokenDetail (Batch entry)
     new_detail = TokenDetail(
         id=next_id,
         generation_id=generation.id,
+        receipt_number=next_receipt,
         token_count=payload.token_count,
         created_at=now,
         updated_at=now,
@@ -64,7 +76,7 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     )
     db.add(new_detail)
 
-    # 4. Update Generation Total
+    # 5. Update Generation Total
     generation.total_tokens += payload.token_count
     generation.updated_at = now
     
@@ -88,12 +100,13 @@ def list_token_generations(db: Session, page: int = 1, page_size: int = 20):
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
-def get_token_details_by_date(target_date: date, db: Session, page: int = 1, page_size: int = 20):
+def get_token_details_by_date(target_date: date, db: Session, page: int = 1, page_size: int = 50):
     generation = db.query(TokenGeneration).filter(TokenGeneration.date == target_date).first()
     if not generation:
         return {
             "items": [],
             "total": 0,
+            "total_tokens": 0,
             "page": page,
             "page_size": page_size,
             "total_pages": 0
@@ -107,6 +120,7 @@ def get_token_details_by_date(target_date: date, db: Session, page: int = 1, pag
     return {
         "items": items,
         "total": total,
+        "total_tokens": generation.total_tokens,
         "page": page,
         "page_size": page_size,
         "total_pages": math.ceil(total / page_size) if total > 0 else 0

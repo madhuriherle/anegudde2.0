@@ -11,10 +11,12 @@ class UserMinimal(BaseModel):
 
 class TokenDetailCreate(BaseModel):
     token_count: int
+    date: Optional[date] = None
 
 class TokenDetailResponse(BaseModel):
     id: int
     generation_id: int
+    receipt_number: int
     token_count: int
     created_at: datetime
     creator: Optional[UserMinimal] = None

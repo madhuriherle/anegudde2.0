@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../utils/currency';
 
@@ -35,185 +35,290 @@ const DashboardPage: React.FC = () => {
     );
   }
 
-  const todayCards = [
-    { title: "Today's Purchase", value: formatCurrency(today.purchase_amount), to: '/purchases' },
-    { title: "Today's Usage Entry", value: today.consumption_entries, to: '/daily-usage' },
-    { title: "Today's Wastage", value: today.wastage_entries, to: '/wastages' },
-    { title: "Tokens Issued Today", value: today.tokens_issued, to: '/reports/tokens' },
-  ];
+  const summaryCardClass =
+    'min-h-[150px] border-amber-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-md';
+
+  const detailCardClass =
+    'flex h-[360px] flex-col overflow-hidden border-amber-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-md';
+
+  const SectionTitle = ({
+    title,
+    actionLabel,
+    onClick,
+  }: {
+    title: string;
+    actionLabel: string;
+    onClick: () => void;
+  }) => (
+    <div className="flex items-center justify-between gap-3 border-b border-amber-100 px-4 py-3">
+      <h3 className="text-sm font-semibold text-[#4B2E13]">{title}</h3>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onClick}
+        className="h-7 px-3 text-xs font-medium text-[#8A5A12] hover:bg-amber-50"
+      >
+        {actionLabel}
+      </Button>
+    </div>
+  );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h2 className="page-title">Canteen Dashboard</h2>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {/* Today's Purchase Card */}
-        <Card className="group border-border-temple flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30">
-          <CardHeader className="pb-2 border-b border-bg-temple bg-gray-50/50 transition-colors group-hover:bg-primary/5">
-            <span className="text-text-main text-sm opacity-70 uppercase font-semibold">Today's Purchase</span>
-            <CardTitle className="text-text-main text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{formatCurrency(today.purchase_amount)}</CardTitle>
-          </CardHeader>
+      {/* Top Summary Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className={summaryCardClass}>
+          <CardContent className="p-6">
+            <p className="text-base font-bold text-[#7A5A2A]">Today's Purchase</p>
+            <p className="mt-3 text-4xl font-extrabold text-[#3B2A16]">
+              {formatCurrency(today.purchase_amount)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={summaryCardClass}>
+          <CardContent className="p-6">
+            <p className="text-base font-bold text-[#7A5A2A]">Usage Entries</p>
+            <p className="mt-3 text-4xl font-extrabold text-[#3B2A16]">
+              {today.consumption_entries}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={summaryCardClass}>
+          <CardContent className="p-6">
+            <p className="text-base font-bold text-[#7A5A2A]">Wastage Entries</p>
+            <p className="mt-3 text-4xl font-extrabold text-[#8B1E1E]">
+              {today.wastage_entries}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={summaryCardClass}>
+          <CardContent className="p-6">
+            <p className="text-base font-bold text-[#7A5A2A]">Tokens Issued</p>
+            <p className="mt-3 text-4xl font-extrabold text-[#3B2A16]">
+              {today.tokens_issued}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Detail Cards */}
+      <div className="grid gap-5 xl:grid-cols-2">
+        {/* Purchase Details */}
+        <Card className={detailCardClass}>
+          <SectionTitle
+            title="Today's Purchase Details"
+            actionLabel="View All"
+            onClick={() => navigate('/purchases')}
+          />
+
           <CardContent className="flex-1 p-0 overflow-hidden">
-            <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
+            <div className="h-full overflow-y-auto">
               {today.purchase_details.length > 0 ? (
-                <div className="divide-y divide-border-temple">
+                <div className="divide-y divide-amber-50">
                   {today.purchase_details.map((item: any, idx: number) => (
-                    <div key={idx} className="p-3 text-xs hover:bg-primary/5 transition-colors cursor-default">
-                      <div className="flex justify-between font-medium text-text-main">
-                        <span className="truncate mr-2">{item.item_name}</span>
-                        <span className="text-primary font-bold">{formatCurrency(item.amount)}</span>
+                    <div
+                      key={idx}
+                      className="grid grid-cols-12 items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-amber-50/60"
+                    >
+                      <div className="col-span-6 min-w-0">
+                        <p className="truncate font-medium text-[#3B2A16]">
+                          {item.item_name}
+                        </p>
                       </div>
-                      <div className="text-text-main opacity-60">
+
+                      <div className="col-span-3 text-right text-xs text-[#6B5A45]">
                         {Number(item.quantity).toLocaleString()} {item.unit_name}
+                      </div>
+
+                      <div className="col-span-3 text-right text-sm font-semibold text-[#8A5A12]">
+                        {formatCurrency(item.amount)}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="p-6 text-center text-text-main opacity-40 italic text-xs">
+                <div className="px-4 py-8 text-center text-sm text-[#9A8A75]">
                   No purchases today
                 </div>
               )}
             </div>
           </CardContent>
-          <div className="p-2 border-t border-border-temple bg-gray-50/30 text-center">
-             <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full text-[10px] h-6 hover:bg-primary hover:text-white transition-all" 
-                onClick={() => navigate('/purchases')}
-              >
-                View All
-              </Button>
-          </div>
         </Card>
 
-        {/* Today's Usage Entry Card */}
-        <Card className="group border-border-temple flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-secondary/30">
-          <CardHeader className="pb-2 border-b border-bg-temple bg-gray-50/50 transition-colors group-hover:bg-secondary/5">
-            <span className="text-text-main text-sm opacity-70 uppercase font-semibold">Today's Usage Entry</span>
-            <CardTitle className="text-text-main text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{today.consumption_entries}</CardTitle>
-          </CardHeader>
+        {/* Usage Details */}
+        <Card className={detailCardClass}>
+          <SectionTitle
+            title="Today's Usage Details"
+            actionLabel="View All"
+            onClick={() => navigate('/daily-usage')}
+          />
+
           <CardContent className="flex-1 p-0 overflow-hidden">
-            <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
+            <div className="h-full overflow-y-auto">
               {today.consumption_details.length > 0 ? (
-                <div className="divide-y divide-border-temple">
+                <div className="divide-y divide-amber-50">
                   {today.consumption_details.map((item: any, idx: number) => (
-                    <div key={idx} className="p-3 text-xs hover:bg-secondary/5 transition-colors cursor-default">
-                      <div className="flex justify-between font-medium text-text-main">
-                        <span className="truncate mr-2">{item.item_name}</span>
-                        <span className="text-secondary font-bold">{formatCurrency(item.amount)}</span>
+                    <div
+                      key={idx}
+                      className="grid grid-cols-12 items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-amber-50/60"
+                    >
+                      <div className="col-span-6 min-w-0">
+                        <p className="truncate font-medium text-[#3B2A16]">
+                          {item.item_name}
+                        </p>
                       </div>
-                      <div className="text-text-main opacity-60">
+
+                      <div className="col-span-3 text-right text-xs text-[#6B5A45]">
                         {Number(item.quantity).toLocaleString()} {item.unit_name}
+                      </div>
+
+                      <div className="col-span-3 text-right text-sm font-semibold text-[#8A5A12]">
+                        {formatCurrency(item.amount)}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="p-6 text-center text-text-main opacity-40 italic text-xs">
+                <div className="px-4 py-8 text-center text-sm text-[#9A8A75]">
                   No usage today
                 </div>
               )}
             </div>
           </CardContent>
-          <div className="p-2 border-t border-border-temple bg-gray-50/30 text-center">
-             <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full text-[10px] h-6 hover:bg-secondary hover:text-white transition-all" 
-                onClick={() => navigate('/daily-usage')}
-              >
-                View All
-              </Button>
-          </div>
         </Card>
 
-        {/* Today's Wastage Card */}
-        <Card className="group border-border-temple flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-error/30">
-          <CardHeader className="pb-2 border-b border-bg-temple bg-gray-50/50 transition-colors group-hover:bg-error/5">
-            <span className="text-text-main text-sm opacity-70 uppercase font-semibold">Today's Wastage</span>
-            <CardTitle className="text-text-main text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{today.wastage_entries}</CardTitle>
-          </CardHeader>
+        {/* Wastage Details */}
+        <Card className={detailCardClass}>
+          <SectionTitle
+            title="Today's Wastage Details"
+            actionLabel="View All"
+            onClick={() => navigate('/wastages')}
+          />
+
           <CardContent className="flex-1 p-0 overflow-hidden">
-            <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
+            <div className="h-full overflow-y-auto">
               {today.wastage_details.length > 0 ? (
-                <div className="divide-y divide-border-temple">
+                <div className="divide-y divide-amber-50">
                   {today.wastage_details.map((item: any, idx: number) => (
-                    <div key={idx} className="p-3 text-xs hover:bg-error/5 transition-colors cursor-default">
-                      <div className="font-medium text-text-main truncate group-hover:text-error transition-colors">
-                        {item.menu_item_name}
+                    <div
+                      key={idx}
+                      className="grid grid-cols-12 items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-red-50/50"
+                    >
+                      <div className="col-span-6 min-w-0">
+                        <p className="truncate font-medium text-[#3B2A16]">
+                          {item.menu_item_name}
+                        </p>
                       </div>
-                      <div className="text-text-main opacity-60">
+
+                      <div className="col-span-3 text-right text-xs text-[#6B5A45]">
                         {Number(item.quantity).toLocaleString()} {item.unit_name}
+                      </div>
+
+                      <div className="col-span-3 text-right text-sm font-semibold text-[#8B1E1E]">
+                        {item.amount !== undefined && item.amount !== null
+                          ? formatCurrency(item.amount)
+                          : '-'}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="p-6 text-center text-text-main opacity-40 italic text-xs">
+                <div className="px-4 py-8 text-center text-sm text-[#9A8A75]">
                   No wastage today
                 </div>
               )}
             </div>
           </CardContent>
-          <div className="p-2 border-t border-border-temple bg-gray-50/30 text-center">
-             <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full text-[10px] h-6 hover:bg-error hover:text-white transition-all" 
-                onClick={() => navigate('/wastages')}
-              >
-                View All
-              </Button>
-          </div>
         </Card>
 
-        {/* Tokens Issued Today Card */}
-        <Card className="group border-border-temple flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30">
-          <CardHeader className="pb-2 border-b border-bg-temple bg-gray-50/50 transition-colors group-hover:bg-primary/5">
-            <span className="text-text-main text-sm opacity-70 uppercase font-semibold">Tokens Issued</span>
-            <CardTitle className="text-text-main text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{today.tokens_issued}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 flex items-center justify-center p-6 bg-white transition-colors group-hover:bg-gray-50/30">
-            <div className="text-center space-y-2 transition-transform duration-500 group-hover:scale-110">
-              <div className="text-4xl font-bold text-primary opacity-20 group-hover:opacity-40 transition-opacity">#</div>
-              <p className="text-xs text-text-main opacity-60">Total tokens generated for today's distribution.</p>
+        {/* Token Details */}
+        <Card className={detailCardClass}>
+          <SectionTitle
+            title="Today's Token Details"
+            actionLabel="View History"
+            onClick={() => navigate('/reports/tokens')}
+          />
+
+          <CardContent className="flex-1 p-0 overflow-hidden">
+            <div className="h-full overflow-y-auto">
+              {today.token_details?.length > 0 ? (
+                <div className="divide-y divide-amber-50">
+                  {today.token_details.map((row: any, idx: number) => (
+                    <div
+                      key={`${row.receipt_no}-${idx}`}
+                      className="grid grid-cols-12 items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-amber-50/60"
+                    >
+                      <div className="col-span-6 min-w-0">
+                        <p className="truncate font-medium text-[#3B2A16]">
+                          Receipt #{row.receipt_no}
+                        </p>
+                      </div>
+
+                      <div className="col-span-3 text-right text-xs text-[#6B5A45]">
+                        {Number(row.token_count || 0).toLocaleString()} Qty
+                      </div>
+
+                      <div className="col-span-3 text-right text-sm font-semibold text-[#8A5A12]">
+                        {row.amount !== undefined && row.amount !== null
+                          ? formatCurrency(row.amount)
+                          : '-'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-8 text-center text-sm text-[#9A8A75]">
+                  No tokens issued today
+                </div>
+              )}
             </div>
           </CardContent>
-          <div className="p-2 border-t border-border-temple bg-gray-50/30 text-center">
-             <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full text-[10px] h-6 hover:bg-primary hover:text-white transition-all" 
-                onClick={() => navigate('/reports/tokens')}
-              >
-                View History
-              </Button>
-          </div>
         </Card>
       </div>
 
-      {/* Low Stock Alerts - Kept as a smaller footer section */}
+      {/* Low Stock Alerts */}
       {lowStock.length > 0 && (
-        <section className="mt-12">
-           <div className="flex items-center justify-between mb-4">
-              <h3 className="text-text-main font-semibold flex items-center gap-2">
-                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                 Low Stock Alerts
-              </h3>
-              <Button variant="link" size="sm" onClick={() => navigate('/items')} className="text-xs text-primary">View Inventory</Button>
-           </div>
-           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {lowStock.slice(0, 4).map((item: any) => (
-                <div key={item.item_id} className="p-3 bg-red-50 border border-red-100 rounded-lg flex justify-between items-center">
-                   <span className="text-xs font-medium text-red-900">{item.item_name}</span>
-                   <span className="text-[10px] bg-red-200 text-red-800 px-2 py-0.5 rounded-full font-bold">{item.current_stock} Left</span>
-                </div>
-              ))}
-           </div>
+        <section className="rounded-xl border border-red-100 bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[#4B2E13]">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              Low Stock Alerts
+            </h3>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/items')}
+              className="h-7 px-3 text-xs font-medium text-[#8A5A12] hover:bg-amber-50"
+            >
+              View Inventory
+            </Button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {lowStock.slice(0, 4).map((item: any) => (
+              <div
+                key={item.item_id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
+              >
+                <span className="truncate text-xs font-medium text-red-900">
+                  {item.item_name}
+                </span>
+
+                <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
+                  {item.current_stock} left
+                </span>
+              </div>
+            ))}
+          </div>
         </section>
       )}
     </div>

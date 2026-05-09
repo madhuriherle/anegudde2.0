@@ -17,7 +17,7 @@ def list_users(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=1000),
     q: str | None = Query(None),
-    status: int | None = Query(None),
+    status: int | None = Query(1),
     search_field: str | None = Query(None),
 ):
     query = db.query(User)

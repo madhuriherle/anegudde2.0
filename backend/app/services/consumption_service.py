@@ -2,9 +2,9 @@ from datetime import datetime, timezone
 from decimal import Decimal
 import math
 from fastapi import HTTPException
-from sqlalchemy import String, or_
+from sqlalchemy import String, or_, text
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import ConsumptionEntry, ConsumptionItem, Item, StockLedger, User
+from app.db.models import ConsumptionEntry, ConsumptionItem, Item, StockLedger, User, WastageEntry, WastageItem
 from app.schemas.consumption import ConsumptionEntryCreate, ConsumptionEntryUpdate
 from app.services.item_service import get_item_last_price
 
@@ -58,9 +58,8 @@ def list_consumptions(db: Session, page: int = 1, page_size: int = 20, q: str = 
 
 def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_user: User) -> ConsumptionEntry:
     now = datetime.now(timezone.utc)
-    cooked_total = Decimal(payload.anna_remained) + Decimal(payload.saru_remained) + Decimal(payload.huli_remained) + Decimal(payload.payas_remained)
-    if len(payload.items or []) == 0 and cooked_total <= 0:
-        raise HTTPException(status_code=422, detail="At least one consumption row or cooked remained quantity is required")
+    if len(payload.items or []) == 0:
+        raise HTTPException(status_code=422, detail="At least one consumption row is required")
 
     for manpower_value in [
         payload.regular_cooking_persons,
@@ -73,10 +72,6 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
     ]:
         if manpower_value < 0:
             raise HTTPException(status_code=422, detail="Manpower fields must be >= 0")
-
-    for cooked_value in [payload.anna_remained, payload.saru_remained, payload.huli_remained, payload.payas_remained]:
-        if Decimal(cooked_value) < 0:
-            raise HTTPException(status_code=422, detail="Cooked remained quantities must be >= 0")
     
     entry = ConsumptionEntry(
         usage_date=payload.usage_date, 
@@ -84,15 +79,14 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
         remarks=payload.remarks,
         regular_cooking_persons=payload.regular_cooking_persons,
         additional_cooking_persons=payload.additional_cooking_persons,
+        total_cooking_persons=(payload.regular_cooking_persons + payload.additional_cooking_persons),
         regular_cleaning_persons=payload.regular_cleaning_persons,
         additional_cleaning_persons=payload.additional_cleaning_persons,
+        total_cleaning_persons=(payload.regular_cleaning_persons + payload.additional_cleaning_persons),
         regular_serving_persons=payload.regular_serving_persons,
         additional_serving_persons=payload.additional_serving_persons,
+        total_serving_persons=(payload.regular_serving_persons + payload.additional_serving_persons),
         times_cooked=payload.times_cooked,
-        anna_remained=payload.anna_remained,
-        saru_remained=payload.saru_remained,
-        huli_remained=payload.huli_remained,
-        payas_remained=payload.payas_remained,
         user_id=payload.user_id, 
         status=payload.status, 
         created_at=now, 
@@ -132,7 +126,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
 
             issue_balance = current_stock - it.quantity_used
             return_balance = issue_balance + it.qty_returned
-            item.current_stock = str(return_balance)
+            item.current_stock = return_balance
 
             db.add(StockLedger(
                 item_id=item.id,
@@ -188,15 +182,46 @@ def get_consumption_full(consumption_id: int, db: Session) -> ConsumptionEntry:
 
 def delete_consumption(consumption_id: int, db: Session, current_user: User) -> None:
     entry = get_consumption(consumption_id, db)
-    # Restore stock before deleting lines.
+    now = datetime.now(timezone.utc)
+    
+    # 1. Soft Delete linked wastage entries
+    wastages = db.query(WastageEntry).filter(WastageEntry.consumption_entry_id == consumption_id).all()
+    for w in wastages:
+        # Restore stock for raw items in wastage
+        w_items = db.query(WastageItem).filter(WastageItem.wastage_entry_id == w.id).all()
+        for wi in w_items:
+            if wi.item_id:
+                item = db.query(Item).filter(Item.id == wi.item_id).first()
+                if item:
+                    item.current_stock = Decimal(item.current_stock or 0) + Decimal(str(wi.quantity))
+        
+        # Mark wastage and ledger entries as inactive
+        w.status = 0
+        w.updated_at = now
+        w.updated_by = current_user.id
+        db.execute(
+            text("UPDATE stock_ledger SET status = 0 WHERE ref_table = 'wastage_items' AND ref_id = :rid"),
+            {"rid": w.id}
+        )
+
+    # 2. Restore stock for consumption items
     for line in db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id).all():
         item = db.query(Item).filter(Item.id == line.item_id).first()
         if item:
-            item.current_stock = str(Decimal(item.current_stock or "0") + Decimal(line.net_quantity or 0))
+            item.current_stock = Decimal(item.current_stock or 0) + Decimal(line.net_quantity or 0)
 
-    db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id).delete()
-    db.query(StockLedger).filter(StockLedger.ref_table.like("consumption_entries%"), StockLedger.ref_id == consumption_id).delete()
-    db.delete(entry); db.commit()
+    # 3. Soft delete the consumption record
+    entry.status = 0
+    entry.updated_at = now
+    entry.updated_by = current_user.id
+
+    # Mark associated ledger entries as inactive
+    db.execute(
+        text("UPDATE stock_ledger SET status = 0 WHERE ref_table LIKE 'consumption_entries%' AND ref_id = :rid"),
+        {"rid": consumption_id}
+    )
+    
+    db.commit()
 
 def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db: Session, current_user: User) -> ConsumptionEntry:
     existing = get_consumption(consumption_id, db)
@@ -211,10 +236,6 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
         regular_serving_persons=payload.regular_serving_persons,
         additional_serving_persons=payload.additional_serving_persons,
         times_cooked=payload.times_cooked,
-        anna_remained=payload.anna_remained,
-        saru_remained=payload.saru_remained,
-        huli_remained=payload.huli_remained,
-        payas_remained=payload.payas_remained,
         user_id=existing.user_id,
         status=existing.status,
         items=payload.items,

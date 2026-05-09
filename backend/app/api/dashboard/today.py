@@ -6,8 +6,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.db.models import ConsumptionEntry, ConsumptionItem, PurchaseEntry, PurchaseItem, User, VendorPayment, WastageEntry, WastageItem, TokenGeneration, Item, MenuItem, Unit
-from app.schemas.dashboard import DashboardToday, DailyItemDetail, DailyWastageDetail
+from app.db.models import ConsumptionEntry, ConsumptionItem, PurchaseEntry, PurchaseItem, User, VendorPayment, WastageEntry, WastageItem, TokenGeneration, TokenDetail, Item, MenuItem, Unit
+from app.schemas.dashboard import DashboardToday, DailyItemDetail, DailyWastageDetail, DailyTokenDetail
 
 router = APIRouter()
 
@@ -119,6 +119,29 @@ def today_summary(
         for r in wastage_details_raw
     ]
 
+    token_details_raw = (
+        db.query(
+            TokenDetail.id.label("receipt_no"),
+            TokenDetail.token_count,
+            User.full_name.label("issued_by"),
+            TokenDetail.created_at.label("issued_at"),
+        )
+        .join(TokenGeneration, TokenGeneration.id == TokenDetail.generation_id)
+        .outerjoin(User, User.id == TokenDetail.created_by)
+        .filter(TokenGeneration.date == today)
+        .order_by(TokenDetail.created_at.desc(), TokenDetail.id.desc())
+        .all()
+    )
+    token_details = [
+        DailyTokenDetail(
+            receipt_no=int(r.receipt_no),
+            token_count=int(r.token_count or 0),
+            issued_by=r.issued_by,
+            issued_at=r.issued_at,
+        )
+        for r in token_details_raw
+    ]
+
     return DashboardToday(
         purchase_amount=purchase_amount,
         consumption_entries=consumption_entries,
@@ -129,5 +152,6 @@ def today_summary(
         tokens_issued=tokens_issued,
         purchase_details=purchase_details,
         consumption_details=consumption_details,
-        wastage_details=wastage_details
+        wastage_details=wastage_details,
+        token_details=token_details,
     )

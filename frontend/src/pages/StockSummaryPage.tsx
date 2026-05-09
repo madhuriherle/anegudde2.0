@@ -243,31 +243,6 @@ const StockSummaryPage: React.FC = () => {
                 <span>{Number(reportData.footer.rice_remained).toFixed(3)}</span>
               </div>
             </div>
-
-            <div className="border border-border-temple p-2 rounded bg-white">
-               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                  <div className="flex justify-between">
-                    <span>ANNA REMAINED:</span>
-                    <span className="font-bold">{Number(reportData.footer.anna_remained).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>SARU REMAINED:</span>
-                    <span className="font-bold">{Number(reportData.footer.saru_remained).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>SAMBAR REMAINED:</span>
-                    <span className="font-bold">{Number(reportData.footer.huli_remained).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>PAYASAM REMAINED:</span>
-                    <span className="font-bold">{Number(reportData.footer.payasam_remained).toFixed(2)}</span>
-                  </div>
-               </div>
-               <div className="mt-2 pt-2 border-t border-border-temple flex justify-between font-bold text-sm">
-                  <span>Total:</span>
-                  <span>{(Number(reportData.footer.anna_remained) + Number(reportData.footer.saru_remained) + Number(reportData.footer.huli_remained) + Number(reportData.footer.payasam_remained)).toFixed(2)}</span>
-               </div>
-            </div>
           </div>
         )}
       </div>

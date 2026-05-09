@@ -100,7 +100,7 @@ const LoginPage: React.FC = () => {
 
                     <Input
                       {...register('username')}
-                      placeholder="Enter username"
+                     
                       className={cn(
                         'pl-10 h-11 bg-white/90 border-[#E5D3B3] focus-visible:ring-[#C96A2B]/20 focus-visible:border-[#C96A2B]',
                         errors.username &&
@@ -127,7 +127,7 @@ const LoginPage: React.FC = () => {
                     <Input
                       {...register('password')}
                       type="password"
-                      placeholder="Enter password"
+                     
                       className={cn(
                         'pl-10 h-11 bg-white/90 border-[#E5D3B3] focus-visible:ring-[#C96A2B]/20 focus-visible:border-[#C96A2B]',
                         errors.password &&

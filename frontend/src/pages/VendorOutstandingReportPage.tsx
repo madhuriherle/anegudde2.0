@@ -154,7 +154,7 @@ const VendorOutstandingReportPage: React.FC = () => {
             <div className="relative mt-1.5">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search by vendor name or code..."
+               
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10 text-text-main"
@@ -174,6 +174,7 @@ const VendorOutstandingReportPage: React.FC = () => {
 };
 
 export default VendorOutstandingReportPage;
+
 
 
 

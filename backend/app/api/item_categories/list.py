@@ -15,10 +15,13 @@ def list_categories(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=1000),
     q: str | None = Query(None),
+    status: int | None = Query(1),
     search_field: str | None = Query(None),
     type_id: int | None = Query(None),
 ):
     query = db.query(ItemCategory)
+    if status is not None:
+        query = query.filter(ItemCategory.status == status)
     if type_id is not None:
         query = query.filter(ItemCategory.type_id == type_id)
     if q:

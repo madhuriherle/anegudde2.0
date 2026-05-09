@@ -80,9 +80,9 @@ const UsersPage: React.FC = () => {
       }
       return api.post('/users/create_user', data);
     },
-    onSuccess: () => {
+    onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      showSuccess(editingUser ? 'User updated' : 'User created');
+      showSuccess(variables?.isEditMode ? 'User updated' : 'User created');
       handleClose();
     },
     onError: (err: any) => {
@@ -196,7 +196,7 @@ const UsersPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="page-title">UserManagement</h2>
+          <h2 className="page-title">User Management</h2>
         </div>
         <Button 
           onClick={() => handleOpen()}
@@ -214,7 +214,7 @@ const UsersPage: React.FC = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  placeholder="Search users..."
+                 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 text-text-main"
@@ -243,26 +243,26 @@ const UsersPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-text-main">Username *</Label>
-                <Input {...register('username')} placeholder="e.g. johndoe" className="text-text-main" disabled={!!editingUser} />
+                <Input {...register('username')} className="text-text-main" disabled={!!editingUser} />
                 {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">{editingUser ? "Password" : "Password *"}</Label>
-                <Input {...register('password')} type="password" placeholder="••••••••" className="text-text-main" />
+                <Input {...register('password')} type="password" className="text-text-main" />
                 {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
               </div>
               <div className="space-y-1.5 md:col-span-2">
                 <Label className="text-text-main">Full Name *</Label>
-                <Input {...register('full_name')} placeholder="e.g. John Doe" className="text-text-main" />
+                <Input {...register('full_name')} className="text-text-main" />
                 {errors.full_name && <p className="text-xs text-red-500">{errors.full_name.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Email Address</Label>
-                <Input {...register('email')} type="email" placeholder="john@example.com" className="text-text-main" />
+                <Input {...register('email')} type="email" className="text-text-main" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Phone Number</Label>
-                <Input {...register('phone')} placeholder="9876543210" className="text-text-main" />
+                <Input {...register('phone')} className="text-text-main" />
               </div>
               <div className="md:col-span-2">
                 <Label className="text-text-main">Role *</Label>
@@ -300,6 +300,7 @@ const UsersPage: React.FC = () => {
 };
 
 export default UsersPage;
+
 
 
 

@@ -42,6 +42,7 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
     
     entry = WastageEntry(
         wastage_date=payload.wastage_date, 
+        consumption_entry_id=payload.consumption_entry_id,
         times_cooked=payload.times_cooked,
         reason=payload.reason, 
         user_id=payload.user_id, 
@@ -54,8 +55,13 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
     db.add(entry); db.flush()
     
     for it in payload.items:
+        # Skip zero quantity items
+        if Decimal(str(it.quantity)) <= 0:
+            continue
+
         wastage_item = WastageItem(
             wastage_entry_id=entry.id, 
+            consumption_entry_id=payload.consumption_entry_id,
             wastage_date=payload.wastage_date, 
             menu_item_id=it.menu_item_id, 
             item_id=it.item_id,
@@ -73,7 +79,15 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
             item = db.query(Item).filter(Item.id == it.item_id).first()
             if item:
                 qty = Decimal(str(it.quantity))
-                item.current_stock = str(Decimal(item.current_stock or "0") - qty)
+                current_stock = Decimal(item.current_stock or 0)
+                
+                if (current_stock - qty) < 0:
+                    raise HTTPException(
+                        status_code=422, 
+                        detail=f"Insufficient stock for item '{item.item_name}'. Current stock is {current_stock} but trying to waste {qty}."
+                    )
+
+                item.current_stock = current_stock - qty
                 item.updated_at = now
                 item.updated_by = current_user.id
                 
@@ -121,7 +135,7 @@ def delete_wastage(wastage_id: int, db: Session, current_user: User) -> None:
         if w_item.item_id:
             item = db.query(Item).filter(Item.id == w_item.item_id).first()
             if item:
-                item.current_stock = str(Decimal(item.current_stock or "0") + Decimal(str(w_item.quantity)))
+                item.current_stock = Decimal(item.current_stock or 0) + Decimal(str(w_item.quantity))
     
     db.query(WastageItem).filter(WastageItem.wastage_entry_id == wastage_id).delete()
     db.query(StockLedger).filter(StockLedger.ref_table == "wastage_items", StockLedger.ref_id == wastage_id).delete()
