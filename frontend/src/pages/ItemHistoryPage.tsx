@@ -20,7 +20,7 @@ import { formatCurrency } from '../utils/currency';
 
 const txnTypes: Record<number, { label: string; icon: any; variant: "default" | "secondary" | "outline" | "error" }> = {
   1: { label: 'Purchase', icon: <ShoppingCart className="h-3 w-3 mr-1" />, variant: 'default' },
-  2: { label: 'Consumption', icon: <Utensils className="h-3 w-3 mr-1" />, variant: 'error' },
+  2: { label: 'Usage Entry', icon: <Utensils className="h-3 w-3 mr-1" />, variant: 'error' },
   3: { label: 'Wastage', icon: <HelpCircle className="h-3 w-3 mr-1" />, variant: 'secondary' },
   4: { label: 'Adjustment', icon: <Settings2 className="h-3 w-3 mr-1" />, variant: 'outline' },
 };

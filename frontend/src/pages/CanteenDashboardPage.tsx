@@ -37,9 +37,9 @@ const DashboardPage: React.FC = () => {
 
   const todayCards = [
     { title: "Today's Purchase", value: formatCurrency(today.purchase_amount), to: '/purchases' },
-    { title: "Today's Consumption", value: today.consumption_entries, to: '/consumptions' },
+    { title: "Today's Usage Entry", value: today.consumption_entries, to: '/daily-usage' },
     { title: "Today's Wastage", value: today.wastage_entries, to: '/wastages' },
-    { title: "Tokens Issued Today", value: today.tokens_issued, to: '/tokens' },
+    { title: "Tokens Issued Today", value: today.tokens_issued, to: '/reports/tokens' },
   ];
 
   return (
@@ -90,10 +90,10 @@ const DashboardPage: React.FC = () => {
           </div>
         </Card>
 
-        {/* Today's Consumption Card */}
+        {/* Today's Usage Entry Card */}
         <Card className="group border-border-temple flex flex-col h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-secondary/30">
           <CardHeader className="pb-2 border-b border-bg-temple bg-gray-50/50 transition-colors group-hover:bg-secondary/5">
-            <span className="text-text-main text-sm opacity-70 uppercase font-semibold">Today's Consumption</span>
+            <span className="text-text-main text-sm opacity-70 uppercase font-semibold">Today's Usage Entry</span>
             <CardTitle className="text-text-main text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{today.consumption_entries}</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
@@ -114,7 +114,7 @@ const DashboardPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="p-6 text-center text-text-main opacity-40 italic text-xs">
-                  No consumption today
+                  No usage today
                 </div>
               )}
             </div>
@@ -124,7 +124,7 @@ const DashboardPage: React.FC = () => {
                 variant="ghost" 
                 size="sm" 
                 className="w-full text-[10px] h-6 hover:bg-secondary hover:text-white transition-all" 
-                onClick={() => navigate('/consumptions')}
+                onClick={() => navigate('/daily-usage')}
               >
                 View All
               </Button>
@@ -188,7 +188,7 @@ const DashboardPage: React.FC = () => {
                 variant="ghost" 
                 size="sm" 
                 className="w-full text-[10px] h-6 hover:bg-primary hover:text-white transition-all" 
-                onClick={() => navigate('/tokens')}
+                onClick={() => navigate('/reports/tokens')}
               >
                 View History
               </Button>
@@ -221,6 +221,3 @@ const DashboardPage: React.FC = () => {
 };
 
 export default DashboardPage;
-
-
-

@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy import String
 from sqlalchemy.orm import Session, joinedload
 
-from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit, ItemType, ItemPrice, PurchaseEntry, Vendor, FinancialYear
+from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit, ItemType, ItemPrice, PurchaseEntry, Vendor
 from app.schemas.item import ItemCreate, ItemUpdate
 
 
@@ -26,7 +26,7 @@ def validate_fk(db: Session, payload: ItemCreate | ItemUpdate, type_id: int | No
             raise HTTPException(status_code=400, detail="Invalid unit_id")
 
 
-def create_item(payload: ItemCreate, db: Session, current_user: User, financial_year: FinancialYear, type_id: int | None = None) -> Item:
+def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: int | None = None) -> Item:
     validate_fk(db, payload, type_id)
     exists = db.query(Item).filter(Item.item_name == payload.item_name).first()
     if exists:
@@ -34,10 +34,7 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, financial_
 
     now = datetime.now(timezone.utc)
     
-    # Automatically assign financial_year_id if not provided
     data = payload.model_dump()
-    if not data.get("financial_year_id"):
-        data["financial_year_id"] = financial_year.id
         
     item = Item(
         **data,

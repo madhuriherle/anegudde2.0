@@ -22,7 +22,6 @@ class PurchaseBillOut(BaseModel):
 
 class PurchaseEntryCreate(BaseModel):
     vendor_id: int
-    financial_year_id: int | None = None
     purchase_date: date
     bill_no: str | None = None # Invoice/Bill Number
     invoice_amount: Decimal | None = None # Actual invoice total
@@ -52,7 +51,6 @@ class PurchaseItemOut(BaseModel):
 class PurchaseEntryOut(BaseModel):
     id: int
     vendor_id: int
-    financial_year_id: int | None = None
     purchase_date: date
     bill_no: str | None = None # Invoice/Bill Number
     total_amount: Decimal
@@ -70,7 +68,6 @@ class PurchaseEntryOut(BaseModel):
 
 class PurchaseEntryUpdate(BaseModel):
     vendor_id: int
-    financial_year_id: int | None = None
     purchase_date: date
     bill_no: str | None = None # Invoice/Bill Number
     invoice_amount: Decimal | None = None

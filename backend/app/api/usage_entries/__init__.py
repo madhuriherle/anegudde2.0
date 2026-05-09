@@ -6,7 +6,7 @@ from .get import router as get_router
 from .update import router as update_router
 from .delete import router as delete_router
 
-router = APIRouter(prefix="/consumptions", tags=["consumptions"])
+router = APIRouter(prefix="/daily-usage", tags=["daily-usage"])
 router.include_router(create_router)
 router.include_router(list_router)
 router.include_router(get_router)

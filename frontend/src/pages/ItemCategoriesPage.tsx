@@ -33,7 +33,7 @@ const ItemCategoriesPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(50);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
 

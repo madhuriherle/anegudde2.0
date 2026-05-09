@@ -43,7 +43,16 @@ const MainLayout: React.FC = () => {
 
   useEffect(() => {
     const path = location.pathname;
-    const canteenPaths = ['/canteen', '/purchases', '/consumptions'];
+    const canteenPaths = [
+      '/canteen', 
+      '/purchases', 
+      '/daily-usage', 
+      '/wastages', 
+      '/items', 
+      '/vendors', 
+      '/settings',
+      '/reports'
+    ];
     if (canteenPaths.some(p => path.startsWith(p))) {
       setActiveModule('canteen');
     } else if (path === '/') {
@@ -58,6 +67,12 @@ const MainLayout: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const goHome = () => {
+    setActiveModule('main');
+    navigate('/');
+    setIsSidebarOpen(false);
   };
 
   const mainMenuItems: MenuItem[] = [
@@ -99,9 +114,9 @@ const MainLayout: React.FC = () => {
     { text: 'Dashboard', icon: UtensilsCrossed, path: '/canteen' },
     { text: 'Purchase', icon: ShoppingCart, path: '/purchases' },
     { 
-      text: 'Consumption', 
+      text: 'Daily Usage Entry', 
       icon: Package,
-      path: '/consumptions'
+      path: '/daily-usage'
     },
     { text: 'Vendors', icon: Users, path: '/vendors' },
     { 
@@ -175,21 +190,14 @@ const MainLayout: React.FC = () => {
     );
   };
 
-  const getFallbackFinancialYear = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); // 0-indexed, April is 3
-    if (month >= 3) { // April or later
-      return `${year}-${(year + 1).toString().slice(-2)}`;
-    } else {
-      return `${year - 1}-${year.toString().slice(-2)}`;
-    }
-  };
-
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-secondary border-r border-secondary-dark/20">
       <div className="h-16 border-b border-white/5 flex items-center px-4">
-        <div className="bg-white p-1 rounded-lg shadow-sm w-full">
+        <div 
+          className="bg-white p-1 rounded-lg shadow-sm w-full cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={goHome}
+          title="Back to Main Menu"
+        >
           <img 
             src={templeLogoSrc} 
             alt="Logo" 
@@ -240,7 +248,14 @@ const MainLayout: React.FC = () => {
             </button>
             <div className="bg-[#F8E6D1] border border-[#B08968] px-4 py-2 rounded-[10px] shadow-[0_2px_6px_rgba(90,46,31,0.08)]">
                <span className="text-sm font-bold text-[#5C2E1F] leading-none block whitespace-nowrap">
-                  Financial Year : {user?.active_financial_year?.name || getFallbackFinancialYear()}
+                  Financial Year : {user?.active_financial_year?.name || (() => {
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = now.getMonth();
+                    return month >= 3 
+                      ? `${year}-${(year + 1).toString().slice(-2)}` 
+                      : `${year - 1}-${year.toString().slice(-2)}`;
+                  })()}
                </span>
             </div>
           </div>

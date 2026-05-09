@@ -63,7 +63,7 @@ const PurchasesPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(50);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [search, setSearch] = useState('');
@@ -86,9 +86,15 @@ const PurchasesPage: React.FC = () => {
   const { data: purchases, isLoading: purchasesLoading } = useQuery({
     queryKey: ['purchases', search, pageSize, fromDate, toDate],
     queryFn: async () => {
-      const params: any = { q: search, page_size: pageSize };
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
+      const dateQ = fromDate && toDate
+        ? `${fromDate} ${toDate}`
+        : fromDate
+          ? `${fromDate} ${fromDate}`
+          : toDate
+            ? `${toDate} ${toDate}`
+            : '';
+      const combinedQ = [search.trim(), dateQ].filter(Boolean).join(' ').trim();
+      const params: any = { q: combinedQ, page_size: pageSize };
       const res = await api.get('/purchases/list_purchases', { params });
       return res.data;
     },

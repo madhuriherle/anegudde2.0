@@ -39,7 +39,7 @@ const UsersPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
-  const pageSize = 20;
+  const pageSize = 50;
   const status = 'all';
   const [search, setSearch] = useState('');
 

@@ -56,9 +56,8 @@ def list_consumptions(db: Session, page: int = 1, page_size: int = 20, q: str = 
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
-def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_user: User, financial_year: FinancialYear) -> ConsumptionEntry:
+def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_user: User) -> ConsumptionEntry:
     now = datetime.now(timezone.utc)
-    fy_id = payload.financial_year_id or financial_year.id
     cooked_total = Decimal(payload.anna_remained) + Decimal(payload.saru_remained) + Decimal(payload.huli_remained) + Decimal(payload.payas_remained)
     if len(payload.items or []) == 0 and cooked_total <= 0:
         raise HTTPException(status_code=422, detail="At least one consumption row or cooked remained quantity is required")
@@ -94,7 +93,6 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
         saru_remained=payload.saru_remained,
         huli_remained=payload.huli_remained,
         payas_remained=payload.payas_remained,
-        financial_year_id=fy_id,
         user_id=payload.user_id, 
         status=payload.status, 
         created_at=now, 
@@ -138,7 +136,6 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
 
             db.add(StockLedger(
                 item_id=item.id,
-                financial_year_id=fy_id,
                 txn_date=payload.usage_date,
                 txn_type=2,
                 ref_table="consumption_entries:RAW_ISSUE",
@@ -158,7 +155,6 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
             if it.qty_returned > 0:
                 db.add(StockLedger(
                     item_id=item.id,
-                    financial_year_id=fy_id,
                     txn_date=payload.usage_date,
                     txn_type=2,
                     ref_table="consumption_entries:RAW_RETURN",
@@ -202,7 +198,7 @@ def delete_consumption(consumption_id: int, db: Session, current_user: User) -> 
     db.query(StockLedger).filter(StockLedger.ref_table.like("consumption_entries%"), StockLedger.ref_id == consumption_id).delete()
     db.delete(entry); db.commit()
 
-def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db: Session, current_user: User, financial_year: FinancialYear) -> ConsumptionEntry:
+def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db: Session, current_user: User) -> ConsumptionEntry:
     existing = get_consumption(consumption_id, db)
     payload_create = ConsumptionEntryCreate(
         usage_date=payload.usage_date,
@@ -219,11 +215,10 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
         saru_remained=payload.saru_remained,
         huli_remained=payload.huli_remained,
         payas_remained=payload.payas_remained,
-        financial_year_id=payload.financial_year_id,
         user_id=existing.user_id,
         status=existing.status,
         items=payload.items,
     )
     delete_consumption(consumption_id, db, current_user)
-    new_entry = create_consumption(payload_create, db, current_user, financial_year)
+    new_entry = create_consumption(payload_create, db, current_user)
     return get_consumption_full(new_entry.id, db)

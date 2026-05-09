@@ -1,16 +1,15 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_current_user, get_db, get_financial_year
-from app.db.models import ItemCategory, ItemType, User, FinancialYear
+from app.api.deps import get_current_user, get_db
+from app.db.models import ItemCategory, ItemType, User
 from app.schemas.item_category import ItemCategoryCreate, ItemCategoryOut
 router = APIRouter()
 @router.post("/create_category", response_model=ItemCategoryOut, status_code=status.HTTP_201_CREATED)
 def create_category(
     payload: ItemCategoryCreate, 
     db: Session = Depends(get_db), 
-    current_user: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    current_user: User = Depends(get_current_user)
 ):
     resolved_type_id = payload.type_id
     if resolved_type_id is None:
@@ -30,8 +29,6 @@ def create_category(
         raise HTTPException(status_code=400, detail="category_name already exists for this type")
     
     data = payload.model_dump(exclude={"type_id"})
-    if not data.get("financial_year_id"):
-        data["financial_year_id"] = financial_year.id
 
     now = datetime.now(timezone.utc)
     row = ItemCategory(

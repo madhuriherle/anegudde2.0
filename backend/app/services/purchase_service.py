@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import Item, PurchaseEntry, PurchaseItem, StockLedger, User, Vendor, ItemPrice, FinancialYear, PurchaseBill
+from app.db.models import Item, PurchaseEntry, PurchaseItem, StockLedger, User, Vendor, ItemPrice, PurchaseBill
 from app.schemas.purchase import PurchaseEntryCreate, PurchaseEntryUpdate
 
 def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
@@ -59,7 +59,7 @@ def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = Non
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
-def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: User, financial_year: FinancialYear) -> PurchaseEntry:
+def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: User) -> PurchaseEntry:
     now = datetime.now(timezone.utc)
     total = Decimal("0")
     for it in payload.items: total += it.quantity * it.price
@@ -68,12 +68,8 @@ def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: Use
     if not vendor:
         raise HTTPException(status_code=400, detail="Invalid vendor_id")
 
-    # Use financial_year_id from the system or the payload if provided
-    fy_id = payload.financial_year_id or financial_year.id
-
     entry = PurchaseEntry(
         vendor_id=payload.vendor_id, 
-        financial_year_id=fy_id,
         purchase_date=payload.purchase_date, 
         bill_no=payload.bill_no, 
         total_amount=total, 
@@ -122,7 +118,6 @@ def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: Use
 
             db.add(StockLedger(
                 item_id=item.id, 
-                financial_year_id=fy_id,
                 txn_date=payload.purchase_date, 
                 txn_type=1, 
                 ref_table="purchase_entries", 
@@ -186,8 +181,8 @@ def delete_purchase(purchase_id: int, db: Session, current_user: User) -> None:
     db.delete(entry)
     db.commit()
 
-def update_purchase(purchase_id: int, payload: PurchaseEntryUpdate, db: Session, current_user: User, financial_year: FinancialYear) -> PurchaseEntry:
+def update_purchase(purchase_id: int, payload: PurchaseEntryUpdate, db: Session, current_user: User) -> PurchaseEntry:
     # Simpler to delete and recreate for complex nested updates in this MVP
     delete_purchase(purchase_id, db, current_user)
-    new_entry = create_purchase(payload, db, current_user, financial_year)
+    new_entry = create_purchase(payload, db, current_user)
     return get_purchase_full(new_entry.id, db)

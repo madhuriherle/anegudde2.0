@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db, get_financial_year
-from app.db.models import User, Vendor, FinancialYear
+from app.api.deps import get_current_user, get_db
+from app.db.models import User, Vendor
 from app.schemas.vendor import VendorCreate, VendorOut
 
 router = APIRouter()
@@ -14,14 +14,9 @@ router = APIRouter()
 def create_vendor(
     payload: VendorCreate, 
     db: Session = Depends(get_db), 
-    current_user: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    current_user: User = Depends(get_current_user)
 ):
     data = payload.model_dump()
-    
-    # Auto-assign financial_year_id if not provided
-    if not data.get("financial_year_id"):
-        data["financial_year_id"] = financial_year.id
     
     # Auto-generate vendor_code if not provided
     if not data.get("vendor_code"):
@@ -54,4 +49,3 @@ def create_vendor(
     db.commit()
     db.refresh(vendor)
     return vendor
-

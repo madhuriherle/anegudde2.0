@@ -25,7 +25,6 @@ class ConsumptionEntryCreate(BaseModel):
     saru_remained: Decimal = Decimal("0")
     huli_remained: Decimal = Decimal("0")
     payas_remained: Decimal = Decimal("0")
-    financial_year_id: int | None = None
     user_id: int
     status: int = 1
     items: list[ConsumptionItemIn] = []
@@ -47,7 +46,6 @@ class ConsumptionEntryOut(BaseModel):
     saru_remained: Decimal = Decimal("0")
     huli_remained: Decimal = Decimal("0")
     payas_remained: Decimal = Decimal("0")
-    financial_year_id: int | None = None
     user_id: int
     status: int
     created_at: datetime
@@ -86,7 +84,6 @@ class ConsumptionEntryUpdate(BaseModel):
     saru_remained: Decimal = Decimal("0")
     huli_remained: Decimal = Decimal("0")
     payas_remained: Decimal = Decimal("0")
-    financial_year_id: int | None = None
     items: list[ConsumptionItemIn] = []
 
 

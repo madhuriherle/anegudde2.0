@@ -1,5 +1,5 @@
 from app.db.session import SessionLocal
-from app.db.models import TokenGeneration, TokenDetail, User, FinancialYear
+from app.db.models import TokenGeneration, TokenDetail, User
 from datetime import datetime, time, timezone, timedelta
 from sqlalchemy import func
 
@@ -14,11 +14,9 @@ def seed_test_tokens():
 
         admin = db.query(User).filter(User.username == "admin").first()
         staff = db.query(User).filter(User.username == "madhuri").first()
-        fy = db.query(FinancialYear).filter(FinancialYear.is_active == True).first()
         
         admin_id = admin.id if admin else 1
         staff_id = staff.id if staff else admin_id
-        fy_id = fy.id if fy else 1
 
         # Dates to seed
         dates = [
@@ -48,7 +46,6 @@ def seed_test_tokens():
             gen = TokenGeneration(
                 date=target_date,
                 total_tokens=total_for_day,
-                financial_year_id=fy_id,
                 created_at=datetime.combine(target_date, time(8,0)).replace(tzinfo=timezone.utc),
                 updated_at=datetime.combine(target_date, batches[-1][0]).replace(tzinfo=timezone.utc),
                 created_by=admin_id,

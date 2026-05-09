@@ -7,7 +7,6 @@ class VendorBase(BaseModel):
     vendor_name: str
     contact_person: str | None = None
     contact_number: str
-    financial_year_id: int | None = None
     address_line1: str
     city: str | None = None
     state: str | None = None
@@ -25,7 +24,6 @@ class VendorUpdate(BaseModel):
     vendor_name: str | None = None
     contact_person: str | None = None
     contact_number: str | None = None
-    financial_year_id: int | None = None
     address_line1: str | None = None
     city: str | None = None
     state: str | None = None

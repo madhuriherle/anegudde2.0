@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
-from app.api.consumptions import router as consumptions_router
+from app.api.usage_entries import router as usage_entries_router
 from app.api.dashboard import router as dashboard_router
 from app.api.item_categories import router as item_categories_router
 from app.api.item_types import router as item_types_router
@@ -76,7 +76,7 @@ app.include_router(units_router)
 app.include_router(item_types_router)
 app.include_router(item_categories_router)
 app.include_router(purchases_router)
-app.include_router(consumptions_router)
+app.include_router(usage_entries_router)
 app.include_router(wastages_router)
 app.include_router(stock_adjustments_router)
 app.include_router(users_router)

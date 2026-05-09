@@ -34,6 +34,11 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 50,
+      },
+    },
   });
 
   return (

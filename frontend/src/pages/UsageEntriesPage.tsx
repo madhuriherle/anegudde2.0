@@ -63,7 +63,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const ConsumptionsPage: React.FC = () => {
+const UsageEntriesPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showConfirm, showError, showSuccess } = useNotification();
@@ -72,44 +72,20 @@ const ConsumptionsPage: React.FC = () => {
   const [viewingConsumption, setViewingConsumption] = useState<any>(null);
   const [viewingWastages, setViewingWastages] = useState<any[]>([]);
   const [editingConsumption, setEditingConsumption] = useState<any>(null);
-  const [dateFilter, setDateFilter] = useState<string>('all');
-  const [customDate, setCustomDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [customDate, setCustomDate] = useState<string>('');
 
   const { data: consumptions, isLoading: consumptionsLoading } = useQuery({
-    queryKey: ['consumptions'],
+    queryKey: ['consumptions', customDate],
     queryFn: async () => {
       const params: any = { page_size: 1000 };
-      return (await api.get('/consumptions/list_consumptions', { params })).data;
+      if (customDate) params.q = customDate;
+      return (await api.get('/daily-usage/list_consumptions', { params })).data;
     },
   });
   const filteredConsumptions = useMemo(() => {
     const rows = Array.isArray(consumptions) ? consumptions : (consumptions?.items || []);
-    if (dateFilter === 'all') return rows;
-
-    const now = new Date();
-    const toYmd = (d: Date) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    };
-
-    let targetDate = '';
-    if (dateFilter === 'today') targetDate = toYmd(now);
-    if (dateFilter === 'yesterday') {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 1);
-      targetDate = toYmd(d);
-    }
-    if (dateFilter === 'tomorrow') {
-      const d = new Date(now);
-      d.setDate(d.getDate() + 1);
-      targetDate = toYmd(d);
-    }
-    if (dateFilter === 'custom') targetDate = customDate;
-
-    return rows.filter((r: any) => r.usage_date === targetDate);
-  }, [consumptions, dateFilter, customDate]);
+    return rows;
+  }, [consumptions]);
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-list'],
@@ -190,7 +166,7 @@ const ConsumptionsPage: React.FC = () => {
         }));
 
       if (editingConsumption?.id) {
-        await api.put(`/consumptions/update_consumption/${editingConsumption.id}`, {
+        await api.put(`/daily-usage/update_consumption/${editingConsumption.id}`, {
           usage_date: data.usage_date,
           regular_cooking_persons: Number(data.regular_cooking_persons || 0),
           additional_cooking_persons: Number(data.additional_cooking_persons || 0),
@@ -213,7 +189,7 @@ const ConsumptionsPage: React.FC = () => {
 
       const calls: Promise<any>[] = [];
       if (rawRows.length > 0) {
-        calls.push(api.post('/consumptions/create_consumption', {
+        calls.push(api.post('/daily-usage/create_consumption', {
           usage_date: data.usage_date,
           regular_cooking_persons: Number(data.regular_cooking_persons || 0),
           additional_cooking_persons: Number(data.additional_cooking_persons || 0),
@@ -273,12 +249,16 @@ const ConsumptionsPage: React.FC = () => {
       });
     },
     onError: (err: any) => {
-      showError(err.response?.data?.detail || 'Failed to save entry');
+      const detail = err?.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d: any) => d?.msg || d?.message || String(d)).join(', ')
+        : (typeof detail === 'string' ? detail : (detail?.message || 'Failed to save entry'));
+      showError(message);
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => api.delete(`/consumptions/delete_consumption/${id}`),
+    mutationFn: async (id: number) => api.delete(`/daily-usage/delete_consumption/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consumptions'] });
       queryClient.invalidateQueries({ queryKey: ['items'] });
@@ -307,7 +287,7 @@ const ConsumptionsPage: React.FC = () => {
 
   const handleEdit = async (consumption: any) => {
     try {
-      const res = await api.get(`/consumptions/get_consumption/${consumption.id}`);
+      const res = await api.get(`/daily-usage/get_consumption/${consumption.id}`);
       const full = res.data;
       const rawDefaults = buildRawDefaults();
       (full.items || []).forEach((it: any) => {
@@ -340,7 +320,7 @@ const ConsumptionsPage: React.FC = () => {
   const handleView = async (consumption: any) => {
     try {
       const [consumptionRes, wastageRes] = await Promise.all([
-        api.get(`/consumptions/get_consumption/${consumption.id}`),
+        api.get(`/daily-usage/get_consumption/${consumption.id}`),
         api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
       ]);
       const fullConsumption = consumptionRes.data;
@@ -431,24 +411,13 @@ const ConsumptionsPage: React.FC = () => {
       <Card className="border-border-temple">
         <CardContent className="p-4 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-            <div className="space-y-1.5">
-              <Label className="text-text-main">Date Filter</Label>
-              <Select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
-                <option value="all">All Dates</option>
-                <option value="today">Today</option>
-                <option value="yesterday">Yesterday</option>
-                <option value="tomorrow">Tomorrow</option>
-                <option value="custom">Custom Date</option>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 w-full sm:w-56">
               <Label className="text-text-main">Date</Label>
               <Input
                 type="date"
                 value={customDate}
                 onChange={(e) => setCustomDate(e.target.value)}
                 className="text-text-main"
-                disabled={dateFilter !== 'custom'}
               />
             </div>
           </div>
@@ -465,11 +434,11 @@ const ConsumptionsPage: React.FC = () => {
         <DialogContent className="max-w-[92vw] overflow-y-auto max-h-[92vh] border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
             <DialogTitle className="text-text-main">Usage Summary</DialogTitle>
-            <DialogDescription className="sr-only">Consumption details</DialogDescription>
+            <DialogDescription className="sr-only">Usage details</DialogDescription>
           </DialogHeader>
-          <div className="mt-4 grid grid-cols-1 xl:grid-cols-10 gap-4 px-2 items-start">
-            <div className="temple-form-section h-full xl:col-span-4">
-              <div className="grid grid-cols-[260px_20px_1fr] gap-y-3 text-text-main">
+          <div className="mt-4 grid grid-cols-1 xl:grid-cols-[0.9fr_1.1fr_1.1fr] gap-4 px-2 items-start">
+            <div className="temple-form-section h-full">
+              <div className="grid grid-cols-[240px_20px_1fr] gap-y-3 text-text-main">
                 <div className="font-semibold whitespace-nowrap">Usage Date</div><div>:</div><div className="whitespace-nowrap">{formatDate(viewingConsumption?.usage_date)}</div>
                 <div className="font-semibold whitespace-nowrap">Regular Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cooking_persons || 0)}</div>
                 <div className="font-semibold whitespace-nowrap">Additional Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
@@ -484,9 +453,9 @@ const ConsumptionsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="temple-form-section h-full xl:col-span-3">
+            <div className="temple-form-section h-full">
               <div className="pb-2">
-                <span className="text-sm font-bold text-text-main">Raw Consumption Items</span>
+                <span className="text-sm font-bold text-text-main">Raw Usage Items</span>
               </div>
               <div className="rounded-md border border-border-temple overflow-hidden mt-1">
                 <table className="w-full text-sm text-left">
@@ -509,9 +478,18 @@ const ConsumptionsPage: React.FC = () => {
                         .map((item: any) => (
                         <tr key={item.id} className="hover:bg-bg-temple/30">
                           <td className="px-4 py-3 text-text-main">{item.item?.item_name || items?.find((it: any) => it.id === item.item_id)?.item_name || `Unknown Item (${item.item_id})`}</td>
-                          <td className="px-4 py-3 text-right text-text-main">{Number(item.quantity_used || 0).toFixed(3)}</td>
-                          <td className="px-4 py-3 text-right text-text-main">{Number(item.qty_returned || 0).toFixed(3)}</td>
-                          <td className="px-4 py-3 text-right font-bold text-text-main">{Number(item.net_quantity || 0).toFixed(3)}</td>
+                          <td className="px-4 py-3 text-right text-text-main">
+                            {Number(item.quantity_used || 0).toFixed(3)}
+                            {(item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code) ? ` ${item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code}` : ''}
+                          </td>
+                          <td className="px-4 py-3 text-right text-text-main">
+                            {Number(item.qty_returned || 0).toFixed(3)}
+                            {(item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code) ? ` ${item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code}` : ''}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-text-main">
+                            {Number(item.net_quantity || 0).toFixed(3)}
+                            {(item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code) ? ` ${item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code}` : ''}
+                          </td>
                         </tr>
                       ))
                     )}
@@ -520,7 +498,7 @@ const ConsumptionsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="temple-form-section h-full xl:col-span-3">
+            <div className="temple-form-section h-full">
               <div className="pb-2">
                 <span className="text-sm font-bold text-text-main">Wastage Entries</span>
               </div>
@@ -546,7 +524,9 @@ const ConsumptionsPage: React.FC = () => {
                           <td className="px-4 py-3 text-text-main">
                             {w.menu_item_name}{w.unit_code ? ` (${w.unit_code})` : ''}
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-text-main">{Number(w.quantity || 0).toFixed(3)}</td>
+                          <td className="px-4 py-3 text-right font-bold text-text-main">
+                            {Number(w.quantity || 0).toFixed(3)}{w.unit_code ? ` ${w.unit_code}` : ''}
+                          </td>
                           <td className="px-4 py-3 text-right font-bold text-text-main">
                             {w.approx_amount != null ? formatCurrency(Number(w.approx_amount || 0)) : '-'}
                           </td>
@@ -573,7 +553,7 @@ const ConsumptionsPage: React.FC = () => {
 
           <div className="bg-white -mx-6 px-6 pt-4">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 xl:grid-cols-10 gap-4 items-start">
+            <div className="grid grid-cols-1 xl:grid-cols-10 gap-4 items-stretch min-h-[56vh]">
               <div className="temple-form-section h-full xl:col-span-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -675,7 +655,7 @@ const ConsumptionsPage: React.FC = () => {
               </div>
 
               <div className="temple-form-section h-full xl:col-span-3">
-                <h4 className="temple-section-header mt-0 uppercase tracking-wider">Item consumption</h4>
+                <h4 className="temple-section-header mt-0 uppercase tracking-wider">Item usage</h4>
                 <div className="max-h-[45vh] overflow-y-auto pr-2 space-y-2">
                   {(items || []).filter((i: any) => i.status === 1).map((item: any) => (
                     <div key={item.id} className="grid grid-cols-12 gap-2 items-center min-h-[42px]">
@@ -851,4 +831,4 @@ const ConsumptionsPage: React.FC = () => {
   );
 };
 
-export default ConsumptionsPage;
+export default UsageEntriesPage;

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_user, get_financial_year
+from app.api.deps import get_db, get_current_user
 from app.schemas.token import TokenDetailCreate, TokenDetailResponse
-from app.db.models import User, FinancialYear
+from app.db.models import User
 from app.services import token_service
 from . import router
 
@@ -10,17 +10,15 @@ from . import router
 def create_tokens(
     payload: TokenDetailCreate, 
     db: Session = Depends(get_db), 
-    current_user: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    current_user: User = Depends(get_current_user)
 ):
-    return token_service.create_tokens(payload, db, current_user, financial_year)
+    return token_service.create_tokens(payload, db, current_user)
 
 @router.get("/generate_tokens", response_model=TokenDetailResponse)
 def create_tokens_get(
     count: int, 
     db: Session = Depends(get_db), 
-    current_user: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    current_user: User = Depends(get_current_user)
 ):
     payload = TokenDetailCreate(token_count=count)
-    return token_service.create_tokens(payload, db, current_user, financial_year)
+    return token_service.create_tokens(payload, db, current_user)

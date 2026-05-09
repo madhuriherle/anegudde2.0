@@ -26,7 +26,7 @@ def _ensure_token_partition_for_timestamp(db: Session, ts: datetime) -> None:
         )
     )
 
-def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User, financial_year: FinancialYear):
+def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     now = datetime.now(timezone.utc)
     today = now.date()
     _ensure_token_partition_for_timestamp(db, now)
@@ -40,7 +40,6 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User, f
         generation = TokenGeneration(
             date=today,
             total_tokens=0,
-            financial_year_id=financial_year.id,
             created_at=now,
             updated_at=now,
             created_by=current_user.id,

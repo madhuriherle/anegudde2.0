@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_user, get_financial_year
-from app.db.models import MenuItem, User, FinancialYear
+from app.api.deps import get_db, get_current_user
+from app.db.models import MenuItem, User
 from app.schemas.menu_item import MenuItemCreate, MenuItemOut
 
 router = APIRouter()
@@ -11,14 +11,12 @@ router = APIRouter()
 def create_menu_item(
     payload: MenuItemCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    financial_year: FinancialYear = Depends(get_financial_year)
+    current_user: User = Depends(get_current_user)
 ):
-    # Check duplicates only inside the active financial year (same scope as list API)
+    # Check duplicates
     existing = (
         db.query(MenuItem)
         .filter(
-            MenuItem.financial_year_id == financial_year.id,
             MenuItem.dish_name.ilike(payload.dish_name),
         )
         .first()
@@ -27,8 +25,6 @@ def create_menu_item(
         raise HTTPException(status_code=400, detail="Dish name already exists")
 
     data = payload.model_dump()
-    if not data.get("financial_year_id"):
-        data["financial_year_id"] = financial_year.id
 
     now = datetime.now(timezone.utc)
     db_item = MenuItem(

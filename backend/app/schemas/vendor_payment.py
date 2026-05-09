@@ -6,7 +6,6 @@ from pydantic import BaseModel, ConfigDict
 class VendorPaymentCreate(BaseModel):
     vendor_id: int
     payment_date: date
-    financial_year_id: int | None = None
     amount: Decimal
     payment_mode: str
     reference_no: str | None = None

@@ -6,7 +6,6 @@ class StockAdjustmentBase(BaseModel):
     item_id: int
     adjustment_date: date
     adjusted_qty: Decimal
-    financial_year_id: int | None = None
     reason: str | None = None
 
 class StockAdjustmentCreate(StockAdjustmentBase):

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 import math
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import MenuItem, User, WastageEntry, WastageItem, Item, StockLedger, FinancialYear
+from app.db.models import MenuItem, User, WastageEntry, WastageItem, Item, StockLedger
 from app.schemas.wastage import WastageEntryCreate, WastageEntryUpdate
 from decimal import Decimal
 
@@ -37,15 +37,13 @@ def list_wastages(db: Session, page: int = 1, page_size: int = 20, q: str = None
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
-def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User, financial_year: FinancialYear) -> WastageEntry:
+def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User) -> WastageEntry:
     now = datetime.now(timezone.utc)
-    fy_id = payload.financial_year_id or financial_year.id
     
     entry = WastageEntry(
         wastage_date=payload.wastage_date, 
         times_cooked=payload.times_cooked,
         reason=payload.reason, 
-        financial_year_id=fy_id,
         user_id=payload.user_id, 
         status=payload.status, 
         created_at=now, 
@@ -82,7 +80,6 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User,
                 unit_cost = item.default_price or 0
                 db.add(StockLedger(
                     item_id=item.id,
-                    financial_year_id=fy_id,
                     txn_date=payload.wastage_date,
                     txn_type=3, # Wastage
                     ref_table="wastage_items",
@@ -130,7 +127,7 @@ def delete_wastage(wastage_id: int, db: Session, current_user: User) -> None:
     db.query(StockLedger).filter(StockLedger.ref_table == "wastage_items", StockLedger.ref_id == wastage_id).delete()
     db.delete(entry); db.commit()
 
-def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, current_user: User, financial_year: FinancialYear) -> WastageEntry:
+def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, current_user: User) -> WastageEntry:
     delete_wastage(wastage_id, db, current_user)
-    new_entry = create_wastage(payload, db, current_user, financial_year)
+    new_entry = create_wastage(payload, db, current_user)
     return get_wastage_full(new_entry.id, db)

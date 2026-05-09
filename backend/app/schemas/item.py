@@ -10,7 +10,6 @@ class ItemBase(BaseModel):
     item_name: str
     category_id: int
     unit_id: int
-    financial_year_id: int | None = None
     opening_stock: str = "0"
     current_stock: str = "0"
     default_price: Decimal | None = None
@@ -27,7 +26,6 @@ class ItemUpdate(BaseModel):
     item_name: str | None = None
     category_id: int | None = None
     unit_id: int | None = None
-    financial_year_id: int | None = None
     opening_stock: str | None = None
     current_stock: str | None = None
     default_price: Decimal | None = None

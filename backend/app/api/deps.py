@@ -5,8 +5,7 @@ from sqlalchemy.orm import Session
 import os
 
 from app.db.session import SessionLocal
-from app.db.models import User, FinancialYear
-from app.services.financial_year_service import get_active_financial_year
+from app.db.models import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -42,7 +41,3 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if not user or user.status != 1:
         raise credentials_exception
     return user
-
-
-def get_financial_year(db: Session = Depends(get_db)) -> FinancialYear:
-    return get_active_financial_year(db)

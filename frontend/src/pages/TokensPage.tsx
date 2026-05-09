@@ -38,7 +38,7 @@ const TokensPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
-  const [pageSize] = useState(20);
+  const [pageSize] = useState(50);
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingDate, setViewingDate] = useState<string | null>(null);

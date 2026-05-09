@@ -338,8 +338,8 @@ const VendorsPage: React.FC = () => {
               {editingVendor ? 'Edit Vendor Profile' : 'Add New Vendor'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="bg-white" autoComplete="off">
-            <div className="space-y-4 px-6 pt-4 pb-0">
+          <form onSubmit={handleSubmit(onSubmit)} className="bg-white flex flex-col" autoComplete="off">
+            <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                 <div>
                   <Label className="text-text-main">Vendor Name (Shop Name) *</Label>
@@ -398,7 +398,7 @@ const VendorsPage: React.FC = () => {
               </div>
             </div>
 
-            <DialogFooter className="gap-3">
+            <DialogFooter className="gap-3 shrink-0">
               <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
                 Cancel
               </Button>

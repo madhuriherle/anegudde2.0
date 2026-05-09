@@ -43,7 +43,7 @@ const UnitsPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   // Filter States
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(50);
   const [status, setStatus] = useState<string>('all');
   const [search, setSearch] = useState('');
 

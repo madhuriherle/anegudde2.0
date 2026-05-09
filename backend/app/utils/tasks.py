@@ -101,7 +101,6 @@ def generate_daily_stock_summary(summary_date: date):
                 db.add(DailyStockSummary(
                     summary_date=summary_date,
                     item_id=item.id,
-                    financial_year_id=item.financial_year_id, # Inherit from item
                     opening_stock=opening_stock,
                     purchased_qty=purchased_qty,
                     consumed_qty=consumed_qty,
@@ -210,7 +209,6 @@ def generate_monthly_stock_summary(summary_month: date):
                 db.add(MonthlyStockSummary(
                     summary_month=start_date,
                     item_id=item.id,
-                    financial_year_id=item.financial_year_id, # Inherit from item
                     opening_stock=opening_stock,
                     total_purchased_qty=summary_data.total_purchased or 0,
                     total_consumed_qty=summary_data.total_consumed or 0,
@@ -220,7 +218,6 @@ def generate_monthly_stock_summary(summary_month: date):
                     avg_purchase_price=summary_data.avg_price,
                     closing_stock_value=closing_stock * (summary_data.avg_price or item.default_price or Decimal("0"))
                 ))
-        
         db.commit()
         logger.info(f"Successfully generated Monthly Stock Summary for {start_date.strftime('%Y-%m')}")
     except Exception as e:

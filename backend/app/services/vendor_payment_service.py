@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 import math
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from app.db.models import User, Vendor, VendorPayment, FinancialYear
+from app.db.models import User, Vendor, VendorPayment
 
 def list_vendor_payments(db: Session, page: int = 1, page_size: int = 20, q: str = None):
     import re
@@ -44,17 +44,15 @@ def list_vendor_payments(db: Session, page: int = 1, page_size: int = 20, q: str
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
-def create_vendor_payment(payload, db: Session, current_user: User, financial_year: FinancialYear) -> VendorPayment:
+def create_vendor_payment(payload, db: Session, current_user: User) -> VendorPayment:
     vendor = db.query(Vendor).filter(Vendor.id == payload.vendor_id).first()
     if not vendor:
         raise HTTPException(status_code=400, detail="Invalid vendor_id")
 
     now = datetime.now(timezone.utc)
-    fy_id = getattr(payload, "financial_year_id", None) or financial_year.id
     
     payment = VendorPayment(
         vendor_id=payload.vendor_id,
-        financial_year_id=fy_id,
         payment_date=payload.payment_date,
         amount=payload.amount,
         payment_mode=payload.payment_mode,

@@ -10,7 +10,7 @@ import ItemsPage from './pages/ItemsPage';
 import ItemHistoryPage from './pages/ItemHistoryPage';
 import ItemPriceHistoryPage from './pages/ItemPriceHistoryPage';
 import PurchasesPage from './pages/PurchasesPage';
-import ConsumptionsPage from './pages/ConsumptionsPage';
+import UsageEntriesPage from './pages/UsageEntriesPage';
 import UsersPage from './pages/UsersPage';
 import ItemCategoriesPage from './pages/ItemCategoriesPage';
 import UnitsPage from './pages/UnitsPage';
@@ -38,7 +38,7 @@ function App() {
         <Route path="/items/:id/history" element={<ItemHistoryPage />} />
         <Route path="/items/:id/price-history" element={<ItemPriceHistoryPage />} />
         <Route path="/purchases" element={<PurchasesPage />} />
-        <Route path="/consumptions" element={<ConsumptionsPage />} />
+        <Route path="/daily-usage" element={<UsageEntriesPage />} />
         <Route path="/wastages" element={<WastagesPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/reports/tokens" element={<TokenReportPage />} />
