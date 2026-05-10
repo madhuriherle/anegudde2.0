@@ -5,10 +5,12 @@ import '../services/api_service.dart';
 class TokenProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
   int _dailyTotal = 0;
+  int _totalReceipts = 0;
   bool _isLoading = false;
   DateTime _selectedDate = DateTime.now();
 
   int get dailyTotal => _dailyTotal;
+  int get totalReceipts => _totalReceipts;
   bool get isLoading => _isLoading;
   DateTime get selectedDate => _selectedDate;
 
@@ -23,16 +25,15 @@ class TokenProvider with ChangeNotifier {
 
     try {
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      // Use the existing details endpoint which returns total (receipts) and total_tokens
       final response = await _apiService.get('/tokens/get_details_by_date/$dateStr');
-      // The API returns a paginated response with total_tokens in the summary or we might need to sum it up
-      // Looking at the TokenGeneration schema, it has total_tokens.
-      // But get_details_by_date returns TokenDetailResponse.
-      // Let's check the service again.
       
       _dailyTotal = response['total_tokens'] ?? 0;
+      _totalReceipts = response['total'] ?? 0;
     } catch (e) {
       print('Fetch Total Error: $e');
       _dailyTotal = 0;
+      _totalReceipts = 0;
     }
 
     _isLoading = false;
@@ -44,8 +45,10 @@ class TokenProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
       final response = await _apiService.post('/tokens/create_token', {
         'token_count': count,
+        'date': dateStr,
       });
       
       await fetchDailyTotal(); // Refresh total

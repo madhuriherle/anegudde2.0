@@ -28,12 +28,11 @@ def _ensure_token_partition_for_timestamp(db: Session, ts: datetime) -> None:
 
 def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     now = datetime.now(timezone.utc)
-    # Date is always today (server time)
-    target_date = now.date()
+    # Use provided date or server's local date (better for local business ops)
+    target_date = payload.date or datetime.now().date()
     
     # Ensure partition exists for the target date's month
-    # We use a datetime for the partition check
-    partition_dt = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+    partition_dt = datetime.combine(target_date, datetime.min.time())
     _ensure_token_partition_for_timestamp(db, partition_dt)
 
     # 1. Get or Create TokenGeneration for the target date
@@ -63,7 +62,7 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     ).scalar() or 0
     next_receipt = max_receipt + 1
 
-    # 4. Save TokenDetail (Batch entry)
+    # 4. Save Token Detail
     new_detail = TokenDetail(
         id=next_id,
         generation_id=generation.id,
@@ -92,6 +91,12 @@ def list_token_generations(db: Session, page: int = 1, page_size: int = 20):
     offset = (page - 1) * page_size
     items = query.order_by(TokenGeneration.date.desc()).offset(offset).limit(page_size).all()
     
+    # Refresh totals for each item to ensure they match reality
+    for item in items:
+        actual_total = db.query(func.coalesce(func.sum(TokenDetail.token_count), 0))\
+            .filter(TokenDetail.generation_id == item.id).scalar()
+        item.total_tokens = actual_total
+    
     return {
         "items": items,
         "total": total,
@@ -102,6 +107,15 @@ def list_token_generations(db: Session, page: int = 1, page_size: int = 20):
 
 def get_token_details_by_date(target_date: date, db: Session, page: int = 1, page_size: int = 50):
     generation = db.query(TokenGeneration).filter(TokenGeneration.date == target_date).first()
+    
+    # Calculate totals directly from details for maximum accuracy/sync
+    total_tokens = 0
+    total_receipts = 0
+    
+    if generation:
+        total_tokens = db.query(func.coalesce(func.sum(TokenDetail.token_count), 0)).filter(TokenDetail.generation_id == generation.id).scalar()
+        total_receipts = db.query(TokenDetail).filter(TokenDetail.generation_id == generation.id).count()
+
     if not generation:
         return {
             "items": [],
@@ -113,17 +127,17 @@ def get_token_details_by_date(target_date: date, db: Session, page: int = 1, pag
         }
     
     query = db.query(TokenDetail).options(joinedload(TokenDetail.creator)).filter(TokenDetail.generation_id == generation.id)
-    total = query.count()
+    # total in paginated response should be total_receipts
     offset = (page - 1) * page_size
     items = query.order_by(TokenDetail.created_at.desc()).offset(offset).limit(page_size).all()
     
     return {
         "items": items,
-        "total": total,
-        "total_tokens": generation.total_tokens,
+        "total": total_receipts,
+        "total_tokens": total_tokens,
         "page": page,
         "page_size": page_size,
-        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+        "total_pages": math.ceil(total_receipts / page_size) if total_receipts > 0 else 0
     }
 
 def list_all_token_details(db: Session, page: int = 1, page_size: int = 50, start_date: date = None, end_date: date = None):
@@ -141,8 +155,14 @@ def list_all_token_details(db: Session, page: int = 1, page_size: int = 50, star
         
     total = query.count()
     
-    # Correct way to get sum of a filtered query: Use the query as a subquery
-    total_tokens = db.query(func.coalesce(func.sum(query.subquery().c.token_count), 0)).scalar()
+    # Calculate total tokens for the filtered range in a separate, simpler query
+    sum_query = db.query(func.coalesce(func.sum(TokenDetail.token_count), 0))
+    if start_date:
+        sum_query = sum_query.filter(TokenDetail.created_at >= datetime.combine(start_date, datetime.min.time()))
+    if end_date:
+        sum_query = sum_query.filter(TokenDetail.created_at <= datetime.combine(end_date, datetime.max.time()))
+    
+    total_tokens = sum_query.scalar()
 
     offset = (page - 1) * page_size
     items = query.order_by(TokenDetail.created_at.desc()).offset(offset).limit(page_size).all()

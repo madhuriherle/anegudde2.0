@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from datetime import date
 from app.api.deps import get_db, get_current_user
-from app.schemas.token import TokenGenerationResponse, TokenDetailResponse
+from app.schemas.token import TokenGenerationResponse, TokenDetailResponse, TokenDetailPaginatedResponse
 from app.schemas.base import PaginatedResponse
 from app.db.models import User
 from app.services import token_service
@@ -17,11 +17,11 @@ def list_generations(
 ):
     return token_service.list_token_generations(db, page, page_size)
 
-@router.get("/get_details_by_date/{target_date}", response_model=PaginatedResponse[TokenDetailResponse])
+@router.get("/get_details_by_date/{target_date}", response_model=TokenDetailPaginatedResponse)
 def get_details(target_date: date, page: int = 1, page_size: int = 20, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return token_service.get_token_details_by_date(target_date, db, page, page_size)
 
-@router.get("/view_history_ledger", response_model=PaginatedResponse[TokenDetailResponse])
+@router.get("/view_history_ledger", response_model=TokenDetailPaginatedResponse)
 def list_history(
     start_date: date = Query(None), 
     end_date: date = Query(None), 
