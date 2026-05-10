@@ -16,7 +16,6 @@ import ItemCategoriesPage from './pages/ItemCategoriesPage';
 import UnitsPage from './pages/UnitsPage';
 import MenuItemsPage from './pages/MenuItemsPage';
 import WastagesPage from './pages/WastagesPage';
-import ReportsPage from './pages/ReportsPage';
 import ProfilePage from './pages/ProfilePage';
 import DailyStockReportPage from './pages/DailyStockReportPage';
 import StockSummaryPage from './pages/StockSummaryPage';
@@ -42,7 +41,7 @@ function App() {
         <Route path="/purchases" element={<PurchasesPage />} />
         <Route path="/daily-usage" element={<UsageEntriesPage />} />
         <Route path="/wastages" element={<WastagesPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/reports" element={<Navigate to="/reports/stock-summary" replace />} />
         <Route path="/reports/tokens" element={<TokenReportPage />} />
         <Route path="/reports/tokens/:date" element={<TokenDetailLedgerPage />} />
         <Route path="/reports/daily-closing" element={<DailyStockReportPage />} />

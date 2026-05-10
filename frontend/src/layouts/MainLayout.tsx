@@ -80,11 +80,8 @@ const MainLayout: React.FC = () => {
     { text: 'Canteen', icon: UtensilsCrossed, path: '/canteen', action: () => setActiveModule('canteen') },
     { text: 'Office', icon: Briefcase, path: '/office' },
     { text: 'Users', icon: Users, path: '/users' },
-    { 
-      text: 'Reports', 
-      icon: BarChart3,
-      children: []
-    },
+    { text: 'Reports', icon: BarChart3, path: undefined },
+    { text: 'Master Settings', icon: Settings, path: undefined },
   ];
 
   const canteenMenuItems: MenuItem[] = [
@@ -128,7 +125,8 @@ const MainLayout: React.FC = () => {
     const content = (
       <div 
         className={cn(
-          "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+          "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+          item.path || item.action || canExpandChildren ? "cursor-pointer" : "cursor-default",
           isActive 
             ? "bg-sidebar-active text-white shadow-sm" 
             : "text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white",

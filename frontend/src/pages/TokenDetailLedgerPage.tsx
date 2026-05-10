@@ -1,16 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Clock,
-  User as UserIcon,
+  Calendar,
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
 import { Button } from '../components/ui/Button';
-import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
+import { Input } from '../components/ui/Input';
+import { Label } from '../components/ui/Label';
 import { formatDate } from '../utils/date';
 
 interface TokenDetail {
@@ -36,27 +37,37 @@ interface ApiResponse {
 const PAGE_SIZE = 50;
 
 const TokenDetailLedgerPage: React.FC = () => {
-  const { date } = useParams<{ date: string }>();
+  const { date: urlDate } = useParams<{ date: string }>();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  
+  // Date state - Single date as requested
+  const [selectedDate, setSelectedDate] = useState(urlDate || new Date().toISOString().split('T')[0]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['token-details', date, page],
+    queryKey: ['token-ledger-details', selectedDate, page],
     queryFn: async () => {
-      if (!date) return null;
-      const res = await api.get(`/tokens/get_details_by_date/${date}`, {
-        params: { page, page_size: PAGE_SIZE }
-      });
+      const params: any = { 
+        page, 
+        page_size: PAGE_SIZE,
+        start_date: selectedDate || null,
+        end_date: selectedDate || null
+      };
+      const res = await api.get('/tokens/view_history_ledger', { params });
       return res.data as ApiResponse;
     },
-    enabled: !!date,
   });
 
   const details = data?.items || [];
   const totalEntries = data?.total || 0;
-  const totalDevotees = data?.total_tokens || 0;
+  
+  // Fallback calculation if backend total is 0 but items exist
+  const totalDevotees = useMemo(() => {
+    if (data?.total_tokens && data.total_tokens > 0) return data.total_tokens;
+    return details.reduce((sum, item) => sum + Number(item.token_count || 0), 0);
+  }, [data, details]);
+
   const totalPages = data?.total_pages || 0;
-  const avgPerGroup = totalEntries > 0 ? Math.round(totalDevotees / totalEntries) : 0;
 
   const columns = useMemo<ColumnDef<TokenDetail>[]>(() => [
     {
@@ -70,7 +81,9 @@ const TokenDetailLedgerPage: React.FC = () => {
       cell: info => (
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-gray-400" />
-          {info.getValue() ? new Date(info.getValue() as string).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+          <span className="text-text-main font-medium">
+            {info.getValue() ? new Date(info.getValue() as string).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+          </span>
         </div>
       ),
     },
@@ -79,20 +92,8 @@ const TokenDetailLedgerPage: React.FC = () => {
       header: () => <div className="text-center w-full">Devotees Count</div>,
       cell: info => (
         <div className="text-center">
-          <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-bg-cream border border-primary/10 text-primary">
+          <span className="inline-flex items-center px-4 py-1 rounded-lg text-sm font-black bg-bg-cream border border-primary/10 text-primary">
             {info.getValue() as number}
-          </span>
-        </div>
-      ),
-    },
-    {
-      id: 'issued_by',
-      header: () => <div className="text-right w-full">Issued By</div>,
-      cell: info => (
-        <div className="flex items-center justify-end gap-2 text-text-main">
-          <UserIcon className="w-4 h-4 text-gray-400" />
-          <span className="truncate max-w-[150px]">
-            {info.row.original.creator?.full_name || 'System Admin'}
           </span>
         </div>
       ),
@@ -101,40 +102,45 @@ const TokenDetailLedgerPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Button 
-          variant="ghost" 
-          size="sm" 
+      <div className="flex items-center gap-4">
+        <button 
           onClick={() => navigate('/reports/tokens')}
-          className="hover:bg-primary/10 text-primary"
+          className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-all"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
+          <ArrowLeft className="w-6 h-6 text-text-main group-hover:-translate-x-1 transition-transform" />
+        </button>
+        <h2 className="page-title mb-0">
+          Token Details: {selectedDate && formatDate(selectedDate)}
+        </h2>
       </div>
 
       <div className="flex flex-col gap-4">
-        <h2 className="page-title mb-0">
-          Token Details: {date && formatDate(date)}
-        </h2>
 
-        {/* Quick Summary Bar at Top */}
-        {!isLoading && totalEntries > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-xl border border-border-temple shadow-sm flex items-center justify-between">
-              <span className="text-xs font-semibold text-text-main opacity-60 uppercase">Total Entries</span>
-              <span className="text-xl font-bold text-primary">{totalEntries}</span>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-border-temple shadow-sm flex items-center justify-between">
-              <span className="text-xs font-semibold text-text-main opacity-60 uppercase">Total Devotees</span>
-              <span className="text-xl font-bold text-primary">{totalDevotees}</span>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-border-temple shadow-sm flex items-center justify-between">
-              <span className="text-xs font-semibold text-text-main opacity-60 uppercase">Avg per Group</span>
-              <span className="text-xl font-bold text-primary">{avgPerGroup}</span>
+        {/* Header Summary Row - AT TOP COUNT AT BOTTOM */}
+        <div className="flex flex-wrap items-center gap-12 bg-white p-6 rounded-xl border border-border-temple shadow-sm">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-text-main">Date</Label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="pl-10 h-10 w-44 text-sm bg-white"
+              />
             </div>
           </div>
-        )}
+
+          <div className="text-left">
+            <p className="text-3xl font-black text-primary leading-none">{totalEntries}</p>
+            <p className="text-[11px] font-black uppercase text-text-main/40 tracking-widest mt-2">Total Entries</p>
+          </div>
+
+          <div className="text-left">
+            <p className="text-3xl font-black text-primary leading-none">{totalDevotees.toLocaleString()}</p>
+            <p className="text-[11px] font-black uppercase text-text-main/40 tracking-widest mt-2">Total Devotees</p>
+          </div>
+        </div>
       </div>
 
       <DataTable 

@@ -140,12 +140,17 @@ def list_all_token_details(db: Session, page: int = 1, page_size: int = 50, star
         query = query.filter(TokenDetail.created_at <= end_dt)
         
     total = query.count()
+    
+    # Correct way to get sum of a filtered query: Use the query as a subquery
+    total_tokens = db.query(func.coalesce(func.sum(query.subquery().c.token_count), 0)).scalar()
+
     offset = (page - 1) * page_size
     items = query.order_by(TokenDetail.created_at.desc()).offset(offset).limit(page_size).all()
     
     return {
         "items": items,
         "total": total,
+        "total_tokens": total_tokens,
         "page": page,
         "page_size": page_size,
         "total_pages": math.ceil(total / page_size) if total > 0 else 0

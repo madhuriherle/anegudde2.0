@@ -9,6 +9,7 @@ import {
   Settings 
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
+import { cn } from '../utils/cn';
 
 const modules = [
   { id: 'home', title: 'Home', icon: Home, path: '/', color: 'text-primary', bg: 'bg-primary/10' },
@@ -33,8 +34,17 @@ const ModulesPage: React.FC = () => {
         {modules.map((module) => (
           <button
             key={module.id}
-            onClick={() => navigate(module.path)}
-            className="group focus:outline-none"
+            onClick={() => {
+              if (module.id === 'reports' || module.id === 'settings') {
+                // No action for now as requested
+                return;
+              }
+              navigate(module.path);
+            }}
+            className={cn(
+              "group focus:outline-none text-left",
+              (module.id === 'reports' || module.id === 'settings') && "cursor-default"
+            )}
           >
             <Card className="h-full border-border-temple hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white/50 backdrop-blur-sm">
               <CardContent className="flex flex-col items-center justify-center p-10 space-y-6">
