@@ -83,29 +83,7 @@ const MainLayout: React.FC = () => {
     { 
       text: 'Reports', 
       icon: BarChart3,
-      children: [
-        { text: 'Stock Summary', path: '/reports/stock-summary' },
-        { text: 'Token Issued Report', path: '/reports/tokens' },
-        { text: 'Financial Report', path: '/reports' },
-        { text: 'Stock Snapshot', path: '/reports/daily-closing' },
-        { text: 'Monthly Performance', path: '/reports/monthly-performance' },
-        { text: 'Vendor Outstanding', path: '/reports/vendor-outstanding' },
-      ]
-    },
-    { 
-      text: 'Master Settings', 
-      icon: Settings,
-      children: [
-        { text: 'Vendors', path: '/vendors' },
-        { 
-          text: 'Items',
-          children: [
-            { text: 'Category', path: '/settings/categories' },
-            { text: 'Menu Item', path: '/settings/menu-items' },
-            { text: 'Raw Item', path: '/items' },
-          ]
-        }
-      ]
+      children: []
     },
   ];
 
@@ -133,10 +111,8 @@ const MainLayout: React.FC = () => {
       icon: BarChart3,
       children: [
         { text: 'Stock Summary', path: '/reports/stock-summary' },
+        { text: 'Canteen Summary', path: '/reports/canteen-summary' },
         { text: 'Token Issued Report', path: '/reports/tokens' },
-        { text: 'Financial Report', path: '/reports' },
-        { text: 'Stock Snapshot', path: '/reports/daily-closing' },
-        { text: 'Monthly Performance', path: '/reports/monthly-performance' },
       ]
     },
     { text: 'Back', icon: ArrowLeft, path: '/', action: () => setActiveModule('main') },
@@ -146,7 +122,7 @@ const MainLayout: React.FC = () => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedMenus[item.text];
     const isActive = item.path && location.pathname === item.path;
-    const shouldHideSubmenusInMain = activeModule === 'main';
+    const shouldHideSubmenusInMain = false;
     const canExpandChildren = hasChildren && !shouldHideSubmenusInMain;
 
     const content = (

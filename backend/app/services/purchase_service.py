@@ -61,8 +61,28 @@ def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = Non
 
 def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: User) -> PurchaseEntry:
     now = datetime.now(timezone.utc)
+    today = now.date()
+    
+    # --- SAFETY BLOCK 1: Prevent Future Dates ---
+    if payload.purchase_date > today:
+        raise HTTPException(status_code=400, detail="Purchase date cannot be in the future.")
+
+    # --- SAFETY BLOCK 2: Prevent Duplicate Bills for same Vendor ---
+    if payload.bill_no:
+        existing_bill = db.query(PurchaseEntry).filter(
+            PurchaseEntry.vendor_id == payload.vendor_id,
+            PurchaseEntry.bill_no == payload.bill_no,
+            PurchaseEntry.status == 1
+        ).first()
+        if existing_bill:
+            raise HTTPException(status_code=400, detail=f"Bill No '{payload.bill_no}' has already been recorded for this vendor.")
+
     total = Decimal("0")
-    for it in payload.items: total += it.quantity * it.price
+    for it in payload.items: 
+        # --- SAFETY BLOCK 3: Prevent Zero Prices ---
+        if it.price <= 0:
+            raise HTTPException(status_code=400, detail="Item price must be greater than zero.")
+        total += it.quantity * it.price
     
     vendor = db.query(Vendor).filter(Vendor.id == payload.vendor_id).first()
     if not vendor:

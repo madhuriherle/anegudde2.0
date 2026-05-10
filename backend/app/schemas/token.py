@@ -11,7 +11,6 @@ class UserMinimal(BaseModel):
 
 class TokenDetailCreate(BaseModel):
     token_count: int
-    date: Optional[date] = None
 
 class TokenDetailResponse(BaseModel):
     id: int

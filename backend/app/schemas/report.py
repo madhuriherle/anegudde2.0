@@ -48,6 +48,41 @@ class DetailedStockSummaryResponse(BaseModel):
     footer: StockSummaryFooter | None = None
 
 
+class CanteenRawReturnRow(BaseModel):
+    item_name: str
+    unit: str
+    qty_returned: Decimal
+
+
+class CanteenWastageRow(BaseModel):
+    item_name: str
+    qty: Decimal
+    approx_amount: Decimal
+
+
+class CanteenSummaryFooter(BaseModel):
+    mahaprasada_devotees: int
+    regular_cooking_persons: int
+    additional_cooking_persons: int
+    total_cooking_persons: int
+    regular_cleaning_persons: int
+    additional_cleaning_persons: int
+    total_cleaning_persons: int
+    regular_serving_persons: int
+    additional_serving_persons: int
+    total_serving_persons: int
+    times_cooked: int
+    raw_returns: list[CanteenRawReturnRow]
+    wastage_items: list[CanteenWastageRow]
+    wastage_total_amount: Decimal
+
+
+class CanteenSummaryResponse(BaseModel):
+    date: date
+    rows: list[DetailedStockSummaryRow]
+    footer: CanteenSummaryFooter
+
+
 class StockFinanceCardRow(BaseModel):
     period: str
     opening_stock: Decimal

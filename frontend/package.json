@@ -34,6 +34,7 @@
     "lucide-react": "^1.14.0",
     "react-hook-form": "^7.74.0",
     "react-router-dom": "^7.14.2",
+    "recharts": "^3.8.1",
     "sweetalert2": "^11.26.24",
     "sweetalert2-react-content": "^5.1.2",
     "tailwind-merge": "^3.5.0",

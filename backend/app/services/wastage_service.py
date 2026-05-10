@@ -39,12 +39,16 @@ def list_wastages(db: Session, page: int = 1, page_size: int = 20, q: str = None
 
 def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User) -> WastageEntry:
     now = datetime.now(timezone.utc)
+    today = now.date()
     
+    # --- SAFETY BLOCK: Prevent Future Dates ---
+    if payload.wastage_date > today:
+        raise HTTPException(status_code=400, detail="Wastage date cannot be in the future.")
+
     entry = WastageEntry(
         wastage_date=payload.wastage_date, 
         consumption_entry_id=payload.consumption_entry_id,
         times_cooked=payload.times_cooked,
-        reason=payload.reason, 
         user_id=payload.user_id, 
         status=payload.status, 
         created_at=now, 

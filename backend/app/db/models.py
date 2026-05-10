@@ -289,7 +289,6 @@ class WastageEntry(Base):
     consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=True)
     wastage_date = Column(Date, nullable=False)
     times_cooked = Column(Integer, nullable=False, default=0, server_default=text("0"))
-    reason = Column(Text, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())

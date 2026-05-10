@@ -46,7 +46,13 @@ def today_summary(
         .scalar() 
         or 0
     )
-    wastage_value = Decimal("0") 
+    wastage_value = (
+        db.query(func.coalesce(func.sum(WastageItem.approx_amount), 0))
+        .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
+        .filter(WastageEntry.wastage_date == today)
+        .scalar()
+        or Decimal("0")
+    )
     
     vendor_payment_amount = (
         db.query(func.coalesce(func.sum(VendorPayment.amount), 0))
@@ -105,7 +111,8 @@ def today_summary(
         db.query(
             MenuItem.dish_name,
             Unit.unit_name,
-            func.sum(WastageItem.quantity).label("quantity")
+            func.sum(WastageItem.quantity).label("quantity"),
+            func.sum(WastageItem.approx_amount).label("amount")
         )
         .join(WastageItem, WastageItem.menu_item_id == MenuItem.id)
         .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
@@ -115,7 +122,7 @@ def today_summary(
         .all()
     )
     wastage_details = [
-        DailyWastageDetail(menu_item_name=r.dish_name, unit_name=r.unit_name, quantity=r.quantity)
+        DailyWastageDetail(menu_item_name=r.dish_name, unit_name=r.unit_name, quantity=r.quantity, amount=r.amount)
         for r in wastage_details_raw
     ]
 

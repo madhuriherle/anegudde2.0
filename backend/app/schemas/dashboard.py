@@ -39,6 +39,7 @@ class DailyWastageDetail(BaseModel):
     menu_item_name: str
     unit_name: str
     quantity: Decimal
+    amount: Decimal
 
 
 class DailyTokenDetail(BaseModel):

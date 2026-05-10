@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Search, Trash2, History, Edit } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,7 +22,6 @@ import {
 } from '../components/ui/Dialog';
 import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
-import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 
@@ -56,8 +54,8 @@ const ItemsPage: React.FC = () => {
   // Filter States
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [fromDate] = useState('');
+  const [toDate] = useState('');
   const [search, setSearch] = useState('');
 
   // Fetch Data
@@ -249,7 +247,6 @@ const ItemsPage: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="text-text-main"
-                placeholder="Search items..."
               />
             </div>
           </div>
@@ -289,16 +286,96 @@ const ItemsPage: React.FC = () => {
             <DialogDescription className="sr-only">Item details form</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit((data) => mutation.mutate({ ...data, id: editingItem?.id, isEditMode: Boolean(editingItem) }))} className="bg-white flex flex-col" autoComplete="off">
-             <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
-                <div className="grid grid-cols-2 gap-4">
-                   <div><Label>Name</Label><Input {...register('item_name')} /></div>
-                   <div><Label>Opening Stock</Label><Input {...register('opening_stock')} /></div>
+            <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <div className="md:col-span-2">
+                  <Label className="text-text-main">Item Name *</Label>
+                  <Input {...register('item_name')} className="text-text-main" />
+                  {errors.item_name && <p className="text-xs text-red-500">{errors.item_name.message}</p>}
                 </div>
-             </div>
-             <DialogFooter className="gap-3 p-6 border-t border-border-temple/40 bg-gray-50">
-               <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>
-               <Button type="submit" disabled={mutation.isPending}>Save</Button>
-             </DialogFooter>
+
+                <div>
+                  <Label className="text-text-main">Category *</Label>
+                  <Controller
+                    name="category_id"
+                    control={control}
+                    render={({ field }) => (
+                      <Select {...field} className="text-text-main">
+                        <option value="">Select Category</option>
+                        {categories?.map((c: any) => (
+                          <option key={c.id} value={c.id}>{c.category_name}</option>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                  {errors.category_id && <p className="text-xs text-red-500">{errors.category_id.message}</p>}
+                </div>
+
+                <div>
+                  <Label className="text-text-main">Unit *</Label>
+                  <Controller
+                    name="unit_id"
+                    control={control}
+                    render={({ field }) => (
+                      <Select {...field} className="text-text-main">
+                        <option value="">Select Unit</option>
+                        {unitOptions.map((u: any) => (
+                          <option key={u.id} value={u.id}>{u.unit_name} ({u.unit_code})</option>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                  {errors.unit_id && <p className="text-xs text-red-500">{errors.unit_id.message}</p>}
+                </div>
+
+                <div>
+                  <Label className="text-text-main">Opening Stock</Label>
+                  <Input
+                    {...register('opening_stock')}
+                    disabled={editingItem && Number(editingItem.current_stock) !== Number(editingItem.opening_stock)}
+                    className={`text-text-main ${editingItem && Number(editingItem.current_stock) !== Number(editingItem.opening_stock) ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`}
+                    onFocus={(e) => {
+                      if (!editingItem && e.target.value === '0') {
+                        setValue('opening_stock', '' as any);
+                      }
+                    }}
+                  />
+                  {errors.opening_stock && <p className="text-xs text-red-500">{errors.opening_stock.message}</p>}
+                  {editingItem && Number(editingItem.current_stock) !== Number(editingItem.opening_stock) && (
+                    <p className="text-[10px] text-text-main/50 italic mt-0.5">Locked: Item has transaction history.</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="text-text-main">Minimum Stock Alert</Label>
+                  <Input
+                    {...register('min_stock_level')}
+                    className="text-text-main"
+                    onFocus={(e) => {
+                      if (!editingItem && e.target.value === '0') {
+                        setValue('min_stock_level', '' as any);
+                      }
+                    }}
+                  />
+                  {errors.min_stock_level && <p className="text-xs text-red-500">{errors.min_stock_level.message}</p>}
+                </div>
+
+                <div>
+                  <Label className="text-text-main">Current Stock</Label>
+                  <Input {...register('current_stock')} className="text-text-main bg-gray-100" disabled />
+                </div>
+
+                <div>
+                  <Label className="text-text-main">Default Price (₹)</Label>
+                  <Input {...register('default_price')} className="text-text-main" />
+                  {errors.default_price && <p className="text-xs text-red-500">{errors.default_price.message}</p>}
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="gap-3 p-6 border-t border-border-temple/40 bg-gray-50">
+              <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Saving...' : 'Save'}</Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

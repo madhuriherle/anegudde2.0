@@ -28,8 +28,8 @@ def _ensure_token_partition_for_timestamp(db: Session, ts: datetime) -> None:
 
 def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     now = datetime.now(timezone.utc)
-    # Use provided date or fallback to today
-    target_date = payload.date if payload.date else now.date()
+    # Date is always today (server time)
+    target_date = now.date()
     
     # Ensure partition exists for the target date's month
     # We use a datetime for the partition check

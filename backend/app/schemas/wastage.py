@@ -29,7 +29,6 @@ class WastageItemIn(BaseModel):
 class WastageEntryCreate(BaseModel):
     wastage_date: date
     times_cooked: int = 0
-    reason: str | None = None
     consumption_entry_id: int | None = None
     user_id: int
     status: int = 1
@@ -40,7 +39,6 @@ class WastageEntryOut(BaseModel):
     id: int
     wastage_date: date
     times_cooked: int
-    reason: str | None = None
     consumption_entry_id: int | None = None
     user_id: int
     status: int
@@ -69,7 +67,6 @@ class WastageItemOut(BaseModel):
 class WastageEntryUpdate(BaseModel):
     wastage_date: date
     times_cooked: int = 0
-    reason: str | None = None
     consumption_entry_id: int | None = None
     items: list[WastageItemIn] = []
 

@@ -24,6 +24,7 @@ import MonthlyPerformanceReportPage from './pages/MonthlyPerformanceReportPage';
 import VendorOutstandingReportPage from './pages/VendorOutstandingReportPage';
 import TokenReportPage from './pages/TokenReportPage';
 import TokenDetailLedgerPage from './pages/TokenDetailLedgerPage';
+import CanteenSummaryPage from './pages/CanteenSummaryPage';
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
         <Route path="/reports/tokens/:date" element={<TokenDetailLedgerPage />} />
         <Route path="/reports/daily-closing" element={<DailyStockReportPage />} />
         <Route path="/reports/stock-summary" element={<StockSummaryPage />} />
+        <Route path="/reports/canteen-summary" element={<CanteenSummaryPage />} />
         <Route path="/reports/monthly-performance" element={<MonthlyPerformanceReportPage />} />
         <Route path="/reports/vendor-outstanding" element={<VendorOutstandingReportPage />} />
         <Route path="/users" element={<UsersPage />} />

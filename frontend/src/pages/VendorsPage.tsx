@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
-import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -25,7 +24,6 @@ import { DetailItem } from '../components/ui/DetailItem';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
-import { Eye, Edit, Trash2 } from 'lucide-react';
 
 const vendorSchema = z.object({
   vendor_code: z.string().optional().or(z.literal('')).or(z.null()),
@@ -71,7 +69,6 @@ const buildVendorPayload = (data: VendorFormValues) => {
 };
 
 const VendorsPage: React.FC = () => {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showConfirm, showError, showSuccess } = useNotification();
   const [search, setSearch] = useState('');
@@ -262,7 +259,6 @@ const VendorsPage: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="text-text-main"
-                placeholder="Search vendors..."
               />
             </div>
           </div>
@@ -303,8 +299,18 @@ const VendorsPage: React.FC = () => {
           </DialogHeader>
           <div className="space-y-1 mt-4">
             <DetailItem label="Vendor Name" value={viewingVendor?.vendor_name} />
-            <DetailItem label="Contact" value={viewingVendor?.contact_number} />
-            <DetailItem label="Address" value={viewingVendor?.address_line1} />
+            <DetailItem label="Contact Person" value={viewingVendor?.contact_person} />
+            <DetailItem label="Primary Contact" value={viewingVendor?.contact_number} />
+            <DetailItem label="Opening Balance" value={formatCurrency(viewingVendor?.opening_balance)} />
+            <DetailItem
+              label="Address"
+              value={[
+                viewingVendor?.address_line1,
+                viewingVendor?.city,
+                viewingVendor?.state,
+                viewingVendor?.postal_code
+              ].filter(Boolean).join(', ')}
+            />
           </div>
           <DialogFooter>
             <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
@@ -318,19 +324,68 @@ const VendorsPage: React.FC = () => {
             <DialogTitle>{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</DialogTitle>
             <DialogDescription className="sr-only">Vendor form</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit((data) => mutation.mutate({ ...data, id: editingVendor?.id, isEditMode: !!editingVendor }))} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-               <div>
-                  <Label>Name</Label>
-                  <Input {...register('vendor_name')} />
-               </div>
-               <div>
-                  <Label>Phone</Label>
-                  <Input {...register('contact_number')} />
-               </div>
+          <form onSubmit={handleSubmit((data) => mutation.mutate({ ...data, id: editingVendor?.id, isEditMode: !!editingVendor }))} className="bg-white flex flex-col" autoComplete="off">
+            <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <Label className="text-text-main">Vendor Name (Shop Name) *</Label>
+                  <Input {...register('vendor_name')} className="text-text-main" />
+                  {errors.vendor_name && <p className="text-xs text-red-500">{errors.vendor_name.message}</p>}
+                </div>
+
+                <div>
+                  <Label className="text-text-main">Contact Person</Label>
+                  <Input {...register('contact_person')} className="text-text-main" />
+                </div>
+
+                <div>
+                  <Label className="text-text-main">Primary Contact *</Label>
+                  <Input {...register('contact_number')} className="text-text-main" />
+                  {errors.contact_number && <p className="text-xs text-red-500">{errors.contact_number.message}</p>}
+                </div>
+
+                <div>
+                  <Label className="text-text-main">Opening Balance *</Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    {...register('opening_balance')}
+                    className="text-text-main"
+                    onFocus={(e) => {
+                      if (!editingVendor && e.target.value === '0') {
+                        setValue('opening_balance', '' as any);
+                      }
+                    }}
+                  />
+                  {errors.opening_balance && <p className="text-xs text-red-500">{errors.opening_balance.message}</p>}
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label className="text-text-main">Address Line 1 *</Label>
+                  <Input {...register('address_line1')} className="text-text-main" />
+                  {errors.address_line1 && <p className="text-xs text-red-500">{errors.address_line1.message}</p>}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 md:col-span-2 gap-4">
+                  <div>
+                    <Label className="text-text-main">City</Label>
+                    <Input {...register('city')} className="text-text-main" />
+                  </div>
+                  <div>
+                    <Label className="text-text-main">State</Label>
+                    <Input {...register('state')} className="text-text-main" />
+                  </div>
+                  <div>
+                    <Label className="text-text-main">Postal Code</Label>
+                    <Input {...register('postal_code')} className="text-text-main" />
+                    {errors.postal_code && <p className="text-xs text-red-500">{errors.postal_code.message}</p>}
+                  </div>
+                </div>
+              </div>
             </div>
-            <DialogFooter>
-               <Button type="submit">Save</Button>
+            <DialogFooter className="gap-3 p-6 border-t border-border-temple/40 bg-gray-50">
+              <Button type="button" variant="ghost" onClick={() => { setOpen(false); setEditingVendor(null); }}>Cancel</Button>
+              <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Saving...' : 'Save'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

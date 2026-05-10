@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 import math
+from decimal import Decimal
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from app.db.models import User, Vendor, VendorPayment
+from app.db.models import User, Vendor, VendorPayment, PurchaseEntry
 
 def list_vendor_payments(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int | None = 1):
     import re
@@ -47,9 +49,36 @@ def list_vendor_payments(db: Session, page: int = 1, page_size: int = 20, q: str
     }
 
 def create_vendor_payment(payload, db: Session, current_user: User) -> VendorPayment:
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    
+    # --- SAFETY BLOCK: Prevent Future Dates ---
+    if payload.payment_date > today:
+        raise HTTPException(status_code=400, detail="Payment date cannot be in the future.")
+
     vendor = db.query(Vendor).filter(Vendor.id == payload.vendor_id).first()
     if not vendor:
         raise HTTPException(status_code=400, detail="Invalid vendor_id")
+
+    # --- SMART BLOCK: Prevent Overpayment ---
+    total_purchases = db.query(func.sum(func.coalesce(PurchaseEntry.invoice_amount, PurchaseEntry.total_amount))).filter(
+        PurchaseEntry.vendor_id == payload.vendor_id, 
+        PurchaseEntry.status == 1
+    ).scalar() or Decimal("0")
+    
+    total_payments = db.query(func.sum(VendorPayment.amount)).filter(
+        VendorPayment.vendor_id == payload.vendor_id, 
+        VendorPayment.status == 1
+    ).scalar() or Decimal("0")
+    
+    outstanding = Decimal(str(vendor.opening_balance)) + Decimal(str(total_purchases)) - Decimal(str(total_payments))
+    
+    if Decimal(str(payload.amount)) > outstanding:
+        raise HTTPException(
+            status_code=422, 
+            detail=f"Payment exceeds outstanding balance. Total outstanding for '{vendor.vendor_name}' is ₹{outstanding:.2f}."
+        )
+    # ---------------------------------------
 
     now = datetime.now(timezone.utc)
     
@@ -69,7 +98,6 @@ def create_vendor_payment(payload, db: Session, current_user: User) -> VendorPay
     )
     
     db.add(payment)
-    
     db.commit()
     db.refresh(payment)
     return payment
@@ -79,7 +107,10 @@ def delete_vendor_payment(payment_id: int, db: Session, current_user: User) -> N
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
     
-    db.delete(payment)
+    # Soft delete
+    payment.status = 0
+    payment.updated_at = datetime.now(timezone.utc)
+    payment.updated_by = current_user.id
     db.commit()
 
 def get_vendor_payment(payment_id: int, db: Session) -> VendorPayment:

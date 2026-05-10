@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 import math
 from fastapi import HTTPException
-from sqlalchemy import String, or_, text
+from sqlalchemy import String, or_, text, func
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import ConsumptionEntry, ConsumptionItem, Item, StockLedger, User, WastageEntry, WastageItem
 from app.schemas.consumption import ConsumptionEntryCreate, ConsumptionEntryUpdate
@@ -58,6 +58,10 @@ def list_consumptions(db: Session, page: int = 1, page_size: int = 20, q: str = 
 
 def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_user: User) -> ConsumptionEntry:
     now = datetime.now(timezone.utc)
+    # --- SAFETY BLOCK: Prevent Future Dates ---
+    if payload.usage_date > now.date():
+        raise HTTPException(status_code=400, detail="Usage date cannot be in the future.")
+
     if len(payload.items or []) == 0:
         raise HTTPException(status_code=422, detail="At least one consumption row is required")
 
@@ -73,6 +77,31 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
         if manpower_value < 0:
             raise HTTPException(status_code=422, detail="Manpower fields must be >= 0")
     
+    # Validate stock as-of usage date (not current live stock), so back-dated entries
+    # cannot create negative historical closing stock.
+    item_ids = [it.item_id for it in (payload.items or [])]
+    opening_rows = db.query(Item.id, Item.opening_stock).filter(Item.id.in_(item_ids)).all()
+    opening_map = {item_id: Decimal(str(opening_stock or 0)) for item_id, opening_stock in opening_rows}
+
+    before_rows = (
+        db.query(
+            StockLedger.item_id,
+            func.coalesce(func.sum(StockLedger.qty_in - StockLedger.qty_out), 0).label("net_before"),
+        )
+        .filter(
+            StockLedger.item_id.in_(item_ids),
+            StockLedger.status == 1,
+            StockLedger.txn_date < payload.usage_date,
+        )
+        .group_by(StockLedger.item_id)
+        .all()
+    )
+    before_map = {r.item_id: Decimal(str(r.net_before or 0)) for r in before_rows}
+    available_as_of = {
+        item_id: opening_map.get(item_id, Decimal("0")) + before_map.get(item_id, Decimal("0"))
+        for item_id in item_ids
+    }
+
     entry = ConsumptionEntry(
         usage_date=payload.usage_date, 
         people_served=payload.people_served,
@@ -120,12 +149,19 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
                 created_by=current_user.id,
                 updated_by=current_user.id
             ))
-            current_stock = Decimal(item.current_stock or "0")
-            if current_stock - net_quantity < 0:
-                raise HTTPException(status_code=422, detail=f"Insufficient stock for item_id={item.id}")
+            datewise_available = available_as_of.get(item.id, Decimal("0"))
+            if datewise_available - Decimal(str(it.quantity_used)) < 0:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Insufficient stock for {item.item_name} on {payload.usage_date}. "
+                        f"Available: {datewise_available:.3f}, Requested: {Decimal(str(it.quantity_used)):.3f}"
+                    ),
+                )
 
-            issue_balance = current_stock - it.quantity_used
+            issue_balance = datewise_available - Decimal(str(it.quantity_used))
             return_balance = issue_balance + it.qty_returned
+            available_as_of[item.id] = Decimal(str(return_balance))
             item.current_stock = return_balance
 
             db.add(StockLedger(
