@@ -102,8 +102,8 @@ const MainLayout: React.FC = () => {
       icon: Package,
       children: [
         { text: 'Category', path: '/settings/categories' },
-        { text: 'Menu Item', path: '/settings/menu-items' },
         { text: 'Raw Item', path: '/items' },
+        { text: 'Menu Item', path: '/settings/menu-items' },
       ]
     },
     {

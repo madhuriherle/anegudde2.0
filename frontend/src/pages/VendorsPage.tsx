@@ -186,10 +186,7 @@ const VendorsPage: React.FC = () => {
         setVendorToDelete(vendor);
         setDeleteWarningOpen(true);
       } else {
-        const confirmed = await showConfirm(
-          'Delete Vendor',
-          `Are you sure you want to delete "${vendor.vendor_name}"?`
-        );
+        const confirmed = await showConfirm('Delete Vendor', `Are you sure you want to delete "${vendor.vendor_name}"?`);
         if (confirmed) {
           deleteMutation.mutate(vendor.id);
         }
@@ -197,6 +194,17 @@ const VendorsPage: React.FC = () => {
     } catch {
       showError('Failed to check vendor usage');
     }
+  };
+
+  const onSubmit = async (data: VendorFormValues) => {
+    const confirmed = await showConfirm(
+      editingVendor ? 'Confirm Update' : 'Confirm Save',
+      editingVendor
+        ? `Are you sure you want to update "${data.vendor_name}"?`
+        : `Are you sure you want to create vendor "${data.vendor_name}"?`
+    );
+    if (!confirmed) return;
+    mutation.mutate({ ...data, id: editingVendor?.id, isEditMode: !!editingVendor });
   };
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
@@ -324,7 +332,7 @@ const VendorsPage: React.FC = () => {
             <DialogTitle>{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</DialogTitle>
             <DialogDescription className="sr-only">Vendor form</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit((data) => mutation.mutate({ ...data, id: editingVendor?.id, isEditMode: !!editingVendor }))} className="bg-white flex flex-col" autoComplete="off">
+          <form onSubmit={handleSubmit(onSubmit)} className="bg-white flex flex-col" autoComplete="off">
             <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                 <div>

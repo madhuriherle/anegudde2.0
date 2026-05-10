@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.db.models import Item, PurchaseEntry, PurchaseItem, StockLedger, User, Vendor, ItemPrice, PurchaseBill
 from app.schemas.purchase import PurchaseEntryCreate, PurchaseEntryUpdate
 
-def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
+def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None, from_date: str = None, to_date: str = None):
     import re
     query = db.query(PurchaseEntry).options(
         joinedload(PurchaseEntry.items), 
@@ -21,9 +21,8 @@ def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = Non
     if status is not None: 
         query = query.filter(PurchaseEntry.status == status)
 
-    # Smart Search: Extract dates from q if present
-    from_date, to_date = None, None
-    if q:
+    # Smart Search: Extract dates from q ONLY if explicit dates are not provided
+    if q and not from_date and not to_date:
         date_patterns = re.findall(r"\d{4}-\d{2}-\d{2}", q)
         if len(date_patterns) >= 2:
             from_date, to_date = date_patterns[0], date_patterns[1]

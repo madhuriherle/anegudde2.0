@@ -81,6 +81,7 @@ const PurchasesPage: React.FC = () => {
   const viewCompareWrapRef = React.useRef<HTMLDivElement | null>(null);
   const [isManualInvoiceAmount, setIsManualInvoiceAmount] = useState(false);
   const [selectedBillFile, setSelectedBillFile] = useState<File | null>(null);
+  const [removeExistingBill, setRemoveExistingBill] = useState(false);
   const [showVendorAddress, setShowVendorAddress] = useState(false);
   const MAX_BILL_FILE_SIZE = 20 * 1024 * 1024;
   const ALLOWED_BILL_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.pdf'];
@@ -88,15 +89,13 @@ const PurchasesPage: React.FC = () => {
   const { data: purchasesData, isLoading: purchasesLoading } = useQuery({
     queryKey: ['purchases', search, page, pageSize, fromDate, toDate],
     queryFn: async () => {
-      const dateQ = fromDate && toDate
-        ? `${fromDate} ${toDate}`
-        : fromDate
-          ? `${fromDate} ${fromDate}`
-          : toDate
-            ? `${toDate} ${toDate}`
-            : '';
-      const combinedQ = [search.trim(), dateQ].filter(Boolean).join(' ').trim();
-      const params: any = { q: combinedQ, page, page_size: pageSize };
+      const params: any = { 
+        q: search.trim(), 
+        from_date: fromDate || null,
+        to_date: toDate || null,
+        page, 
+        page_size: pageSize 
+      };
       const res = await api.get('/purchases/list_purchases', { params });
       return res.data;
     },
@@ -204,7 +203,7 @@ const PurchasesPage: React.FC = () => {
 
   const mutation = useMutation({
     mutationFn: async (payload: any) => {
-      const { id, isEditMode, billFile, ...data } = payload;
+      const { id, isEditMode, billFile, removeBill, ...data } = payload;
       if (isEditMode && !id) {
         throw new Error('Missing purchase ID for update');
       }
@@ -229,6 +228,13 @@ const PurchasesPage: React.FC = () => {
           billUploaded = true;
         } catch (uploadErr: any) {
           throw new Error(uploadErr?.response?.data?.detail || 'Purchase saved, but bill upload failed');
+        }
+      }
+      if (removeBill && id) {
+        try {
+          await api.delete(`/purchases/delete_bill/${id}`);
+        } catch (removeErr: any) {
+          throw new Error(removeErr?.response?.data?.detail || 'Purchase saved, but bill removal failed');
         }
       }
       return { saveRes, billUploaded };
@@ -263,6 +269,7 @@ const PurchasesPage: React.FC = () => {
   const handleOpen = async (purchase: any = null) => {
     setIsManualInvoiceAmount(false);
     setSelectedBillFile(null);
+    setRemoveExistingBill(false);
     if (purchase) {
       try {
         const res = await api.get(`/purchases/get_purchase/${purchase.id}`);
@@ -331,6 +338,7 @@ const PurchasesPage: React.FC = () => {
     setOpen(false);
     setEditingPurchase(null);
     setSelectedBillFile(null);
+    setRemoveExistingBill(false);
   };
 
   const handleBillFileChange = (file: File | null) => {
@@ -351,7 +359,18 @@ const PurchasesPage: React.FC = () => {
       return;
     }
 
+    setRemoveExistingBill(false);
     setSelectedBillFile(file);
+  };
+
+  const handleRemoveCurrentBill = async () => {
+    const confirmed = await showConfirm(
+      'Remove Current Bill',
+      'Are you sure you want to remove the current bill attachment?'
+    );
+    if (!confirmed) return;
+    setSelectedBillFile(null);
+    setRemoveExistingBill(true);
   };
 
   React.useEffect(() => {
@@ -402,7 +421,13 @@ const PurchasesPage: React.FC = () => {
     );
 
     if (confirmed) {
-      mutation.mutate({ ...data, id: editingPurchase?.id, isEditMode: Boolean(editingPurchase), billFile: selectedBillFile });
+      mutation.mutate({
+        ...data,
+        id: editingPurchase?.id,
+        isEditMode: Boolean(editingPurchase),
+        billFile: selectedBillFile,
+        removeBill: removeExistingBill,
+      });
     }
   };
 
@@ -874,7 +899,7 @@ const PurchasesPage: React.FC = () => {
     />
   </label>
 
-  {!selectedBillFile && editingPurchase?.bills?.length > 0 && (
+  {!selectedBillFile && !removeExistingBill && editingPurchase?.bills?.length > 0 && (
     <div className="flex items-center gap-2 rounded-lg border border-[#D9C8AF] bg-white px-3 py-2 text-xs">
       <FileText className="h-4 w-4 text-primary" />
 
@@ -894,6 +919,18 @@ const PurchasesPage: React.FC = () => {
       >
         Download
       </button>
+      <button
+        type="button"
+        className="action-btn-delete"
+        onClick={handleRemoveCurrentBill}
+      >
+        Remove
+      </button>
+    </div>
+  )}
+  {removeExistingBill && (
+    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+      Current bill will be removed when you click Save.
     </div>
   )}
 </div>

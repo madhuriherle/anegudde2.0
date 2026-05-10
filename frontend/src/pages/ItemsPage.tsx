@@ -22,16 +22,18 @@ import {
 } from '../components/ui/Dialog';
 import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
+import { DetailItem } from '../components/ui/DetailItem';
 import { formatCurrency } from '../utils/currency';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
+import { cn } from '../utils/cn';
 
 const itemSchema = z.object({
   item_name: z.string().min(1, 'Name is required'),
   category_id: z.coerce.number().min(1, 'Category is required'),
   unit_id: z.coerce.number().min(1, 'Unit is required'),
-  opening_stock: z.coerce.string().regex(/^\d*\.?\d*$/, 'Must be a valid number').default('0'),
-  current_stock: z.coerce.string().regex(/^\d*\.?\d*$/, 'Must be a valid number').default('0'),
-  default_price: z.coerce.number().min(0, 'Cannot be negative'),
+  opening_stock: z.coerce.string().default('0'),
+  current_stock: z.coerce.string().default('0'),
+  default_price: z.coerce.number().default(0),
   min_stock_level: z.coerce.number().min(0, 'Cannot be negative'),
   max_stock_level: z.coerce.number().min(0, 'Cannot be negative'),
   status: z.coerce.number().default(1),
@@ -45,6 +47,8 @@ const ItemsPage: React.FC = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   
   const [open, setOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewingItem, setViewingItem] = useState<any>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
 
   const [deleteWarningOpen, setDeleteWarningOpen] = useState(false);
@@ -54,22 +58,18 @@ const ItemsPage: React.FC = () => {
   // Filter States
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
-  const [fromDate] = useState('');
-  const [toDate] = useState('');
   const [search, setSearch] = useState('');
 
   // Fetch Data
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
-    queryKey: ['items', search, fromDate, toDate, page, pageSize],
+    queryKey: ['items', search, page, pageSize],
     queryFn: async () => {
       const params: any = { 
         page,
         page_size: pageSize,
-        q: search
+        q: search,
+        status: null 
       };
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
-      
       const res = await api.get('/items/list_items', { params });
       return res.data;
     },
@@ -163,6 +163,11 @@ const ItemsPage: React.FC = () => {
     setEditingItem(null);
   };
 
+  const handleView = (item: any) => {
+    setViewingItem(item);
+    setViewDialogOpen(true);
+  };
+
   const handleDeleteClick = async (item: any) => {
     try {
       const res = await api.get('/system/check_usage', {
@@ -204,7 +209,7 @@ const ItemsPage: React.FC = () => {
     },
     {
       accessorKey: 'default_price',
-      header: 'Default Price',
+      header: 'Current Price',
       cell: (i) => formatCurrency(i.getValue() as number),
     },
     {
@@ -223,9 +228,10 @@ const ItemsPage: React.FC = () => {
       header: () => <div className="text-center">Actions</div>,
       cell: info => (
         <div className="flex items-center justify-center gap-2">
-          <button onClick={() => navigate(`/items/${info.row.original.id}/history`)} className="action-btn-view">History</button>
+          <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
           <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
           <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>
+          <button onClick={() => navigate(`/items/${info.row.original.id}/history`)} className="action-btn-view bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200">History</button>
         </div>
       )
     }
@@ -247,6 +253,7 @@ const ItemsPage: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="text-text-main"
+                placeholder="Search items..."
               />
             </div>
           </div>
@@ -279,16 +286,48 @@ const ItemsPage: React.FC = () => {
         ]}
       />
 
+      {/* Item View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-2xl border-border-temple">
+          <DialogHeader>
+            <DialogTitle>Item Details</DialogTitle>
+            <DialogDescription className="sr-only">Viewing item properties</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-1 mt-4">
+            <DetailItem label="Item Name" value={viewingItem?.item_name} />
+            <DetailItem label="Category" value={viewingItem?.category?.category_name} />
+            <DetailItem label="Unit" value={`${viewingItem?.unit?.unit_name} (${viewingItem?.unit?.unit_code})`} />
+            <DetailItem label="Opening Stock" value={`${Number(viewingItem?.opening_stock || 0).toFixed(3)} ${viewingItem?.unit?.unit_code || ''}`} />
+            <DetailItem 
+              label="Current Stock" 
+              value={`${Number(viewingItem?.current_stock || 0).toFixed(3)} ${viewingItem?.unit?.unit_code || ''}`} 
+              valueClassName={cn(
+                "font-bold",
+                Number(viewingItem?.current_stock) <= Number(viewingItem?.min_stock_level) ? 'text-error' : 'text-primary'
+              )} 
+            />
+            <DetailItem label="Current Rate" value={formatCurrency(viewingItem?.default_price || 0)} />
+            <DetailItem label="Min. Stock Alert" value={`${Number(viewingItem?.min_stock_level || 0).toFixed(3)} ${viewingItem?.unit?.unit_code || ''}`} />
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setViewDialogOpen(false)} className="px-10 h-10 font-bold text-white bg-primary hover:bg-secondary rounded-lg">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Item Add/Edit Dialog */}
       <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
-        <DialogContent className="max-w-2xl overflow-hidden max-h-[90vh] border-border-temple">
+        <DialogContent className="max-w-xl overflow-hidden max-h-[90vh] border-border-temple">
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit Item' : 'Add New Item'}</DialogTitle>
             <DialogDescription className="sr-only">Item details form</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit((data) => mutation.mutate({ ...data, id: editingItem?.id, isEditMode: Boolean(editingItem) }))} className="bg-white flex flex-col" autoComplete="off">
             <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                <div className="md:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <div>
                   <Label className="text-text-main">Item Name *</Label>
                   <Input {...register('item_name')} className="text-text-main" />
                   {errors.item_name && <p className="text-xs text-red-500">{errors.item_name.message}</p>}
@@ -329,46 +368,17 @@ const ItemsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label className="text-text-main">Opening Stock</Label>
-                  <Input
-                    {...register('opening_stock')}
-                    disabled={editingItem && Number(editingItem.current_stock) !== Number(editingItem.opening_stock)}
-                    className={`text-text-main ${editingItem && Number(editingItem.current_stock) !== Number(editingItem.opening_stock) ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`}
-                    onFocus={(e) => {
-                      if (!editingItem && e.target.value === '0') {
-                        setValue('opening_stock', '' as any);
-                      }
-                    }}
-                  />
-                  {errors.opening_stock && <p className="text-xs text-red-500">{errors.opening_stock.message}</p>}
-                  {editingItem && Number(editingItem.current_stock) !== Number(editingItem.opening_stock) && (
-                    <p className="text-[10px] text-text-main/50 italic mt-0.5">Locked: Item has transaction history.</p>
-                  )}
-                </div>
-
-                <div>
                   <Label className="text-text-main">Minimum Stock Alert</Label>
                   <Input
                     {...register('min_stock_level')}
                     className="text-text-main"
                     onFocus={(e) => {
-                      if (!editingItem && e.target.value === '0') {
+                      if (e.target.value === '0') {
                         setValue('min_stock_level', '' as any);
                       }
                     }}
                   />
                   {errors.min_stock_level && <p className="text-xs text-red-500">{errors.min_stock_level.message}</p>}
-                </div>
-
-                <div>
-                  <Label className="text-text-main">Current Stock</Label>
-                  <Input {...register('current_stock')} className="text-text-main bg-gray-100" disabled />
-                </div>
-
-                <div>
-                  <Label className="text-text-main">Default Price (₹)</Label>
-                  <Input {...register('default_price')} className="text-text-main" />
-                  {errors.default_price && <p className="text-xs text-red-500">{errors.default_price.message}</p>}
                 </div>
               </div>
             </div>

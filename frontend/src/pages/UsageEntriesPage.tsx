@@ -16,6 +16,7 @@ import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
+import { cn } from '../utils/cn';
 import { Plus, Trash2 } from 'lucide-react';
 
 const formSchema = z.object({
@@ -55,7 +56,7 @@ const formSchema = z.object({
   }
   Object.entries(data.raw_items || {}).forEach(([id, row]: any) => {
     if (Number(row.qty_returned || 0) > Number(row.quantity_used || 0)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Returned cannot exceed used for raw item ${id}`, path: ['raw_items', id, 'qty_returned'] });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Returned qty cannot be more than used qty`, path: ['raw_items', id, 'qty_returned'] });
     }
   });
 });
@@ -120,6 +121,7 @@ const UsageEntriesPage: React.FC = () => {
 
   const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(formSchema) as any,
+    mode: 'onChange',
     defaultValues: {
       usage_date: new Date().toISOString().split('T')[0],
       regular_cooking_persons: 0,
@@ -669,39 +671,45 @@ const UsageEntriesPage: React.FC = () => {
               <div className="temple-form-section h-full xl:col-span-3">
                 <h4 className="temple-section-header mt-0 uppercase tracking-wider">Item usage</h4>
                 <div className="max-h-[45vh] overflow-y-auto pr-2 space-y-2">
-                  {(items || []).filter((i: any) => i.status === 1).map((item: any) => (
-                    <div key={item.id} className="grid grid-cols-12 gap-2 items-center min-h-[42px]">
-                      <div className="col-span-6 text-sm font-medium text-text-main leading-5">
-                        {item.item_name}{item.unit?.unit_code ? ` (${item.unit.unit_code})` : ''}
+                  {(items || []).filter((i: any) => i.status === 1).map((item: any) => {
+                    const itemError = (errors.raw_items as any)?.[item.id];
+                    return (
+                      <div key={item.id} className="grid grid-cols-12 gap-2 items-center min-h-[42px]">
+                        <div className="col-span-6 text-sm font-medium text-text-main leading-5">
+                          {item.item_name}{item.unit?.unit_code ? ` (${item.unit.unit_code})` : ''}
+                        </div>
+                        <div className="col-span-3">
+                          <Label className="text-[10px]">Used</Label>
+                          <Input 
+                            type="text" 
+                            className={cn("h-8 text-xs", itemError?.quantity_used && "border-red-500")} 
+                            {...register(`raw_items.${item.id}.quantity_used` as const)} 
+                            onFocus={(e) => {
+                              if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                                setValue(`raw_items.${item.id}.quantity_used` as any, '' as any);
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Label className={cn("text-[10px]", itemError?.qty_returned && "text-red-500 font-bold")}>Returned</Label>
+                          <Input 
+                            type="text" 
+                            className={cn("h-8 text-xs", itemError?.qty_returned && "border-red-500 bg-red-50")} 
+                            {...register(`raw_items.${item.id}.qty_returned` as const)} 
+                            onFocus={(e) => {
+                              if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                                setValue(`raw_items.${item.id}.qty_returned` as any, '' as any);
+                              }
+                            }}
+                          />
+                          {itemError?.qty_returned && (
+                             <p className="text-[8px] text-red-500 font-black leading-tight mt-0.5 uppercase tracking-tighter">Exceeds Used</p>
+                          )}
+                        </div>
                       </div>
-                      <div className="col-span-3">
-                        <Label className="text-[10px]">Used</Label>
-                        <Input 
-                          type="text" 
-                          className="h-8 text-xs" 
-                          {...register(`raw_items.${item.id}.quantity_used` as const)} 
-                          onFocus={(e) => {
-                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                              setValue(`raw_items.${item.id}.quantity_used` as any, '' as any);
-                            }
-                          }}
-                        />
-                      </div>
-                      <div className="col-span-3">
-                        <Label className="text-[10px]">Returned</Label>
-                        <Input 
-                          type="text" 
-                          className="h-8 text-xs" 
-                          {...register(`raw_items.${item.id}.qty_returned` as const)} 
-                          onFocus={(e) => {
-                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                              setValue(`raw_items.${item.id}.qty_returned` as any, '' as any);
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -826,8 +834,53 @@ const UsageEntriesPage: React.FC = () => {
               </div>
             </div>
 
-            {errors.raw_items?.message && <p className="text-xs text-error">{errors.raw_items.message as string}</p>}
-            {Object.keys(errors).length > 0 && !errors.raw_items?.message && <p className="text-xs text-error">Please correct invalid values.</p>}
+            {/* Robust Error Display */}
+            {Object.keys(errors).length > 0 && (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
+                <p className="text-[10px] text-red-700 font-black mb-2 uppercase tracking-[0.2em]">Validation Alerts ({Object.keys(errors).length})</p>
+                <ul className="space-y-1.5">
+                  {Object.entries(errors).map(([key, error]: [string, any]) => {
+                    const messages: React.ReactNode[] = [];
+
+                    // 1. Handle Field-level errors (Date, Persons, or top-level raw_items error)
+                    if (error.message) {
+                      messages.push(error.message);
+                    }
+                    
+                    // 2. Handle nested Root errors (Added via superRefine)
+                    if (error.root?.message) {
+                      messages.push(error.root.message);
+                    }
+
+                    // 3. Handle Item-specific errors (Usage or Wastage rows)
+                    if (typeof error === 'object' && key !== 'raw_wastage_items') {
+                      Object.entries(error).forEach(([id, itemErr]: [string, any]) => {
+                        if (id === 'message' || id === 'root' || id === 'types') return;
+                        
+                        // Find the item name for either Usage or Wastage list
+                        const itemName = items?.find(i => String(i.id) === id)?.item_name || 
+                                         menuItems?.find(m => String(m.id) === id)?.dish_name;
+                        
+                        // Extract the error message from the nested structure
+                        const actualErr = itemErr.qty_returned || itemErr.quantity_used || itemErr.quantity || itemErr.approx_amount || itemErr;
+                        if (actualErr?.message) {
+                           messages.push(
+                             itemName ? <><strong className="uppercase">{itemName}</strong>: {actualErr.message}</> : actualErr.message
+                           );
+                        }
+                      });
+                    }
+
+                    return messages.map((m, i) => (
+                      <li key={`${key}-${i}`} className="text-[11px] text-red-600 font-bold flex items-center gap-2">
+                        <div className="h-1 w-1 rounded-full bg-red-600" />
+                        {m}
+                      </li>
+                    ));
+                  })}
+                </ul>
+              </div>
+            )}
 
             <DialogFooter className="gap-3">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">Cancel</Button>
