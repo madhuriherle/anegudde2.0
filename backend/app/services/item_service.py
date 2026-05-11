@@ -3,7 +3,7 @@ from decimal import Decimal
 import math
 
 from fastapi import HTTPException
-from sqlalchemy import String
+from sqlalchemy import String, case
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit, ItemType, ItemPrice, PurchaseEntry, Vendor, ItemSerialNumber
@@ -135,9 +135,14 @@ def list_items(
                 (Unit.unit_name.ilike(like))
             )
             
-    # Default sorting: Status (Active first), then Item Name (A-Z)
+    # Default sorting: Status (Active first), then configured display order, then Item Name (A-Z)
     if sort_by == "id" and sort_order == "desc":
-        query = query.order_by(Item.status.desc(), Item.item_name.asc())
+        query = query.order_by(
+            Item.status.desc(),
+            case((Item.display_order.is_(None), 1), else_=0).asc(),
+            Item.display_order.asc(),
+            Item.item_name.asc(),
+        )
     else:
         sort_col = getattr(Item, sort_by, Item.id)
         query = query.order_by(sort_col.asc() if sort_order.lower() == "asc" else sort_col.desc())
@@ -156,7 +161,12 @@ def list_items(
 
 
 def get_item(item_id: int, db: Session) -> Item:
-    item = db.query(Item).options(joinedload(Item.unit)).filter(Item.id == item_id).first()
+    item = (
+        db.query(Item)
+        .options(joinedload(Item.category), joinedload(Item.unit))
+        .filter(Item.id == item_id)
+        .first()
+    )
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     return item

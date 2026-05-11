@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/token_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/printing_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -84,28 +85,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
                 ),
                 const Spacer(),
-                // Website Style FY Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFDF2E9),
-                    border: Border.all(color: const Color(0xFFE5D5C5)),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Financial Year : $displayFY',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5C2E1F),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Website Style FY Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDF2E9),
+                        border: Border.all(color: const Color(0xFFE5D5C5)),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Financial Year : $displayFY',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5C2E1F),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 24),
-                IconButton(
-                  icon: const Icon(Icons.logout, color: Color(0xFF4A3728), size: 20),
-                  onPressed: () => _showLogoutConfirmation(context, authProvider),
-                  tooltip: 'Logout',
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(Icons.logout, color: Color(0xFF4A3728), size: 20),
+                      onPressed: () => _showLogoutConfirmation(context, authProvider),
+                      tooltip: 'Logout',
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -283,9 +289,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final response = await tokenProvider.issueTokens(count);
     if (response != null) {
       _countController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tokens issued successfully!')),
-      );
+      
+      // Print the token automatically
+      try {
+        await PrintingService.printToken(response);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tokens issued and printing...')),
+        );
+      } catch (e) {
+        print('Printing error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Issued successfully, but printing failed: $e')),
+        );
+      }
     }
     
     // Always return focus to the text field for the next entry

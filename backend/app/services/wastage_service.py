@@ -146,6 +146,91 @@ def delete_wastage(wastage_id: int, db: Session, current_user: User) -> None:
     db.delete(entry); db.commit()
 
 def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, current_user: User) -> WastageEntry:
-    delete_wastage(wastage_id, db, current_user)
-    new_entry = create_wastage(payload, db, current_user)
-    return get_wastage_full(new_entry.id, db)
+    entry = get_wastage(wastage_id, db)
+    now = datetime.now(timezone.utc)
+    today = now.date()
+
+    if payload.wastage_date > today:
+        raise HTTPException(status_code=400, detail="Wastage date cannot be in the future.")
+
+    # Reverse previous stock effect for raw-item wastage rows.
+    old_items = db.query(WastageItem).filter(WastageItem.wastage_entry_id == wastage_id).all()
+    for old in old_items:
+        if old.item_id:
+            item = db.query(Item).filter(Item.id == old.item_id).first()
+            if item:
+                item.current_stock = Decimal(item.current_stock or 0) + Decimal(str(old.quantity))
+                item.updated_at = now
+                item.updated_by = current_user.id
+
+    # Remove old detail rows and old ledger rows tied to this entry id.
+    db.query(WastageItem).filter(WastageItem.wastage_entry_id == wastage_id).delete()
+    db.query(StockLedger).filter(
+        StockLedger.ref_table == "wastage_items",
+        StockLedger.ref_id == wastage_id
+    ).delete()
+
+    # Update main entry in place.
+    entry.wastage_date = payload.wastage_date
+    entry.consumption_entry_id = payload.consumption_entry_id
+    entry.times_cooked = payload.times_cooked
+    entry.updated_at = now
+    entry.updated_by = current_user.id
+
+    # Apply new wastage rows and stock impact.
+    for it in payload.items:
+        if Decimal(str(it.quantity)) <= 0:
+            continue
+
+        wastage_item = WastageItem(
+            wastage_entry_id=entry.id,
+            consumption_entry_id=payload.consumption_entry_id,
+            wastage_date=payload.wastage_date,
+            menu_item_id=it.menu_item_id,
+            item_id=it.item_id,
+            quantity=it.quantity,
+            approx_amount=it.approx_amount,
+            created_at=now,
+            updated_at=now,
+            created_by=current_user.id,
+            updated_by=current_user.id
+        )
+        db.add(wastage_item)
+
+        if it.item_id:
+            item = db.query(Item).filter(Item.id == it.item_id).first()
+            if item:
+                qty = Decimal(str(it.quantity))
+                current_stock = Decimal(item.current_stock or 0)
+                if (current_stock - qty) < 0:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Insufficient stock for item '{item.item_name}'. Current stock is {current_stock} but trying to waste {qty}."
+                    )
+
+                item.current_stock = current_stock - qty
+                item.updated_at = now
+                item.updated_by = current_user.id
+
+                unit_cost = item.default_price or 0
+                db.add(StockLedger(
+                    item_id=item.id,
+                    txn_date=payload.wastage_date,
+                    txn_type=3,  # Wastage
+                    ref_table="wastage_items",
+                    ref_id=entry.id,
+                    qty_in=0,
+                    qty_out=qty,
+                    unit_cost=unit_cost,
+                    value_in=0,
+                    value_out=qty * unit_cost,
+                    balance=Decimal(item.current_stock),
+                    current_value=Decimal(item.current_stock) * unit_cost,
+                    created_at=now,
+                    updated_at=now,
+                    created_by=current_user.id,
+                    updated_by=current_user.id
+                ))
+
+    db.commit()
+    return get_wastage_full(entry.id, db)

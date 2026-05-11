@@ -52,7 +52,12 @@ const MenuItemsPage: React.FC = () => {
     queryKey: ['units-list'],
     queryFn: async () => (await api.get('/units/list_units', { params: { page_size: 1000 } })).data,
   });
-  const unitOptions = Array.isArray(units) ? units : (units?.items ?? []);
+  const unitOptions = useMemo(() => {
+    const list = Array.isArray(units) ? units : (units?.items ?? []);
+    return [...list].sort((a: any, b: any) =>
+      String(a.unit_name || '').localeCompare(String(b.unit_name || ''), undefined, { sensitivity: 'base' })
+    );
+  }, [units]);
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<MenuItemFormValues>({
     resolver: zodResolver(menuItemSchema) as any,
@@ -182,8 +187,18 @@ const MenuItemsPage: React.FC = () => {
 
   const sortedMenuItems = useMemo(() => {
     if (!menuItems) return [];
+    const preferredOrder = ['Rice', 'Rasam', 'Huli', 'Palya', 'Chatni', 'Payasam', 'Buttermilk'];
+    const rank = (dishName: string) => {
+      const match = String(dishName || '').match(/\(([^)]+)\)/);
+      const englishName = (match?.[1] || '').trim();
+      const idx = preferredOrder.indexOf(englishName);
+      return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+
     return [...(Array.isArray(menuItems) ? menuItems : (menuItems?.items ?? []))].sort((a, b) => {
       if (a.status !== b.status) return b.status - a.status;
+      const rankDiff = rank(a.dish_name) - rank(b.dish_name);
+      if (rankDiff !== 0) return rankDiff;
       return a.dish_name.localeCompare(b.dish_name);
     });
   }, [menuItems]);

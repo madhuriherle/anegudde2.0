@@ -100,6 +100,22 @@ const WastagesPage: React.FC = () => {
       }
     },
     {
+      id: 'approx_details',
+      header: 'Approx Amt',
+      cell: info => {
+        const items = info.row.original.items || [];
+        return (
+          <div className="space-y-1 py-1">
+            {items.map((it: any, idx: number) => (
+              <div key={idx} className="text-[11px] text-text-main leading-tight h-4 flex items-center">
+                {formatCurrency(Number(it.approx_amount || 0))}
+              </div>
+            ))}
+          </div>
+        );
+      }
+    },
+    {
       id: 'total_amount',
       header: 'Total Approx Amt',
       cell: info => {

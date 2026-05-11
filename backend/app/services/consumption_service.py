@@ -91,7 +91,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
         .filter(
             StockLedger.item_id.in_(item_ids),
             StockLedger.status == 1,
-            StockLedger.txn_date < payload.usage_date,
+            StockLedger.txn_date <= payload.usage_date,
         )
         .group_by(StockLedger.item_id)
         .all()
@@ -261,21 +261,157 @@ def delete_consumption(consumption_id: int, db: Session, current_user: User) -> 
 
 def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db: Session, current_user: User) -> ConsumptionEntry:
     existing = get_consumption(consumption_id, db)
-    payload_create = ConsumptionEntryCreate(
-        usage_date=payload.usage_date,
-        people_served=payload.people_served,
-        remarks=payload.remarks,
-        regular_cooking_persons=payload.regular_cooking_persons,
-        additional_cooking_persons=payload.additional_cooking_persons,
-        regular_cleaning_persons=payload.regular_cleaning_persons,
-        additional_cleaning_persons=payload.additional_cleaning_persons,
-        regular_serving_persons=payload.regular_serving_persons,
-        additional_serving_persons=payload.additional_serving_persons,
-        times_cooked=payload.times_cooked,
-        user_id=existing.user_id,
-        status=existing.status,
-        items=payload.items,
+    now = datetime.now(timezone.utc)
+
+    if payload.usage_date > now.date():
+        raise HTTPException(status_code=400, detail="Usage date cannot be in the future.")
+    if len(payload.items or []) == 0:
+        raise HTTPException(status_code=422, detail="At least one consumption row is required")
+
+    for manpower_value in [
+        payload.regular_cooking_persons,
+        payload.additional_cooking_persons,
+        payload.regular_cleaning_persons,
+        payload.additional_cleaning_persons,
+        payload.regular_serving_persons,
+        payload.additional_serving_persons,
+        payload.times_cooked,
+    ]:
+        if manpower_value < 0:
+            raise HTTPException(status_code=422, detail="Manpower fields must be >= 0")
+
+    # Reverse old consumption stock impact before applying new rows.
+    old_lines = db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id).all()
+    for line in old_lines:
+        item = db.query(Item).filter(Item.id == line.item_id).first()
+        if item:
+            item.current_stock = Decimal(item.current_stock or 0) + Decimal(line.net_quantity or 0)
+            item.updated_at = now
+            item.updated_by = current_user.id
+
+    db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id).delete()
+    db.execute(
+        text("DELETE FROM stock_ledger WHERE ref_table LIKE 'consumption_entries%' AND ref_id = :rid"),
+        {"rid": consumption_id}
     )
-    delete_consumption(consumption_id, db, current_user)
-    new_entry = create_consumption(payload_create, db, current_user)
-    return get_consumption_full(new_entry.id, db)
+
+    existing.usage_date = payload.usage_date
+    existing.people_served = payload.people_served
+    existing.remarks = payload.remarks
+    existing.regular_cooking_persons = payload.regular_cooking_persons
+    existing.additional_cooking_persons = payload.additional_cooking_persons
+    existing.total_cooking_persons = payload.regular_cooking_persons + payload.additional_cooking_persons
+    existing.regular_cleaning_persons = payload.regular_cleaning_persons
+    existing.additional_cleaning_persons = payload.additional_cleaning_persons
+    existing.total_cleaning_persons = payload.regular_cleaning_persons + payload.additional_cleaning_persons
+    existing.regular_serving_persons = payload.regular_serving_persons
+    existing.additional_serving_persons = payload.additional_serving_persons
+    existing.total_serving_persons = payload.regular_serving_persons + payload.additional_serving_persons
+    existing.times_cooked = payload.times_cooked
+    existing.updated_at = now
+    existing.updated_by = current_user.id
+
+    item_ids = [it.item_id for it in (payload.items or [])]
+    opening_rows = db.query(Item.id, Item.opening_stock).filter(Item.id.in_(item_ids)).all()
+    opening_map = {item_id: Decimal(str(opening_stock or 0)) for item_id, opening_stock in opening_rows}
+    before_rows = (
+        db.query(
+            StockLedger.item_id,
+            func.coalesce(func.sum(StockLedger.qty_in - StockLedger.qty_out), 0).label("net_before"),
+        )
+        .filter(
+            StockLedger.item_id.in_(item_ids),
+            StockLedger.status == 1,
+            StockLedger.txn_date <= payload.usage_date,
+        )
+        .group_by(StockLedger.item_id)
+        .all()
+    )
+    before_map = {r.item_id: Decimal(str(r.net_before or 0)) for r in before_rows}
+    available_as_of = {
+        item_id: opening_map.get(item_id, Decimal("0")) + before_map.get(item_id, Decimal("0"))
+        for item_id in item_ids
+    }
+
+    for it in payload.items:
+        if it.quantity_used < 0 or it.qty_returned < 0:
+            raise HTTPException(status_code=422, detail="quantity_used and qty_returned must be >= 0")
+        if it.qty_returned > it.quantity_used:
+            raise HTTPException(status_code=422, detail="qty_returned cannot be greater than quantity_used")
+
+        item = db.query(Item).filter(Item.id == it.item_id).first()
+        if item:
+            unit_cost = it.unit_cost_at_time or get_item_last_price(it.item_id, db)
+            net_quantity = it.quantity_used - it.qty_returned
+            line_total = net_quantity * unit_cost
+            db.add(ConsumptionItem(
+                consumption_entry_id=existing.id,
+                usage_date=payload.usage_date,
+                item_id=it.item_id,
+                quantity_used=it.quantity_used,
+                qty_returned=it.qty_returned,
+                net_quantity=net_quantity,
+                unit_cost_at_time=unit_cost,
+                line_total=line_total,
+                created_at=now,
+                updated_at=now,
+                created_by=current_user.id,
+                updated_by=current_user.id
+            ))
+            datewise_available = available_as_of.get(item.id, Decimal("0"))
+            if datewise_available - Decimal(str(it.quantity_used)) < 0:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Insufficient stock for {item.item_name} on {payload.usage_date}. "
+                        f"Available: {datewise_available:.3f}, Requested: {Decimal(str(it.quantity_used)):.3f}"
+                    ),
+                )
+
+            issue_balance = datewise_available - Decimal(str(it.quantity_used))
+            return_balance = issue_balance + it.qty_returned
+            available_as_of[item.id] = Decimal(str(return_balance))
+            item.current_stock = return_balance
+            item.updated_at = now
+            item.updated_by = current_user.id
+
+            db.add(StockLedger(
+                item_id=item.id,
+                txn_date=payload.usage_date,
+                txn_type=2,
+                ref_table="consumption_entries:RAW_ISSUE",
+                ref_id=existing.id,
+                qty_in=0,
+                qty_out=it.quantity_used,
+                unit_cost=unit_cost,
+                value_in=0,
+                value_out=(it.quantity_used * unit_cost),
+                balance=issue_balance,
+                current_value=issue_balance * unit_cost,
+                created_at=now,
+                updated_at=now,
+                created_by=current_user.id,
+                updated_by=current_user.id
+            ))
+            if it.qty_returned > 0:
+                db.add(StockLedger(
+                    item_id=item.id,
+                    txn_date=payload.usage_date,
+                    txn_type=2,
+                    ref_table="consumption_entries:RAW_RETURN",
+                    ref_id=existing.id,
+                    qty_in=it.qty_returned,
+                    qty_out=0,
+                    unit_cost=unit_cost,
+                    value_in=(it.qty_returned * unit_cost),
+                    value_out=0,
+                    balance=return_balance,
+                    current_value=return_balance * unit_cost,
+                    created_at=now,
+                    updated_at=now,
+                    created_by=current_user.id,
+                    updated_by=current_user.id
+                ))
+
+    db.commit()
+    return get_consumption_full(existing.id, db)

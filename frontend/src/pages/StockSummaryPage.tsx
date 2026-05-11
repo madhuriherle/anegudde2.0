@@ -58,6 +58,20 @@ const StockSummaryPage: React.FC = () => {
     });
   }, [reportData]);
 
+  const orderedRows = useMemo(() => {
+    const rows = reportData?.rows ?? [];
+    const priority = ['ಅಕ್ಕಿ', 'ಬೆಲ್ಲ', 'ತೊಗರಿ ಬೇಳೆ', 'ಗೋಧಿ ಕಡಿ', 'ಒಣಮೆಣಸು', 'ಹುಣಸೆ ಹಣ್ಣು', 'ತುಪ್ಪ'];
+    const rank = (name: string) => {
+      const idx = priority.findIndex((p) => String(name || '').startsWith(p));
+      return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+    return [...rows].sort((a: any, b: any) => {
+      const diff = rank(a.item_name) - rank(b.item_name);
+      if (diff !== 0) return diff;
+      return String(a.item_name || '').localeCompare(String(b.item_name || ''));
+    });
+  }, [reportData]);
+
   return (
     <div className="space-y-6 print:space-y-2 stock-summary-print">
       <style>{`
@@ -133,7 +147,7 @@ const StockSummaryPage: React.FC = () => {
                   <td colSpan={11} className="py-10 text-center text-text-main/60">No data found</td>
                 </tr>
               ) : (
-                reportData?.rows?.map((row: any, idx: number) => (
+                orderedRows.map((row: any, idx: number) => (
                   <tr key={row.item_id} className="hover:bg-bg-temple/20 transition-colors">
                     <td className="px-2 py-1.5 border-r border-border-temple text-center">{idx + 1}</td>
                     <td className="px-2 py-1.5 border-r border-border-temple font-medium">{row.item_name}</td>

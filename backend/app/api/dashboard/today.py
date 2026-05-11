@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends
@@ -162,3 +162,43 @@ def today_summary(
         wastage_details=wastage_details,
         token_details=token_details,
     )
+
+
+@router.get("/get_weekly_menu_wastage")
+def get_weekly_menu_wastage(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    today = date.today()
+    from_date = today - timedelta(days=6)
+
+    rows = (
+        db.query(
+            MenuItem.dish_name.label("menu_item_name"),
+            Unit.unit_name.label("unit_name"),
+            func.coalesce(func.sum(WastageItem.quantity), 0).label("quantity"),
+            func.coalesce(func.sum(WastageItem.approx_amount), 0).label("amount"),
+        )
+        .join(WastageItem, WastageItem.menu_item_id == MenuItem.id)
+        .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
+        .join(Unit, MenuItem.unit_id == Unit.id)
+        .filter(
+            WastageEntry.status == 1,
+            WastageEntry.wastage_date >= from_date,
+            WastageEntry.wastage_date <= today,
+        )
+        .group_by(MenuItem.dish_name, Unit.unit_name)
+        .order_by(func.coalesce(func.sum(WastageItem.approx_amount), 0).desc())
+        .limit(5)
+        .all()
+    )
+
+    return [
+        {
+            "menu_item_name": r.menu_item_name,
+            "unit_name": r.unit_name,
+            "quantity": r.quantity,
+            "amount": r.amount,
+        }
+        for r in rows
+    ]

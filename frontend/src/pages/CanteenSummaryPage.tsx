@@ -53,6 +53,20 @@ const CanteenSummaryPage: React.FC = () => {
     });
   }, [reportData]);
 
+  const orderedRows = useMemo(() => {
+    const rows = reportData?.rows ?? [];
+    const priority = ['ಅಕ್ಕಿ', 'ಬೆಲ್ಲ', 'ತೊಗರಿ ಬೇಳೆ', 'ಗೋಧಿ ಕಡಿ', 'ಒಣಮೆಣಸು', 'ಹುಣಸೆ ಹಣ್ಣು', 'ತುಪ್ಪ'];
+    const rank = (name: string) => {
+      const idx = priority.findIndex((p) => String(name || '').startsWith(p));
+      return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+    return [...rows].sort((a: any, b: any) => {
+      const diff = rank(a.item_name) - rank(b.item_name);
+      if (diff !== 0) return diff;
+      return String(a.item_name || '').localeCompare(String(b.item_name || ''));
+    });
+  }, [reportData]);
+
   const footer = reportData?.footer;
   const fmt2 = (n: number) => String(Math.trunc(n)).padStart(2, '0');
   const devotees = Number(footer?.mahaprasada_devotees ?? 0);
@@ -148,7 +162,7 @@ const CanteenSummaryPage: React.FC = () => {
                   <td colSpan={11} className="py-10 text-center text-text-main/60">No data found</td>
                 </tr>
               ) : (
-                reportData?.rows?.map((row: any, idx: number) => (
+                orderedRows.map((row: any, idx: number) => (
                   <tr key={row.item_id} className="hover:bg-bg-temple/20 transition-colors">
                     <td className="px-2 py-1.5 border-r border-border-temple text-center">{idx + 1}</td>
                     <td className="px-2 py-1.5 border-r border-border-temple font-medium">{row.item_name}</td>
@@ -188,16 +202,29 @@ const CanteenSummaryPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 summary-grid">
               {showTopCard && (
               <div className="border border-border-temple rounded p-3 summary-card">
-                <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
-                  {devotees > 0 && (<><span className="font-extrabold">No. of Mahaprasada Devotees</span><span className="font-extrabold">: {fmt2(devotees)}</span></>)}
-                  {timesCooked > 0 && (<><span className="font-extrabold">No. of times cooked</span><span className="font-extrabold">: {fmt2(timesCooked)}</span></>)}
+                <div className="inline-grid grid-cols-[max-content_max-content_max-content] gap-x-1 gap-y-1 items-center">
+                  {devotees > 0 && (
+                    <>
+                      <span className="font-extrabold whitespace-nowrap">No. of Mahaprasada Devotees</span>
+                      <span className="text-center font-extrabold">:</span>
+                      <span className="font-extrabold tabular-nums">{fmt2(devotees)}</span>
+                    </>
+                  )}
+                  {timesCooked > 0 && (
+                    <>
+                      <span className="font-extrabold whitespace-nowrap">No. of times cooked</span>
+                      <span className="text-center font-extrabold">:</span>
+                      <span className="font-extrabold tabular-nums">{fmt2(timesCooked)}</span>
+                    </>
+                  )}
                 </div>
                 {rawReturns.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-border-temple/40 space-y-1">
                   {rawReturns.map((r: any) => (
-                    <div key={r.item_name} className="grid grid-cols-[minmax(0,1fr)_120px] gap-x-3 whitespace-nowrap no-wrap-print">
+                    <div key={r.item_name} className="inline-grid grid-cols-[max-content_max-content_max-content] gap-x-1 whitespace-nowrap no-wrap-print items-center">
                       <span className="font-extrabold">{r.item_name} Remained</span>
-                      <span className="text-right tabular-nums">{Number(r.qty_returned).toFixed(3)} {r.unit}</span>
+                      <span className="font-extrabold">:</span>
+                      <span className="tabular-nums">{Number(r.qty_returned).toFixed(3)} {r.unit}</span>
                     </div>
                   ))}
                 </div>
@@ -206,10 +233,12 @@ const CanteenSummaryPage: React.FC = () => {
               )}
               {showPersonsCard && (
               <div className="border border-border-temple rounded p-3 summary-card">
-                <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
+                <div className="inline-grid grid-cols-[max-content_max-content_max-content] gap-x-1 gap-y-1 items-center">
                   {personRows.map(([label, value]) => (
                     <React.Fragment key={label as string}>
-                      <span className="font-extrabold">{label as string}</span><span>: {fmt2(value as number)}</span>
+                      <span className="font-extrabold whitespace-nowrap">{label as string}</span>
+                      <span className="text-center font-extrabold">:</span>
+                      <span className="tabular-nums">{fmt2(value as number)}</span>
                     </React.Fragment>
                   ))}
                 </div>
@@ -261,7 +290,7 @@ const CanteenSummaryPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {(reportData?.rows ?? []).map((row: any, idx: number) => (
+            {orderedRows.map((row: any, idx: number) => (
               <tr key={`print-row-${row.item_id}-${idx}`}>
                 <td className="border px-1 py-1 text-center">{idx + 1}</td>
                 <td className="border px-1 py-1">{row.item_name}</td>

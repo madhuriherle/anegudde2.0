@@ -88,15 +88,15 @@ def seed_items_and_dishes(db: Session):
     # 4. Menu Items (Dishes - ಅಡುಗೆಗಳು)
     print("\n--- Seeding Menu Items (Dishes) ---")
     menu_items = [
-        ("ಅನ್ನ (Rice)", "NOS"),
-        ("ಸಾರು (Rasam)", "NOS"),
-        ("ಪಾಯಸ (Payasam)", "NOS"),
-        ("ಹುಳಿ (Huli)", "NOS"),
-        ("ಪಲ್ಯ (Palya)", "NOS"),
-        ("ಚಟ್ನಿ (Chatni)", "NOS"),
-        ("ಮಜ್ಜಿಗೆ (Buttermilk)", "NOS"),
-        ("ಚಿತ್ರಾನ್ನ (Chitranna)", "NOS"),
-        ("ಕೋಸಂಬರಿ (Kosambari)", "NOS")
+        ("ಅನ್ನ (Rice)", "KG"),
+        ("ಸಾರು (Rasam)", "LTR"),
+        ("ಪಾಯಸ (Payasam)", "LTR"),
+        ("ಹುಳಿ (Huli)", "LTR"),
+        ("ಪಲ್ಯ (Palya)", "KG"),
+        ("ಚಟ್ನಿ (Chatni)", "KG"),
+        ("ಮಜ್ಜಿಗೆ (Buttermilk)", "LTR"),
+        ("ಚಿತ್ರಾನ್ನ (Chitranna)", "KG"),
+        ("ಕೋಸಂಬರಿ (Kosambari)", "KG")
     ]
     for name, u_code in menu_items:
         mi = db.query(MenuItem).filter(MenuItem.dish_name == name).first()
