@@ -5,10 +5,19 @@ from pydantic import BaseModel, ConfigDict
 
 from .unit import UnitOut
 
+class ItemCategoryRef(BaseModel):
+    id: int
+    type_id: int
+    category_name: str
+    status: int
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class ItemBase(BaseModel):
     item_name: str
-    category_id: int
+    display_order: int | None = None
+    category_id: int | None = None
     unit_id: int
     opening_stock: Decimal = Decimal("0")
     current_stock: Decimal = Decimal("0")
@@ -59,10 +68,12 @@ class ItemOut(ItemBase):
     created_by: int | None = None
     updated_by: int | None = None
     serial_numbers: list[ItemSerialNumberOut] = []
+    category: ItemCategoryRef | None = None
     unit: UnitOut | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 ItemCreate.model_rebuild()
 ItemUpdate.model_rebuild()
+ItemCategoryRef.model_rebuild()
 ItemOut.model_rebuild()

@@ -149,7 +149,8 @@ class Item(Base):
     __tablename__ = "items"
     id = Column(Integer, primary_key=True)
     item_name = Column(String(150), unique=True, nullable=False)
-    category_id = Column(Integer, ForeignKey("item_categories.id"), nullable=False)
+    display_order = Column(Integer, nullable=True)
+    category_id = Column(Integer, ForeignKey("item_categories.id"), nullable=True)
     unit_id = Column(Integer, ForeignKey("units.id"), nullable=False)
     opening_stock = Column(Numeric(15, 3), nullable=False, default=0)
     current_stock = Column(Numeric(15, 3), nullable=False, default=0)

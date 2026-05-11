@@ -29,7 +29,7 @@ import { cn } from '../utils/cn';
 
 const itemSchema = z.object({
   item_name: z.string().min(1, 'Name is required'),
-  category_id: z.coerce.number().min(1, 'Category is required'),
+  category_id: z.coerce.number().optional().nullable(),
   unit_id: z.coerce.number().min(1, 'Unit is required'),
   opening_stock: z.coerce.string().default('0'),
   current_stock: z.coerce.string().default('0'),
@@ -82,14 +82,22 @@ const ItemsPage: React.FC = () => {
     queryFn: async () => (await api.get('/item-categories/list_categories')).data,
   });
   const categories = useMemo(() => {
-    return Array.isArray(categoriesData) ? categoriesData : (categoriesData?.items ?? []);
+    const list = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.items ?? []);
+    return [...list].sort((a: any, b: any) =>
+      String(a.category_name || '').localeCompare(String(b.category_name || ''), undefined, { sensitivity: 'base' })
+    );
   }, [categoriesData]);
 
   const { data: units } = useQuery({
     queryKey: ['units-list'],
     queryFn: async () => (await api.get('/units/list_units', { params: { page_size: 1000 } })).data,
   });
-  const unitOptions = Array.isArray(units) ? units : (units?.items ?? []);
+  const unitOptions = useMemo(() => {
+    const list = Array.isArray(units) ? units : (units?.items ?? []);
+    return [...list].sort((a: any, b: any) =>
+      String(a.unit_name || '').localeCompare(String(b.unit_name || ''), undefined, { sensitivity: 'base' })
+    );
+  }, [units]);
 
   const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema) as any,
