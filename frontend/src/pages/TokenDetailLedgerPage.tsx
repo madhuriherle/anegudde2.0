@@ -12,6 +12,7 @@ import { Button } from '../components/ui/Button';
 import { DataTable } from '../components/ui/DataTable';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
+import { Card, CardContent } from '../components/ui/Card';
 import { formatDate } from '../utils/date';
 
 interface TokenDetail {
@@ -79,12 +80,9 @@ const TokenDetailLedgerPage: React.FC = () => {
       accessorKey: 'created_at',
       header: 'Time',
       cell: info => (
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-gray-400" />
-          <span className="text-text-main font-medium">
-            {info.getValue() ? new Date(info.getValue() as string).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-          </span>
-        </div>
+        <span className="text-text-main font-medium">
+          {info.getValue() ? new Date(info.getValue() as string).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+        </span>
       ),
     },
     {
@@ -114,33 +112,44 @@ const TokenDetailLedgerPage: React.FC = () => {
         </h2>
       </div>
 
-      <div className="flex flex-col gap-4">
-
-        {/* Header Summary Row - AT TOP COUNT AT BOTTOM */}
-        <div className="flex flex-wrap items-center gap-12 bg-white p-6 rounded-xl border border-border-temple shadow-sm">
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-text-main">Date</Label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="pl-10 h-10 w-44 text-sm bg-white"
-              />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Date Filter Card */}
+        <Card className="border-border-temple shadow-sm">
+          <CardContent className="p-6">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-text-main">Date</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="pl-10 h-10 w-full text-sm bg-white"
+                />
+              </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="text-left">
-            <p className="text-3xl font-black text-primary leading-none">{totalEntries}</p>
-            <p className="text-[11px] font-black uppercase text-text-main/40 tracking-widest mt-2">Total Entries</p>
-          </div>
+        {/* Total Entries Card */}
+        <Card className="border-border-temple shadow-sm">
+          <CardContent className="p-6 flex items-center justify-center h-full">
+            <div className="flex items-center gap-4">
+              <p className="text-xs font-black uppercase text-text-main/40 tracking-widest whitespace-nowrap">Total Entries:</p>
+              <p className="text-4xl font-black text-primary leading-none">{totalEntries}</p>
+            </div>
+          </CardContent>
+        </Card>
 
-          <div className="text-left">
-            <p className="text-3xl font-black text-primary leading-none">{totalDevotees.toLocaleString()}</p>
-            <p className="text-[11px] font-black uppercase text-text-main/40 tracking-widest mt-2">Total Devotees</p>
-          </div>
-        </div>
+        {/* Total Devotees Card */}
+        <Card className="border-border-temple shadow-sm">
+          <CardContent className="p-6 flex items-center justify-center h-full">
+            <div className="flex items-center gap-4">
+              <p className="text-xs font-black uppercase text-text-main/40 tracking-widest whitespace-nowrap">Total Devotees:</p>
+              <p className="text-4xl font-black text-primary leading-none">{totalDevotees.toLocaleString()}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <DataTable 

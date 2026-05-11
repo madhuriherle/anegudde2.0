@@ -72,6 +72,7 @@ const UsageEntriesPage: React.FC = () => {
   const [viewingConsumption, setViewingConsumption] = useState<any>(null);
   const [viewingWastages, setViewingWastages] = useState<any[]>([]);
   const [editingConsumption, setEditingConsumption] = useState<any>(null);
+  const [editingWastageEntryId, setEditingWastageEntryId] = useState<number | null>(null);
   const [customDate, setCustomDate] = useState<string>('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
@@ -196,15 +197,22 @@ const UsageEntriesPage: React.FC = () => {
       }
 
       if (allWastageItems.length > 0) {
-        await api.post('/wastages/create_wastage', {
+        const wastagePayload = {
           wastage_date: data.usage_date,
           consumption_entry_id: saveRes.data.id,
-          reason: 'Combined consumption entry',
           times_cooked: Number(data.times_cooked || 0),
           user_id: user?.id,
           status: 1,
           items: allWastageItems,
-        });
+        };
+
+        if (editingConsumption?.id && editingWastageEntryId) {
+          await api.put(`/wastages/update_wastage/${editingWastageEntryId}`, wastagePayload);
+        } else {
+          await api.post('/wastages/create_wastage', wastagePayload);
+        }
+      } else if (editingConsumption?.id && editingWastageEntryId) {
+        await api.delete(`/wastages/delete_wastage/${editingWastageEntryId}`);
       }
     },
     onSuccess: (_res, variables) => {
@@ -215,6 +223,7 @@ const UsageEntriesPage: React.FC = () => {
       showSuccess(variables?.isEditMode ? 'Entry updated' : 'Combined entry saved');
       setOpen(false);
       setEditingConsumption(null);
+      setEditingWastageEntryId(null);
       reset({
         usage_date: new Date().toISOString().split('T')[0],
         regular_cooking_persons: 0,
@@ -250,6 +259,7 @@ const UsageEntriesPage: React.FC = () => {
 
   const openNew = () => {
     setEditingConsumption(null);
+    setEditingWastageEntryId(null);
     reset({
       usage_date: new Date().toISOString().split('T')[0],
       regular_cooking_persons: 0,
@@ -279,6 +289,7 @@ const UsageEntriesPage: React.FC = () => {
         : (wastageRes.data?.items || []);
       
       const matchedWastages = wastageRows.filter((w: any) => w.consumption_entry_id === full.id);
+      const primaryWastage = matchedWastages.length > 0 ? matchedWastages[0] : null;
       
       const rawDefaults = buildRawDefaults();
       (full.items || []).forEach((it: any) => {
@@ -309,6 +320,7 @@ const UsageEntriesPage: React.FC = () => {
       });
 
       setEditingConsumption(full);
+      setEditingWastageEntryId(primaryWastage?.id ?? null);
       reset({
         usage_date: full.usage_date,
         regular_cooking_persons: Number(full.regular_cooking_persons || 0),
@@ -457,12 +469,12 @@ const UsageEntriesPage: React.FC = () => {
                 <div className="font-semibold whitespace-nowrap">Regular Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cooking_persons || 0)}</div>
                 <div className="font-semibold whitespace-nowrap">Additional Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
                 <div className="font-semibold whitespace-nowrap">Total Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cooking_persons || 0) + Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Regular Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cleaning_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Additional Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Total Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cleaning_persons || 0) + Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
                 <div className="font-semibold whitespace-nowrap">Regular Serving Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_serving_persons || 0)}</div>
                 <div className="font-semibold whitespace-nowrap">Additional Serving Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_serving_persons || 0)}</div>
                 <div className="font-semibold whitespace-nowrap">Total Serving Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_serving_persons || 0) + Number(viewingConsumption?.additional_serving_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Regular Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cleaning_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Additional Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
+                <div className="font-semibold whitespace-nowrap">Total Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cleaning_persons || 0) + Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
                 <div className="font-semibold whitespace-nowrap">No. of times cooked</div><div>:</div><div>{viewingConsumption?.times_cooked ?? 0}</div>
               </div>
             </div>
@@ -558,8 +570,17 @@ const UsageEntriesPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open} onOpenChange={(val) => !val && setOpen(false)}>
-        <DialogContent className="max-w-[92vw] overflow-y-auto max-h-[92vh]">
+      <Dialog open={open} onOpenChange={(val) => {
+        // Only allow closing if NOT loading
+        if (!val && !saveMutation.isPending) {
+          setOpen(false);
+        }
+      }}>
+        <DialogContent 
+          className="max-w-[92vw] overflow-y-auto max-h-[92vh]"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>{editingConsumption ? 'Edit Usage Entry' : 'Add Usage Entry'}</DialogTitle>
             <DialogDescription className="sr-only">Create consumption and wastage entry</DialogDescription>
@@ -614,32 +635,6 @@ const UsageEntriesPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label whitespace-nowrap">Regular Cleaning Persons</Label>
-                  <Input 
-                    type="text" 
-                    {...register('regular_cleaning_persons')} 
-                    className="h-8 text-xs" 
-                    onFocus={(e) => {
-                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                        setValue('regular_cleaning_persons', '' as any);
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="temple-label whitespace-nowrap">Additional Cleaning Persons</Label>
-                  <Input 
-                    type="text" 
-                    {...register('additional_cleaning_persons')} 
-                    className="h-8 text-xs" 
-                    onFocus={(e) => {
-                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                        setValue('additional_cleaning_persons', '' as any);
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-1">
                   <Label className="temple-label whitespace-nowrap">Regular Serving Persons</Label>
                   <Input 
                     type="text" 
@@ -661,6 +656,32 @@ const UsageEntriesPage: React.FC = () => {
                     onFocus={(e) => {
                       if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
                         setValue('additional_serving_persons', '' as any);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="temple-label whitespace-nowrap">Regular Cleaning Persons</Label>
+                  <Input 
+                    type="text" 
+                    {...register('regular_cleaning_persons')} 
+                    className="h-8 text-xs" 
+                    onFocus={(e) => {
+                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                        setValue('regular_cleaning_persons', '' as any);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="temple-label whitespace-nowrap">Additional Cleaning Persons</Label>
+                  <Input 
+                    type="text" 
+                    {...register('additional_cleaning_persons')} 
+                    className="h-8 text-xs" 
+                    onFocus={(e) => {
+                      if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                        setValue('additional_cleaning_persons', '' as any);
                       }
                     }}
                   />

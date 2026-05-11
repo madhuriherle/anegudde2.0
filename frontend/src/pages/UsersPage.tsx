@@ -232,8 +232,16 @@ const UsersPage: React.FC = () => {
       />
 
       {/* Add/Edit Dialog */}
-      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
-        <DialogContent className="max-w-2xl border-border-temple">
+      <Dialog open={open} onOpenChange={(val) => {
+        if (!val && !mutation.isPending) {
+          handleClose();
+        }
+      }}>
+        <DialogContent 
+          className="max-w-2xl border-border-temple"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader className="border-b border-border-temple/40 pb-4">
             <DialogTitle className="text-text-main">
               {editingUser ? 'Edit User' : 'New User'}

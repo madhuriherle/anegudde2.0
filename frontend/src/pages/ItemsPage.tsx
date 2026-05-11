@@ -326,8 +326,16 @@ const ItemsPage: React.FC = () => {
       </Dialog>
 
       {/* Item Add/Edit Dialog */}
-      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
-        <DialogContent className="max-w-xl overflow-hidden max-h-[90vh] border-border-temple">
+      <Dialog open={open} onOpenChange={(val) => {
+        if (!val && !mutation.isPending) {
+          handleClose();
+        }
+      }}>
+        <DialogContent 
+          className="max-w-xl overflow-hidden max-h-[90vh] border-border-temple"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit Item' : 'Add New Item'}</DialogTitle>
             <DialogDescription className="sr-only">Item details form</DialogDescription>

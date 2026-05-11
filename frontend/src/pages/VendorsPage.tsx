@@ -326,8 +326,16 @@ const VendorsPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl border-border-temple">
+      <Dialog open={open} onOpenChange={(val) => {
+        if (!val && !mutation.isPending) {
+          handleClose();
+        }
+      }}>
+        <DialogContent 
+          className="max-w-2xl border-border-temple"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</DialogTitle>
             <DialogDescription className="sr-only">Vendor form</DialogDescription>

@@ -242,11 +242,14 @@ const PurchasesPage: React.FC = () => {
           throw new Error(uploadErr?.response?.data?.detail || 'Purchase saved, but bill upload failed');
         }
       }
-      if (removeBill && id) {
-        try {
-          await api.delete(`/purchases/delete_bill/${id}`);
-        } catch (removeErr: any) {
-          throw new Error(removeErr?.response?.data?.detail || 'Purchase saved, but bill removal failed');
+      if (removeBill) {
+        const targetId = saveRes?.data?.id || id;
+        if (targetId) {
+          try {
+            await api.delete(`/purchases/delete_bill/${targetId}`);
+          } catch (removeErr: any) {
+            throw new Error(removeErr?.response?.data?.detail || 'Purchase saved, but bill removal failed');
+          }
         }
       }
       return { saveRes, billUploaded };
@@ -682,8 +685,16 @@ const PurchasesPage: React.FC = () => {
       </Dialog>
 
       {/* Add/Edit Dialog */}
-      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto border-border-temple">
+      <Dialog open={open} onOpenChange={(val) => {
+        if (!val && !mutation.isPending) {
+          handleClose();
+        }
+      }}>
+        <DialogContent 
+          className="max-w-6xl max-h-[90vh] overflow-y-auto border-border-temple"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="text-text-main font-temple">
               {editingPurchase ? 'Edit Purchase Entry' : 'Record New Purchase'}
