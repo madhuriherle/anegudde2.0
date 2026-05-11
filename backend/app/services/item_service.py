@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy import String
 from sqlalchemy.orm import Session, joinedload
 
-from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit, ItemType, ItemPrice, PurchaseEntry, Vendor
+from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit, ItemType, ItemPrice, PurchaseEntry, Vendor, ItemSerialNumber
 from app.schemas.item import ItemCreate, ItemUpdate
 
 
@@ -35,6 +35,7 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: i
     now = datetime.now(timezone.utc)
     
     data = payload.model_dump()
+    serial_no = data.pop("serial_number", None)
         
     item = Item(
         **data,
@@ -44,6 +45,17 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: i
         updated_by=current_user.id,
     )
     db.add(item)
+    db.flush() # Get item.id
+
+    if serial_no:
+        # Check if serial exists
+        s_exists = db.query(ItemSerialNumber).filter(ItemSerialNumber.serial_number == serial_no).first()
+        if s_exists:
+             raise HTTPException(status_code=400, detail=f"Serial number {serial_no} already assigned to another item")
+        
+        new_s = ItemSerialNumber(item_id=item.id, serial_number=serial_no, status=1)
+        db.add(new_s)
+
     db.commit()
     db.refresh(item)
     return item
@@ -62,11 +74,17 @@ def list_items(
     sort_order: str = "desc"
 ) -> dict:
     import re
-    query = db.query(Item).join(ItemCategory, Item.category_id == ItemCategory.id).options(
+    # Start with base query and joinedloads for efficiency
+    query = db.query(Item).options(
         joinedload(Item.category),
         joinedload(Item.unit),
         joinedload(Item.serial_numbers)
     )
+    
+    # Always join ItemCategory if we need to filter by type_id or search it
+    # We'll use outerjoin to avoid excluding items without categories (if any)
+    query = query.outerjoin(ItemCategory, Item.category_id == ItemCategory.id)
+    query = query.outerjoin(Unit, Item.unit_id == Unit.id)
     
     if status is not None:
         query = query.filter(Item.status == status)
@@ -101,13 +119,15 @@ def list_items(
         elif search_field == "id":
             query = query.filter(Item.id.cast(String).ilike(like))
         elif search_field == "serial":
-            query = query.join(Item.serial_numbers).filter(ItemSerialNumber.serial_number.ilike(like))
+            query = query.outerjoin(ItemSerialNumber).filter(ItemSerialNumber.serial_number.ilike(like))
         elif search_field == "category":
-            query = query.join(ItemCategory).filter(ItemCategory.category_name.ilike(like))
+            query = query.filter(ItemCategory.category_name.ilike(like))
         elif search_field == "unit":
-            query = query.join(Unit).filter(Unit.unit_name.ilike(like))
+            query = query.filter(Unit.unit_name.ilike(like))
         else:
-            query = query.outerjoin(Item.serial_numbers).outerjoin(ItemCategory).outerjoin(Unit).filter(
+            # Need ItemSerialNumber for global search
+            query = query.outerjoin(ItemSerialNumber)
+            query = query.filter(
                 (Item.item_name.ilike(like)) |
                 (Item.id.cast(String).ilike(like)) |
                 (ItemSerialNumber.serial_number.ilike(like)) |
@@ -146,8 +166,30 @@ def update_item(item_id: int, payload: ItemUpdate, db: Session, current_user: Us
     item = get_item(item_id, db)
     validate_fk(db, payload, type_id)
 
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    serial_no = data.pop("serial_number", None)
+
+    for key, value in data.items():
         setattr(item, key, value)
+    
+    if serial_no is not None:
+        # Check if this serial already exists for ANOTHER item
+        existing_s = db.query(ItemSerialNumber).filter(
+            ItemSerialNumber.serial_number == serial_no,
+            ItemSerialNumber.item_id != item_id
+        ).first()
+        if existing_s:
+            raise HTTPException(status_code=400, detail=f"Serial number {serial_no} is already assigned to another item")
+        
+        # Update or create serial for this item
+        # In a simple "Code" system, we assume one active code per item
+        current_s = db.query(ItemSerialNumber).filter(ItemSerialNumber.item_id == item_id).first()
+        if current_s:
+            current_s.serial_number = serial_no
+        else:
+            new_s = ItemSerialNumber(item_id=item_id, serial_number=serial_no, status=1)
+            db.add(new_s)
+
     item.updated_at = datetime.now(timezone.utc)
     item.updated_by = current_user.id
     db.commit()

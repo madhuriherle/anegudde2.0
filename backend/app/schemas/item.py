@@ -19,7 +19,7 @@ class ItemBase(BaseModel):
 
 
 class ItemCreate(ItemBase):
-    pass
+    serial_number: str | None = None
 
 
 class ItemUpdate(BaseModel):
@@ -32,6 +32,7 @@ class ItemUpdate(BaseModel):
     min_stock_level: Decimal | None = None
     max_stock_level: Decimal | None = None
     status: int | None = None
+    serial_number: str | None = None
 
 
 class ItemSerialNumberBase(BaseModel):

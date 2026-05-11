@@ -125,7 +125,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Expanded(
                             child: _buildMetricCard(
-                              'TOTAL TOKENS',
+                              'TOTAL DEVOTEES',
                               '${tokenProvider.dailyTotal}',
                               const Color(0xFFB45309),
                               Icons.confirmation_num_outlined,

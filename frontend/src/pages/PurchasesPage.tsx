@@ -111,9 +111,21 @@ const PurchasesPage: React.FC = () => {
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-list'],
-    queryFn: async () => (await api.get('/items/list_items')).data,
+    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data,
   });
   const items = useMemo(() => itemsData?.items || [], [itemsData]);
+  const activeItems = useMemo(() => (items || []).filter((i: any) => i.status === 1), [items]);
+
+  const serialToItemIdMap = useMemo(() => {
+    const map = new Map<string, number>();
+    activeItems.forEach((i: any) => {
+      (i.serial_numbers || []).forEach((s: any) => {
+        const serial = String(s?.serial_number || '').trim().toLowerCase();
+        if (serial) map.set(serial, i.id);
+      });
+    });
+    return map;
+  }, [activeItems]);
 
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<any>({
     resolver: zodResolver(purchaseSchema) as any,
@@ -755,20 +767,21 @@ const PurchasesPage: React.FC = () => {
                        
                         className="h-9 text-sm text-center font-bold text-text-main border-primary/30"
                         {...register(`items.${index}.search_id` as const)}
-                        onChange={async (e) => {
-                          const val = e.target.value;
+                        onChange={(e) => {
+                          const val = String(e.target.value || '').trim();
+                          const normalized = val.toLowerCase();
                           setValue(`items.${index}.search_id`, val);
-                          if (val) {
-                            try {
-                              const res = await api.get(`/items/by_serial/${val}`);
-                              if (res.data) {
-                                setValue(`items.${index}.item_id`, res.data.id);
-                              }
-                            } catch (err) {
-                              // Item not found by serial, check if it's a direct ID
-                              const item = items.find((i: any) => String(i.id) === val);
-                              if (item) {
-                                setValue(`items.${index}.item_id`, item.id);
+                          
+                          if (normalized) {
+                            // 1. Instant local lookup
+                            const matchedId = serialToItemIdMap.get(normalized);
+                            if (matchedId) {
+                              setValue(`items.${index}.item_id`, matchedId);
+                            } else {
+                              // 2. Fallback to API/Direct ID if not in local map
+                              const directItem = activeItems.find((i: any) => String(i.id) === val);
+                              if (directItem) {
+                                setValue(`items.${index}.item_id`, directItem.id);
                               }
                             }
                           }
