@@ -36,13 +36,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final tokenProvider = Provider.of<TokenProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
 
-    // Get current financial year (logic from web)
-    final now = DateTime.now();
-    final year = now.year;
-    final month = now.month;
-    final financialYear = month >= 4 
-      ? '$year-${(year + 1).toString().substring(2)}' 
-      : '${year - 1}-${year.toString().substring(2)}';
+    // Use FY from API if available, otherwise fallback to local logic
+    String displayFY = tokenProvider.activeFinancialYear;
+    if (displayFY.isEmpty) {
+      final now = DateTime.now();
+      final year = now.year;
+      final month = now.month;
+      displayFY = month >= 4 
+        ? '$year-${(year + 1).toString().substring(2)}' 
+        : '${year - 1}-${year.toString().substring(2)}';
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDF8F3), // Match bg-temple / bg-cream
@@ -72,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     'assets/images/logo.png',
                     height: 48,
                     width: 48,
-                    fit: CrossAxisAlignment.center == CrossAxisAlignment.center ? BoxFit.contain : BoxFit.cover,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -81,17 +84,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
                 ),
                 const Spacer(),
-                // Compact FY Badge
+                // Website Style FY Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFDF2E9),
-                    border: Border.all(color: const Color(0xFFB45309).withOpacity(0.3)),
-                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFE5D5C5)),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    'FY $financialYear',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                    'Financial Year : $displayFY',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5C2E1F),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 24),
@@ -290,41 +297,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            'Confirm Logout',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
-          ),
-          content: const Text(
-            'Are you sure you want to log out of the system?',
-            textAlign: TextAlign.center,
-          ),
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('No, Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    authProvider.logout();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4A3728),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                  child: const Text('Yes, Logout'),
-                ),
-              ],
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          title: Center(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDF2E9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.logout_rounded, color: Color(0xFFB45309), size: 28),
             ),
-          ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Confirm Logout',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Are you sure you want to log out of the system?',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.grey[300]!),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text('No, Cancel', style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        authProvider.logout();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4A3728),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Yes, Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );
