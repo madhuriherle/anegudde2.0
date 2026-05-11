@@ -65,22 +65,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: Row(
               children: [
-                // Minimal Logo
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4A3728),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'AIMS',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1),
+                // Minimal Logo with Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    height: 48,
+                    width: 48,
+                    fit: CrossAxisAlignment.center == CrossAxisAlignment.center ? BoxFit.contain : BoxFit.cover,
                   ),
                 ),
                 const SizedBox(width: 16),
                 const Text(
-                  'Token Distribution Dashboard',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
+                  'AIMS Meal & Token System',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
                 ),
                 const Spacer(),
                 // Compact FY Badge
