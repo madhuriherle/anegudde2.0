@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -15,6 +16,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final _countController = TextEditingController();
   final _focusNode = FocusNode();
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -23,10 +25,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Provider.of<TokenProvider>(context, listen: false).fetchDailyTotal();
       _focusNode.requestFocus();
     });
+    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted) return;
+      Provider.of<TokenProvider>(context, listen: false).fetchDailyTotal();
+    });
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _countController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -293,9 +300,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // Print the token automatically
       try {
         await PrintingService.printToken(response);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tokens issued and printing...')),
-        );
+        _showSuccessPopup(context, response);
       } catch (e) {
         print('Printing error: $e');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -306,6 +311,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     // Always return focus to the text field for the next entry
     _focusNode.requestFocus();
+  }
+
+  void _showSuccessPopup(BuildContext context, Map<String, dynamic> data) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        // Auto-close after 1 second
+        Future.delayed(const Duration(seconds: 1), () {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        });
+
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 8,
+          backgroundColor: Colors.white,
+          child: Container(
+            width: 320,
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Light green circle with checkmark (Matching image style)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F9F0),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFE1F2E1), width: 2),
+                  ),
+                  child: const Icon(Icons.check, color: Color(0xFF72C366), size: 40),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Success',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Color(0xFF555555)),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Receipt No: ${data['receipt_number']} • Devotees: ${data['token_count']}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF777777), fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showLogoutConfirmation(BuildContext context, AuthProvider authProvider) {

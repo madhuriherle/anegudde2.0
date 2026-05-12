@@ -239,7 +239,8 @@ const TokensPage: React.FC = () => {
               <table className="w-full text-sm text-left">
                 <thead className="bg-bg-temple text-text-main uppercase text-[11px] font-bold tracking-wider">
                   <tr>
-                    <th className="px-4 py-3 border-b border-border-temple">Time</th>
+                    <th className="px-4 py-3 border-b border-border-temple">Receipt No</th>
+                    <th className="px-4 py-3 border-b border-border-temple text-center">Time</th>
                     <th className="px-4 py-3 border-b border-border-temple text-right">Tokens Issued</th>
                     <th className="px-4 py-3 border-b border-border-temple text-right">Issued By</th>
                   </tr>
@@ -247,21 +248,24 @@ const TokensPage: React.FC = () => {
                 <tbody className="divide-y divide-border-temple/40">
                   {detailsLoading ? (
                     <tr>
-                      <td colSpan={3} className="py-10 text-center">
+                      <td colSpan={4} className="py-10 text-center">
                         <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                       </td>
                     </tr>
                   ) : details?.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="py-10 text-center text-text-main">
+                      <td colSpan={4} className="py-10 text-center text-text-main">
                         No data found
                       </td>
                     </tr>
                   ) : (
                     details?.map((detail: any) => (
                       <tr key={detail.id} className="hover:bg-bg-temple/30">
-                        <td className="px-4 py-3 text-text-main">
-                          {formatDateTime(detail.created_at)}
+                        <td className="px-4 py-3 text-text-main font-bold">
+                          {detail.receipt_number}
+                        </td>
+                        <td className="px-4 py-3 text-center text-text-main/70">
+                          {new Date(detail.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="px-4 py-3 text-right font-bold text-primary">
                           {detail.token_count}

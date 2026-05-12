@@ -182,7 +182,7 @@ const CanteenSummaryPage: React.FC = () => {
             {grandTotals && (
               <tfoot className="bg-gray-50 font-bold border-t border-border-temple">
                 <tr>
-                  <td colSpan={3} className="px-2 py-2 border-r border-border-temple text-left">GRAND TOTAL...</td>
+                  <td colSpan={3} className="px-2 py-2 border-r border-border-temple text-left">GRAND TOTAL</td>
                   <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.opening.toFixed(3)}</td>
                   <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.purchase.toFixed(3)}</td>
                   <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.issues.toFixed(3)}</td>
@@ -307,7 +307,7 @@ const CanteenSummaryPage: React.FC = () => {
             ))}
             {grandTotals && (
               <tr>
-                <td className="border px-1 py-1 font-bold" colSpan={3}>GRAND TOTAL...</td>
+                <td className="border px-1 py-1 font-bold" colSpan={3}>GRAND TOTAL</td>
                 <td className="border px-1 py-1 text-right font-bold">{grandTotals.opening.toFixed(3)}</td>
                 <td className="border px-1 py-1 text-right font-bold">{grandTotals.purchase.toFixed(3)}</td>
                 <td className="border px-1 py-1 text-right font-bold">{grandTotals.issues.toFixed(3)}</td>

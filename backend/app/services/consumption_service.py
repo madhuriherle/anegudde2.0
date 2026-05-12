@@ -154,7 +154,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
                 raise HTTPException(
                     status_code=422,
                     detail=(
-                        f"Insufficient stock for {item.item_name} on {payload.usage_date}. "
+                        f"Insufficient stock for {item.item_name} on {payload.usage_date.strftime('%d-%m-%Y')}. "
                         f"Available: {datewise_available:.3f}, Requested: {Decimal(str(it.quantity_used)):.3f}"
                     ),
                 )
@@ -363,7 +363,7 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
                 raise HTTPException(
                     status_code=422,
                     detail=(
-                        f"Insufficient stock for {item.item_name} on {payload.usage_date}. "
+                        f"Insufficient stock for {item.item_name} on {payload.usage_date.strftime('%d-%m-%Y')}. "
                         f"Available: {datewise_available:.3f}, Requested: {Decimal(str(it.quantity_used)):.3f}"
                     ),
                 )

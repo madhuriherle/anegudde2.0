@@ -16,12 +16,22 @@ class TokenProvider with ChangeNotifier {
   DateTime get selectedDate => _selectedDate;
   String get activeFinancialYear => _activeFinancialYear;
 
+  void _syncSelectedDateWithToday() {
+    final now = DateTime.now();
+    if (_selectedDate.year != now.year ||
+        _selectedDate.month != now.month ||
+        _selectedDate.day != now.day) {
+      _selectedDate = now;
+    }
+  }
+
   void setDate(DateTime date) {
     _selectedDate = date;
     fetchDailyTotal();
   }
 
   Future<void> fetchDailyTotal() async {
+    _syncSelectedDateWithToday();
     _isLoading = true;
     notifyListeners();
 
@@ -54,6 +64,7 @@ class TokenProvider with ChangeNotifier {
   }
 
   Future<Map<String, dynamic>?> issueTokens(int count) async {
+    _syncSelectedDateWithToday();
     _isLoading = true;
     notifyListeners();
 

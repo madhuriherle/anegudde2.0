@@ -24,6 +24,7 @@ import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 import { DetailItem } from '../components/ui/DetailItem';
 import { formatCurrency } from '../utils/currency';
+import { formatQuantityWithUnit } from '../utils/quantity';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 import { cn } from '../utils/cn';
 
@@ -37,6 +38,7 @@ const itemSchema = z.object({
   min_stock_level: z.coerce.number().min(0, 'Cannot be negative'),
   max_stock_level: z.coerce.number().min(0, 'Cannot be negative'),
   status: z.coerce.number().default(1),
+  serial_number: z.string().optional().nullable(),
 });
 
 type ItemFormValues = z.infer<typeof itemSchema>;
@@ -68,7 +70,6 @@ const ItemsPage: React.FC = () => {
         page,
         page_size: pageSize,
         q: search,
-        status: null 
       };
       const res = await api.get('/items/list_items', { params });
       return res.data;
@@ -149,6 +150,7 @@ const ItemsPage: React.FC = () => {
         default_price: Number(item.default_price ?? 0),
         min_stock_level: Number(item.min_stock_level ?? 0),
         max_stock_level: Number(item.max_stock_level ?? 0),
+        serial_number: item.serial_numbers?.[0]?.serial_number || '',
       });
     } else {
       reset({
@@ -161,6 +163,7 @@ const ItemsPage: React.FC = () => {
         min_stock_level: 0,
         max_stock_level: 0,
         status: 1,
+        serial_number: '',
       });
     }
     setOpen(true);
@@ -303,20 +306,21 @@ const ItemsPage: React.FC = () => {
           </DialogHeader>
           
           <div className="space-y-1 mt-4">
+            <DetailItem label="Serial ID" value={viewingItem?.serial_numbers?.[0]?.serial_number || '-'} />
             <DetailItem label="Item Name" value={viewingItem?.item_name} />
             <DetailItem label="Category" value={viewingItem?.category?.category_name} />
             <DetailItem label="Unit" value={`${viewingItem?.unit?.unit_name} (${viewingItem?.unit?.unit_code})`} />
-            <DetailItem label="Opening Stock" value={`${Number(viewingItem?.opening_stock || 0).toFixed(3)} ${viewingItem?.unit?.unit_code || ''}`} />
+            <DetailItem label="Opening Stock" value={formatQuantityWithUnit(viewingItem?.opening_stock || 0, viewingItem?.unit)} />
             <DetailItem 
               label="Current Stock" 
-              value={`${Number(viewingItem?.current_stock || 0).toFixed(3)} ${viewingItem?.unit?.unit_code || ''}`} 
+              value={formatQuantityWithUnit(viewingItem?.current_stock || 0, viewingItem?.unit)} 
               valueClassName={cn(
                 "font-bold",
                 Number(viewingItem?.current_stock) <= Number(viewingItem?.min_stock_level) ? 'text-error' : 'text-primary'
               )} 
             />
             <DetailItem label="Current Rate" value={formatCurrency(viewingItem?.default_price || 0)} />
-            <DetailItem label="Min. Stock Alert" value={`${Number(viewingItem?.min_stock_level || 0).toFixed(3)} ${viewingItem?.unit?.unit_code || ''}`} />
+            <DetailItem label="Min. Stock Alert" value={formatQuantityWithUnit(viewingItem?.min_stock_level || 0, viewingItem?.unit)} />
           </div>
 
           <DialogFooter>
@@ -343,6 +347,12 @@ const ItemsPage: React.FC = () => {
           <form onSubmit={handleSubmit((data) => mutation.mutate({ ...data, id: editingItem?.id, isEditMode: Boolean(editingItem) }))} className="bg-white flex flex-col" autoComplete="off">
             <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                  <Label className="text-text-main">Serial ID (Shortcut)</Label>
+                  <Input {...register('serial_number')} className="text-text-main" placeholder="e.g. 1, 22, RICE-1" />
+                  {errors.serial_number && <p className="text-xs text-red-500">{errors.serial_number.message}</p>}
+                </div>
+
                 <div>
                   <Label className="text-text-main">Item Name *</Label>
                   <Input {...register('item_name')} className="text-text-main" />

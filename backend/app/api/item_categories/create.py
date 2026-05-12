@@ -13,9 +13,13 @@ def create_category(
 ):
     resolved_type_id = payload.type_id
     if resolved_type_id is None:
+        # Try finding 'Kitchen' or fallback to the first active type available
         kitchen_type = db.query(ItemType).filter(ItemType.type_name == "Kitchen", ItemType.status == 1).first()
         if not kitchen_type:
-            raise HTTPException(status_code=400, detail="Kitchen type not found")
+            kitchen_type = db.query(ItemType).filter(ItemType.status == 1).order_by(ItemType.id).first()
+        
+        if not kitchen_type:
+            raise HTTPException(status_code=400, detail="No active item types found in system. Please contact administrator.")
         resolved_type_id = kitchen_type.id
 
     item_type = db.query(ItemType).filter(ItemType.id == resolved_type_id, ItemType.status == 1).first()

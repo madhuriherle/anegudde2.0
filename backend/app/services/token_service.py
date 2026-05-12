@@ -27,36 +27,45 @@ def _ensure_token_partition_for_timestamp(db: Session, ts: datetime) -> None:
     )
 
 def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
-    now = datetime.now(timezone.utc)
-    # Use provided date or server's local date (better for local business ops)
-    target_date = payload.date or datetime.now().date()
+    # Use server's local time for business logic consistency
+    now_local = datetime.now()
+    now_utc = datetime.now(timezone.utc)
+    target_date = payload.date or now_local.date()
     
     # Ensure partition exists for the target date's month
     partition_dt = datetime.combine(target_date, datetime.min.time())
     _ensure_token_partition_for_timestamp(db, partition_dt)
 
-    # 1. Get or Create TokenGeneration for the target date
+    # 1. Get or Create TokenGeneration with a Row Lock
+    # Using with_for_update() ensures that concurrent requests for the same date 
+    # are queued, preventing race conditions on receipt_number and total_tokens.
     generation = db.query(TokenGeneration).filter(
         TokenGeneration.date == target_date
-    ).first()
+    ).with_for_update().first()
     
     if not generation:
         generation = TokenGeneration(
             date=target_date,
             total_tokens=0,
-            created_at=now,
-            updated_at=now,
+            created_at=now_utc,
+            updated_at=now_utc,
             created_by=current_user.id,
             updated_by=current_user.id
         )
         db.add(generation)
         db.flush()
+        # Re-lock if newly created (PostgreSQL behavior check)
+        generation = db.query(TokenGeneration).filter(
+            TokenGeneration.id == generation.id
+        ).with_for_update().first()
 
-    # 2. Calculate Manual ID for Partitioned Table
+    # 2. Calculate Manual ID for Partitioned Table (Global Max)
+    # Note: In a high-traffic system, a Sequence is better than func.max()
     max_id = db.query(func.max(TokenDetail.id)).scalar() or 0
     next_id = max_id + 1
 
-    # 3. Calculate Receipt Number (Restarts from 1 each day/generation)
+    # 3. Calculate Receipt Number (Scoped to today's generation)
+    # Since we have a lock on 'generation', this calculation is now thread-safe
     max_receipt = db.query(func.max(TokenDetail.receipt_number)).filter(
         TokenDetail.generation_id == generation.id
     ).scalar() or 0
@@ -68,8 +77,9 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
         generation_id=generation.id,
         receipt_number=next_receipt,
         token_count=payload.token_count,
-        created_at=now,
-        updated_at=now,
+        # created_at is the partitioning key, use UTC but keep it consistent
+        created_at=now_utc,
+        updated_at=now_utc,
         created_by=current_user.id,
         updated_by=current_user.id
     )
@@ -77,11 +87,16 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
 
     # 5. Update Generation Total
     generation.total_tokens += payload.token_count
-    generation.updated_at = now
+    generation.updated_at = now_utc
+    generation.updated_by = current_user.id
     
-    db.commit()
-    db.refresh(new_detail)
-    return new_detail
+    try:
+        db.commit()
+        db.refresh(new_detail)
+        return new_detail
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to issue token: {str(e)}")
 
 
 def list_token_generations(db: Session, page: int = 1, page_size: int = 20):

@@ -18,6 +18,7 @@ import {
 import { DetailItem } from '../components/ui/DetailItem';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
+import { formatQuantityWithUnit } from '../utils/quantity';
 
 const WastagesPage: React.FC = () => {
   const { showError } = useNotification();
@@ -92,7 +93,7 @@ const WastagesPage: React.FC = () => {
           <div className="space-y-1 py-1">
             {items.map((it: any, idx: number) => (
               <div key={idx} className="text-[11px] text-text-main leading-tight h-4 flex items-center">
-                {it.quantity} {it.menu_item?.unit?.unit_code || it.item?.unit?.unit_code}
+                {formatQuantityWithUnit(it.quantity, it.menu_item?.unit || it.item?.unit)}
               </div>
             ))}
           </div>
@@ -194,7 +195,7 @@ const WastagesPage: React.FC = () => {
                         {item.menu_item?.dish_name || item.item?.item_name}
                       </td>
                       <td className="px-3 py-2 text-right text-text-main">
-                        {item.quantity} {item.menu_item?.unit?.unit_code || item.item?.unit?.unit_code}
+                        {formatQuantityWithUnit(item.quantity, item.menu_item?.unit || item.item?.unit)}
                       </td>
                       <td className="px-3 py-2 text-right text-text-main">
                         {formatCurrency(Number(item.approx_amount || 0))}

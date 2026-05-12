@@ -142,12 +142,12 @@ const UnitsPage: React.FC = () => {
       header: 'ID', 
     },
     { 
-      accessorKey: 'unit_name', 
-      header: 'Unit Name', 
-    },
-    { 
       accessorKey: 'unit_code', 
       header: 'Code', 
+    },
+    { 
+      accessorKey: 'unit_name', 
+      header: 'Unit Name', 
     },
     { 
       accessorKey: 'status', 

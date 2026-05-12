@@ -92,7 +92,6 @@ const VendorsPage: React.FC = () => {
         q: search,
         page,
         page_size: pageSize,
-        status: 1,
       };
 
       const res = await api.get('/vendors/list_vendors', { params });
@@ -175,6 +174,12 @@ const VendorsPage: React.FC = () => {
     setOpen(true);
   };
 
+  const handleClose = () => {
+    if (mutation.isPending) return;
+    setOpen(false);
+    setEditingVendor(null);
+  };
+
   const handleDeleteClick = async (vendor: any) => {
     try {
       const res = await api.get('/system/check_usage', {
@@ -248,7 +253,11 @@ const VendorsPage: React.FC = () => {
   ], [statusMutation]);
 
   const sortedVendors = useMemo(() => {
-    return [...vendors].sort((a, b) => a.vendor_name.localeCompare(b.vendor_name));
+    return [...vendors].sort((a, b) => {
+      const statusDiff = (b.status ?? 0) - (a.status ?? 0);
+      if (statusDiff !== 0) return statusDiff;
+      return (a.vendor_name ?? '').localeCompare(b.vendor_name ?? '', undefined, { sensitivity: 'base' });
+    });
   }, [vendors]);
 
   return (
@@ -326,11 +335,7 @@ const VendorsPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open} onOpenChange={(val) => {
-        if (!val && !mutation.isPending) {
-          handleClose();
-        }
-      }}>
+      <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
         <DialogContent 
           className="max-w-2xl border-border-temple"
           onPointerDownOutside={(e) => e.preventDefault()}
@@ -366,12 +371,8 @@ const VendorsPage: React.FC = () => {
                     type="text"
                     inputMode="decimal"
                     {...register('opening_balance')}
-                    className="text-text-main"
-                    onFocus={(e) => {
-                      if (!editingVendor && e.target.value === '0') {
-                        setValue('opening_balance', '' as any);
-                      }
-                    }}
+                    className="text-text-main bg-gray-50 cursor-not-allowed"
+                    readOnly
                   />
                   {errors.opening_balance && <p className="text-xs text-red-500">{errors.opening_balance.message}</p>}
                 </div>

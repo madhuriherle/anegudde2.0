@@ -128,7 +128,7 @@ def today_summary(
 
     token_details_raw = (
         db.query(
-            TokenDetail.id.label("receipt_no"),
+            TokenDetail.receipt_number.label("receipt_no"),
             TokenDetail.token_count,
             User.full_name.label("issued_by"),
             TokenDetail.created_at.label("issued_at"),
@@ -136,7 +136,7 @@ def today_summary(
         .join(TokenGeneration, TokenGeneration.id == TokenDetail.generation_id)
         .outerjoin(User, User.id == TokenDetail.created_by)
         .filter(TokenGeneration.date == today)
-        .order_by(TokenDetail.created_at.desc(), TokenDetail.id.desc())
+        .order_by(TokenDetail.created_at.desc(), TokenDetail.receipt_number.desc())
         .all()
     )
     token_details = [

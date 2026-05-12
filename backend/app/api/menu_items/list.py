@@ -9,7 +9,7 @@ router = APIRouter()
 @router.get("/list_menu_items", response_model=list[MenuItemOut])
 def list_menu_items(
     db: Session = Depends(get_db),
-    status: int | None = Query(1),
+    status: int | None = Query(None),
     q: str | None = Query(None)
 ):
     query = db.query(MenuItem).options(joinedload(MenuItem.unit))

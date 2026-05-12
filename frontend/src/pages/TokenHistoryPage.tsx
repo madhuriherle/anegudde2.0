@@ -37,8 +37,9 @@ const TokenHistoryPage: React.FC = () => {
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     { 
-      accessorKey: 'id', 
-      header: 'ID',
+      accessorKey: 'receipt_number', 
+      header: 'Receipt No',
+      cell: info => <span className="font-bold text-text-main">{info.getValue() as number}</span>,
     },
     { 
       accessorKey: 'created_at', 

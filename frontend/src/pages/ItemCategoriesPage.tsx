@@ -9,7 +9,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
@@ -20,6 +20,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
 import { Label } from '../components/ui/Label';
+import { Select } from '../components/ui/Select';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 
 const categorySchema = z.object({
@@ -35,7 +36,6 @@ const ItemCategoriesPage: React.FC = () => {
   
   // Filter States
   const [pageSize, setPageSize] = useState(50);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
 
   const [editingCategory, setEditingCategory] = useState<any>(null);
@@ -45,10 +45,9 @@ const ItemCategoriesPage: React.FC = () => {
 
   // Fetch Data
   const { data: categories, isLoading } = useQuery({
-    queryKey: ['item-categories', search, pageSize, statusFilter],
+    queryKey: ['item-categories', search, pageSize],
     queryFn: async () => {
       const params: any = { q: search, page_size: pageSize };
-      if (statusFilter !== 'all') params.status = statusFilter === 'active' ? 1 : 0;
       const res = await api.get('/item-categories/list_categories', { params });
       return res.data;
     },
@@ -56,6 +55,10 @@ const ItemCategoriesPage: React.FC = () => {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema) as any,
+    defaultValues: {
+      category_name: '',
+      status: 1,
+    }
   });
 
   const mutation = useMutation({

@@ -31,6 +31,7 @@ import { Label } from '../components/ui/Label';
 import { DetailItem } from '../components/ui/DetailItem';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
+import { formatQuantityWithUnit } from '../utils/quantity';
 
 // Helper to validate and transform text input to number
 const numericString = z.string()
@@ -114,18 +115,17 @@ const PurchasesPage: React.FC = () => {
     queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data,
   });
   const items = useMemo(() => itemsData?.items || [], [itemsData]);
-  const activeItems = useMemo(() => (items || []).filter((i: any) => i.status === 1), [items]);
-
+  
   const serialToItemIdMap = useMemo(() => {
     const map = new Map<string, number>();
-    activeItems.forEach((i: any) => {
+    items.filter((i: any) => i.status === 1).forEach((i: any) => {
       (i.serial_numbers || []).forEach((s: any) => {
         const serial = String(s?.serial_number || '').trim().toLowerCase();
         if (serial) map.set(serial, i.id);
       });
     });
     return map;
-  }, [activeItems]);
+  }, [items]);
 
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<any>({
     resolver: zodResolver(purchaseSchema) as any,
@@ -597,6 +597,7 @@ const PurchasesPage: React.FC = () => {
                 <DetailItem label="Purchase Date" value={formatDate(viewingPurchase?.purchase_date)} />
                 <DetailItem label="Invoice No" value={viewingPurchase?.bill_no} />
                 <DetailItem label="Vendor" value={vendors?.find((v: any) => v.id === viewingPurchase?.vendor_id)?.vendor_name} />
+                <DetailItem label="Manual Bill Amount" value={formatCurrency(viewingPurchase?.invoice_amount)} />
               </div>
 
               <div className="space-y-2">
@@ -615,7 +616,9 @@ const PurchasesPage: React.FC = () => {
                       {viewingPurchase?.items?.map((item: any, idx: number) => (
                         <tr key={idx} className="bg-white">
                           <td className="px-4 py-2 text-text-main">{items?.find((i: any) => i.id === item.item_id)?.item_name}</td>
-                          <td className="px-4 py-2 text-text-main text-right">{item.quantity}</td>
+                          <td className="px-4 py-2 text-text-main text-right">
+                            {formatQuantityWithUnit(item.quantity, items?.find((i: any) => i.id === item.item_id)?.unit)}
+                          </td>
                           <td className="px-4 py-2 text-text-main text-right">{formatCurrency(item.price)}</td>
                           <td className="px-4 py-2 text-text-main text-right font-medium">{formatCurrency(item.line_total)}</td>
                         </tr>
@@ -628,9 +631,9 @@ const PurchasesPage: React.FC = () => {
               <Card className="bg-bg-temple/40 border-border-temple/40 border shadow-none">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-primary font-bold uppercase text-sm">Invoice Grand Total</span>
+                    <span className="text-primary font-bold uppercase text-sm">System Calculated Grand Total</span>
                     <span className="text-primary font-bold text-xl">
-                      {formatCurrency(Number(viewingPurchase?.invoice_amount || viewingPurchase?.total_amount))}
+                      {formatCurrency(viewingPurchase?.total_amount)}
                     </span>
                   </div>
                 </CardContent>
@@ -753,6 +756,7 @@ const PurchasesPage: React.FC = () => {
                         onFocus={(e) => {
                           if (!editingPurchase && (field.value === '0' || field.value === 0)) {
                             field.onChange('');
+                            setIsManualInvoiceAmount(true);
                           }
                         }}
                       />
@@ -784,16 +788,13 @@ const PurchasesPage: React.FC = () => {
                           setValue(`items.${index}.search_id`, val);
                           
                           if (normalized) {
-                            // 1. Instant local lookup
+                            // STRICT Lookup: Match ONLY by Serial ID (Shortcut)
                             const matchedId = serialToItemIdMap.get(normalized);
                             if (matchedId) {
                               setValue(`items.${index}.item_id`, matchedId);
                             } else {
-                              // 2. Fallback to API/Direct ID if not in local map
-                              const directItem = activeItems.find((i: any) => String(i.id) === val);
-                              if (directItem) {
-                                setValue(`items.${index}.item_id`, directItem.id);
-                              }
+                              // If not a valid Serial ID, clear the selection
+                              setValue(`items.${index}.item_id`, '' as any);
                             }
                           }
                         }}
@@ -872,11 +873,21 @@ const PurchasesPage: React.FC = () => {
                   <Plus className="h-3 w-3 mr-1" /> Add Item
                 </Button>
                 
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-bold text-text-main uppercase tracking-widest">Grand Total:</span>
-                  <span className="text-3xl font-black text-primary">
-                    {formatCurrency(Number(watchedInvoiceAmount) > 0 ? Number(watchedInvoiceAmount) : totalAmount)}
-                  </span>
+                <div className="flex items-center gap-6">
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-bold text-text-main/50 uppercase tracking-widest">Calculated Total</span>
+                    <span className="text-3xl font-black text-primary">
+                      {formatCurrency(totalAmount)}
+                    </span>
+                  </div>
+                  {isManualInvoiceAmount && Math.abs(totalAmount - (Number(String(watchedInvoiceAmount || '0').replace(/[^0-9.]/g, '')) || 0)) > 0.01 && (
+                    <div className="flex flex-col items-start bg-red-50 px-3 py-1 rounded border border-red-100">
+                      <span className="text-[10px] font-bold text-red-500 uppercase">Difference</span>
+                      <span className="text-sm font-bold text-red-600">
+                        {formatCurrency(totalAmount - (Number(String(watchedInvoiceAmount || '0').replace(/[^0-9.]/g, '')) || 0))}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

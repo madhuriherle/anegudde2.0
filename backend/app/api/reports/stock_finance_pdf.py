@@ -39,7 +39,7 @@ def stock_finance_pdf(
     </style></head>
     <body>
     <h1>Anegudde Sri Vinayaka Temple</h1>
-    <h2>Inventory Stock & Financial Report ({from_date} to {to_date})</h2>
+    <h2>Inventory Stock & Financial Report ({from_date.strftime('%d-%m-%Y')} to {to_date.strftime('%d-%m-%Y')})</h2>
     <table><thead><tr>
     <th>Period</th><th class="text-right">Opening</th><th class="text-right">Purchased</th><th class="text-right">Consumed</th><th class="text-right">Wastage</th><th class="text-right">Closing</th><th class="text-right">Purchase Val</th><th class="text-right">Payment Val</th><th class="text-right">Balance</th>
     </tr></thead><tbody>
@@ -64,7 +64,7 @@ def stock_finance_pdf(
             </tbody></table>
             <div class="summary"><strong>Notes:</strong> This report is generated automatically by the Inventory Management System.
             Net Balance = Purchase Value - Vendor Payments.</div>
-            <div class="footer">Printed on: """ + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + """</div>
+            <div class="footer">Printed on: """ + datetime.now().strftime("%d-%m-%Y %H:%M:%S") + """</div>
     </body></html>
     """
 

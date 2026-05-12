@@ -167,7 +167,7 @@ const StockSummaryPage: React.FC = () => {
             {grandTotals && (
               <tfoot className="bg-gray-50 font-bold border-t border-border-temple">
                 <tr>
-                  <td colSpan={3} className="px-2 py-2 border-r border-border-temple text-left">GRAND TOTAL...</td>
+                  <td colSpan={3} className="px-2 py-2 border-r border-border-temple text-left">GRAND TOTAL</td>
                   <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.opening.toFixed(3)}</td>
                   <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.purchase.toFixed(3)}</td>
                   <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.issues.toFixed(3)}</td>

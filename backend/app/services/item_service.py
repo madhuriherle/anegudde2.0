@@ -47,14 +47,16 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: i
     db.add(item)
     db.flush() # Get item.id
 
-    if serial_no:
-        # Check if serial exists
-        s_exists = db.query(ItemSerialNumber).filter(ItemSerialNumber.serial_number == serial_no).first()
-        if s_exists:
-             raise HTTPException(status_code=400, detail=f"Serial number {serial_no} already assigned to another item")
-        
-        new_s = ItemSerialNumber(item_id=item.id, serial_number=serial_no, status=1)
-        db.add(new_s)
+    # Use provided serial_no or fallback to item.id
+    target_serial = serial_no if serial_no else str(item.id)
+    
+    # Check if serial exists
+    s_exists = db.query(ItemSerialNumber).filter(ItemSerialNumber.serial_number == target_serial).first()
+    if s_exists:
+            raise HTTPException(status_code=400, detail=f"Serial number {target_serial} already assigned to another item")
+    
+    new_s = ItemSerialNumber(item_id=item.id, serial_number=target_serial, status=1)
+    db.add(new_s)
 
     db.commit()
     db.refresh(item)

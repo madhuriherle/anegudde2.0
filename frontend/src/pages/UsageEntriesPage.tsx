@@ -16,6 +16,7 @@ import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
+import { formatQuantityWithUnit } from '../utils/quantity';
 import { cn } from '../utils/cn';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -97,7 +98,17 @@ const UsageEntriesPage: React.FC = () => {
     () => (Array.isArray(itemsData) ? itemsData : (itemsData?.items || [])),
     [itemsData]
   );
+  const { data: menuItemsData } = useQuery({
+    queryKey: ['menu-items-list'],
+    queryFn: async () => (await api.get('/menu-items/list_menu_items', { params: { page_size: 1000 } })).data,
+  });
+  const menuItems = useMemo(
+    () => (Array.isArray(menuItemsData) ? menuItemsData : (menuItemsData?.items || [])),
+    [menuItemsData]
+  );
   const activeItems = useMemo(() => (items || []).filter((i: any) => i.status === 1), [items]);
+  const activeMenuItems = useMemo(() => menuItems.filter((m: any) => m.status === 1), [menuItems]);
+
   const serialToItemIdMap = useMemo(() => {
     const map = new Map<string, number>();
     activeItems.forEach((i: any) => {
@@ -109,16 +120,10 @@ const UsageEntriesPage: React.FC = () => {
     return map;
   }, [activeItems]);
 
-  const { data: menuItemsData } = useQuery({
-    queryKey: ['menu-items-list'],
-    queryFn: async () => (await api.get('/menu-items/list_menu_items')).data,
-  });
-  const menuItems = useMemo(() => Array.isArray(menuItemsData) ? menuItemsData : (menuItemsData?.items || []), [menuItemsData]);
-
   const buildRawDefaults = () =>
-    Object.fromEntries((items).map((it: any) => [String(it.id), { quantity_used: 0, qty_returned: 0 }]));
+    Object.fromEntries((activeItems).map((it: any) => [String(it.id), { quantity_used: 0, qty_returned: 0 }]));
   const buildWastageDefaults = () =>
-    Object.fromEntries((menuItems).map((it: any) => [String(it.id), { quantity: 0, approx_amount: 0 }]));
+    Object.fromEntries((activeMenuItems).map((it: any) => [String(it.id), { quantity: 0, approx_amount: 0 }]));
 
   const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(formSchema) as any,
@@ -355,6 +360,7 @@ const UsageEntriesPage: React.FC = () => {
         .flatMap((w: any) => (w.items || []).map((it: any) => ({
           entryId: w.id,
           menu_item_name: it.menu_item?.dish_name || it.item?.item_name || `Item #${it.menu_item_id || it.item_id}`,
+          unit_name: it.menu_item?.unit?.unit_name || it.item?.unit?.unit_name || '',
           unit_code: it.menu_item?.unit?.unit_code || it.item?.unit?.unit_code || '',
           quantity: it.quantity,
           approx_amount: it.approx_amount,
@@ -505,16 +511,22 @@ const UsageEntriesPage: React.FC = () => {
                         <tr key={item.id} className="hover:bg-bg-temple/30">
                           <td className="px-4 py-3 text-text-main">{item.item?.item_name || items?.find((it: any) => it.id === item.item_id)?.item_name || `Unknown Item (${item.item_id})`}</td>
                           <td className="px-4 py-3 text-right text-text-main">
-                            {Number(item.quantity_used || 0).toFixed(3)}
-                            {(item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code) ? ` ${item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code}` : ''}
+                            {formatQuantityWithUnit(
+                              item.quantity_used || 0,
+                              item.item?.unit || items?.find((it: any) => it.id === item.item_id)?.unit
+                            )}
                           </td>
                           <td className="px-4 py-3 text-right text-text-main">
-                            {Number(item.qty_returned || 0).toFixed(3)}
-                            {(item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code) ? ` ${item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code}` : ''}
+                            {formatQuantityWithUnit(
+                              item.qty_returned || 0,
+                              item.item?.unit || items?.find((it: any) => it.id === item.item_id)?.unit
+                            )}
                           </td>
                           <td className="px-4 py-3 text-right text-text-main">
-                            {Number(item.net_quantity || 0).toFixed(3)}
-                            {(item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code) ? ` ${item.item?.unit?.unit_code || items?.find((it: any) => it.id === item.item_id)?.unit?.unit_code}` : ''}
+                            {formatQuantityWithUnit(
+                              item.net_quantity || 0,
+                              item.item?.unit || items?.find((it: any) => it.id === item.item_id)?.unit
+                            )}
                           </td>
                         </tr>
                       ))
@@ -548,10 +560,10 @@ const UsageEntriesPage: React.FC = () => {
                         .map((w: any, idx: number) => (
                         <tr key={`${w.entryId}-${idx}`} className="hover:bg-bg-temple/30">
                           <td className="px-4 py-3 text-text-main">
-                            {w.menu_item_name}{w.unit_code ? ` (${w.unit_code})` : ''}
+                            {w.menu_item_name}
                           </td>
                           <td className="px-4 py-3 text-right text-text-main">
-                            {Number(w.quantity || 0).toFixed(3)}{w.unit_code ? ` ${w.unit_code}` : ''}
+                            {formatQuantityWithUnit(w.quantity || 0, { unit_name: w.unit_name, unit_code: w.unit_code })}
                           </td>
                           <td className="px-4 py-3 text-right text-text-main">
                             {w.approx_amount != null ? formatCurrency(Number(w.approx_amount || 0)) : '-'}
@@ -691,16 +703,20 @@ const UsageEntriesPage: React.FC = () => {
 
               <div className="temple-form-section h-full xl:col-span-3">
                 <h4 className="temple-section-header mt-0 uppercase tracking-wider">Item usage</h4>
+                <div className="grid grid-cols-12 gap-2 mb-1 px-1 border-b border-border-temple/10 pb-1">
+                  <div className="col-span-6"></div>
+                  <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Used</div>
+                  <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Returned</div>
+                </div>
                 <div className="max-h-[45vh] overflow-y-auto pr-2 space-y-2">
                   {(items || []).filter((i: any) => i.status === 1).map((item: any) => {
                     const itemError = (errors.raw_items as any)?.[item.id];
                     return (
-                      <div key={item.id} className="grid grid-cols-12 gap-2 items-center min-h-[42px]">
+                      <div key={item.id} className="grid grid-cols-12 gap-2 items-center min-h-[32px]">
                         <div className="col-span-6 text-sm font-medium text-text-main leading-5">
                           {item.item_name}{item.unit?.unit_code ? ` (${item.unit.unit_code})` : ''}
                         </div>
                         <div className="col-span-3">
-                          <Label className="text-[10px]">Used</Label>
                           <Input 
                             type="text" 
                             className={cn("h-8 text-xs", itemError?.quantity_used && "border-red-500")} 
@@ -713,7 +729,6 @@ const UsageEntriesPage: React.FC = () => {
                           />
                         </div>
                         <div className="col-span-3">
-                          <Label className={cn("text-[10px]", itemError?.qty_returned && "text-red-500 font-bold")}>Returned</Label>
                           <Input 
                             type="text" 
                             className={cn("h-8 text-xs", itemError?.qty_returned && "border-red-500 bg-red-50")} 
@@ -736,16 +751,20 @@ const UsageEntriesPage: React.FC = () => {
 
               <div className="temple-form-section h-full xl:col-span-4">
                 <h4 className="temple-section-header mt-0 uppercase tracking-wider">item wasted</h4>
+                <div className="grid grid-cols-12 gap-2 mb-1 px-1 border-b border-border-temple/10 pb-1">
+                  <div className="col-span-6"></div>
+                  <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Qty</div>
+                  <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Approx Amt</div>
+                </div>
                 <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-3">
                   {/* Menu Items Wastage */}
                   <div className="space-y-2">
                     {(menuItems || []).filter((m: any) => m.status === 1).map((menu: any) => (
-                      <div key={menu.id} className="grid grid-cols-12 gap-2 items-center min-h-[42px]">
+                      <div key={menu.id} className="grid grid-cols-12 gap-2 items-center min-h-[32px]">
                         <div className="col-span-6 text-sm font-medium text-text-main leading-5">
                           {menu.dish_name}{menu.unit?.unit_code ? ` (${menu.unit.unit_code})` : ''}
                         </div>
                         <div className="col-span-3">
-                          <Label className="text-[10px]">Qty</Label>
                           <Input 
                             type="text" 
                             className="h-8 text-xs" 
@@ -758,7 +777,6 @@ const UsageEntriesPage: React.FC = () => {
                           />
                         </div>
                         <div className="col-span-3">
-                          <Label className="text-[10px]">Approx Amt</Label>
                           <Input 
                             type="text" 
                             className="h-8 text-xs" 
@@ -789,9 +807,15 @@ const UsageEntriesPage: React.FC = () => {
                               const serialRaw = e.target.value || '';
                               const normalized = serialRaw.trim().toLowerCase();
                               const matchedItemId = serialToItemIdMap.get(normalized) || 0;
-                              setValue(`raw_wastage_items.${index}.serial_id` as const, serialRaw, { shouldDirty: true });
-                              if (matchedItemId > 0) {
-                                setValue(`raw_wastage_items.${index}.item_id` as const, matchedItemId, { shouldDirty: true, shouldValidate: true });
+                              
+                              setValue(`raw_wastage_items.${index}.serial_id` as const, serialRaw);
+                              
+                              if (normalized && matchedItemId > 0) {
+                                // Match found: Update selection
+                                setValue(`raw_wastage_items.${index}.item_id` as const, matchedItemId, { shouldValidate: true });
+                              } else if (!normalized || !matchedItemId) {
+                                // No match or empty: CLEAR selection
+                                setValue(`raw_wastage_items.${index}.item_id` as const, 0, { shouldValidate: true });
                               }
                             }}
                           />
@@ -807,11 +831,9 @@ const UsageEntriesPage: React.FC = () => {
                                 className="h-8 text-[11px] bg-white"
                               >
                                 <option value={0}>Select Item</option>
-                                {activeItems.map((i: any) => {
-                                  const serial = i.serial_numbers?.[0]?.serial_number;
-                                  const label = serial ? `${i.item_name} (${serial})` : i.item_name;
-                                  return <option key={i.id} value={i.id}>{label}</option>
-                                })}
+                                {activeItems.map((i: any) => (
+                                  <option key={i.id} value={i.id}>{i.item_name}</option>
+                                ))}
                               </Select>
                             )}
                           />
