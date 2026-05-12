@@ -306,8 +306,8 @@ const ItemsPage: React.FC = () => {
           </DialogHeader>
           
           <div className="space-y-1 mt-4">
-            <DetailItem label="Serial ID" value={viewingItem?.serial_numbers?.[0]?.serial_number || '-'} />
             <DetailItem label="Item Name" value={viewingItem?.item_name} />
+            <DetailItem label="Serial ID" value={viewingItem?.serial_numbers?.[0]?.serial_number || '-'} />
             <DetailItem label="Category" value={viewingItem?.category?.category_name} />
             <DetailItem label="Unit" value={`${viewingItem?.unit?.unit_name} (${viewingItem?.unit?.unit_code})`} />
             <DetailItem label="Opening Stock" value={formatQuantityWithUnit(viewingItem?.opening_stock || 0, viewingItem?.unit)} />
@@ -348,15 +348,15 @@ const ItemsPage: React.FC = () => {
             <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <div>
-                  <Label className="text-text-main">Serial ID (Shortcut)</Label>
-                  <Input {...register('serial_number')} className="text-text-main" placeholder="e.g. 1, 22, RICE-1" />
-                  {errors.serial_number && <p className="text-xs text-red-500">{errors.serial_number.message}</p>}
-                </div>
-
-                <div>
                   <Label className="text-text-main">Item Name *</Label>
                   <Input {...register('item_name')} className="text-text-main" />
                   {errors.item_name && <p className="text-xs text-red-500">{errors.item_name.message}</p>}
+                </div>
+
+                <div>
+                  <Label className="text-text-main">Serial ID (Shortcut)</Label>
+                  <Input {...register('serial_number')} className="text-text-main" placeholder="e.g. 1, 22, RICE-1" />
+                  {errors.serial_number && <p className="text-xs text-red-500">{errors.serial_number.message}</p>}
                 </div>
 
                 <div>
