@@ -307,8 +307,7 @@ const CanteenSummaryPage: React.FC = () => {
             ))}
             {grandTotals && (
               <tr>
-                <td className="border px-1 py-1 font-bold" colSpan={3}>GRAND TOTAL</td>
-                <td className="border px-1 py-1 text-right font-bold">{grandTotals.opening.toFixed(3)}</td>
+                <td className="border px-1 py-1 font-bold" colSpan={3}>GRAND TOTAL</td>                <td className="border px-1 py-1 text-right font-bold">{grandTotals.opening.toFixed(3)}</td>
                 <td className="border px-1 py-1 text-right font-bold">{grandTotals.purchase.toFixed(3)}</td>
                 <td className="border px-1 py-1 text-right font-bold">{grandTotals.issues.toFixed(3)}</td>
                 <td className="border px-1 py-1 text-right font-bold">{formatCurrency(grandTotals.issue_val)}</td>

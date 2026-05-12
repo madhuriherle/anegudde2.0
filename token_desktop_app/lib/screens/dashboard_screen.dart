@@ -347,12 +347,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 20),
                 const Text(
-                  'Success',
+                  'Token Generated Successfully',
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Color(0xFF555555)),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Receipt No: ${data['receipt_number']} • Devotees: ${data['token_count']}',
+                  'Devotees: ${data['token_count']}',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 14, color: Color(0xFF777777), fontWeight: FontWeight.w500),
                 ),

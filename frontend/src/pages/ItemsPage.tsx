@@ -100,6 +100,22 @@ const ItemsPage: React.FC = () => {
     );
   }, [units]);
 
+  const todayDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const { data: todaySummaryData } = useQuery({
+    queryKey: ['canteen-summary', todayDate],
+    queryFn: async () => {
+      const res = await api.get('/reports/get_canteen_summary', { params: { date: todayDate } });
+      return res.data;
+    },
+  });
+  const todayOpeningByItemId = useMemo(() => {
+    const map = new Map<number, number>();
+    (todaySummaryData?.rows || []).forEach((row: any) => {
+      map.set(Number(row.item_id), Number(row.opening_balance || 0));
+    });
+    return map;
+  }, [todaySummaryData]);
+
   const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema) as any,
   });
@@ -307,10 +323,13 @@ const ItemsPage: React.FC = () => {
           
           <div className="space-y-1 mt-4">
             <DetailItem label="Item Name" value={viewingItem?.item_name} />
-            <DetailItem label="Serial ID" value={viewingItem?.serial_numbers?.[0]?.serial_number || '-'} />
+            <DetailItem label="SL.NO" value={viewingItem?.serial_numbers?.[0]?.serial_number || '-'} />
             <DetailItem label="Category" value={viewingItem?.category?.category_name} />
             <DetailItem label="Unit" value={`${viewingItem?.unit?.unit_name} (${viewingItem?.unit?.unit_code})`} />
-            <DetailItem label="Opening Stock" value={formatQuantityWithUnit(viewingItem?.opening_stock || 0, viewingItem?.unit)} />
+            <DetailItem
+              label="Today Opening Stock"
+              value={formatQuantityWithUnit(todayOpeningByItemId.get(Number(viewingItem?.id)) ?? 0, viewingItem?.unit)}
+            />
             <DetailItem 
               label="Current Stock" 
               value={formatQuantityWithUnit(viewingItem?.current_stock || 0, viewingItem?.unit)} 
@@ -354,8 +373,8 @@ const ItemsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label className="text-text-main">Serial ID (Shortcut)</Label>
-                  <Input {...register('serial_number')} className="text-text-main" placeholder="e.g. 1, 22, RICE-1" />
+                  <Label className="text-text-main">SL.NO (Shortcut)</Label>
+                  <Input {...register('serial_number')} className="text-text-main" />
                   {errors.serial_number && <p className="text-xs text-red-500">{errors.serial_number.message}</p>}
                 </div>
 

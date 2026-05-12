@@ -8,8 +8,10 @@ from app.db.session import SessionLocal
 
 
 ROLE_NAMES = [
-    "Super Admin/Temple Trustee",
+    "Super Admin",
+    "Temple Trustee",
     "Temple Manager",
+    "Admin",
 ]
 
 PRIVILEGES = [
@@ -22,12 +24,27 @@ PRIVILEGES = [
     "wastages.read", "wastages.write",
     "vendor_payments.read", "vendor_payments.write",
     "reports.read", "dashboard.read",
-    "users.read",
+    "users.read", "users.write",
 ]
 
 
 def seed_roles(db: Session) -> dict[str, int]:
     role_ids: dict[str, int] = {}
+    
+    # Check if old combined role exists and rename it to Super Admin
+    old_role = db.query(Role).filter(Role.role_name == "Super Admin/Temple Trustee").first()
+    if old_role:
+        old_role.role_name = "Super Admin"
+        db.flush()
+        
+    # Check if 'Temple Manager' exists and ensure it's named correctly (though it probably is)
+    manager_role = db.query(Role).filter(Role.role_name == "Temple Manager").first()
+    
+    # If the user saw 'Admin' in the screenshot, it might be in the DB already.
+    # Let's see what's in there.
+    all_roles = db.query(Role).all()
+    print(f"Current roles in DB: {[r.role_name for r in all_roles]}")
+
     for name in ROLE_NAMES:
         role = db.query(Role).filter(Role.role_name == name).first()
         if not role:
@@ -46,6 +63,10 @@ def seed_roles(db: Session) -> dict[str, int]:
 def seed_admin_user(db: Session, super_admin_role_id: int) -> int:
     user = db.query(User).filter(User.username == "admin").first()
     if user:
+        # If user exists, update their role to Super Admin if it's different
+        if user.role_id != super_admin_role_id:
+            user.role_id = super_admin_role_id
+            db.flush()
         return user.id
 
     now = datetime.now(timezone.utc)
@@ -90,6 +111,8 @@ def seed_role_privileges(db: Session, role_ids: dict[str, int], privilege_ids: d
     now = datetime.now(timezone.utc)
 
     super_admin_privs = set(privilege_ids.values())
+    trustee_privs = set(privilege_ids.values()) # Trustee also has all privs
+    
     manager_priv_names = [
         "vendors.read", "vendors.write",
         "items.read", "items.write",
@@ -102,10 +125,18 @@ def seed_role_privileges(db: Session, role_ids: dict[str, int], privilege_ids: d
         "reports.read", "dashboard.read",
     ]
     manager_privs = {privilege_ids[n] for n in manager_priv_names if n in privilege_ids}
+    
+    admin_privs = manager_privs.copy()
+    if "users.read" in privilege_ids:
+        admin_privs.add(privilege_ids["users.read"])
+    if "users.write" in privilege_ids:
+        admin_privs.add(privilege_ids["users.write"])
 
     mapping = {
-        role_ids["Super Admin/Temple Trustee"]: super_admin_privs,
+        role_ids["Super Admin"]: super_admin_privs,
+        role_ids["Temple Trustee"]: trustee_privs,
         role_ids["Temple Manager"]: manager_privs,
+        role_ids["Admin"]: admin_privs,
     }
 
     for role_id, priv_set in mapping.items():
@@ -134,7 +165,7 @@ def main() -> None:
     db = SessionLocal()
     try:
         role_ids = seed_roles(db)
-        admin_id = seed_admin_user(db, role_ids["Super Admin/Temple Trustee"])
+        admin_id = seed_admin_user(db, role_ids["Super Admin"])
         privilege_ids = seed_privileges(db, admin_id)
         seed_role_privileges(db, role_ids, privilege_ids, admin_id)
         db.commit()

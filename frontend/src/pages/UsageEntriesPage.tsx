@@ -797,7 +797,7 @@ const UsageEntriesPage: React.FC = () => {
                     {rawWastageFields.map((field, index) => (
                       <div key={field.id} className="grid grid-cols-12 gap-2 items-center bg-bg-temple/20 p-2 rounded border border-border-temple/20 min-h-[42px]">
                         <div className="col-span-4">
-                          <Label className="text-[10px] mb-1 block">Serial ID</Label>
+                          <Label className="text-[10px] mb-1 block">SL.NO</Label>
                           <Input
                             type="text"
                             className="h-8 text-[11px] bg-white"
@@ -830,7 +830,7 @@ const UsageEntriesPage: React.FC = () => {
                                 {...selectField} 
                                 className="h-8 text-[11px] bg-white"
                               >
-                                <option value={0}>Select Item</option>
+                                <option value={0} disabled hidden>Select Item</option>
                                 {activeItems.map((i: any) => (
                                   <option key={i.id} value={i.id}>{i.item_name}</option>
                                 ))}

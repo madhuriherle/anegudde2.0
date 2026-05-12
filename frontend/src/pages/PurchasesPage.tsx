@@ -776,7 +776,7 @@ const PurchasesPage: React.FC = () => {
                 {fields.map((field, index) => (
                   <div key={field.id} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-white p-3 rounded-lg border border-border-temple/40 shadow-sm relative">
                     <div className="sm:col-span-1 space-y-1.5">
-                      {index === 0 && <Label className="text-xs font-bold text-text-main">Serial No</Label>}
+                      {index === 0 && <Label className="text-xs font-bold text-text-main">SL.NO</Label>}
                       <Input 
                         type="text" 
                        
@@ -814,7 +814,7 @@ const PurchasesPage: React.FC = () => {
                               setValue(`items.${index}.search_id`, String(val.target.value));
                             }}
                           >
-                            <option value="">Select Item</option>
+                            <option value="" disabled hidden>Select Item</option>
                             {items?.filter((i: any) => i.status === 1 || watchedItems?.[index]?.item_id === i.id).map((i: any) => (
                               <option key={i.id} value={i.id}>{i.item_name}</option>
                             ))}
