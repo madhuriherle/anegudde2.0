@@ -50,11 +50,11 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False, index=True)
     full_name = Column(String(150), nullable=False)
     email = Column(String(150), nullable=True)
     phone = Column(String(20), nullable=True)
-    status = Column(Integer, nullable=False, default=1)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -64,8 +64,8 @@ class User(Base):
 class RolePrivilege(Base):
     __tablename__ = "role_privileges"
     id = Column(Integer, primary_key=True)
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
-    privilege_id = Column(Integer, ForeignKey("privileges.id"), nullable=False)
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False, index=True)
+    privilege_id = Column(Integer, ForeignKey("privileges.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -90,7 +90,7 @@ class Vendor(Base):
     opening_balance = Column(Numeric(15, 3), nullable=False, default=0)
     credit_limit = Column(Numeric(15, 3), nullable=True)
     notes = Column(Text, nullable=True)
-    status = Column(Integer, nullable=False, default=1)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -101,7 +101,7 @@ class Unit(Base):
     id = Column(Integer, primary_key=True)
     unit_name = Column(String(50), nullable=False)
     unit_code = Column(String(20), nullable=False)
-    status = Column(Integer, nullable=False, server_default=text("1")) # 1: Active, 0: Inactive
+    status = Column(Integer, nullable=False, server_default=text("1"), index=True) # 1: Active, 0: Inactive
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -111,7 +111,7 @@ class ItemType(Base):
     __tablename__ = "item_types"
     id = Column(Integer, primary_key=True)
     type_name = Column(String(100), unique=True, nullable=False)
-    status = Column(Integer, nullable=False, default=1)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -121,8 +121,8 @@ class MenuItem(Base):
     __tablename__ = "menu_items"
     id = Column(Integer, primary_key=True)
     dish_name = Column(String(150), nullable=False)
-    unit_id = Column(Integer, ForeignKey("units.id"), nullable=False)
-    status = Column(Integer, nullable=False, server_default=text("1")) # 1: Active, 0: Disabled
+    unit_id = Column(Integer, ForeignKey("units.id"), nullable=False, index=True)
+    status = Column(Integer, nullable=False, server_default=text("1"), index=True) # 1: Active, 0: Disabled
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -136,9 +136,9 @@ class MenuItem(Base):
 class ItemCategory(Base):
     __tablename__ = "item_categories"
     id = Column(Integer, primary_key=True)
-    type_id = Column(Integer, ForeignKey("item_types.id"), nullable=False)
+    type_id = Column(Integer, ForeignKey("item_types.id"), nullable=False, index=True)
     category_name = Column(String(100), nullable=False)
-    status = Column(Integer, nullable=False, default=1)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -149,15 +149,15 @@ class Item(Base):
     __tablename__ = "items"
     id = Column(Integer, primary_key=True)
     item_name = Column(String(150), unique=True, nullable=False)
-    display_order = Column(Integer, nullable=True)
-    category_id = Column(Integer, ForeignKey("item_categories.id"), nullable=True)
-    unit_id = Column(Integer, ForeignKey("units.id"), nullable=False)
+    display_order = Column(Integer, nullable=True, index=True)
+    category_id = Column(Integer, ForeignKey("item_categories.id"), nullable=True, index=True)
+    unit_id = Column(Integer, ForeignKey("units.id"), nullable=False, index=True)
     opening_stock = Column(Numeric(15, 3), nullable=False, default=0)
     current_stock = Column(Numeric(15, 3), nullable=False, default=0)
     default_price = Column(Numeric(15, 3), nullable=True)
     min_stock_level = Column(Numeric(15, 3), nullable=True)
     max_stock_level = Column(Numeric(15, 3), nullable=True)
-    status = Column(Integer, nullable=False, default=1)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -169,9 +169,9 @@ class Item(Base):
 class ItemSerialNumber(Base):
     __tablename__ = "item_serial_numbers"
     id = Column(Integer, primary_key=True)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
     serial_number = Column(String(50), unique=True, nullable=False)
-    status = Column(Integer, nullable=False, default=1)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     
     item = relationship("Item", back_populates="serial_numbers")
@@ -179,9 +179,9 @@ class ItemSerialNumber(Base):
 class ItemPrice(Base):
     __tablename__ = "item_prices"
     id = Column(Integer, primary_key=True)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
     price = Column(Numeric(15, 3), nullable=False)
-    purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=True)
+    purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=True, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     
@@ -195,13 +195,13 @@ class ItemPrice(Base):
 class PurchaseEntry(Base):
     __tablename__ = "purchase_entries"
     id = Column(Integer, primary_key=True)
-    purchase_date = Column(Date, nullable=False)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
+    purchase_date = Column(Date, nullable=False, index=True)
+    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
     bill_no = Column(String(50), nullable=True) # Bill/Invoice Number
     total_amount = Column(Numeric(15, 3), nullable=False) # Sum of item line totals
     invoice_amount = Column(Numeric(15, 3), nullable=True) # Manual entry for actual invoice amount
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(Integer, nullable=False, default=1)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -214,7 +214,7 @@ class PurchaseEntry(Base):
 class PurchaseBill(Base):
     __tablename__ = "purchase_bills"
     id = Column(Integer, primary_key=True)
-    purchase_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=False)
+    purchase_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=False, index=True)
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     file_type = Column(String(100), nullable=True)
@@ -225,13 +225,13 @@ class PurchaseBill(Base):
 class PurchaseItem(Base):
     __tablename__ = "purchase_items"
     id = Column(Integer, primary_key=True)
-    purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=False)
-    purchase_date = Column(Date, nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=False, index=True)
+    purchase_date = Column(Date, nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
     quantity = Column(Numeric(15, 3), nullable=False)
     price = Column(Numeric(15, 3), nullable=False)
     line_total = Column(Numeric(15, 3), nullable=False)
-    status = Column(Integer, nullable=False, default=1)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -242,7 +242,7 @@ class PurchaseItem(Base):
 class ConsumptionEntry(Base):
     __tablename__ = "consumption_entries"
     id = Column(Integer, primary_key=True)
-    usage_date = Column(Date, nullable=False)
+    usage_date = Column(Date, nullable=False, index=True)
     people_served = Column(Integer, nullable=True)
     remarks = Column(Text, nullable=True)
     regular_cooking_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
@@ -255,8 +255,8 @@ class ConsumptionEntry(Base):
     additional_serving_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
     total_serving_persons = Column(Integer, nullable=False, default=0, server_default=text("0"))
     times_cooked = Column(Integer, nullable=False, default=0, server_default=text("0"))
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(Integer, nullable=False, default=1)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -265,13 +265,14 @@ class ConsumptionEntry(Base):
     items = relationship("ConsumptionItem", back_populates="consumption_entry", cascade="all, delete-orphan")
     wastage_items = relationship("WastageItem", back_populates="consumption_entry", cascade="all, delete-orphan")
     wastages = relationship("WastageEntry", back_populates="consumption_entry", cascade="all, delete-orphan")
+    stock_adjustments = relationship("StockAdjustment", back_populates="consumption_entry", cascade="all, delete-orphan")
 
 class ConsumptionItem(Base):
     __tablename__ = "consumption_items"
     id = Column(Integer, primary_key=True)
-    consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=False)
-    usage_date = Column(Date, nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=False, index=True)
+    usage_date = Column(Date, nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
     quantity_used = Column(Numeric(15, 3), nullable=False)
     qty_returned = Column(Numeric(15, 3), nullable=False, default=0, server_default=text("0"))
     net_quantity = Column(Numeric(15, 3), nullable=False, default=0, server_default=text("0"))
@@ -287,11 +288,11 @@ class ConsumptionItem(Base):
 class WastageEntry(Base):
     __tablename__ = "wastage_entries"
     id = Column(Integer, primary_key=True)
-    consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=True)
-    wastage_date = Column(Date, nullable=False)
+    consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=True, index=True)
+    wastage_date = Column(Date, nullable=False, index=True)
     times_cooked = Column(Integer, nullable=False, default=0, server_default=text("0"))
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(Integer, nullable=False, default=1)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -303,11 +304,11 @@ class WastageEntry(Base):
 class WastageItem(Base):
     __tablename__ = "wastage_items"
     id = Column(Integer, primary_key=True)
-    wastage_entry_id = Column(Integer, ForeignKey("wastage_entries.id"), nullable=True)
-    consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=True)
-    wastage_date = Column(Date, nullable=False)
-    menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=True)
+    wastage_entry_id = Column(Integer, ForeignKey("wastage_entries.id"), nullable=True, index=True)
+    consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=True, index=True)
+    wastage_date = Column(Date, nullable=False, index=True)
+    menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=True, index=True)
     quantity = Column(Numeric(15, 3), nullable=False)
     approx_amount = Column(Numeric(15, 3), nullable=False, default=0, server_default=text("0"))
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -322,25 +323,28 @@ class WastageItem(Base):
 class StockAdjustment(Base):
     __tablename__ = "stock_adjustments"
     id = Column(Integer, primary_key=True)
-    adjustment_date = Column(Date, nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    consumption_entry_id = Column(Integer, ForeignKey("consumption_entries.id"), nullable=True, index=True)
+    adjustment_date = Column(Date, nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
     adjusted_qty = Column(Numeric(15, 3), nullable=False)
     reason = Column(String(255), nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    consumption_entry = relationship("ConsumptionEntry", back_populates="stock_adjustments")
+    item = relationship("Item")
 
 class VendorPayment(Base):
     __tablename__ = "vendor_payments"
     id = Column(Integer, primary_key=True)
-    payment_date = Column(Date, nullable=False)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
+    payment_date = Column(Date, nullable=False, index=True)
+    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
     amount = Column(Numeric(15, 3), nullable=False)
     payment_mode = Column(String(30), nullable=False)
     reference_no = Column(String(100), nullable=True)
     remarks = Column(Text, nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(Integer, nullable=False, default=1)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -349,11 +353,11 @@ class VendorPayment(Base):
 class StockLedger(Base):
     __tablename__ = "stock_ledger"
     id = Column(Integer, primary_key=True)
-    txn_date = Column(Date, nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
-    txn_type = Column(SmallInteger, nullable=False)
-    ref_table = Column(String(100), nullable=False)
-    ref_id = Column(Integer, nullable=False)
+    txn_date = Column(Date, nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
+    txn_type = Column(SmallInteger, nullable=False, index=True)
+    ref_table = Column(String(100), nullable=False, index=True)
+    ref_id = Column(Integer, nullable=False, index=True)
     qty_in = Column(Numeric(15, 3), nullable=False, default=0)
     qty_out = Column(Numeric(15, 3), nullable=False, default=0)
     unit_cost = Column(Numeric(15, 3), nullable=False, default=0)
@@ -361,7 +365,7 @@ class StockLedger(Base):
     value_out = Column(Numeric(15, 3), nullable=False, default=0)
     balance = Column(Numeric(15, 3), nullable=False, default=0)
     current_value = Column(Numeric(15, 3), nullable=False, default=0)
-    status = Column(Integer, nullable=False, default=1, server_default=text("1"))
+    status = Column(Integer, nullable=False, default=1, server_default=text("1"), index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -374,8 +378,8 @@ class StockLedger(Base):
 class LoginHistory(Base):
     __tablename__ = "login_history"
     id = Column(Integer, primary_key=True)
-    logged_in_at = Column(DateTime, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    logged_in_at = Column(DateTime, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     login_identifier = Column(String(150), nullable=False)
     login_status = Column(String(20), nullable=False)
     failure_reason = Column(String(255), nullable=True)
@@ -390,10 +394,10 @@ class LoginHistory(Base):
 class ActivityLog(Base):
     __tablename__ = "activity_logs"
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    activity_at = Column(DateTime, nullable=False, server_default=func.now())
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    activity_at = Column(DateTime, nullable=False, server_default=func.now(), index=True)
     method = Column(String(10), nullable=False)
-    endpoint = Column(String(255), nullable=False)
+    endpoint = Column(String(255), nullable=False, index=True)
     action = Column(String(150), nullable=False)
     activity_status = Column(String(20), nullable=False, default="SUCCESS")
     reason = Column(String(255), nullable=True)
@@ -414,8 +418,8 @@ class ActivityLog(Base):
 class DailyStockSummary(Base):
     __tablename__ = "daily_stock_summary"
     id = Column(Integer, primary_key=True)
-    summary_date = Column(Date, nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    summary_date = Column(Date, nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
     opening_stock = Column(Numeric(15, 3), nullable=False)
     purchased_qty = Column(Numeric(15, 3), nullable=False)
     consumed_qty = Column(Numeric(15, 3), nullable=False)
@@ -430,8 +434,8 @@ class DailyStockSummary(Base):
 class MonthlyStockSummary(Base):
     __tablename__ = "monthly_stock_summary"
     id = Column(Integer, primary_key=True)
-    summary_month = Column(Date, nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    summary_month = Column(Date, nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
     opening_stock = Column(Numeric(15, 3), nullable=False)
     total_purchased_qty = Column(Numeric(15, 3), nullable=False)
     total_consumed_qty = Column(Numeric(15, 3), nullable=False)
@@ -462,7 +466,7 @@ class TokenGeneration(Base):
 class TokenDetail(Base):
     __tablename__ = "token_details"
     id = Column(Integer, primary_key=True)
-    generation_id = Column(Integer, ForeignKey("token_generations.id"), nullable=False)
+    generation_id = Column(Integer, ForeignKey("token_generations.id"), nullable=False, index=True)
     receipt_number = Column(Integer, nullable=False)
     token_count = Column(Integer, nullable=False)
     created_at = Column(DateTime, primary_key=True, nullable=False, server_default=func.now())
@@ -479,13 +483,13 @@ class TokenDetail(Base):
 class PurchaseReturnEntry(Base):
     __tablename__ = "purchase_return_entries"
     id = Column(Integer, primary_key=True)
-    return_date = Column(Date, nullable=False)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
-    purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=True)
+    return_date = Column(Date, nullable=False, index=True)
+    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
+    purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=True, index=True)
     total_return_amount = Column(Numeric(15, 3), nullable=False)
     remarks = Column(Text, nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(Integer, nullable=False, default=1)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -499,8 +503,8 @@ class PurchaseReturnEntry(Base):
 class PurchaseReturnItem(Base):
     __tablename__ = "purchase_return_items"
     id = Column(Integer, primary_key=True)
-    return_entry_id = Column(Integer, ForeignKey("purchase_return_entries.id"), nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    return_entry_id = Column(Integer, ForeignKey("purchase_return_entries.id"), nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
     quantity = Column(Numeric(15, 3), nullable=False)
     price = Column(Numeric(15, 3), nullable=False)
     line_total = Column(Numeric(15, 3), nullable=False)

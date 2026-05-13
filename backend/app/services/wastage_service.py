@@ -78,7 +78,8 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
         )
         db.add(wastage_item)
         
-        # If it's a raw item wastage, deduct stock and record in ledger
+        # If it's a raw item wastage (should be handled by stock_adjustment_service now, 
+        # but kept for legacy/compatibility if called directly with item_id)
         if it.item_id:
             item = db.query(Item).filter(Item.id == it.item_id).first()
             if item:
@@ -99,7 +100,7 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
                 db.add(StockLedger(
                     item_id=item.id,
                     txn_date=payload.wastage_date,
-                    txn_type=4, # Stock Adjustment
+                    txn_type=3, # Wastage (Type 3) - for raw item wastage
                     ref_table="wastage_items",
                     ref_id=entry.id,
                     qty_in=0,
@@ -216,7 +217,7 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
                 db.add(StockLedger(
                     item_id=item.id,
                     txn_date=payload.wastage_date,
-                    txn_type=4,  # Stock Adjustment
+                    txn_type=3,  # Wastage
                     ref_table="wastage_items",
                     ref_id=entry.id,
                     qty_in=0,

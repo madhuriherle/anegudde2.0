@@ -62,9 +62,6 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
     if payload.usage_date > now.date():
         raise HTTPException(status_code=400, detail="Usage date cannot be in the future.")
 
-    if len(payload.items or []) == 0:
-        raise HTTPException(status_code=422, detail="At least one consumption row is required")
-
     for manpower_value in [
         payload.regular_cooking_persons,
         payload.additional_cooking_persons,
@@ -265,9 +262,6 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
 
     if payload.usage_date > now.date():
         raise HTTPException(status_code=400, detail="Usage date cannot be in the future.")
-    if len(payload.items or []) == 0:
-        raise HTTPException(status_code=422, detail="At least one consumption row is required")
-
     for manpower_value in [
         payload.regular_cooking_persons,
         payload.additional_cooking_persons,

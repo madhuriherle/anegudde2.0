@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trash2, FileText } from 'lucide-react';
+import { Trash2, FileText, ArrowLeft } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
@@ -128,6 +128,13 @@ const PurchaseReturnsPage: React.FC = () => {
       return;
     }
 
+    if (cleaned === '') {
+      setReturnItems(prev => prev.map(ri =>
+        ri.item_id === itemId ? { ...ri, return_qty: '' as any } : ri
+      ));
+      return;
+    }
+
     const numQty = parseFloat(qty) || 0;
     const originalItem = billItems.find((bi: any) => bi.item_id === itemId);
     
@@ -239,9 +246,15 @@ const PurchaseReturnsPage: React.FC = () => {
   if (isAdding) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="page-title">{editingReturnId ? 'Edit Purchase Return' : 'New Purchase Return'}</h2>
-          <Button variant="ghost" onClick={() => setIsAdding(false)}>Cancel</Button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsAdding(false)}
+            className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-all"
+            aria-label="Back"
+          >
+            <ArrowLeft className="w-6 h-6 text-text-main group-hover:-translate-x-1 transition-transform" />
+          </button>
+          <h2 className="page-title mb-0">{editingReturnId ? 'Edit Purchase Return' : 'New Purchase Return'}</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -339,7 +352,9 @@ const PurchaseReturnsPage: React.FC = () => {
                               value={ri.return_qty}
                               onFocus={() => {
                                 if (Number(ri.return_qty) === 0) {
-                                  handleQtyChange(ri.item_id, '');
+                                  setReturnItems(prev => prev.map(p =>
+                                    p.item_id === ri.item_id ? { ...p, return_qty: '' as any } : p
+                                  ));
                                 }
                               }}
                               onChange={e => handleQtyChange(ri.item_id, e.target.value)}
@@ -393,7 +408,13 @@ const PurchaseReturnsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="page-title">Purchase Returns</h2>
-        <Button onClick={() => setIsAdding(true)} className="flex items-center gap-2">
+        <Button
+          onClick={() => {
+            resetForm();
+            setIsAdding(true);
+          }}
+          className="flex items-center gap-2"
+        >
           Record Return
         </Button>
       </div>

@@ -3,43 +3,94 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
-from app.db.models import Item, StockAdjustment, StockLedger, User
-from app.schemas.stock_adjustment import StockAdjustmentCreate, StockAdjustmentOut
+from app.db.models import Item, StockAdjustment, StockLedger, User, ConsumptionEntry
+from app.schemas.stock_adjustment import StockAdjustmentCreate
+from typing import List
+
 router = APIRouter()
-@router.post("/create_adjustment", response_model=StockAdjustmentOut, status_code=status.HTTP_201_CREATED)
-def create_adjustment(payload: StockAdjustmentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    item = db.query(Item).filter(Item.id == payload.item_id).first()
-    if not item: raise HTTPException(status_code=400, detail="Invalid item_id")
+
+@router.post("/sync_for_consumption/{consumption_id}", status_code=status.HTTP_200_OK)
+def sync_for_consumption(
+    consumption_id: int,
+    payload: List[StockAdjustmentCreate],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    consumption = db.query(ConsumptionEntry).filter(ConsumptionEntry.id == consumption_id).first()
+    if not consumption:
+        raise HTTPException(status_code=404, detail="Consumption entry not found")
+
     now = datetime.now(timezone.utc)
-    adjustment = StockAdjustment(**payload.model_dump(), user_id=current_user.id, created_at=now, created_by=current_user.id)
-    db.add(adjustment); db.flush()
+
+    # 1. Reverse old adjustments
+    old_adjustments = db.query(StockAdjustment).filter(StockAdjustment.consumption_entry_id == consumption_id).all()
+    for old in old_adjustments:
+        item = db.query(Item).filter(Item.id == old.item_id).first()
+        if item:
+            # Reverse the negative adjustment (add it back)
+            item.current_stock = Decimal(item.current_stock or 0) - old.adjusted_qty
     
-    item.current_stock = Decimal(item.current_stock or 0) + payload.adjusted_qty; item.updated_at = now; item.updated_by = current_user.id
-    db.add(StockLedger(
-        item_id=item.id, 
-        txn_date=payload.adjustment_date, 
-        txn_type=4, 
-        ref_table="stock_adjustments", 
-        ref_id=adjustment.id, 
-        qty_in=payload.adjusted_qty if payload.adjusted_qty > 0 else 0, 
-        qty_out=abs(payload.adjusted_qty) if payload.adjusted_qty < 0 else 0, 
-        unit_cost=item.default_price or 0, 
-        value_in=(payload.adjusted_qty * (item.default_price or 0)) if payload.adjusted_qty > 0 else 0, 
-        value_out=(abs(payload.adjusted_qty) * (item.default_price or 0)) if payload.adjusted_qty < 0 else 0, 
-        balance=Decimal(item.current_stock), 
-        current_value=Decimal(item.current_stock) * (item.default_price or 0),
-        created_at=now, 
-        updated_at=now, 
-        created_by=current_user.id, 
-        updated_by=current_user.id
-    ))
+    # Delete old adjustments and their ledger entries
+    db.query(StockAdjustment).filter(StockAdjustment.consumption_entry_id == consumption_id).delete()
+    db.query(StockLedger).filter(
+        StockLedger.ref_table == "stock_adjustments",
+        StockLedger.ref_id.in_([a.id for a in old_adjustments])
+    ).delete(synchronize_session=False)
+
+    # 2. Apply new adjustments
+    for adj in payload:
+        item = db.query(Item).filter(Item.id == adj.item_id).first()
+        if not item:
+            continue
+        
+        # We expect raw input from UI as positive 'wasted/adjusted' qty, 
+        # so we store it as NEGATIVE in stock_adjustments table to represent deduction.
+        actual_qty = -abs(adj.adjusted_qty)
+        
+        # Check if adjustment results in negative stock
+        current_stock = Decimal(item.current_stock or 0)
+        if (current_stock + actual_qty) < 0:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Insufficient stock for item '{item.item_name}'. Current stock is {current_stock} but trying to deduct {abs(actual_qty)}."
+            )
+        
+        new_adj = StockAdjustment(
+            consumption_entry_id=consumption_id,
+            adjustment_date=adj.adjustment_date,
+            item_id=adj.item_id,
+            adjusted_qty=actual_qty,
+            reason=adj.reason or f"Linked to Usage Entry #{consumption_id}",
+            user_id=current_user.id,
+            created_at=now,
+            created_by=current_user.id
+        )
+        db.add(new_adj)
+        db.flush()
+
+        item.current_stock = Decimal(item.current_stock or 0) + actual_qty
+        item.updated_at = now
+        item.updated_by = current_user.id
+
+        unit_cost = item.default_price or 0
+        db.add(StockLedger(
+            item_id=item.id,
+            txn_date=adj.adjustment_date,
+            txn_type=4, # Stock Adjustment
+            ref_table="stock_adjustments",
+            ref_id=new_adj.id,
+            qty_in=0,
+            qty_out=abs(actual_qty),
+            unit_cost=unit_cost,
+            value_in=0,
+            value_out=abs(actual_qty) * unit_cost,
+            balance=Decimal(item.current_stock),
+            current_value=Decimal(item.current_stock) * unit_cost,
+            created_at=now,
+            updated_at=now,
+            created_by=current_user.id,
+            updated_by=current_user.id
+        ))
+
     db.commit()
-    return StockAdjustmentOut(
-        id=adjustment.id,
-        item_id=payload.item_id,
-        adjustment_date=payload.adjustment_date,
-        adjusted_qty=payload.adjusted_qty,
-        reason=payload.reason,
-        user_id=current_user.id,
-        created_at=now,
-    )
+    return {"message": "Stock adjustments synchronized successfully"}

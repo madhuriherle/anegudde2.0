@@ -209,14 +209,30 @@ const UsageEntriesPage: React.FC = () => {
         saveRes = await api.post('/daily-usage/create_consumption', commonPayload);
       }
 
-      if (allWastageItems.length > 0) {
+      const consumptionId = saveRes.data.id;
+
+      // 1. Sync Stock Adjustments (Raw Items)
+      const adjustmentPayload = rawWastageRows.map(r => ({
+        item_id: r.item_id,
+        adjustment_date: data.usage_date,
+        adjusted_qty: r.quantity, // Backend expects positive, will negate it
+        reason: `Linked to Usage Entry #${consumptionId}`
+      }));
+      
+      if (adjustmentPayload.length > 0 || (editingConsumption?.id)) {
+        // Always sync if editing to handle removals
+        await api.post(`/stock-adjustments/sync_for_consumption/${consumptionId}`, adjustmentPayload);
+      }
+
+      // 2. Sync Wastage (Menu Items)
+      if (wastageRows.length > 0) {
         const wastagePayload = {
           wastage_date: data.usage_date,
-          consumption_entry_id: saveRes.data.id,
+          consumption_entry_id: consumptionId,
           times_cooked: Number(data.times_cooked || 0),
           user_id: user?.id,
           status: 1,
-          items: allWastageItems,
+          items: wastageRows,
         };
 
         if (editingConsumption?.id && editingWastageEntryId) {
@@ -291,9 +307,10 @@ const UsageEntriesPage: React.FC = () => {
 
   const handleEdit = async (consumption: any) => {
     try {
-      const [consumptionRes, wastageRes] = await Promise.all([
+      const [consumptionRes, wastageRes, adjustmentsRes] = await Promise.all([
         api.get(`/daily-usage/get_consumption/${consumption.id}`),
         api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
+        api.get('/stock-adjustments/list_adjustments', { params: { consumption_entry_id: consumption.id } }),
       ]);
       
       const full = consumptionRes.data;
@@ -313,8 +330,7 @@ const UsageEntriesPage: React.FC = () => {
       });
 
       const wastageDefaults = buildWastageDefaults();
-      const rawWastageToLoad: any[] = [];
-      
+      // Load Menu Items Wastage
       matchedWastages.forEach((w: any) => {
         (w.items || []).forEach((it: any) => {
           if (it.menu_item_id) {
@@ -322,15 +338,16 @@ const UsageEntriesPage: React.FC = () => {
               quantity: Number(it.quantity || 0),
               approx_amount: Number(it.approx_amount || 0),
             };
-          } else if (it.item_id) {
-            rawWastageToLoad.push({
-              item_id: it.item_id,
-              quantity: Number(it.quantity || 0),
-              serial_id: items?.find((ri: any) => ri.id === it.item_id)?.serial_numbers?.[0]?.serial_number || ''
-            });
           }
         });
       });
+
+      // Load Stock Adjustments (Raw Items)
+      const rawWastageToLoad = (adjustmentsRes.data || []).map((adj: any) => ({
+        item_id: adj.item_id,
+        quantity: Math.abs(Number(adj.adjusted_qty || 0)),
+        serial_id: items?.find((ri: any) => ri.id === adj.item_id)?.serial_numbers?.[0]?.serial_number || ''
+      }));
 
       setEditingConsumption(full);
       setEditingWastageEntryId(primaryWastage?.id ?? null);
@@ -355,27 +372,38 @@ const UsageEntriesPage: React.FC = () => {
 
   const handleView = async (consumption: any) => {
     try {
-      const [consumptionRes, wastageRes] = await Promise.all([
+      const [consumptionRes, wastageRes, adjustmentsRes] = await Promise.all([
         api.get(`/daily-usage/get_consumption/${consumption.id}`),
         api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
+        api.get('/stock-adjustments/list_adjustments', { params: { consumption_entry_id: consumption.id } }),
       ]);
       const fullConsumption = consumptionRes.data;
       const wastageRows = Array.isArray(wastageRes.data)
         ? wastageRes.data
         : (wastageRes.data?.items || []);
-      const matchedWastages = wastageRows
+      
+      const menuWastages = wastageRows
         .filter((w: any) => w.consumption_entry_id === fullConsumption.id)
-        .flatMap((w: any) => (w.items || []).map((it: any) => ({
+        .flatMap((w: any) => (w.items || []).filter((it: any) => it.menu_item_id).map((it: any) => ({
           entryId: w.id,
-          menu_item_name: it.menu_item?.dish_name || it.item?.item_name || `Item #${it.menu_item_id || it.item_id}`,
-          unit_name: it.menu_item?.unit?.unit_name || it.item?.unit?.unit_name || '',
-          unit_code: it.menu_item?.unit?.unit_code || it.item?.unit?.unit_code || '',
+          menu_item_name: it.menu_item?.dish_name || `Dish #${it.menu_item_id}`,
+          unit_name: it.menu_item?.unit?.unit_name || '',
+          unit_code: it.menu_item?.unit?.unit_code || '',
           quantity: it.quantity,
           approx_amount: it.approx_amount,
         })));
 
+      const rawAdjustments = (adjustmentsRes.data || []).map((adj: any) => ({
+        entryId: adj.id,
+        menu_item_name: items?.find((i: any) => i.id === adj.item_id)?.item_name || `Item #${adj.item_id}`,
+        unit_name: items?.find((i: any) => i.id === adj.item_id)?.unit?.unit_name || '',
+        unit_code: items?.find((i: any) => i.id === adj.item_id)?.unit?.unit_code || '',
+        quantity: Math.abs(adj.adjusted_qty),
+        approx_amount: null,
+      }));
+
       setViewingConsumption(fullConsumption);
-      setViewingWastages(matchedWastages);
+      setViewingWastages([...menuWastages, ...rawAdjustments]);
       setViewDialogOpen(true);
     } catch {
       showError('Failed to fetch record details');
@@ -863,7 +891,12 @@ const UsageEntriesPage: React.FC = () => {
                           <Input 
                             type="text" 
                             className="h-8 w-[120px] text-xs bg-white" 
-                            {...register(`raw_wastage_items.${index}.quantity` as const)} 
+                            {...register(`raw_wastage_items.${index}.quantity` as const)}
+                            onFocus={(e) => {
+                              if (e.target.value === '0') {
+                                setValue(`raw_wastage_items.${index}.quantity` as const, '' as any);
+                              }
+                            }}
                           />
                         </div>
                         <div className="col-span-1 flex justify-end">
