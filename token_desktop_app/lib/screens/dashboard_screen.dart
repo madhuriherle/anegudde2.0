@@ -770,20 +770,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             borderRadius: BorderRadius.circular(20),
           ),
           contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-          title: Center(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFDF2E9),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.logout_rounded,
-                color: Color(0xFFB45309),
-                size: 28,
-              ),
-            ),
-          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -818,7 +804,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       child: Text(
-                        'No, Cancel',
+                        'No',
                         style: TextStyle(
                           color: Colors.grey[700],
                           fontWeight: FontWeight.bold,
@@ -843,7 +829,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         elevation: 0,
                       ),
                       child: const Text(
-                        'Yes, Logout',
+                        'Yes',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),

@@ -135,8 +135,8 @@ const TokenDetailLedgerPage: React.FC = () => {
         <Card className="border-border-temple shadow-sm">
           <CardContent className="p-6 flex items-center justify-center h-full">
             <div className="flex items-center gap-4">
-              <p className="text-xs font-bold uppercase text-text-main tracking-widest whitespace-nowrap">Total Entries:</p>
-              <p className="text-4xl font-black text-primary leading-none">{totalEntries}</p>
+              <span className="text-sm font-bold uppercase text-text-main tracking-widest whitespace-nowrap">Total Entries:</span>
+              <span className="text-5xl font-black text-primary leading-none">{totalEntries}</span>
             </div>
           </CardContent>
         </Card>
@@ -145,8 +145,8 @@ const TokenDetailLedgerPage: React.FC = () => {
         <Card className="border-border-temple shadow-sm">
           <CardContent className="p-6 flex items-center justify-center h-full">
             <div className="flex items-center gap-4">
-              <p className="text-xs font-bold uppercase text-text-main tracking-widest whitespace-nowrap">Total Devotees:</p>
-              <p className="text-4xl font-black text-primary leading-none">{totalDevotees.toLocaleString()}</p>
+              <span className="text-sm font-bold uppercase text-text-main tracking-widest whitespace-nowrap">Total Devotees:</span>
+              <span className="text-5xl font-black text-primary leading-none">{totalDevotees.toLocaleString()}</span>
             </div>
           </CardContent>
         </Card>

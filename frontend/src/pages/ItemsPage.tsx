@@ -61,22 +61,36 @@ const ItemsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   // Fetch Data
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
-    queryKey: ['items', search, page, pageSize],
+    queryKey: ['items', search, page, pageSize, selectedCategory, selectedStatus],
     queryFn: async () => {
       const params: any = { 
         page,
         page_size: pageSize,
         q: search,
+        sort_by: 'item_name',
+        sort_order: 'asc',
       };
+      if (selectedCategory) params.category_id = Number(selectedCategory);
+      if (selectedStatus !== '') params.status = Number(selectedStatus);
       const res = await api.get('/items/list_items', { params });
       return res.data;
     },
   });
 
-  const items = useMemo(() => itemsData?.items ?? [], [itemsData]);
+  const items = useMemo(() => {
+    const list = itemsData?.items ?? [];
+    return [...list].sort((a: any, b: any) => {
+      const aStatus = Number(a?.status ?? 0);
+      const bStatus = Number(b?.status ?? 0);
+      if (aStatus !== bStatus) return bStatus - aStatus; // Active first
+      return String(a?.item_name || '').localeCompare(String(b?.item_name || ''), undefined, { sensitivity: 'base' });
+    });
+  }, [itemsData]);
 
   const { data: categoriesData } = useQuery({
     queryKey: ['item-categories-list'],
@@ -221,6 +235,11 @@ const ItemsPage: React.FC = () => {
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
+      id: 'item_code',
+      header: 'Item Code',
+      cell: (i) => <span className="text-text-main">{i.row.original?.serial_numbers?.[0]?.serial_number || '-'}</span>,
+    },
+    {
       accessorKey: 'item_name',
       header: 'Item Name',
       cell: (i) => <span className="text-text-main font-medium">{i.getValue() as string}</span>,
@@ -278,10 +297,44 @@ const ItemsPage: React.FC = () => {
               <Label className="text-text-main">Search</Label>
               <Input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 className="text-text-main"
                 placeholder="Search items..."
               />
+            </div>
+            <div className="space-y-1.5 w-full sm:w-72">
+              <Label className="text-text-main">Category</Label>
+              <Select
+                value={selectedCategory}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  setPage(1);
+                }}
+                className="text-text-main"
+              >
+                <option value="">All Categories</option>
+                {categories?.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.category_name}</option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-1.5 w-full sm:w-56">
+              <Label className="text-text-main">Status</Label>
+              <Select
+                value={selectedStatus}
+                onChange={(e) => {
+                  setSelectedStatus(e.target.value);
+                  setPage(1);
+                }}
+                className="text-text-main"
+              >
+                <option value="">All</option>
+                <option value="1">Active</option>
+                <option value="0">Disabled</option>
+              </Select>
             </div>
           </div>
         </CardContent>
