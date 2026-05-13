@@ -159,9 +159,8 @@ const DashboardPage: React.FC = () => {
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
           <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Usage Items</CardTitle>
-             <div className="text-right">
-                <p className="text-base font-black text-[#D05E2D] tracking-tight">{formatCurrency(today?.consumption_value || 0)}</p>
-                <span className="text-[10px] text-text-main/60 font-bold uppercase tracking-normal">Consumed Value</span>
+            <div className="text-right">
+                <div className="text-[28px] leading-none font-black text-[#D05E2D] tracking-tight">{formatCurrency(today?.consumption_value || 0)}</div>
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
@@ -194,8 +193,7 @@ const DashboardPage: React.FC = () => {
           <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Purchase Items</CardTitle>
             <div className="text-right">
-                <p className="text-base font-bold text-[#D05E2D] tracking-tight">{formatCurrency(today?.purchase_amount || 0)}</p>
-                <span className="text-[10px] text-text-main/60 font-bold uppercase tracking-normal">Total Value</span>
+                <div className="text-[28px] leading-none font-black text-[#D05E2D] tracking-tight">{formatCurrency(today?.purchase_amount || 0)}</div>
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
@@ -228,8 +226,7 @@ const DashboardPage: React.FC = () => {
           <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Wastage Items</CardTitle>
              <div className="text-right">
-                <p className="text-base font-bold text-[#D05E2D] tracking-tight">{formatCurrency(today?.wastage_value || 0)}</p>
-                <span className="text-[10px] text-text-main/60 font-bold uppercase tracking-normal">Estimated Loss</span>
+                <div className="text-[28px] leading-none font-black text-[#D05E2D] tracking-tight">{formatCurrency(today?.wastage_value || 0)}</div>
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">

@@ -52,8 +52,16 @@ const formSchema = z.object({
   const hasRaw = Object.values(data.raw_items || {}).some((v: any) => Number(v.quantity_used || 0) > 0 || Number(v.qty_returned || 0) > 0);
   const hasWastage = Object.values(data.wastage_items || {}).some((v: any) => Number(v?.quantity || 0) > 0);
   const hasRawWastage = (data.raw_wastage_items || []).some((v: any) => Number(v?.quantity || 0) > 0);
-  if (!hasRaw && !hasWastage && !hasRawWastage) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter at least one quantity', path: ['raw_items'] });
+  const hasManpower =
+    Number(data.regular_cooking_persons || 0) > 0 ||
+    Number(data.additional_cooking_persons || 0) > 0 ||
+    Number(data.regular_serving_persons || 0) > 0 ||
+    Number(data.additional_serving_persons || 0) > 0 ||
+    Number(data.regular_cleaning_persons || 0) > 0 ||
+    Number(data.additional_cleaning_persons || 0) > 0;
+  const hasTimesCooked = Number(data.times_cooked || 0) > 0;
+  if (!hasRaw && !hasWastage && !hasRawWastage && !hasManpower && !hasTimesCooked) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter at least one value before saving', path: ['raw_items'] });
   }
   Object.entries(data.raw_items || {}).forEach(([id, row]: any) => {
     if (Number(row.qty_returned || 0) > Number(row.quantity_used || 0)) {

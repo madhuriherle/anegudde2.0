@@ -90,7 +90,7 @@ const TokenDetailLedgerPage: React.FC = () => {
       header: () => <div className="text-center w-full">Devotees Count</div>,
       cell: info => (
         <div className="text-center">
-          <span className="inline-flex items-center px-4 py-1 rounded-lg text-sm font-black bg-bg-cream border border-primary/10 text-primary">
+          <span className="inline-flex items-center px-4 py-1 rounded-lg text-sm font-black text-primary">
             {info.getValue() as number}
           </span>
         </div>
