@@ -65,7 +65,7 @@ const DashboardPage: React.FC = () => {
         
         {/* 1. Total Tokens (Token Issuance Activity) */}
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white text-left min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-3.5 flex flex-row items-center justify-between">
+          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider text-left">Total Tokens</CardTitle>
             <div className="text-right">
                 <div 
@@ -114,7 +114,7 @@ const DashboardPage: React.FC = () => {
 
         {/* 2. Low Stock (Critical Low Stock Section) */}
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-3.5 flex flex-row items-center justify-between text-left">
+          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between text-left">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Low Stock</CardTitle>
             <Button 
               onClick={() => navigate('/items')}
@@ -157,7 +157,7 @@ const DashboardPage: React.FC = () => {
 
         {/* 3. Usage Items List */}
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 flex flex-row items-center justify-between">
+          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Usage Items</CardTitle>
              <div className="text-right">
                 <p className="text-base font-black text-[#D05E2D] tracking-tight">{formatCurrency(today?.consumption_value || 0)}</p>
@@ -191,7 +191,7 @@ const DashboardPage: React.FC = () => {
 
         {/* 4. Purchase Items List */}
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 flex flex-row items-center justify-between">
+          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Purchase Items</CardTitle>
             <div className="text-right">
                 <p className="text-base font-bold text-[#D05E2D] tracking-tight">{formatCurrency(today?.purchase_amount || 0)}</p>
@@ -225,7 +225,7 @@ const DashboardPage: React.FC = () => {
 
         {/* 5. Wastage Items List */}
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 flex flex-row items-center justify-between">
+          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Wastage Items</CardTitle>
              <div className="text-right">
                 <p className="text-base font-bold text-[#D05E2D] tracking-tight">{formatCurrency(today?.wastage_value || 0)}</p>
@@ -259,7 +259,7 @@ const DashboardPage: React.FC = () => {
 
         {/* 6. Top 5 Menu Wastage (Weekly) */}
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 bg-white overflow-hidden min-h-[400px]">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100 px-6 py-3.5">
+          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Top 5 Menu Wastage (Weekly)</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate('/wastages')} className="text-[9px] text-primary font-bold uppercase tracking-widest border border-primary/20 hover:bg-primary/5 px-2.5 h-6 rounded-lg">
               Details
@@ -289,8 +289,8 @@ const DashboardPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-text-main/60 gap-3 border-2 border-dashed border-gray-100 rounded-2xl text-center font-bold uppercase tracking-widest text-[11px]">
-                <p>No weekly wastage data</p>
+              <div className="py-20 text-center text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+                No weekly wastage data
               </div>
             )}
           </CardContent>
