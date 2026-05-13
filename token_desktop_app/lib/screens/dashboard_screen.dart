@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/token_provider.dart';
@@ -18,13 +19,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _focusNode = FocusNode();
   Timer? _refreshTimer;
 
+  void _refocusCountInput() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _focusNode.requestFocus();
+      _countController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _countController.text.length,
+      );
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<TokenProvider>(context, listen: false).fetchDailyTotal();
-      _focusNode.requestFocus();
+      _refocusCountInput();
     });
+
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (!mounted) return;
       Provider.of<TokenProvider>(context, listen: false).fetchDailyTotal();
@@ -43,29 +57,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final tokenProvider = Provider.of<TokenProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
+    final userProfile = authProvider.userProfile;
+    final displayName =
+        userProfile?['username'] ?? userProfile?['name'] ?? 'Loading...';
 
-    // Use FY from API if available, otherwise fallback to local logic
-    String displayFY = tokenProvider.activeFinancialYear;
-    if (displayFY.isEmpty) {
-      final now = DateTime.now();
-      final year = now.year;
-      final month = now.month;
-      displayFY = month >= 4 
-        ? '$year-${(year + 1).toString().substring(2)}' 
-        : '${year - 1}-${year.toString().substring(2)}';
-    }
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    final contentWidth = screenWidth >= 1600
+        ? 1100.0
+        : screenWidth >= 1200
+            ? 950.0
+            : screenWidth * 0.92;
+
+    final fieldWidth = screenWidth >= 1200
+        ? 320.0
+        : (screenWidth * 0.55).clamp(280.0, 360.0);
+
+    final mainVerticalPadding = screenHeight < 760 ? 28.0 : 48.0;
+    final cardPadding = screenWidth < 900 ? 24.0 : 32.0;
+
+    // Responsive dimensions
+    final responsiveFieldHeight = (screenHeight * 0.13).clamp(80.0, 110.0);
+    final responsiveButtonHeight = (screenHeight * 0.075).clamp(50.0, 60.0);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF8F3), // Match bg-temple / bg-cream
+      backgroundColor: const Color(0xFFFDF8F3),
       body: Column(
         children: [
-          // 1. Top Header (Web Style - Clean & Compact)
+          // 1. Top Header
           Container(
             height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth < 800 ? 16 : 24,
+            ),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border(bottom: BorderSide(color: Colors.brown.withOpacity(0.1))),
+              border: Border(
+                bottom: BorderSide(color: Colors.brown.withOpacity(0.1)),
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.02),
@@ -76,7 +106,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: Row(
               children: [
-                // Minimal Logo with Image
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.asset(
@@ -88,80 +117,170 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(width: 16),
                 const Text(
-                  'AIMS Meal & Token System',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
+                  'Meal Token System',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4A3728),
+                  ),
                 ),
                 const Spacer(),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Website Style FY Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                // Profile Menu Badge
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: PopupMenuButton<String>(
+                    offset: const Offset(0, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 4,
+                    tooltip: '',
+                    onSelected: (value) {
+                      if (value == 'logout') {
+                        _showLogoutConfirmation(context, authProvider);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.logout,
+                              size: 18,
+                              color: Colors.redAccent,
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Logout',
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFDF2E9),
                         border: Border.all(color: const Color(0xFFE5D5C5)),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(30),
                       ),
-                      child: Text(
-                        'Financial Year : $displayFY',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5C2E1F),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton(
-                      icon: const Icon(Icons.logout, color: Color(0xFF4A3728), size: 20),
-                      onPressed: () => _showLogoutConfirmation(context, authProvider),
-                      tooltip: 'Logout',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          // ... rest of the build method ...
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  child: Column(
-                    children: [
-                      // Metrics Row (Compact Cards)
-                      Row(
+                      child: Row(
                         children: [
-                          Expanded(
-                            child: _buildMetricCard(
-                              'TOTAL DEVOTEES',
-                              '${tokenProvider.dailyTotal}',
-                              const Color(0xFFB45309),
-                              Icons.confirmation_num_outlined,
+                          Text(
+                            'Hi, ${displayName.toUpperCase()}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF5C2E1F),
                             ),
                           ),
-                          const SizedBox(width: 24),
-                          Expanded(
-                            child: _buildMetricCard(
-                              'TOTAL RECEIPTS',
-                              '${tokenProvider.totalReceipts}',
-                              const Color(0xFF4A3728),
-                              Icons.receipt_long_outlined,
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.arrow_drop_down,
+                            size: 20,
+                            color: Color(0xFF5C2E1F),
+                          ),
+                          const SizedBox(width: 4),
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: const Color(0xFF4A3728),
+                            child: Text(
+                              displayName.isNotEmpty
+                                  ? displayName[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
                       ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 2. Main Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                vertical: mainVerticalPadding,
+                horizontal: screenWidth < 800 ? 16 : 24,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: contentWidth),
+                  child: Column(
+                    children: [
+                      // Metrics Row
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isSmallWidth = constraints.maxWidth < 720;
+
+                          if (isSmallWidth) {
+                            return Column(
+                              children: [
+                                _buildMetricCard(
+                                  'TOTAL DEVOTEES',
+                                  '${tokenProvider.dailyTotal}',
+                                  const Color(0xFFB45309),
+                                  Icons.confirmation_num_outlined,
+                                ),
+                                const SizedBox(height: 16),
+                                _buildMetricCard(
+                                  'TOTAL RECEIPTS',
+                                  '${tokenProvider.totalReceipts}',
+                                  const Color(0xFF4A3728),
+                                  Icons.receipt_long_outlined,
+                                ),
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: _buildMetricCard(
+                                  'TOTAL DEVOTEES',
+                                  '${tokenProvider.dailyTotal}',
+                                  const Color(0xFFB45309),
+                                  Icons.confirmation_num_outlined,
+                                ),
+                              ),
+                              const SizedBox(width: 24),
+                              Expanded(
+                                child: _buildMetricCard(
+                                  'TOTAL RECEIPTS',
+                                  '${tokenProvider.totalReceipts}',
+                                  const Color(0xFF4A3728),
+                                  Icons.receipt_long_outlined,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+
                       const SizedBox(height: 32),
-                      // Issue Tokens Card (Professional & Clean)
+
+                      // Issue Tokens Card
                       Container(
+                        width: double.infinity,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.brown.withOpacity(0.08)),
+                          border: Border.all(
+                            color: Colors.brown.withOpacity(0.08),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.02),
@@ -171,77 +290,183 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(32.0),
+                          padding: EdgeInsets.all(cardPadding),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               const Text(
                                 'Issue New Tokens',
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF4A3728),
+                                ),
                               ),
-                              const SizedBox(height: 32),
-                              // Date/Operator Info
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  _buildInfoField('DATE', DateFormat('dd MMM yyyy').format(DateTime.now()), Icons.today),
-                                ],
+
+                              SizedBox(height: screenHeight < 760 ? 24 : 32),
+
+                              // Date Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFDF8F3),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.brown.withOpacity(0.05),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.today,
+                                      size: 18,
+                                      color: Colors.brown.withOpacity(0.6),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'DATE : ${DateFormat('dd MMM yyyy').format(DateTime.now())}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Color(0xFF4A3728),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 40),
+
+                              SizedBox(height: screenHeight < 760 ? 32 : 40),
+
                               const Text(
                                 'NUMBER OF DEVOTEES',
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 10, letterSpacing: 1.2),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                  letterSpacing: 1.2,
+                                ),
                               ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: 320,
-                                child: TextField(
-                                  controller: _countController,
-                                  focusNode: _focusNode,
-                                  keyboardType: TextInputType.number,
-                                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
-                                  textAlign: TextAlign.center,
-                                  onSubmitted: (_) => _handleIssueTokens(tokenProvider),
-                                  decoration: InputDecoration(
-                                    hintText: 'Enter count',
-                                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.3), fontSize: 18, fontWeight: FontWeight.normal),
-                                    filled: true,
-                                    fillColor: const Color(0xFFFCFBF9),
 
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black12)),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(color: Color(0xFFB45309), width: 2),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                              const SizedBox(height: 12),
+
+                              // Responsive Input Field
+                              SizedBox(
+                                width: fieldWidth,
+                                height: responsiveFieldHeight,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFCFBF9),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.black12),
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      TextField(
+                                        controller: _countController,
+                                        focusNode: _focusNode,
+                                        autofocus: true,
+                                        keyboardType: TextInputType.text,
+                                        textAlign: TextAlign.center,
+                                        textAlignVertical: TextAlignVertical.center,
+                                        expands: true,
+                                        maxLines: null,
+                                        minLines: null,
+                                        style: const TextStyle(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF4A3728),
+                                          height: 1.0,
+                                        ),
+                                        onSubmitted: (_) =>
+                                            _handleIssueTokens(tokenProvider),
+                                        onTapOutside: (_) => _refocusCountInput(),
+                                        decoration: InputDecoration(
+                                          hintText: '',
+                                          hintStyle: TextStyle(
+                                            color: Colors.grey.withOpacity(0.45),
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.normal,
+                                            height: 1.0,
+                                          ),
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.zero,
+                                          isCollapsed: true,
+                                        ),
+                                      ),
+                                      // Focus border overlay
+                                      AnimatedBuilder(
+                                        animation: _focusNode,
+                                        builder: (context, child) {
+                                          return IgnorePointer(
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: _focusNode.hasFocus 
+                                                      ? const Color(0xFFB45309) 
+                                                      : Colors.transparent,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 32),
+
+                              SizedBox(height: screenHeight < 760 ? 24 : 32),
+
+                              // Responsive Print Button
                               SizedBox(
-                                width: 320,
-                                height: 56,
+                                width: fieldWidth,
+                                height: responsiveButtonHeight,
                                 child: ElevatedButton(
                                   onPressed: tokenProvider.isLoading
                                       ? null
-                                      : () => _handleIssueTokens(tokenProvider),
+                                      : () =>
+                                          _handleIssueTokens(tokenProvider),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF4A3728),
+                                    backgroundColor:
+                                        const Color(0xFF4A3728),
                                     foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                     elevation: 2,
                                   ),
                                   child: tokenProvider.isLoading
-                                      ? const CircularProgressIndicator(color: Colors.white)
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
                                       : const Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
-                                            Icon(Icons.print_outlined, size: 20),
-                                            const SizedBox(width: 12),
+                                            Icon(
+                                              Icons.print_outlined,
+                                              size: 20,
+                                            ),
+                                            SizedBox(width: 12),
                                             Text(
                                               'GENERATE & PRINT',
-                                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1),
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 1,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -257,22 +482,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ),
-          
+
           // 3. Footer
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+            padding: const EdgeInsets.symmetric(
+              vertical: 16,
+              horizontal: 32,
+            ),
             color: const Color(0xFF1A1A1A),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '© Anegudde Inventory Management System (AIMS) ${DateTime.now().year}',
-                  style: const TextStyle(color: Color(0xFF777777), fontSize: 11),
+                  '© Aanegudde Inventory Management System (AIMS) ${DateTime.now().year}',
+                  style: const TextStyle(
+                    color: Color(0xFFB8B8B8),
+                    fontSize: 13,
+                  ),
                 ),
-                const Text(
-                  'Design By D-apps.in',
-                  style: TextStyle(color: Colors.white24, fontSize: 11),
+                Row(
+                  children: [
+                    Text(
+                      'Developed by ',
+                      style: TextStyle(
+                        color: Color(0xFFCDCDCD),
+                        fontSize: 13,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.asset(
+                        'assets/images/d-apps.png',
+                        width: 18,
+                        height: 18,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'D-apps.in',
+                      style: TextStyle(
+                        color: Color(0xFFE0E0E0),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -283,42 +540,157 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleIssueTokens(TokenProvider tokenProvider) async {
-    final countText = _countController.text;
+    final countText = _countController.text.trim();
+    final isValidFormat = RegExp(r'^[0-9]+$').hasMatch(countText);
+
+    if (!isValidFormat) {
+      await _showInvalidFormatAlert();
+      _countController.clear();
+      _refocusCountInput();
+      return;
+    }
+
     final count = int.tryParse(countText);
+
     if (count == null || count <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid count')),
       );
-      _focusNode.requestFocus();
+      _refocusCountInput();
       return;
     }
 
     final response = await tokenProvider.issueTokens(count);
+
     if (response != null) {
       _countController.clear();
-      
-      // Print the token automatically
+
       try {
         await PrintingService.printToken(response);
-        _showSuccessPopup(context, response);
+        await _showSuccessPopup(context, response);
       } catch (e) {
         print('Printing error: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Issued successfully, but printing failed: $e')),
+          SnackBar(
+            content: Text('Issued successfully, but printing failed: $e'),
+          ),
         );
       }
     }
-    
-    // Always return focus to the text field for the next entry
-    _focusNode.requestFocus();
+
+    _refocusCountInput();
   }
 
-  void _showSuccessPopup(BuildContext context, Map<String, dynamic> data) {
-    showDialog(
+  Future<void> _showInvalidFormatAlert() async {
+    await showDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext context) {
-        // Auto-close after 1 second
+        Future.delayed(const Duration(seconds: 1), () {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        });
+
+        return Shortcuts(
+          shortcuts: <ShortcutActivator, Intent>{
+            const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
+            const SingleActivator(LogicalKeyboardKey.numpadEnter): const ActivateIntent(),
+          },
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                  return null;
+                },
+              ),
+            },
+            child: Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: const Color(0xFFFFF8F1),
+              child: Container(
+                width: 360,
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFEDD5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.priority_high_rounded,
+                        color: Color(0xFFB45309),
+                        size: 30,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Invalid Format',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF4A3728),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Please enter valid number',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Color(0xFF6B4F3A),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: 140,
+                      height: 40,
+                      child: ElevatedButton(
+                        autofocus: true,
+                        onPressed: () {
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4A3728),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Okay',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    _refocusCountInput();
+  }
+
+  Future<void> _showSuccessPopup(
+    BuildContext context,
+    Map<String, dynamic> data,
+  ) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
         Future.delayed(const Duration(seconds: 1), () {
           if (Navigator.of(context).canPop()) {
             Navigator.of(context).pop();
@@ -326,36 +698,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
 
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           elevation: 8,
           backgroundColor: Colors.white,
           child: Container(
             width: 320,
-            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            padding: const EdgeInsets.symmetric(
+              vertical: 32,
+              horizontal: 24,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Light green circle with checkmark (Matching image style)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF0F9F0),
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFE1F2E1), width: 2),
+                    border: Border.all(
+                      color: const Color(0xFFE1F2E1),
+                      width: 2,
+                    ),
                   ),
-                  child: const Icon(Icons.check, color: Color(0xFF72C366), size: 40),
+                  child: const Icon(
+                    Icons.check,
+                    color: Color(0xFF72C366),
+                    size: 40,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 const Text(
                   'Token Generated Successfully',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Color(0xFF555555)),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF555555),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Devotees: ${data['token_count']}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF777777), fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF777777),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -365,23 +756,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showLogoutConfirmation(BuildContext context, AuthProvider authProvider) {
+  void _showLogoutConfirmation(
+    BuildContext context,
+    AuthProvider authProvider,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
           title: Center(
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFDF2E9),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFDF2E9),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.logout_rounded, color: Color(0xFFB45309), size: 28),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: Color(0xFFB45309),
+                size: 28,
+              ),
             ),
           ),
           content: Column(
@@ -389,13 +789,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               const Text(
                 'Confirm Logout',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4A3728),
+                ),
               ),
               const SizedBox(height: 12),
               Text(
                 'Are you sure you want to log out of the system?',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 32),
               Row(
@@ -406,9 +813,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.grey[300]!),
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: Text('No, Cancel', style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.bold)),
+                      child: Text(
+                        'No, Cancel',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -422,10 +837,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         backgroundColor: const Color(0xFF4A3728),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         elevation: 0,
                       ),
-                      child: const Text('Yes, Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Yes, Logout',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],
@@ -437,7 +857,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMetricCard(String label, String value, Color color, IconData icon) {
+  Widget _buildMetricCard(
+    String label,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -445,14 +870,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withOpacity(0.1)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(width: 20),
@@ -460,9 +892,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                    letterSpacing: 1,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color)),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
               ],
             ),
           ),
@@ -470,31 +917,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
-  Widget _buildInfoField(String label, String value, IconData icon) {
-    return Container(
-      constraints: const BoxConstraints(minWidth: 150),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFDF8F3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.brown.withOpacity(0.05)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18, color: Colors.brown.withOpacity(0.6)),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF4A3728))),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
+
+

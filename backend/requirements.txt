@@ -10,4 +10,3 @@ passlib[bcrypt]
 pydantic[email]
 xhtml2pdf
 apscheduler
-

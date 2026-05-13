@@ -79,8 +79,7 @@ const LoginPage: React.FC = () => {
 
               <p className="text-sm text-[#7A5C3E] text-center">
                 Welcome to Anegudde Inventory Management System (AIMS)
-              </p>
-            </CardHeader>
+              </p>            </CardHeader>
 
             <CardContent>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

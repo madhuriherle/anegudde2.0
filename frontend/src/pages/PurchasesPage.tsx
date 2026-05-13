@@ -40,7 +40,7 @@ const numericString = z.string()
 
 const purchaseItemSchema = z.object({
   item_id: z.coerce.number().min(1, 'Item is required'),
-  quantity: numericString.pipe(z.number().min(0.001, 'Min quantity is 0.001')),
+  quantity: numericString.pipe(z.number().min(0.001, 'Please enter qty')),
   price: numericString.pipe(z.number().min(0, 'Price cannot be negative')),
   search_id: z.string().optional(),
 });
@@ -65,7 +65,7 @@ const PurchasesPage: React.FC = () => {
   
   // Filter States
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize] = useState(50);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [search, setSearch] = useState('');
@@ -78,9 +78,8 @@ const PurchasesPage: React.FC = () => {
   const [viewBillPreviewUrl, setViewBillPreviewUrl] = useState<string | null>(null);
   const [viewBillPreviewType, setViewBillPreviewType] = useState<'image' | 'pdf' | null>(null);
   const [viewBillPreviewLoading, setViewBillPreviewLoading] = useState(false);
-  const [viewSummaryPanelWidth, setViewSummaryPanelWidth] = useState(52);
+  const [viewSummaryPanelWidth, setViewSummaryPanelWidth] = useState(40);
   const viewCompareWrapRef = React.useRef<HTMLDivElement | null>(null);
-  const [isManualInvoiceAmount, setIsManualInvoiceAmount] = useState(false);
   const [selectedBillFile, setSelectedBillFile] = useState<File | null>(null);
   const [removeExistingBill, setRemoveExistingBill] = useState(false);
   const [showVendorAddress, setShowVendorAddress] = useState(false);
@@ -101,8 +100,6 @@ const PurchasesPage: React.FC = () => {
       return res.data;
     },
   });
-
-  const purchases = useMemo(() => purchasesData?.items ?? [], [purchasesData]);
 
   const { data: vendorsData } = useQuery({
     queryKey: ['vendors-list'],
@@ -142,7 +139,6 @@ const PurchasesPage: React.FC = () => {
   });
 
   const watchedItems = watch('items');
-  const watchedInvoiceAmount = watch('invoice_amount');
   const watchedVendorId = watch('vendor_id');
   const watchedBillNo = watch('bill_no');
   const selectedVendor = useMemo(
@@ -175,31 +171,28 @@ const PurchasesPage: React.FC = () => {
       previousVendorIdRef.current = watchedVendorId;
       vendorConfirmBaselineRef.current = {
         billNo: String(watchedBillNo || ''),
-        invoiceAmount: String(watchedInvoiceAmount ?? ''),
         items: JSON.stringify(watchedItems || []),
         fileName: selectedBillFile?.name || '',
       };
     }
-  }, [watchedVendorId, watchedBillNo, watchedInvoiceAmount, watchedItems, selectedBillFile]);
+  }, [watchedVendorId, watchedBillNo, watchedItems, selectedBillFile]);
 
   React.useEffect(() => {
     if (!showVendorAddress || !vendorConfirmBaselineRef.current) return;
     const current = {
       billNo: String(watchedBillNo || ''),
-      invoiceAmount: String(watchedInvoiceAmount ?? ''),
       items: JSON.stringify(watchedItems || []),
       fileName: selectedBillFile?.name || '',
     };
     const baseline = vendorConfirmBaselineRef.current;
     const changedSinceVendorPick =
       current.billNo !== baseline.billNo ||
-      current.invoiceAmount !== baseline.invoiceAmount ||
       current.items !== baseline.items ||
       current.fileName !== baseline.fileName;
     if (changedSinceVendorPick) {
       setShowVendorAddress(false);
     }
-  }, [showVendorAddress, watchedBillNo, watchedInvoiceAmount, watchedItems, selectedBillFile]);
+  }, [showVendorAddress, watchedBillNo, watchedItems, selectedBillFile]);
   
   const totalAmount = (watchedItems || []).reduce((sum: number, item: any) => {
     const q = Number(item.quantity) || 0;
@@ -208,10 +201,8 @@ const PurchasesPage: React.FC = () => {
   }, 0);
 
   React.useEffect(() => {
-    if (!isManualInvoiceAmount) {
-      setValue('invoice_amount', String(totalAmount));
-    }
-  }, [totalAmount, isManualInvoiceAmount, setValue]);
+    setValue('invoice_amount', String(totalAmount));
+  }, [totalAmount, setValue]);
 
   const mutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -282,7 +273,6 @@ const PurchasesPage: React.FC = () => {
   });
 
   const handleOpen = async (purchase: any = null) => {
-    setIsManualInvoiceAmount(false);
     setSelectedBillFile(null);
     setRemoveExistingBill(false);
     if (purchase) {
@@ -290,9 +280,6 @@ const PurchasesPage: React.FC = () => {
         const res = await api.get(`/purchases/get_purchase/${purchase.id}`);
         const fullData = res.data;
         
-        const initialTotal = (fullData.items || []).reduce((s: number, i: any) => s + (Number(i.quantity) * Number(i.price)), 0);
-        setIsManualInvoiceAmount(Number(fullData.invoice_amount) !== initialTotal && Number(fullData.invoice_amount) !== 0);
-
         setEditingPurchase(fullData);
         reset({
           purchase_date: fullData.purchase_date,
@@ -430,6 +417,18 @@ const PurchasesPage: React.FC = () => {
   }, [viewBillPreviewUrl]);
 
   const onSubmit = async (data: PurchaseFormValues) => {
+    const calculatedGrandTotal = Number(totalAmount.toFixed(2));
+    const payloadData: PurchaseFormValues = { ...data, invoice_amount: calculatedGrandTotal as any };
+
+    // Bill Attachment validation
+    const hasExistingBill = editingPurchase?.bills?.length > 0;
+    const willHaveBill = (selectedBillFile !== null) || (hasExistingBill && !removeExistingBill);
+    
+    if (!willHaveBill) {
+      showError('Bill Attachment is mandatory. Please upload a bill.');
+      return;
+    }
+
     const confirmed = await showConfirm(
       editingPurchase ? "Confirm Update" : "Confirm Save",
       `Are you sure you want to ${editingPurchase ? 'update' : 'save'} this purchase?`
@@ -437,7 +436,7 @@ const PurchasesPage: React.FC = () => {
 
     if (confirmed) {
       mutation.mutate({
-        ...data,
+        ...payloadData,
         id: editingPurchase?.id,
         isEditMode: Boolean(editingPurchase),
         billFile: selectedBillFile,
@@ -581,7 +580,7 @@ const PurchasesPage: React.FC = () => {
 
       {/* View Details Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-7xl max-h-[92vh] overflow-y-auto border-border-temple">
+        <DialogContent className="w-[96vw] max-w-[1800px] max-h-[94vh] overflow-y-auto border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
             <DialogTitle className="text-text-main font-temple">Purchase Summary</DialogTitle>
             <DialogDescription className="sr-only">Detailed breakdown of the selected purchase entry.</DialogDescription>
@@ -597,7 +596,6 @@ const PurchasesPage: React.FC = () => {
                 <DetailItem label="Purchase Date" value={formatDate(viewingPurchase?.purchase_date)} />
                 <DetailItem label="Invoice No" value={viewingPurchase?.bill_no} />
                 <DetailItem label="Vendor" value={vendors?.find((v: any) => v.id === viewingPurchase?.vendor_id)?.vendor_name} />
-                <DetailItem label="Manual Bill Amount" value={formatCurrency(viewingPurchase?.invoice_amount)} />
               </div>
 
               <div className="space-y-2">
@@ -631,7 +629,7 @@ const PurchasesPage: React.FC = () => {
               <Card className="bg-bg-temple/40 border-border-temple/40 border shadow-none">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-primary font-bold uppercase text-sm">System Calculated Grand Total</span>
+                    <span className="text-primary font-bold uppercase text-sm">Grand Total</span>
                     <span className="text-primary font-bold text-xl">
                       {formatCurrency(viewingPurchase?.total_amount)}
                     </span>
@@ -650,7 +648,7 @@ const PurchasesPage: React.FC = () => {
                   <div className="h-16 w-[2px] rounded bg-[#D9C8AF]" />
                 </div>
 
-                <div className="rounded-lg border border-border-temple bg-white overflow-hidden h-[520px] w-full xl:w-[calc(100%-var(--summary-width))] xl:pl-3">
+                <div className="rounded-lg border border-border-temple bg-white overflow-hidden h-[72vh] min-h-[620px] w-full xl:w-[calc(100%-var(--summary-width))] xl:pl-3">
                   <div className="px-4 py-2 border-b border-border-temple bg-bg-temple/40 flex items-center justify-between">
                     <span className="text-sm font-bold text-primary uppercase tracking-wider">Uploaded Bill Preview</span>
                     <button
@@ -694,7 +692,7 @@ const PurchasesPage: React.FC = () => {
         }
       }}>
         <DialogContent 
-          className="max-w-6xl max-h-[90vh] overflow-y-auto border-border-temple"
+          className="max-w-4xl max-h-[90vh] overflow-y-auto border-border-temple"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
@@ -705,8 +703,8 @@ const PurchasesPage: React.FC = () => {
             <DialogDescription className="sr-only">Form to record or update a purchase from a vendor.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4 pb-0">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 justify-items-start">
+              <div className="space-y-1.5 w-full max-w-[280px]">
                 <Label className="text-text-main">Select Vendor *</Label>
                 <Controller
                   name="vendor_id"
@@ -720,50 +718,21 @@ const PurchasesPage: React.FC = () => {
                     </Select>
                   )}
                 />
-                {errors.vendor_id && <p className="text-xs text-red-500 font-medium">{errors.vendor_id.message}</p>}
+                {errors.vendor_id && <p className="text-xs text-red-500 font-medium">{(errors.vendor_id as any).message}</p>}
                 {selectedVendorAddress && showVendorAddress && (
                   <p className="text-[11px] text-text-main/70 leading-4">
                     {selectedVendorAddress}
                   </p>
                 )}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 w-full max-w-[280px]">
                 <Label className="text-text-main">Purchase Date *</Label>
                 <Input type="date" {...register('purchase_date')} className="h-10 text-text-main" />
-                {errors.purchase_date && <p className="text-xs text-red-500 font-medium">{errors.purchase_date.message}</p>}
+                {errors.purchase_date && <p className="text-xs text-red-500 font-medium">{(errors.purchase_date as any).message}</p>}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 w-full max-w-[280px]">
                 <Label className="text-text-main">Invoice/Bill Number</Label>
                 <Input {...register('bill_no')} className="h-10 text-text-main" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-text-main font-bold">Total Bill Amount</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50 font-bold">₹</span>
-                  <Controller
-                    name="invoice_amount"
-                    control={control}
-                    render={({ field }) => (
-                      <Input 
-                        type="text" 
-                        {...field} 
-                        className="pl-8 h-10 text-text-main font-bold" 
-                       
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setIsManualInvoiceAmount(true);
-                        }}
-                        onFocus={(e) => {
-                          if (!editingPurchase && (field.value === '0' || field.value === 0)) {
-                            field.onChange('');
-                            setIsManualInvoiceAmount(true);
-                          }
-                        }}
-                      />
-                    )}
-                  />
-                </div>
-                {errors.invoice_amount && <p className="text-[10px] text-red-500 font-bold uppercase">{(errors.invoice_amount as any).message}</p>}
               </div>
             </div>
 
@@ -775,8 +744,8 @@ const PurchasesPage: React.FC = () => {
               <div className="space-y-4">
                 {fields.map((field, index) => (
                   <div key={field.id} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-white p-3 rounded-lg border border-border-temple/40 shadow-sm relative">
-                    <div className="sm:col-span-1 space-y-1.5">
-                      {index === 0 && <Label className="text-xs font-bold text-text-main">SL.NO</Label>}
+                    <div className="sm:col-span-2 space-y-1.5">
+                      {index === 0 && <Label className="text-xs font-bold text-text-main">Item Code</Label>}
                       <Input 
                         type="text" 
                        
@@ -800,7 +769,7 @@ const PurchasesPage: React.FC = () => {
                         }}
                       />
                     </div>
-                    <div className="sm:col-span-4 space-y-1.5">
+                    <div className="sm:col-span-3 space-y-1.5">
                       {index === 0 && <Label className="text-xs font-bold text-text-main">Item Name *</Label>}
                       <Controller
                         name={`items.${index}.item_id` as const}
@@ -821,7 +790,7 @@ const PurchasesPage: React.FC = () => {
                           </Select>
                         )}
                       />
-                      {errors.items?.[index]?.item_id && <p className="text-[10px] text-red-500 font-bold">Required</p>}
+                      {(errors.items as any)?.[index]?.item_id && <p className="text-[10px] text-red-500 font-bold">Required</p>}
                     </div>
                     <div className="sm:col-span-2 space-y-1.5">
                       {index === 0 && <Label className="text-xs font-bold text-text-main">Qty *</Label>}
@@ -835,7 +804,7 @@ const PurchasesPage: React.FC = () => {
                           }
                         }}
                       />
-                      {errors.items?.[index]?.quantity && <p className="text-[10px] text-red-500 font-bold uppercase">{(errors.items[index]?.quantity as any).message}</p>}
+                      {(errors.items as any)?.[index]?.quantity && <p className="text-[10px] text-red-500 font-bold">{((errors.items as any)[index]?.quantity as any).message}</p>}
                     </div>
                     <div className="sm:col-span-2 space-y-1.5">
                       {index === 0 && <Label className="text-xs font-bold text-text-main">Price *</Label>}
@@ -849,7 +818,7 @@ const PurchasesPage: React.FC = () => {
                           }
                         }}
                       />
-                      {errors.items?.[index]?.price && <p className="text-[10px] text-red-500 font-bold uppercase">{(errors.items[index]?.price as any).message}</p>}
+                      {(errors.items as any)?.[index]?.price && <p className="text-[10px] text-red-500 font-bold uppercase">{((errors.items as any)[index]?.price as any).message}</p>}
                     </div>
                     <div className="sm:col-span-2 space-y-1.5">
                        {index === 0 && <Label className="text-xs font-bold text-text-main w-full">Subtotal</Label>}
@@ -875,25 +844,17 @@ const PurchasesPage: React.FC = () => {
                 
                 <div className="flex items-center gap-6">
                   <div className="flex flex-col items-end">
-                    <span className="text-[10px] font-bold text-text-main/50 uppercase tracking-widest">Calculated Total</span>
+                    <span className="text-[10px] font-bold text-text-main/50 uppercase tracking-widest">Grand Total</span>
                     <span className="text-3xl font-black text-primary">
                       {formatCurrency(totalAmount)}
                     </span>
                   </div>
-                  {isManualInvoiceAmount && Math.abs(totalAmount - (Number(String(watchedInvoiceAmount || '0').replace(/[^0-9.]/g, '')) || 0)) > 0.01 && (
-                    <div className="flex flex-col items-start bg-red-50 px-3 py-1 rounded border border-red-100">
-                      <span className="text-[10px] font-bold text-red-500 uppercase">Difference</span>
-                      <span className="text-sm font-bold text-red-600">
-                        {formatCurrency(totalAmount - (Number(String(watchedInvoiceAmount || '0').replace(/[^0-9.]/g, '')) || 0))}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
 
 <div className="space-y-1.5">
-  <Label className="text-text-main font-bold">Bill Attachment</Label>
+  <Label className="text-text-main font-bold">Bill Attachment *</Label>
 
   <label
     htmlFor="bill-file-upload"
@@ -933,6 +894,11 @@ const PurchasesPage: React.FC = () => {
       className="hidden"
     />
   </label>
+  {selectedBillFile && (
+    <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
+      Bill selected successfully: <span className="font-semibold">{selectedBillFile.name}</span>
+    </div>
+  )}
 
   {!selectedBillFile && !removeExistingBill && editingPurchase?.bills?.length > 0 && (
     <div className="flex items-center gap-2 rounded-lg border border-[#D9C8AF] bg-white px-3 py-2 text-xs">
@@ -986,5 +952,3 @@ const PurchasesPage: React.FC = () => {
 };
 
 export default PurchasesPage;
-
-

@@ -87,7 +87,14 @@ const MainLayout: React.FC = () => {
   const canteenMenuItems: MenuItem[] = [
     { text: 'Home', icon: Home, path: '/', action: () => setActiveModule('main') },
     { text: 'Dashboard', icon: UtensilsCrossed, path: '/canteen' },
-    { text: 'Purchase', icon: ShoppingCart, path: '/purchases' },
+    { 
+      text: 'Purchase', 
+      icon: ShoppingCart,
+      children: [
+        { text: 'Purchase Entry', path: '/purchases' },
+        { text: 'Purchase Returns', path: '/purchases/returns' },
+      ]
+    },
     { 
       text: 'Daily Usage Entry', 
       icon: Package,

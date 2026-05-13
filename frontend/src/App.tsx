@@ -10,6 +10,7 @@ import ItemsPage from './pages/ItemsPage';
 import ItemHistoryPage from './pages/ItemHistoryPage';
 import ItemPriceHistoryPage from './pages/ItemPriceHistoryPage';
 import PurchasesPage from './pages/PurchasesPage';
+import PurchaseReturnsPage from './pages/PurchaseReturnsPage';
 import UsageEntriesPage from './pages/UsageEntriesPage';
 import UsersPage from './pages/UsersPage';
 import ItemCategoriesPage from './pages/ItemCategoriesPage';
@@ -18,7 +19,7 @@ import MenuItemsPage from './pages/MenuItemsPage';
 import WastagesPage from './pages/WastagesPage';
 import ProfilePage from './pages/ProfilePage';
 import DailyStockReportPage from './pages/DailyStockReportPage';
-import StockSummaryPage from './pages/StockSummaryPage';
+import { StockSummaryPage } from './pages/StockSummaryPage';
 import MonthlyPerformanceReportPage from './pages/MonthlyPerformanceReportPage';
 import VendorOutstandingReportPage from './pages/VendorOutstandingReportPage';
 import TokenReportPage from './pages/TokenReportPage';
@@ -39,6 +40,7 @@ function App() {
         <Route path="/items/:id/history" element={<ItemHistoryPage />} />
         <Route path="/items/:id/price-history" element={<ItemPriceHistoryPage />} />
         <Route path="/purchases" element={<PurchasesPage />} />
+        <Route path="/purchases/returns" element={<PurchaseReturnsPage />} />
         <Route path="/daily-usage" element={<UsageEntriesPage />} />
         <Route path="/wastages" element={<WastagesPage />} />
         <Route path="/reports" element={<Navigate to="/reports/stock-summary" replace />} />

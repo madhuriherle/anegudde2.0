@@ -20,6 +20,7 @@ class StockReportRow(BaseModel):
 class DetailedStockSummaryRow(BaseModel):
     item_id: int
     item_name: str
+    category_name: str | None = None
     unit: str
     rate: Decimal
     opening_balance: Decimal

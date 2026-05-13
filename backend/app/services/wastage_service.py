@@ -99,7 +99,7 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
                 db.add(StockLedger(
                     item_id=item.id,
                     txn_date=payload.wastage_date,
-                    txn_type=3, # Wastage
+                    txn_type=4, # Stock Adjustment
                     ref_table="wastage_items",
                     ref_id=entry.id,
                     qty_in=0,
@@ -216,7 +216,7 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
                 db.add(StockLedger(
                     item_id=item.id,
                     txn_date=payload.wastage_date,
-                    txn_type=3,  # Wastage
+                    txn_type=4,  # Stock Adjustment
                     ref_table="wastage_items",
                     ref_id=entry.id,
                     qty_in=0,

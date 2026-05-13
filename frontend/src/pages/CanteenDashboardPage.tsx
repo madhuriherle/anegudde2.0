@@ -63,122 +63,28 @@ const DashboardPage: React.FC = () => {
       {/* 3x2 Grid Layout */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 text-left">
         
-        {/* 1. Purchase Items List */}
-        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-[#D05E2D] uppercase tracking-wider">Purchase Items</CardTitle>
-            <div className="text-right">
-                <p className="text-base font-bold text-[#D05E2D] tracking-tight">{formatCurrency(today?.purchase_amount || 0)}</p>
-                <span className="text-[10px] text-text-main/60 font-bold uppercase tracking-normal">Total Value</span>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden">
-            <div className="h-[340px] overflow-y-auto">
-              <div className="divide-y divide-gray-50">
-                {today?.purchase_details?.length > 0 ? (
-                  today.purchase_details.map((item: any, idx: number) => (
-                    <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
-                      <div className="col-span-5 text-left text-[13px] font-bold text-text-main group-hover:text-[#8B1E1E] transition-colors pr-2 break-words leading-5">
-                        {item.item_name}
-                      </div>
-                      <div className="col-span-4 text-center text-[11px] font-bold text-text-main/80 group-hover:text-text-main transition-colors uppercase whitespace-nowrap">
-                        {Number(item.quantity).toLocaleString()} {item.unit_name}
-                      </div>
-                      <div className="col-span-3 text-right text-[13px] font-bold text-text-main group-hover:text-[#8B1E1E] transition-colors">
-                        {formatCurrency(item.amount)}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-20 text-center text-text-main/60 italic text-[11px] font-normal uppercase tracking-widest">No purchases today</div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 2. Usage Items List */}
-        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-[#D05E2D] uppercase tracking-wider">Usage Items</CardTitle>
-             <div className="text-right">
-                <p className="text-base font-bold text-[#D05E2D] tracking-tight">{formatCurrency(today?.consumption_value || 0)}</p>
-                <span className="text-[10px] text-text-main/60 font-bold uppercase tracking-normal">Consumed Value</span>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden">
-            <div className="h-[340px] overflow-y-auto">
-              <div className="divide-y divide-gray-50">
-                {today?.consumption_details?.length > 0 ? (
-                  today.consumption_details.map((item: any, idx: number) => (
-                    <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
-                      <div className="col-span-5 text-left text-[13px] font-bold text-text-main group-hover:text-[#B8860B] transition-colors pr-2 break-words leading-5">
-                        {item.item_name}
-                      </div>
-                      <div className="col-span-4 text-center text-[11px] font-bold text-text-main/80 group-hover:text-text-main/70 transition-colors uppercase whitespace-nowrap">
-                        {Number(item.quantity).toLocaleString()} {item.unit_name}
-                      </div>
-                      <div className="col-span-3 text-right text-[13px] font-bold text-text-main group-hover:text-[#B8860B]/80 transition-colors">
-                        {formatCurrency(item.amount)}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-20 text-center text-text-main/60 italic text-[11px] font-bold uppercase tracking-widest">No usage today</div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 3. Wastage Items List */}
-        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-[#D05E2D] uppercase tracking-wider">Wastage Items</CardTitle>
-             <div className="text-right">
-                <p className="text-base font-bold text-[#D05E2D] tracking-tight">{formatCurrency(today?.wastage_value || 0)}</p>
-                <span className="text-[10px] text-text-main/60 font-bold uppercase tracking-normal">Estimated Loss</span>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden">
-            <div className="h-[340px] overflow-y-auto">
-              <div className="divide-y divide-gray-50">
-                {today?.wastage_details?.length > 0 ? (
-                  today.wastage_details.map((item: any, idx: number) => (
-                    <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
-                      <div className="col-span-5 text-left text-[13px] font-bold text-text-main group-hover:text-[#4A3728] transition-colors pr-2 break-words leading-5">
-                        {item.menu_item_name}
-                      </div>
-                      <div className="col-span-4 text-center text-[11px] font-bold text-text-main/80 group-hover:text-text-main transition-colors uppercase whitespace-nowrap">
-                        {Number(item.quantity).toLocaleString()} {item.unit_name}
-                      </div>
-                      <div className="col-span-3 text-right text-[13px] font-bold text-text-main group-hover:text-[#4A3728]/80 transition-colors">
-                        {formatCurrency(item.amount)}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-20 text-center text-text-main/60 italic text-[11px] font-bold uppercase tracking-widest">No wastage today</div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 4. Token Issuance Activity */}
+        {/* 1. Total Tokens (Token Issuance Activity) */}
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white text-left min-h-[400px]">
           <CardHeader className="bg-white border-b border-gray-100 px-6 py-3.5 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-[#D05E2D] uppercase tracking-wider text-left">Latest Tokens</CardTitle>
+            <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider text-left">Total Tokens</CardTitle>
             <div className="text-right">
-                <p className="text-base font-bold text-[#D05E2D] tracking-tight">{Number(today?.tokens_issued || 0).toLocaleString()}</p>
-                <span className="text-[10px] text-text-main/60 font-bold uppercase tracking-normal text-nowrap">Devotees Served</span>
+                <div 
+                  className="text-amber-700 tracking-tight leading-none"
+                  style={{ 
+                    fontSize: '34px', 
+                    fontWeight: '800',
+                    display: 'block',
+                  }}
+                >
+                  {Number(today?.tokens_issued || 0).toLocaleString()}
+                </div>
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
              <div className="h-[340px] overflow-y-auto">
               {today?.token_details?.length > 0 ? (
                 <div>
-                  <div className="grid grid-cols-12 px-8 py-2.5 border-b border-gray-100 bg-gray-50/70 text-[9px] uppercase tracking-wider text-text-main/80 font-bold">
+                  <div className="grid grid-cols-12 px-8 py-2.5 border-b border-gray-100 bg-gray-50/70 text-[11px] uppercase tracking-wider text-text-main/80 font-bold">
                     <div className="col-span-4">Receipt No</div>
                     <div className="col-span-4 text-center">Time</div>
                     <div className="col-span-4 text-right">Token</div>
@@ -198,7 +104,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-text-main/60 p-20 italic text-center text-[11px] font-bold uppercase tracking-widest">
+                <div className="flex items-center justify-center h-full text-text-main/60 p-20 text-center text-[11px] font-bold uppercase tracking-widest">
                   No tokens distributed yet
                 </div>
               )}
@@ -206,49 +112,10 @@ const DashboardPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* 5. Top 5 Menu Wastage (Weekly) */}
-        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 bg-white overflow-hidden min-h-[400px]">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100 px-6 py-3.5">
-            <CardTitle className="text-sm font-medium text-[#D05E2D] uppercase tracking-wider">Top 5 Menu Wastage (Weekly)</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/wastages')} className="text-[9px] text-primary font-bold uppercase tracking-widest border border-primary/20 hover:bg-primary/5 px-2.5 h-6 rounded-lg">
-              Details
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0 h-[340px] overflow-y-auto">
-            {weeklyTopWastage.length > 0 ? (
-              <div>
-                <div className="grid grid-cols-12 px-6 py-2.5 border-b border-gray-100 bg-gray-50/70 text-[9px] uppercase tracking-wider text-text-main/80 font-bold">
-                  <div className="col-span-6">Menu Item</div>
-                  <div className="col-span-3 text-right">Qty</div>
-                  <div className="col-span-3 text-right">Loss</div>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {weeklyTopWastage.map((row: any, idx: number) => (
-                    <div key={`${row.menu_item_name}-${idx}`} className="px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors">
-                      <div className="grid grid-cols-12 items-center gap-2">
-                        <div className="col-span-6 text-[13px] text-text-main font-bold break-words leading-5">{row.menu_item_name}</div>
-                        <div className="col-span-3 text-right text-[11px] text-text-main/70 font-bold">{row.quantity.toFixed(3)} {row.unit_name}</div>
-                        <div className="col-span-3 text-right text-[13px] font-bold text-[#8B1E1E]">{formatCurrency(row.amount)}</div>
-                      </div>
-                      <div className="mt-1.5 h-1 w-full bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#8B1E1E]/80 transition-all duration-500" style={{ width: `${row.width}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-text-main/60 gap-3 border-2 border-dashed border-gray-100 rounded-2xl text-center font-bold uppercase tracking-widest text-[11px]">
-                <p>No weekly wastage data</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 6. Critical Low Stock Section */}
+        {/* 2. Low Stock (Critical Low Stock Section) */}
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col bg-white min-h-[400px]">
           <CardHeader className="bg-white border-b border-gray-100 px-6 py-3.5 flex flex-row items-center justify-between text-left">
-            <CardTitle className="text-sm font-medium text-[#D05E2D] uppercase tracking-wider">Low Stock</CardTitle>
+            <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Low Stock</CardTitle>
             <Button 
               onClick={() => navigate('/items')}
               variant="ghost"
@@ -285,6 +152,147 @@ const DashboardPage: React.FC = () => {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* 3. Usage Items List */}
+        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
+          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Usage Items</CardTitle>
+             <div className="text-right">
+                <p className="text-base font-black text-[#D05E2D] tracking-tight">{formatCurrency(today?.consumption_value || 0)}</p>
+                <span className="text-[10px] text-text-main/60 font-bold uppercase tracking-normal">Consumed Value</span>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 overflow-hidden">
+            <div className="h-[340px] overflow-y-auto">
+              <div className="divide-y divide-gray-50">
+                {today?.consumption_details?.length > 0 ? (
+                  today.consumption_details.map((item: any, idx: number) => (
+                    <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
+                      <div className="col-span-5 text-left text-[13px] font-bold text-text-main group-hover:text-[#B8860B] transition-colors pr-2 break-words leading-5">
+                        {item.item_name}
+                      </div>
+                      <div className="col-span-4 text-center text-[11px] font-bold text-text-main/80 group-hover:text-text-main/70 transition-colors uppercase whitespace-nowrap">
+                        {Number(item.quantity).toLocaleString()} {item.unit_name}
+                      </div>
+                      <div className="col-span-3 text-right text-[13px] font-bold text-text-main group-hover:text-[#B8860B]/80 transition-colors">
+                        {formatCurrency(item.amount)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-20 text-center text-text-main/60 text-[11px] font-bold uppercase tracking-widest">No usage today</div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4. Purchase Items List */}
+        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
+          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Purchase Items</CardTitle>
+            <div className="text-right">
+                <p className="text-base font-bold text-[#D05E2D] tracking-tight">{formatCurrency(today?.purchase_amount || 0)}</p>
+                <span className="text-[10px] text-text-main/60 font-bold uppercase tracking-normal">Total Value</span>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 overflow-hidden">
+            <div className="h-[340px] overflow-y-auto">
+              <div className="divide-y divide-gray-50">
+                {today?.purchase_details?.length > 0 ? (
+                  today.purchase_details.map((item: any, idx: number) => (
+                    <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
+                      <div className="col-span-5 text-left text-[13px] font-bold text-text-main group-hover:text-[#8B1E1E] transition-colors pr-2 break-words leading-5">
+                        {item.item_name}
+                      </div>
+                      <div className="col-span-4 text-center text-[11px] font-bold text-text-main/80 group-hover:text-text-main transition-colors uppercase whitespace-nowrap">
+                        {Number(item.quantity).toLocaleString()} {item.unit_name}
+                      </div>
+                      <div className="col-span-3 text-right text-[13px] font-bold text-text-main group-hover:text-[#8B1E1E] transition-colors">
+                        {formatCurrency(item.amount)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-20 text-center text-text-main/60 text-[11px] font-bold uppercase tracking-widest">No purchases today</div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 5. Wastage Items List */}
+        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
+          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Wastage Items</CardTitle>
+             <div className="text-right">
+                <p className="text-base font-bold text-[#D05E2D] tracking-tight">{formatCurrency(today?.wastage_value || 0)}</p>
+                <span className="text-[10px] text-text-main/60 font-bold uppercase tracking-normal">Estimated Loss</span>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 overflow-hidden">
+            <div className="h-[340px] overflow-y-auto">
+              <div className="divide-y divide-gray-50">
+                {today?.wastage_details?.length > 0 ? (
+                  today.wastage_details.map((item: any, idx: number) => (
+                    <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
+                      <div className="col-span-5 text-left text-[13px] font-bold text-text-main group-hover:text-[#4A3728] transition-colors pr-2 break-words leading-5">
+                        {item.menu_item_name}
+                      </div>
+                      <div className="col-span-4 text-center text-[11px] font-bold text-text-main/80 group-hover:text-text-main transition-colors uppercase whitespace-nowrap">
+                        {Number(item.quantity).toLocaleString()} {item.unit_name}
+                      </div>
+                      <div className="col-span-3 text-right text-[13px] font-bold text-text-main group-hover:text-[#4A3728]/80 transition-colors">
+                        {formatCurrency(item.amount)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-20 text-center text-text-main/60 text-[11px] font-bold uppercase tracking-widest">No wastage today</div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 6. Top 5 Menu Wastage (Weekly) */}
+        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 bg-white overflow-hidden min-h-[400px]">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100 px-6 py-3.5">
+            <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Top 5 Menu Wastage (Weekly)</CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/wastages')} className="text-[9px] text-primary font-bold uppercase tracking-widest border border-primary/20 hover:bg-primary/5 px-2.5 h-6 rounded-lg">
+              Details
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0 h-[340px] overflow-y-auto">
+            {weeklyTopWastage.length > 0 ? (
+              <div>
+                <div className="grid grid-cols-12 px-6 py-2.5 border-b border-gray-100 bg-gray-50/70 text-[11px] uppercase tracking-wider text-text-main/80 font-bold">
+                  <div className="col-span-6">Menu Item</div>
+                  <div className="col-span-3 text-right">Qty</div>
+                  <div className="col-span-3 text-right">Loss</div>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {weeklyTopWastage.map((row: any, idx: number) => (
+                    <div key={`${row.menu_item_name}-${idx}`} className="px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors">
+                      <div className="grid grid-cols-12 items-center gap-2">
+                        <div className="col-span-6 text-[13px] text-text-main font-bold break-words leading-5">{row.menu_item_name}</div>
+                        <div className="col-span-3 text-right text-[11px] text-text-main/70 font-bold">{row.quantity.toFixed(3)} {row.unit_name}</div>
+                        <div className="col-span-3 text-right text-[13px] font-bold text-[#8B1E1E]">{formatCurrency(row.amount)}</div>
+                      </div>
+                      <div className="mt-1.5 h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#8B1E1E]/80 transition-all duration-500" style={{ width: `${row.width}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-text-main/60 gap-3 border-2 border-dashed border-gray-100 rounded-2xl text-center font-bold uppercase tracking-widest text-[11px]">
+                <p>No weekly wastage data</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

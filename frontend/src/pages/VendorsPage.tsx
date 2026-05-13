@@ -314,7 +314,7 @@ const VendorsPage: React.FC = () => {
             <DialogTitle>Vendor Profile</DialogTitle>
             <DialogDescription className="sr-only">Vendor details</DialogDescription>
           </DialogHeader>
-          <div className="space-y-1 mt-4">
+          <div className="space-y-1 mt-4 mb-6">
             <DetailItem label="Vendor Name" value={viewingVendor?.vendor_name} />
             <DetailItem label="Contact Person" value={viewingVendor?.contact_person} />
             <DetailItem label="Primary Contact" value={viewingVendor?.contact_number} />
@@ -341,12 +341,12 @@ const VendorsPage: React.FC = () => {
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
-          <DialogHeader>
+          <DialogHeader className="mb-0">
             <DialogTitle>{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</DialogTitle>
             <DialogDescription className="sr-only">Vendor form</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="bg-white flex flex-col" autoComplete="off">
-            <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
+            <div className="space-y-4 px-6 pt-4 pb-6 overflow-y-auto max-h-[60vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                 <div>
                   <Label className="text-text-main">Vendor Name (Shop Name) *</Label>
@@ -400,7 +400,7 @@ const VendorsPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <DialogFooter className="gap-3 p-6 border-t border-border-temple/40 bg-gray-50">
+            <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 bg-gray-50">
               <Button type="button" variant="ghost" onClick={() => { setOpen(false); setEditingVendor(null); }}>Cancel</Button>
               <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Saving...' : 'Save'}</Button>
             </DialogFooter>

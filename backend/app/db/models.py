@@ -475,3 +475,40 @@ class TokenDetail(Base):
     __table_args__ = (
         {"postgresql_partition_by": "RANGE (created_at)"}
     )
+
+class PurchaseReturnEntry(Base):
+    __tablename__ = "purchase_return_entries"
+    id = Column(Integer, primary_key=True)
+    return_date = Column(Date, nullable=False)
+    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
+    purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=True)
+    total_return_amount = Column(Numeric(15, 3), nullable=False)
+    remarks = Column(Text, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    vendor = relationship("Vendor")
+    purchase_entry = relationship("PurchaseEntry")
+    user = relationship("User", foreign_keys=[user_id])
+    items = relationship("PurchaseReturnItem", back_populates="return_entry", cascade="all, delete-orphan")
+
+class PurchaseReturnItem(Base):
+    __tablename__ = "purchase_return_items"
+    id = Column(Integer, primary_key=True)
+    return_entry_id = Column(Integer, ForeignKey("purchase_return_entries.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    quantity = Column(Numeric(15, 3), nullable=False)
+    price = Column(Numeric(15, 3), nullable=False)
+    line_total = Column(Numeric(15, 3), nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    item = relationship("Item")
+    return_entry = relationship("PurchaseReturnEntry", back_populates="items")
+
+    @property
+    def item_name(self):
+        return self.item.item_name if self.item else None

@@ -321,25 +321,28 @@ const ItemsPage: React.FC = () => {
             <DialogDescription className="sr-only">Viewing item properties</DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-1 mt-4">
-            <DetailItem label="Item Name" value={viewingItem?.item_name} />
-            <DetailItem label="SL.NO" value={viewingItem?.serial_numbers?.[0]?.serial_number || '-'} />
-            <DetailItem label="Category" value={viewingItem?.category?.category_name} />
-            <DetailItem label="Unit" value={`${viewingItem?.unit?.unit_name} (${viewingItem?.unit?.unit_code})`} />
-            <DetailItem
-              label="Today Opening Stock"
-              value={formatQuantityWithUnit(todayOpeningByItemId.get(Number(viewingItem?.id)) ?? 0, viewingItem?.unit)}
-            />
-            <DetailItem 
-              label="Current Stock" 
-              value={formatQuantityWithUnit(viewingItem?.current_stock || 0, viewingItem?.unit)} 
-              valueClassName={cn(
-                "font-bold",
-                Number(viewingItem?.current_stock) <= Number(viewingItem?.min_stock_level) ? 'text-error' : 'text-primary'
-              )} 
-            />
-            <DetailItem label="Current Rate" value={formatCurrency(viewingItem?.default_price || 0)} />
-            <DetailItem label="Min. Stock Alert" value={formatQuantityWithUnit(viewingItem?.min_stock_level || 0, viewingItem?.unit)} />
+          <div className="space-y-6 py-2 mb-6 mt-4">
+            <div className="space-y-1">
+              <DetailItem label="Item ID" value={viewingItem?.id} />
+              <DetailItem label="Item Name" value={viewingItem?.item_name} />
+              <DetailItem label="Item Code" value={viewingItem?.serial_numbers?.[0]?.serial_number || '-'} />
+              <DetailItem label="Category" value={viewingItem?.category?.category_name} />
+              <DetailItem label="Unit" value={`${viewingItem?.unit?.unit_name} (${viewingItem?.unit?.unit_code})`} />
+              <DetailItem
+                label="Today Opening Stock"
+                value={formatQuantityWithUnit(todayOpeningByItemId.get(Number(viewingItem?.id)) ?? 0, viewingItem?.unit)}
+              />
+              <DetailItem 
+                label="Current Stock" 
+                value={formatQuantityWithUnit(viewingItem?.current_stock || 0, viewingItem?.unit)} 
+                valueClassName={cn(
+                  "font-bold",
+                  Number(viewingItem?.current_stock) <= Number(viewingItem?.min_stock_level) ? 'text-error' : 'text-primary'
+                )} 
+              />
+              <DetailItem label="Current Rate" value={formatCurrency(viewingItem?.default_price || 0)} />
+              <DetailItem label="Min. Stock Alert" value={formatQuantityWithUnit(viewingItem?.min_stock_level || 0, viewingItem?.unit)} />
+            </div>
           </div>
 
           <DialogFooter>
@@ -373,7 +376,7 @@ const ItemsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label className="text-text-main">SL.NO (Shortcut)</Label>
+                  <Label className="text-text-main">Item Code</Label>
                   <Input {...register('serial_number')} className="text-text-main" />
                   {errors.serial_number && <p className="text-xs text-red-500">{errors.serial_number.message}</p>}
                 </div>

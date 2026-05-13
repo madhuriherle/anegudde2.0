@@ -393,18 +393,18 @@ const UsageEntriesPage: React.FC = () => {
         Number(i.row.original.additional_cooking_persons || 0),
     },
     {
-      id: 'total_cleaning',
-      header: 'Total Cleaning Persons',
-      cell: (i) =>
-        Number(i.row.original.regular_cleaning_persons || 0) +
-        Number(i.row.original.additional_cleaning_persons || 0),
-    },
-    {
       id: 'total_serving',
       header: 'Total Serving Persons',
       cell: (i) =>
         Number(i.row.original.regular_serving_persons || 0) +
         Number(i.row.original.additional_serving_persons || 0),
+    },
+    {
+      id: 'total_cleaning',
+      header: 'Total Cleaning Persons',
+      cell: (i) =>
+        Number(i.row.original.regular_cleaning_persons || 0) +
+        Number(i.row.original.additional_cleaning_persons || 0),
     },
     {
       id: 'actions',
@@ -750,7 +750,7 @@ const UsageEntriesPage: React.FC = () => {
               </div>
 
               <div className="temple-form-section h-full xl:col-span-4">
-                <h4 className="temple-section-header mt-0 uppercase tracking-wider">item wasted</h4>
+                <h4 className="temple-section-header mt-0 uppercase tracking-wider">Menu Item Wastage</h4>
                 <div className="grid grid-cols-12 gap-2 mb-1 px-1 border-b border-border-temple/10 pb-1">
                   <div className="col-span-6"></div>
                   <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Qty</div>
@@ -793,11 +793,25 @@ const UsageEntriesPage: React.FC = () => {
                   </div>
 
                   {/* Raw Items Wastage */}
-                  <div className="space-y-2 pt-2">
+                  <div className="space-y-2 mt-6 pt-2">
+                    <h5 className="text-xs font-bold uppercase tracking-wide text-primary">Stock Adjustment</h5>
+                    {rawWastageFields.length > 0 && (
+                      <div className="grid grid-cols-12 gap-2 items-center px-2">
+                        <div className="col-span-4">
+                          <Label className="text-[10px] block">Item Code</Label>
+                        </div>
+                        <div className="col-span-4">
+                          <Label className="text-[10px] block">Item Name</Label>
+                        </div>
+                        <div className="col-span-3">
+                          <Label className="text-[10px] block">Adjustment Qty</Label>
+                        </div>
+                        <div className="col-span-1" />
+                      </div>
+                    )}
                     {rawWastageFields.map((field, index) => (
                       <div key={field.id} className="grid grid-cols-12 gap-2 items-center bg-bg-temple/20 p-2 rounded border border-border-temple/20 min-h-[42px]">
                         <div className="col-span-4">
-                          <Label className="text-[10px] mb-1 block">SL.NO</Label>
                           <Input
                             type="text"
                             className="h-8 text-[11px] bg-white"
@@ -821,7 +835,6 @@ const UsageEntriesPage: React.FC = () => {
                           />
                         </div>
                         <div className="col-span-4">
-                          <Label className="text-[10px] mb-1 block">Item Name</Label>
                           <Controller
                             name={`raw_wastage_items.${index}.item_id` as const}
                             control={control}
@@ -839,14 +852,13 @@ const UsageEntriesPage: React.FC = () => {
                           />
                         </div>
                         <div className="col-span-3">
-                          <Label className="text-[10px] mb-1 block">Wastage Qty</Label>
                           <Input 
                             type="text" 
                             className="h-8 w-[120px] text-xs bg-white" 
                             {...register(`raw_wastage_items.${index}.quantity` as const)} 
                           />
                         </div>
-                        <div className="col-span-1 flex justify-end pt-5">
+                        <div className="col-span-1 flex justify-end">
                           <Button 
                             type="button" 
                             variant="ghost" 

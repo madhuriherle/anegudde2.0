@@ -18,11 +18,13 @@ import { Badge } from '../components/ui/Badge';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 
-const txnTypes: Record<number, { label: string; icon: any; variant: "default" | "secondary" | "outline" | "error" }> = {
-  1: { label: 'Purchase', icon: <ShoppingCart className="h-3 w-3 mr-1" />, variant: 'default' },
-  2: { label: 'Usage Entry', icon: <Utensils className="h-3 w-3 mr-1" />, variant: 'error' },
-  3: { label: 'Wastage', icon: <HelpCircle className="h-3 w-3 mr-1" />, variant: 'secondary' },
-  4: { label: 'Adjustment', icon: <Settings2 className="h-3 w-3 mr-1" />, variant: 'outline' },
+const txnTypes: Record<number, { label: string; color: string }> = {
+  1: { label: 'Purchase', color: 'text-primary-main' },
+  2: { label: 'Usage Entry', color: 'text-red-600' },
+  3: { label: 'Wastage', color: 'text-orange-600' },
+  4: { label: 'Stock Adjustment', color: 'text-gray-600' },
+  5: { label: 'Purchase Return', color: 'text-purple-600' },
+  6: { label: 'Return to Stock', color: 'text-green-600' },
 };
 
 const ItemHistoryPage: React.FC = () => {
@@ -55,12 +57,11 @@ const ItemHistoryPage: React.FC = () => {
       accessorKey: 'txn_type',
       header: 'Action',
       cell: info => {
-        const type = txnTypes[info.getValue() as number] || { label: 'Unknown', variant: 'outline', icon: null };
+        const type = txnTypes[info.getValue() as number] || { label: 'Unknown', color: 'text-text-main' };
         return (
-          <Badge variant={type.variant} className="flex items-center w-fit">
-            {type.icon}
+          <span className={`font-bold text-[11px] uppercase tracking-wider ${type.color}`}>
             {type.label}
-          </Badge>
+          </span>
         );
       }
     },
@@ -70,9 +71,11 @@ const ItemHistoryPage: React.FC = () => {
       cell: info => {
         const val = Number(info.getValue());
         return (
-          <div className={`text-right ${val > 0 ? 'text-green-600' : 'text-text-main/30'}`}>
-            {val > 0 ? `+${val}` : '-'}
-            {val > 0 && item?.unit?.unit_code && <span className="ml-1 text-[10px] opacity-60 font-normal text-text-main">{item.unit.unit_code}</span>}
+          <div className={`text-right font-medium ${val > 0 ? 'text-green-600' : 'text-text-main/20'}`}>
+            {val > 0 ? val : '-'}
+            {val > 0 && item?.unit?.unit_code && (
+              <span className="ml-1 text-[10px] opacity-60 font-normal text-text-main">{item.unit.unit_code}</span>
+            )}
           </div>
         );
       }
@@ -83,9 +86,11 @@ const ItemHistoryPage: React.FC = () => {
       cell: info => {
         const val = Number(info.getValue());
         return (
-          <div className={`text-right ${val > 0 ? 'text-red-600' : 'text-text-main/30'}`}>
-            {val > 0 ? `-${val}` : '-'}
-            {val > 0 && item?.unit?.unit_code && <span className="ml-1 text-[10px] opacity-60 font-normal text-text-main">{item.unit.unit_code}</span>}
+          <div className={`text-right font-medium ${val > 0 ? 'text-red-600' : 'text-text-main/20'}`}>
+            {val > 0 ? val : '-'}
+            {val > 0 && item?.unit?.unit_code && (
+              <span className="ml-1 text-[10px] opacity-60 font-normal text-text-main">{item.unit.unit_code}</span>
+            )}
           </div>
         );
       }

@@ -186,7 +186,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
                 db.add(StockLedger(
                     item_id=item.id,
                     txn_date=payload.usage_date,
-                    txn_type=2,
+                    txn_type=6,
                     ref_table="consumption_entries:RAW_RETURN",
                     ref_id=entry.id,
                     qty_in=it.qty_returned,
@@ -397,7 +397,7 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
                 db.add(StockLedger(
                     item_id=item.id,
                     txn_date=payload.usage_date,
-                    txn_type=2,
+                    txn_type=6,
                     ref_table="consumption_entries:RAW_RETURN",
                     ref_id=existing.id,
                     qty_in=it.qty_returned,

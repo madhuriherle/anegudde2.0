@@ -134,6 +134,7 @@ def detailed_stock_summary_report(
             rows.append(DetailedStockSummaryRow(
                 item_id=item.id,
                 item_name=item.item_name,
+                category_name=item.category.category_name if item.category else "Uncategorized",
                 unit=item.unit.unit_code,
                 rate=rate,
                 opening_balance=ob,
@@ -261,6 +262,7 @@ def canteen_summary_report(
             rows.append(DetailedStockSummaryRow(
                 item_id=item.id,
                 item_name=item.item_name,
+                category_name=item.category.category_name if item.category else "Uncategorized",
                 unit=item.unit.unit_code,
                 rate=rate,
                 opening_balance=ob,

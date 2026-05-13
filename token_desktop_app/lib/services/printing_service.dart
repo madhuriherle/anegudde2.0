@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -9,7 +10,7 @@ import 'package:intl/intl.dart';
 
 class PrintingService {
   static const String _templeName =
-      '\u0C85\u0CA8\u0CC6\u0C97\u0CC1\u0CA1\u0CCD\u0CA1\u0CC6 \u0CB6\u0CCD\u0CB0\u0CC0 \u0CB5\u0CBF\u0CA8\u0CBE\u0CAF\u0C95 \u0CA6\u0CC7\u0CB5\u0CB8\u0CCD\u0CA5\u0CBE\u0CA8';
+      '\u0C86\u0CA8\u0CC6\u0C97\u0CC1\u0CA1\u0CCD\u0CA1\u0CC6 \u0CB6\u0CCD\u0CB0\u0CC0 \u0CB5\u0CBF\u0CA8\u0CBE\u0CAF\u0C95 \u0CA6\u0CC7\u0CB5\u0CB8\u0CCD\u0CA5\u0CBE\u0CA8';
   static const String _mahaPrasada =
       '\u0CAE\u0CB9\u0CBE \u0CAA\u0CCD\u0CB0\u0CB8\u0CBE\u0CA6';
   static const String _devoteeCountLabel =
@@ -25,7 +26,7 @@ class PrintingService {
       textDirection: ui.TextDirection.ltr,
       fontSize: fontSize,
       fontWeight: fontWeight,
-      fontFamily: 'Nirmala UI',
+      fontFamily: 'KannadaFont',
     );
     final paragraphBuilder = ui.ParagraphBuilder(paragraphStyle)
       ..pushStyle(
@@ -33,7 +34,7 @@ class PrintingService {
           color: const Color(0xFF000000),
           fontSize: fontSize,
           fontWeight: fontWeight,
-          fontFamily: 'Nirmala UI',
+          fontFamily: 'KannadaFont',
         ),
       )
       ..addText(text);
@@ -45,8 +46,9 @@ class PrintingService {
     final canvas = ui.Canvas(recorder);
     canvas.drawParagraph(paragraph, ui.Offset.zero);
     final picture = recorder.endRecording();
+    // Add extra width to prevent edge clipping
     final image = await picture.toImage(
-      maxWidth.ceil(),
+      (maxWidth + 4).ceil(),
       (paragraph.height + 2).ceil(),
     );
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -59,6 +61,7 @@ class PrintingService {
     required double startFontSize,
     required double minFontSize,
     required FontWeight fontWeight,
+    TextAlign textAlign = TextAlign.center, // Default to center
   }) async {
     double fontSize = startFontSize;
     ui.Paragraph? paragraph;
@@ -67,8 +70,9 @@ class PrintingService {
         textDirection: ui.TextDirection.ltr,
         fontSize: fontSize,
         fontWeight: fontWeight,
-        fontFamily: 'Nirmala UI',
+        fontFamily: 'KannadaFont',
         maxLines: 1,
+        textAlign: textAlign, // Apply alignment
       );
       final builder = ui.ParagraphBuilder(style)
         ..pushStyle(
@@ -76,43 +80,48 @@ class PrintingService {
             color: const Color(0xFF000000),
             fontSize: fontSize,
             fontWeight: fontWeight,
-            fontFamily: 'Nirmala UI',
+            fontFamily: 'KannadaFont',
           ),
         )
         ..addText(text);
       final p = builder.build()..layout(ui.ParagraphConstraints(width: maxWidth));
-      if (!p.didExceedMaxLines) {
+      
+      if (p.minIntrinsicWidth <= maxWidth) {
         paragraph = p;
         break;
       }
       fontSize -= 0.5;
     }
 
-    paragraph ??= (ui.ParagraphBuilder(
-      ui.ParagraphStyle(
+    // Fallback
+    if (paragraph == null) {
+      final style = ui.ParagraphStyle(
         textDirection: ui.TextDirection.ltr,
         fontSize: minFontSize,
         fontWeight: fontWeight,
-        fontFamily: 'Nirmala UI',
+        fontFamily: 'KannadaFont',
         maxLines: 1,
-      ),
-    )..pushStyle(
-        ui.TextStyle(
-          color: const Color(0xFF000000),
-          fontSize: minFontSize,
-          fontWeight: fontWeight,
-          fontFamily: 'Nirmala UI',
-        ),
-      )..addText(text))
-        .build()
-      ..layout(ui.ParagraphConstraints(width: maxWidth));
+        textAlign: textAlign,
+      );
+      final builder = ui.ParagraphBuilder(style)
+        ..pushStyle(
+          ui.TextStyle(
+            color: const Color(0xFF000000),
+            fontSize: minFontSize,
+            fontWeight: fontWeight,
+            fontFamily: 'KannadaFont',
+          ),
+        )
+        ..addText(text);
+      paragraph = builder.build()..layout(ui.ParagraphConstraints(width: maxWidth));
+    }
 
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
     canvas.drawParagraph(paragraph, ui.Offset.zero);
     final picture = recorder.endRecording();
     final image = await picture.toImage(
-      maxWidth.ceil(),
+      maxWidth.ceil(), // Use full maxWidth for the image to maintain centering
       (paragraph.height + 2).ceil(),
     );
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -122,29 +131,31 @@ class PrintingService {
   static Future<void> printToken(Map<String, dynamic> tokenData) async {
     final doc = pw.Document();
 
-    // Load Kannada font for the receipt
-    final kannadaFont = await PdfGoogleFonts.notoSansKannadaRegular();
-    final kannadaFontBold = await PdfGoogleFonts.notoSansKannadaBold();
+    // Use standard Helvetica fonts for English text to avoid TTF parsing issues
+    // Kannada text is rendered as images using Baloo Tamma 2 font for a traditional look
+    final fontRegular = pw.Font.helvetica();
+    final fontBold = pw.Font.helveticaBold();
 
     final date = DateFormat('dd-MM-yyyy').format(DateTime.now());
     final time = DateFormat('HH:mm:ss').format(DateTime.now());
     final tokenCount = tokenData['token_count'];
     final receiptNo = tokenData['receipt_number'];
-    const cardWidth = 56 * PdfPageFormat.mm;
-    const pageContentWidth = cardWidth - (4 * PdfPageFormat.mm);
+    const cardWidth = 72 * PdfPageFormat.mm; // Slightly more width
+    const pageContentWidth = cardWidth - (8 * PdfPageFormat.mm); // More padding inside
     final templeNameImage = pw.MemoryImage(
       await _renderKannadaSingleLineAsPng(
         _templeName,
-        startFontSize: 10,
-        minFontSize: 7.5,
+        startFontSize: 18, 
+        minFontSize: 8, // Allow it to go smaller to fit the long name
         fontWeight: FontWeight.w700,
         maxWidth: pageContentWidth,
       ),
     );
     final mahaPrasadaImage = pw.MemoryImage(
-      await _renderKannadaTextAsPng(
+      await _renderKannadaSingleLineAsPng(
         _mahaPrasada,
-        fontSize: 16,
+        startFontSize: 22, // Target size
+        minFontSize: 14,   // Scale down if needed
         fontWeight: FontWeight.w700,
         maxWidth: pageContentWidth,
       ),
@@ -152,15 +163,15 @@ class PrintingService {
     final devoteeCountLabelImage = pw.MemoryImage(
       await _renderKannadaSingleLineAsPng(
         _devoteeCountLabel,
-        startFontSize: 12,
-        minFontSize: 9,
+        startFontSize: 20, // Slightly reduced from 22
+        minFontSize: 16,
         fontWeight: FontWeight.w700,
-        maxWidth: pageContentWidth * 0.5,
+        maxWidth: pageContentWidth * 0.7, 
       ),
     );
 
-    const cardHeight = 70 * PdfPageFormat.mm;
-    const pageWidth = 62 * PdfPageFormat.mm;
+    const cardHeight = 85 * PdfPageFormat.mm; 
+    const pageWidth = 80 * PdfPageFormat.mm; // Standard 80mm width for thermal printers
 
     doc.addPage(
       pw.Page(
@@ -170,31 +181,29 @@ class PrintingService {
           cardHeight,
           marginTop: 1 * PdfPageFormat.mm,
           marginBottom: 1 * PdfPageFormat.mm,
-          marginLeft: 3 * PdfPageFormat.mm,
-          marginRight: 0 * PdfPageFormat.mm,
+          marginLeft: 6 * PdfPageFormat.mm, // Increased from 2mm to avoid cut-off
+          marginRight: 4 * PdfPageFormat.mm,
         ),
         orientation: pw.PageOrientation.portrait,
         build: (pw.Context context) {
           return pw.Align(
-            alignment: pw.Alignment.topCenter,
-            child: pw.Padding(
-              padding: const pw.EdgeInsets.only(left: 0.3 * PdfPageFormat.mm),
-              child: pw.Container(
+            alignment: pw.Alignment.topLeft, // Changed from topCenter to allow margin to work
+            child: pw.Container(
               width: cardWidth,
               padding: const pw.EdgeInsets.fromLTRB(
-                3.0 * PdfPageFormat.mm,
-                3.5 * PdfPageFormat.mm,
-                3.0 * PdfPageFormat.mm,
-                2.5 * PdfPageFormat.mm,
+                4.0 * PdfPageFormat.mm, 
+                5.0 * PdfPageFormat.mm,
+                4.0 * PdfPageFormat.mm,
+                4.0 * PdfPageFormat.mm,
               ),
               decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.black, width: 1),
+                border: pw.Border.all(color: PdfColors.black, width: 1.2), // Thicker border
               ),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
                 mainAxisSize: pw.MainAxisSize.min,
                 children: [
-                  // Temple Name - force single-line feel with smaller font/image
+                  // Temple Name
                   pw.Center(
                     child: pw.Image(
                       templeNameImage,
@@ -202,7 +211,7 @@ class PrintingService {
                       fit: pw.BoxFit.contain,
                     ),
                   ),
-                  pw.SizedBox(height: 3),
+                  pw.SizedBox(height: 5),
                   
                   // Receipt Number, Date and Time
                   pw.Container(
@@ -210,61 +219,54 @@ class PrintingService {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('R.No.: $receiptNo', style: pw.TextStyle(font: kannadaFontBold, fontSize: 9.5)),
-                        pw.SizedBox(height: 0.8 * PdfPageFormat.mm),
+                        pw.Text('R.No.: $receiptNo', style: pw.TextStyle(font: fontBold, fontSize: 13)), // Increased from 9.5
+                        pw.SizedBox(height: 1.5 * PdfPageFormat.mm),
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            pw.Text('Date: $date', style: pw.TextStyle(font: kannadaFont, fontSize: 8.5)),
-                            pw.Text(time, style: pw.TextStyle(font: kannadaFont, fontSize: 8.5)),
+                            pw.Text('Date: $date', style: pw.TextStyle(font: fontRegular, fontSize: 12)), // Increased from 8.5
+                            pw.Text(time, style: pw.TextStyle(font: fontRegular, fontSize: 12)), // Increased from 8.5
                           ],
                         ),
                       ],
                     ),
                   ),
                   
-                  pw.SizedBox(height: 2),
+                  pw.SizedBox(height: 4),
                   
                   pw.Container(
                     width: double.infinity,
                     alignment: pw.Alignment.center,
                     child: pw.Image(
                       mahaPrasadaImage,
-                      width: pageContentWidth * 0.58,
+                      width: pageContentWidth * 0.75, // Increased width
                       fit: pw.BoxFit.contain,
                     ),
                   ),
                   
-                  pw.SizedBox(height: 2),
-                  pw.Divider(thickness: 0.8, color: PdfColors.black),
-                  pw.SizedBox(height: 2),
+                  pw.SizedBox(height: 4),
+                  pw.Divider(thickness: 1.0, color: PdfColors.black),
+                  pw.SizedBox(height: 4),
                   
-                  // Devotee Count - compact spacing between label and value
+                  // Devotee Count
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.center,
                     children: [
                       pw.Image(
                         devoteeCountLabelImage,
-                        width: pageContentWidth * 0.34,
+                        width: pageContentWidth * 0.55, // Increased width
                         fit: pw.BoxFit.contain,
                       ),
-                      pw.SizedBox(width: 2 * PdfPageFormat.mm),
+                      pw.SizedBox(width: 4 * PdfPageFormat.mm),
                       pw.Text(
                         '$tokenCount',
-                        style: pw.TextStyle(font: kannadaFontBold, fontSize: 13),
+                        style: pw.TextStyle(font: fontBold, fontSize: 24), // Increased from 13
                       ),
                     ],
                   ),
-                  pw.SizedBox(height: 8),
-                  pw.Center(
-                    child: pw.Text(
-                      '--- Thank You ---',
-                      style: pw.TextStyle(font: kannadaFont, fontSize: 8),
-                    ),
-                  ),
+                  pw.SizedBox(height: 6),
                 ],
               ),
-            ),
             ),
           );
         },
