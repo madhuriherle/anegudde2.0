@@ -387,7 +387,7 @@ const PurchasesPage: React.FC = () => {
 
       setViewBillPreviewLoading(true);
       try {
-        const res = await api.get(`/purchases/download_bill/${viewingPurchase.id}`, { responseType: 'blob' });
+        const res = await api.get(`/purchases/download_bill/${viewingPurchase.id}?t=${new Date().getTime()}`, { responseType: 'blob' });
         const blob = res.data as Blob;
         const blobUrl = window.URL.createObjectURL(blob);
         const mime = (blob.type || '').toLowerCase();

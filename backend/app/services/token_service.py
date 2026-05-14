@@ -110,7 +110,9 @@ def list_token_generations(db: Session, page: int = 1, page_size: int = 20):
     for item in items:
         actual_total = db.query(func.coalesce(func.sum(TokenDetail.token_count), 0))\
             .filter(TokenDetail.generation_id == item.id).scalar()
-        item.total_tokens = actual_total
+        # Only override if we actually found details, otherwise keep the stored total
+        if actual_total > 0:
+            item.total_tokens = actual_total
     
     return {
         "items": items,
@@ -129,6 +131,9 @@ def get_token_details_by_date(target_date: date, db: Session, page: int = 1, pag
     
     if generation:
         total_tokens = db.query(func.coalesce(func.sum(TokenDetail.token_count), 0)).filter(TokenDetail.generation_id == generation.id).scalar()
+        # Fallback to generation total if no details are found
+        if total_tokens == 0:
+            total_tokens = generation.total_tokens
         total_receipts = db.query(TokenDetail).filter(TokenDetail.generation_id == generation.id).count()
 
     if not generation:

@@ -136,7 +136,7 @@ const PurchaseReturnsPage: React.FC = () => {
     }
 
     const numQty = parseFloat(qty) || 0;
-    const originalItem = billItems.find((bi: any) => bi.item_id === itemId);
+    const originalItem = billItems?.find((bi: any) => bi.item_id === itemId);
     
     if (originalItem && numQty > originalItem.quantity) {
       showError(`Cannot return more than purchased (${originalItem.quantity})`);
@@ -243,167 +243,6 @@ const PurchaseReturnsPage: React.FC = () => {
     }
   ], [deleteMutation, showConfirm]);
 
-  if (isAdding) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setIsAdding(false)}
-            className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-all"
-            aria-label="Back"
-          >
-            <ArrowLeft className="w-6 h-6 text-text-main group-hover:-translate-x-1 transition-transform" />
-          </button>
-          <h2 className="page-title mb-0">{editingReturnId ? 'Edit Purchase Return' : 'New Purchase Return'}</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="md:col-span-1">
-            <CardContent className="p-6 space-y-4">
-              <div>
-                <Label>Return Date</Label>
-                <Input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)} />
-              </div>
-              <div>
-                <Label>Select Vendor</Label>
-                <Select 
-                  value={selectedVendor} 
-                  onChange={e => {
-                    setSelectedVendor(e.target.value);
-                    setSelectedBill('');
-                    setReturnItems([]);
-                  }}
-                >
-                  <option value="">Select Vendor</option>
-                  {vendors?.map((v: any) => (
-                    <option key={v.id} value={v.id}>{v.vendor_name}</option>
-                  ))}
-                </Select>
-              </div>
-              {selectedVendor && (
-                <div>
-                  <Label>Select Bill</Label>
-                  <Select 
-                    value={selectedBill} 
-                    onChange={e => {
-                      setSelectedBill(e.target.value);
-                      setReturnItems([]);
-                    }}
-                  >
-                    <option value="">Select Bill</option>
-                    {bills?.map((b: any) => (
-                      <option key={b.id} value={b.id}>
-                        Inv: {b.bill_no || 'N/A'} | {new Date(b.purchase_date).toLocaleDateString()} | ₹{parseFloat(b.total_amount).toLocaleString()}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
-              <div>
-                <Label>Remarks</Label>
-                <Input value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Reason for return..." />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="md:col-span-2">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-bold mb-4">Return Items</h3>
-              {selectedBill ? (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {availableBillItems.map((bi: any) => (
-                      <Button 
-                        key={bi.item_id} 
-                        variant="ghost" 
-                        size="sm" 
-                        className="bg-primary/5 hover:bg-primary/10 border border-primary/20"
-                        onClick={() => handleAddItem(bi)}
-                      >
-                        + {bi.item_name}
-                      </Button>
-                    ))}
-                    {availableBillItems.length === 0 && (
-                      <span className="text-sm text-gray-500">All bill items added</span>
-                    )}
-                  </div>
-
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2">Item</th>
-                        <th className="text-right py-2">Purchased Qty</th>
-                        <th className="text-right py-2">Return Qty</th>
-                        <th className="text-right py-2">Price</th>
-                        <th className="text-right py-2">Total</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {normalizedReturnItems.map(ri => (
-                        <tr key={ri.item_id} className="border-b">
-                          <td className="py-2 font-medium">{ri.item_name}</td>
-                          <td className="text-right py-2 text-gray-500">{ri.quantity} {ri.unit_name}</td>
-                          <td className="py-2 text-right">
-                            <Input 
-                              type="text"
-                              inputMode="decimal"
-                              className="w-24 ml-auto text-right h-8" 
-                              value={ri.return_qty}
-                              onFocus={() => {
-                                if (Number(ri.return_qty) === 0) {
-                                  setReturnItems(prev => prev.map(p =>
-                                    p.item_id === ri.item_id ? { ...p, return_qty: '' as any } : p
-                                  ));
-                                }
-                              }}
-                              onChange={e => handleQtyChange(ri.item_id, e.target.value)}
-                            />
-                          </td>
-                          <td className="text-right py-2">₹{parseFloat(ri.price).toLocaleString()}</td>
-                          <td className="text-right py-2 font-bold">
-                            ₹{(ri.return_qty * ri.price).toLocaleString()}
-                          </td>
-                          <td className="text-right pl-2">
-                            <button onClick={() => setReturnItems(prev => prev.filter(p => p.item_id !== ri.item_id))}>
-                              <Trash2 className="w-4 h-4 text-error" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {normalizedReturnItems.length > 0 && (
-                        <tr className="bg-gray-50 font-bold">
-                          <td colSpan={4} className="py-3 px-2">Total Return Amount</td>
-                          <td className="text-right py-3 px-2 text-primary">
-                            ₹{normalizedReturnItems.reduce((acc, curr) => acc + (curr.return_qty * curr.price), 0).toLocaleString()}
-                          </td>
-                          <td></td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-
-                  <Button 
-                    className="w-full mt-6" 
-                    onClick={handleSubmit}
-                    disabled={mutation.isPending || normalizedReturnItems.length === 0}
-                  >
-                    {editingReturnId ? 'Update Return' : 'Process Return'}
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-48 text-gray-400 border-2 border-dashed rounded-lg">
-                  <FileText className="w-12 h-12 mb-2 opacity-20" />
-                  <p>Please select a vendor and bill first</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -419,17 +258,192 @@ const PurchaseReturnsPage: React.FC = () => {
         </Button>
       </div>
 
-      <Card>
+      <div className="rounded-xl border border-border-temple overflow-hidden bg-white">
         <DataTable columns={columns} data={returns?.items || []} loading={isLoading} />
-      </Card>
+      </div>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={isAdding} onOpenChange={setIsAdding}>
+        <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col border-border-temple overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="text-text-main font-temple">
+              {editingReturnId ? 'Edit Purchase Return' : 'New Purchase Return'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto py-4 pr-1">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <Card className="xl:col-span-1 border-border-temple">
+                <CardContent className="p-6 space-y-5">
+                  <div className="space-y-1.5">
+                    <Label className="text-text-main font-medium">Return Date *</Label>
+                    <Input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)} className="h-10 text-text-main" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-text-main font-medium">Select Vendor *</Label>
+                    <Select 
+                      value={selectedVendor} 
+                      className="h-10 text-text-main"
+                      onChange={e => {
+                        setSelectedVendor(e.target.value);
+                        setSelectedBill('');
+                        setReturnItems([]);
+                      }}
+                    >
+                      <option value="">Select Vendor</option>
+                      {vendors?.map((v: any) => (
+                        <option key={v.id} value={v.id}>{v.vendor_name}</option>
+                      ))}
+                    </Select>
+                  </div>
+                  {selectedVendor && (
+                    <div className="space-y-1.5">
+                      <Label className="text-text-main font-medium">Select Bill / Invoice *</Label>
+                      <Select 
+                        value={selectedBill} 
+                        className="h-10 text-text-main"
+                        onChange={e => {
+                          setSelectedBill(e.target.value);
+                          setReturnItems([]);
+                        }}
+                      >
+                        <option value="">Select Bill</option>
+                        {bills?.map((b: any) => (
+                          <option key={b.id} value={b.id}>
+                            Inv: {b.bill_no || 'N/A'} | {new Date(b.purchase_date).toLocaleDateString()} | ₹{parseFloat(b.total_amount).toLocaleString()}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label className="text-text-main font-medium">Remarks</Label>
+                    <Input value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Reason for return..." className="h-10 text-text-main" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="xl:col-span-2 border-border-temple">
+                <CardContent className="p-6">
+                  <h3 className="text-sm font-bold text-primary uppercase tracking-widest mb-6">Return Items</h3>
+                  {selectedBill ? (
+                    <div className="space-y-6">
+                      <div className="flex flex-wrap gap-2 p-3 bg-bg-temple/20 rounded-lg border border-border-temple/40">
+                        <p className="w-full text-[10px] font-bold text-text-main/50 uppercase tracking-widest mb-1">Add Items from Bill:</p>
+                        {availableBillItems.map((bi: any) => (
+                          <Button 
+                            key={bi.item_id} 
+                            variant="ghost" 
+                            size="sm" 
+                            className="bg-white hover:bg-bg-temple border border-border-temple/60 text-text-main text-xs"
+                            onClick={() => handleAddItem(bi)}
+                          >
+                            + {bi.item_name}
+                          </Button>
+                        ))}
+                        {availableBillItems.length === 0 && (
+                          <span className="text-sm text-text-main/50 italic py-1 px-2">All bill items added</span>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl border border-border-temple overflow-hidden shadow-sm">
+                        <table className="w-full text-sm">
+                          <thead className="bg-bg-temple border-b border-border-temple">
+                            <tr>
+                              <th className="text-left px-4 py-3 font-bold text-text-main">Item</th>
+                              <th className="text-right px-4 py-3 font-bold text-text-main">Purchased Qty</th>
+                              <th className="text-right px-4 py-3 font-bold text-text-main w-32">Return Qty</th>
+                              <th className="text-right px-4 py-3 font-bold text-text-main">Price</th>
+                              <th className="text-right px-4 py-3 font-bold text-text-main">Total</th>
+                              <th className="w-12"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border-temple/40">
+                            {normalizedReturnItems.map(ri => (
+                              <tr key={ri.item_id} className="bg-white hover:bg-bg-temple/5 transition-colors">
+                                <td className="px-4 py-3 font-medium text-text-main">{ri.item_name}</td>
+                                <td className="text-right px-4 py-3 text-text-main/70">{ri.quantity} {ri.unit_name}</td>
+                                <td className="px-4 py-3">
+                                  <Input 
+                                    type="text"
+                                    inputMode="decimal"
+                                    className="w-full text-right h-9 border-primary/30 focus:border-primary font-bold" 
+                                    value={ri.return_qty}
+                                    onFocus={() => {
+                                      if (Number(ri.return_qty) === 0) {
+                                        setReturnItems(prev => prev.map(p =>
+                                          p.item_id === ri.item_id ? { ...p, return_qty: '' as any } : p
+                                        ));
+                                      }
+                                    }}
+                                    onChange={e => handleQtyChange(ri.item_id, e.target.value)}
+                                  />
+                                </td>
+                                <td className="text-right px-4 py-3 text-text-main font-medium">₹{parseFloat(ri.price).toLocaleString()}</td>
+                                <td className="text-right px-4 py-3 font-bold text-text-main">
+                                  ₹{(ri.return_qty * ri.price).toLocaleString()}
+                                </td>
+                                <td className="px-2">
+                                  <button 
+                                    onClick={() => setReturnItems(prev => prev.filter(p => p.item_id !== ri.item_id))}
+                                    className="p-1.5 rounded-full hover:bg-red-50 text-error transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-text-main/50 uppercase tracking-widest">Total Return Amount</span>
+                          <span className="text-3xl font-black text-primary">
+                            ₹{normalizedReturnItems.reduce((acc, curr) => acc + (curr.return_qty * curr.price), 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-64 text-text-main/30 border-2 border-dashed border-border-temple/60 rounded-xl bg-bg-temple/5">
+                      <FileText className="w-16 h-16 mb-3 opacity-20" />
+                      <p className="font-bold uppercase tracking-widest text-xs">Please select a vendor and bill first</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-3 mt-8">
+            <Button 
+              type="button"
+              variant="ghost" 
+              onClick={() => setIsAdding(false)}
+              className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold"
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest shadow-lg border-none" 
+              onClick={handleSubmit}
+              disabled={mutation.isPending || normalizedReturnItems.length === 0}
+            >
+              {mutation.isPending ? 'Saving...' : (editingReturnId ? 'Update' : 'Save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Purchase Return Details</DialogTitle>
+        <DialogContent className="max-w-2xl border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-text-main font-temple">Purchase Return Details</DialogTitle>
           </DialogHeader>
           {viewingReturn && (
-            <div className="space-y-6 py-2 mb-6">
+            <div className="space-y-6 py-4">
               <div className="space-y-0">
                 <DetailItem label="Return Date" value={new Date(viewingReturn.return_date).toLocaleDateString()} />
                 <DetailItem label="Vendor Name" value={viewingReturn.vendor?.vendor_name} />
@@ -439,23 +453,23 @@ const PurchaseReturnsPage: React.FC = () => {
 
               <div className="space-y-2">
                 <h4 className="text-sm font-bold text-primary uppercase tracking-wider">Returned Items</h4>
-                <div className="border rounded-lg overflow-hidden border-border-temple">
+                <div className="border rounded-lg overflow-hidden border-border-temple shadow-sm">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-bg-temple border-b border-border-temple">
                       <tr>
-                        <th className="px-4 py-2 font-bold text-text-main">Item Name</th>
-                        <th className="px-4 py-2 font-bold text-text-main text-right">Qty</th>
-                        <th className="px-4 py-2 font-bold text-text-main text-right">Price</th>
-                        <th className="px-4 py-2 font-bold text-text-main text-right">Total</th>
+                        <th className="px-4 py-3 font-bold text-text-main">Item Name</th>
+                        <th className="px-4 py-3 font-bold text-text-main text-right">Qty</th>
+                        <th className="px-4 py-3 font-bold text-text-main text-right">Price</th>
+                        <th className="px-4 py-3 font-bold text-text-main text-right">Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border-temple/40">
                       {viewingReturn.items.map((it: any) => (
                         <tr key={it.id} className="bg-white">
-                          <td className="px-4 py-2 text-text-main">{it.item_name || 'N/A'}</td>
-                          <td className="px-4 py-2 text-text-main text-right">{it.quantity}</td>
-                          <td className="px-4 py-2 text-text-main text-right">₹{parseFloat(it.price).toLocaleString()}</td>
-                          <td className="px-4 py-2 text-text-main text-right font-medium">₹{parseFloat(it.line_total).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-text-main font-medium">{it.item_name || 'N/A'}</td>
+                          <td className="px-4 py-3 text-text-main text-right">{it.quantity}</td>
+                          <td className="px-4 py-3 text-text-main text-right">₹{parseFloat(it.price).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-text-main text-right font-bold text-primary">₹{parseFloat(it.line_total).toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -464,7 +478,7 @@ const PurchaseReturnsPage: React.FC = () => {
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="border-t border-border-temple/40 pt-4">
             <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10 border-none shadow-none">Close</Button>
           </DialogFooter>
         </DialogContent>

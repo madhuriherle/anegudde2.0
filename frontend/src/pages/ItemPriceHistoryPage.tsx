@@ -42,7 +42,7 @@ const ItemPriceHistoryPage: React.FC = () => {
           </Button>
           <div className="flex items-baseline gap-2">
             <h2 className="page-title">Price History</h2>
-            <p className="text-sm text-secondary/60 font-medium">:{item?.item_name || 'Loading...'}</p>
+            <span className="text-2xl font-semibold font-temple text-secondary/70">:{item?.item_name || 'Loading...'}</span>
           </div>
         </div>
       </div>

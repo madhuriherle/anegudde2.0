@@ -209,7 +209,7 @@ class PurchaseEntry(Base):
     vendor = relationship("Vendor", foreign_keys=[vendor_id])
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("PurchaseItem", back_populates="purchase_entry", cascade="all, delete-orphan")
-    bills = relationship("PurchaseBill", back_populates="purchase_entry", cascade="all, delete-orphan")
+    bills = relationship("PurchaseBill", back_populates="purchase_entry", cascade="all, delete-orphan", order_by="desc(PurchaseBill.id)")
 
 class PurchaseBill(Base):
     __tablename__ = "purchase_bills"

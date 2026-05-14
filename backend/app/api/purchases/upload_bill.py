@@ -26,6 +26,18 @@ async def upload_purchase_bill(
         if not entry:
             raise HTTPException(status_code=404, detail="Purchase not found")
 
+        # Delete existing bills for this purchase first
+        old_bills = db.query(PurchaseBill).filter(PurchaseBill.purchase_id == purchase_id).all()
+        for old_bill in old_bills:
+            try:
+                old_path = BASE_DIR / old_bill.file_path
+                if old_path.exists() and old_path.is_file():
+                    old_path.unlink()
+            except Exception as e:
+                print(f"DEBUG: Failed to delete old bill file {old_bill.file_path}: {e}")
+            db.delete(old_bill)
+        db.flush()
+
         # Create hierarchical folder: uploads/purchase_bills/YYYY/MM
         now = datetime.now()
         year = now.strftime("%Y")

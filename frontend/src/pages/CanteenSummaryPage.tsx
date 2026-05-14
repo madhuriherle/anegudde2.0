@@ -284,27 +284,27 @@ const CanteenSummaryPage: React.FC = () => {
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="border border-border-temple rounded-md p-3">
                   <div className="text-[12px] uppercase font-bold border-b border-border-temple/30 pb-1 mb-2">Day Snapshot</div>
-                  <div className="space-y-1.5 text-[12px]">
-                    <div className="flex justify-between">
-                      <span className="font-bold text-[13px]">No. of Mahaprasada Devotees</span>
-                      <span className="font-extrabold text-[18px] leading-none">{devotees.toLocaleString()}</span>
+                  <div className="space-y-1 text-[12px]">
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1">
+                      <span className="font-bold">No. of Mahaprasada Devotees</span>
+                      <span className="font-extrabold text-[14px]">: {devotees.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1">
                       <span className="font-bold">No. of Times Cooked</span>
-                      <span className="font-extrabold">{timesCooked}</span>
+                      <span className="font-extrabold">: {timesCooked}</span>
                     </div>
                   </div>
                   <div className="border-b border-border-temple/30 pb-1 mt-3 mb-2"></div>
                   <div className="space-y-1 text-[12px]">
-                    <div className="grid grid-cols-[220px_auto] items-baseline gap-1"><span className="font-semibold">Regular Cooking Persons</span><span className="font-bold">: {Number(footer?.regular_cooking_persons ?? 0)}</span></div>
-                    <div className="grid grid-cols-[220px_auto] items-baseline gap-1"><span className="font-semibold">Additional Cooking Persons</span><span className="font-bold">: {Number(footer?.additional_cooking_persons ?? 0)}</span></div>
-                    <div className="grid grid-cols-[220px_auto] items-baseline gap-1"><span className="font-semibold">Total Cooking Persons</span><span className="font-bold">: {Number(footer?.total_cooking_persons ?? 0)}</span></div>
-                    <div className="grid grid-cols-[220px_auto] items-baseline gap-1"><span className="font-semibold">Regular Serving Persons</span><span className="font-bold">: {Number(footer?.regular_serving_persons ?? 0)}</span></div>
-                    <div className="grid grid-cols-[220px_auto] items-baseline gap-1"><span className="font-semibold">Additional Serving Persons</span><span className="font-bold">: {Number(footer?.additional_serving_persons ?? 0)}</span></div>
-                    <div className="grid grid-cols-[220px_auto] items-baseline gap-1"><span className="font-semibold">Total Serving Persons</span><span className="font-bold">: {Number(footer?.total_serving_persons ?? 0)}</span></div>
-                    <div className="grid grid-cols-[220px_auto] items-baseline gap-1"><span className="font-semibold">Regular Cleaning Persons</span><span className="font-bold">: {Number(footer?.regular_cleaning_persons ?? 0)}</span></div>
-                    <div className="grid grid-cols-[220px_auto] items-baseline gap-1"><span className="font-semibold">Additional Cleaning Persons</span><span className="font-bold">: {Number(footer?.additional_cleaning_persons ?? 0)}</span></div>
-                    <div className="grid grid-cols-[220px_auto] items-baseline gap-1"><span className="font-semibold">Total Cleaning Persons</span><span className="font-bold">: {Number(footer?.total_cleaning_persons ?? 0)}</span></div>
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1"><span className="font-semibold">Regular Cooking Persons</span><span className="font-bold">: {Number(footer?.regular_cooking_persons ?? 0)}</span></div>
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1"><span className="font-semibold">Additional Cooking Persons</span><span className="font-bold">: {Number(footer?.additional_cooking_persons ?? 0)}</span></div>
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1"><span className="font-bold">Total Cooking Persons</span><span className="font-bold">: {Number(footer?.total_cooking_persons ?? 0)}</span></div>
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1 mt-1"><span className="font-semibold">Regular Serving Persons</span><span className="font-bold">: {Number(footer?.regular_serving_persons ?? 0)}</span></div>
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1"><span className="font-semibold">Additional Serving Persons</span><span className="font-bold">: {Number(footer?.additional_serving_persons ?? 0)}</span></div>
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1"><span className="font-bold">Total Serving Persons</span><span className="font-bold">: {Number(footer?.total_serving_persons ?? 0)}</span></div>
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1 mt-1"><span className="font-semibold">Regular Cleaning Persons</span><span className="font-bold">: {Number(footer?.regular_cleaning_persons ?? 0)}</span></div>
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1"><span className="font-semibold">Additional Cleaning Persons</span><span className="font-bold">: {Number(footer?.additional_cleaning_persons ?? 0)}</span></div>
+                    <div className="grid grid-cols-[185px_auto] items-baseline gap-1"><span className="font-bold">Total Cleaning Persons</span><span className="font-bold">: {Number(footer?.total_cleaning_persons ?? 0)}</span></div>
                   </div>
                 </div>
 
@@ -420,51 +420,58 @@ const CanteenSummaryPage: React.FC = () => {
           </tbody>
         </table>
 
-        <table className="w-full mt-4 text-[9px] border-collapse border border-black footer-table">
+        <table className="w-full mt-2 text-[8px] border-collapse border border-black footer-table" style={{ pageBreakInside: 'avoid' }}>
           <thead>
-            <tr className="bg-gray-100 uppercase font-bold">
-              <th className="border border-black p-1 text-left w-1/3">Daily Summary</th>
-              <th className="border border-black p-1 text-left w-1/3">Manpower</th>
-              <th className="border border-black p-1 text-left w-1/3">Wastage</th>
+            <tr className="bg-gray-100 uppercase font-bold text-[9px]">
+              <th className="border border-black p-1 text-left w-[46%]">Daily Summary & Raw Returns</th>
+              <th className="border border-black p-1 text-left w-[18%]">Manpower</th>
+              <th className="border border-black p-1 text-left w-[36%]">Wastage</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td className="border border-black p-2 align-top">
-                <div className="space-y-1">
-                  <div className="flex justify-between"><b>Devotees Served</b> <span>{fmt2(devotees)}</span></div>
-                  <div className="flex justify-between"><b>Batches Cooked</b> <span>{fmt2(timesCooked)}</span></div>
-                  {rawReturns.length > 0 && <div className="mt-1 pt-1 border-t border-black/10"><b>Raw Returns:</b></div>}
-                  {rawReturns.map((r: any) => (
-                    <div key={`print-return-${r.item_name}`} className="flex justify-between">
-                      <span>{r.item_name} Remained</span>
-                      <span>{Number(r.qty_returned).toFixed(3)} {r.unit}</span>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-[130px_auto] items-baseline gap-1 mb-2">
+                  <b>No. of Mahaprasada Devotees</b> 
+                  <span className="font-bold">: {devotees}</span>
+                  <b>No. of Times Cooked</b> 
+                  <span className="font-bold">: {timesCooked}</span>
+                </div>
+                
+                <div className="pt-1 border-t border-black/20">
+                  <div className="font-bold mb-1 uppercase text-[7px] opacity-70">Raw Returns (Remained)</div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+                    {rawReturnRowsAllItems.map((r: any) => (
+                      <div key={`print-return-${r.item_name}`} className="grid grid-cols-[115px_auto] items-baseline gap-1 leading-tight">
+                        <span className="truncate overflow-hidden" title={r.item_name}>{r.item_name}</span>
+                        <span className="font-bold">: {Number(r.qty_returned).toFixed(3)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </td>
               <td className="border border-black p-2 align-top">
                 <div className="space-y-0.5">
                   {personRows.map(([label, value]) => (
-                    <div key={`print-person-${label as string}`} className="flex justify-between">
-                      <span>{label as string}</span>
-                      <span>{fmt2(value as number)}</span>
+                    <div key={`print-person-${label as string}`} className="grid grid-cols-[100px_auto] items-baseline gap-1">
+                      <span className="text-[7px] leading-tight overflow-hidden truncate">{label as string}</span>
+                      <span className="font-bold">: {fmt2(value as number)}</span>
                     </div>
                   ))}
                 </div>
               </td>
               <td className="border border-black p-2 align-top">
                 <div className="flex flex-col h-full">
-                  <div className="space-y-0.5 flex-1">
-                    {wastageItems.map((w: any) => (
-                      <div key={`print-waste-${w.item_name}`} className="flex justify-between">
-                        <span>{w.item_name}</span>
-                        <span>{Number(w.qty).toFixed(3)} ({formatCurrency(w.approx_amount)})</span>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 flex-1">
+                    {wastageRowsForDisplay.map((w) => (
+                      <div key={`print-waste-${w.item_name}`} className="grid grid-cols-[100px_auto] items-baseline leading-tight">
+                        <span className="truncate overflow-hidden" title={w.item_name}>{w.item_name}</span>
+                        <span className="font-semibold">: {Number(w.qty).toFixed(3)}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="text-right font-bold mt-2 pt-1 border-t border-black">
-                    Total: {formatCurrency(wastageTotal || 0)}
+                  <div className="text-right font-bold mt-2 pt-1 border-t border-black text-[9px]">
+                    Total Wastage: {formatCurrency(wastageTotal || 0)}
                   </div>
                 </div>
               </td>
