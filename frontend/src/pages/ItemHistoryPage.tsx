@@ -1,29 +1,56 @@
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  ShoppingCart, 
-  Utensils, 
-  Settings2, 
-  HelpCircle,
-  ArrowLeft
+import {
+  ArrowLeft,
+  PackagePlus,
+  PackageMinus,
+  RotateCcw,
+  RotateCw,
+  Settings2,
+  Utensils,
+  type LucideIcon,
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
-import { Badge } from '../components/ui/Badge';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
+import { formatQuantityWithUnit } from '../utils/quantity';
 
-const txnTypes: Record<number, { label: string; color: string }> = {
-  1: { label: 'Purchase', color: 'text-primary-main' },
-  2: { label: 'Usage Entry', color: 'text-red-600' },
-  3: { label: 'Wastage', color: 'text-orange-600' },
-  4: { label: 'Stock Adjustment', color: 'text-gray-600' },
-  5: { label: 'Purchase Return', color: 'text-purple-600' },
-  6: { label: 'Return to Stock', color: 'text-green-600' },
+const txnTypes: Record<number, { label: string; className: string; icon: LucideIcon }> = {
+  1: {
+    label: 'Purchase',
+    className: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    icon: PackagePlus,
+  },
+  2: {
+    label: 'Usage Entry',
+    className: 'bg-red-100 text-red-800 border-red-300',
+    icon: Utensils,
+  },
+  3: {
+    label: 'Wastage',
+    className: 'bg-orange-100 text-orange-800 border-orange-300',
+    icon: PackageMinus,
+  },
+  4: {
+    label: 'Stock Adjustment',
+    className: 'bg-slate-200 text-slate-800 border-slate-400',
+    icon: Settings2,
+  },
+  5: {
+    label: 'Purchase Return',
+    className: 'bg-purple-100 text-purple-800 border-purple-300',
+    icon: RotateCcw,
+  },
+  6: {
+    label: 'Return to Stock',
+    className: 'bg-sky-100 text-sky-800 border-sky-300',
+    icon: RotateCw,
+  },
 };
 
 const ItemHistoryPage: React.FC = () => {
@@ -56,9 +83,15 @@ const ItemHistoryPage: React.FC = () => {
       accessorKey: 'txn_type',
       header: 'Action',
       cell: info => {
-        const type = txnTypes[info.getValue() as number] || { label: 'Unknown', color: 'text-text-main' };
+        const type = txnTypes[info.getValue() as number] || {
+          label: 'Unknown',
+          className: 'bg-gray-50 text-gray-700 border-gray-200',
+          icon: Settings2,
+        };
+        const Icon = type.icon;
         return (
-          <span className={`font-bold text-[11px] uppercase tracking-wider ${type.color}`}>
+          <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-bold uppercase tracking-wider shadow-sm ${type.className}`}>
+            <Icon className="h-3.5 w-3.5" />
             {type.label}
           </span>
         );
@@ -71,10 +104,7 @@ const ItemHistoryPage: React.FC = () => {
         const val = Number(info.getValue());
         return (
           <div className={`text-right font-medium ${val > 0 ? 'text-green-600' : 'text-text-main/20'}`}>
-            {val > 0 ? val : '-'}
-            {val > 0 && item?.unit?.unit_code && (
-              <span className="ml-1 text-[10px] opacity-60 font-normal text-text-main">{item.unit.unit_code}</span>
-            )}
+            {val > 0 ? formatQuantityWithUnit(val, item?.unit) : '-'}
           </div>
         );
       }
@@ -86,10 +116,7 @@ const ItemHistoryPage: React.FC = () => {
         const val = Number(info.getValue());
         return (
           <div className={`text-right font-medium ${val > 0 ? 'text-red-600' : 'text-text-main/20'}`}>
-            {val > 0 ? val : '-'}
-            {val > 0 && item?.unit?.unit_code && (
-              <span className="ml-1 text-[10px] opacity-60 font-normal text-text-main">{item.unit.unit_code}</span>
-            )}
+            {val > 0 ? formatQuantityWithUnit(val, item?.unit) : '-'}
           </div>
         );
       }
@@ -100,8 +127,7 @@ const ItemHistoryPage: React.FC = () => {
       cell: info => {
         return (
           <div className="text-right text-primary-main">
-            {info.getValue() as string}
-            {item?.unit?.unit_code && <span className="ml-1 text-[10px] opacity-60 font-normal">{item.unit.unit_code}</span>}
+            {formatQuantityWithUnit(info.getValue(), item?.unit)}
           </div>
         );
       }

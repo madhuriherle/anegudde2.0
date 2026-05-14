@@ -18,9 +18,14 @@ def list_purchase_returns(db: Session, page: int = 1, page_size: int = 20, q: st
         query = query.filter(PurchaseReturnEntry.vendor_id == vendor_id)
         
     if q:
-        like = f"%{q}%"
-        query = query.join(Vendor)
-        query = query.filter(Vendor.vendor_name.ilike(like))
+        q = q.strip()
+        try:
+            return_date = datetime.strptime(q, "%Y-%m-%d").date()
+            query = query.filter(PurchaseReturnEntry.return_date == return_date)
+        except ValueError:
+            like = f"%{q}%"
+            query = query.join(Vendor)
+            query = query.filter(Vendor.vendor_name.ilike(like))
 
     total = query.count()
     offset = (page - 1) * page_size

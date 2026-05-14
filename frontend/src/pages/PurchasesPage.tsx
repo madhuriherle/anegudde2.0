@@ -124,6 +124,16 @@ const PurchasesPage: React.FC = () => {
     return map;
   }, [items]);
 
+  const itemCodeByItemIdMap = useMemo(() => {
+    const map = new Map<number, string>();
+    items.forEach((i: any) => {
+      const serial = (i.serial_numbers || [])
+        .find((s: any) => Number(s?.status ?? 1) === 1)?.serial_number;
+      if (serial) map.set(Number(i.id), String(serial));
+    });
+    return map;
+  }, [items]);
+
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<any>({
     resolver: zodResolver(purchaseSchema) as any,
     defaultValues: {
@@ -290,7 +300,7 @@ const PurchasesPage: React.FC = () => {
             item_id: item.item_id,
             quantity: String(item.quantity),
             price: String(item.price),
-            search_id: String(item.item_id)
+            search_id: itemCodeByItemIdMap.get(Number(item.item_id)) || ''
           })),
         });
       } catch (err) {
@@ -780,11 +790,12 @@ const PurchasesPage: React.FC = () => {
                             className="w-full h-9 text-sm text-text-main font-bold"
                             onChange={(val) => {
                               itemField.onChange(val);
-                              setValue(`items.${index}.search_id`, String(val.target.value));
+                              const itemId = Number(val.target.value);
+                              setValue(`items.${index}.search_id`, itemCodeByItemIdMap.get(itemId) || '');
                             }}
                           >
                             <option value="" disabled hidden>Select Item</option>
-                            {items?.filter((i: any) => i.status === 1 || watchedItems?.[index]?.item_id === i.id).map((i: any) => (
+                            {items?.filter((i: any) => i.status === 1 || Number(watchedItems?.[index]?.item_id) === Number(i.id)).map((i: any) => (
                               <option key={i.id} value={i.id}>{i.item_name}</option>
                             ))}
                           </Select>

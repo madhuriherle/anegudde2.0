@@ -356,7 +356,7 @@ const CanteenSummaryPage: React.FC = () => {
                         <tr key={`snapshot-${label}`}>
                           <td className={`px-2 py-1.5 border-r border-border-temple ${label === 'No. of Mahaprasada Devotees' ? 'font-bold' : 'font-medium'}`}>{label}</td>
                           <td
-                            className="px-2 py-1.5 text-right font-bold"
+                            className="px-2 py-1.5 text-center font-bold"
                             style={label === 'No. of Mahaprasada Devotees' ? { fontSize: '14px' } : undefined}
                           >
                             {value}

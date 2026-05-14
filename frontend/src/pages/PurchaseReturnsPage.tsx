@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trash2, FileText, ArrowLeft } from 'lucide-react';
+import { Trash2, FileText, X } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
@@ -24,6 +24,7 @@ const PurchaseReturnsPage: React.FC = () => {
   const [returnItems, setReturnItems] = useState<any[]>([]);
   const [remarks, setRemarks] = useState('');
   const [returnDate, setReturnDate] = useState(new Date().toISOString().split('T')[0]);
+  const [filterDate, setFilterDate] = useState('');
   const [editingReturnId, setEditingReturnId] = useState<number | null>(null);
 
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -31,9 +32,11 @@ const PurchaseReturnsPage: React.FC = () => {
 
   // Data Fetching
   const { data: returns, isLoading } = useQuery({
-    queryKey: ['purchase-returns'],
+    queryKey: ['purchase-returns', filterDate],
     queryFn: async () => {
-      const res = await api.get('/purchases/list_returns');
+      const res = await api.get('/purchases/list_returns', {
+        params: filterDate ? { q: filterDate } : undefined
+      });
       return res.data;
     }
   });
@@ -261,6 +264,30 @@ const PurchaseReturnsPage: React.FC = () => {
         >
           Record Return
         </Button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-end gap-3 rounded-xl border border-border-temple bg-white p-4 shadow-sm">
+        <div className="space-y-1.5 w-full sm:w-64">
+          <Label className="text-text-main font-bold">Date</Label>
+          <div className="relative">
+            <Input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="h-10 pr-9 text-text-main"
+            />
+            {filterDate && (
+              <button
+                type="button"
+                aria-label="Clear date filter"
+                onClick={() => setFilterDate('')}
+                className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-text-light hover:bg-bg-temple hover:text-text-main"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="rounded-xl border border-border-temple overflow-hidden bg-white">
