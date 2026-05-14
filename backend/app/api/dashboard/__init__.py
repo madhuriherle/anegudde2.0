@@ -6,7 +6,10 @@ from .overview import router as overview_router
 from .today import router as today_router
 from .low_stock import router as low_stock_router
 
+from .canteen_summary import router as canteen_summary_router
+
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+router.include_router(canteen_summary_router)
 router.include_router(stock_trend_router)
 router.include_router(recent_activity_router)
 router.include_router(overview_router)
