@@ -450,7 +450,7 @@ const PurchaseReturnsPage: React.FC = () => {
               onClick={handleSubmit}
               disabled={mutation.isPending || normalizedReturnItems.length === 0}
             >
-              {mutation.isPending ? 'Saving...' : (editingReturnId ? 'Update' : 'Save')}
+              {mutation.isPending ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>
