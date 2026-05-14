@@ -80,6 +80,7 @@ const UsageEntriesPage: React.FC = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingConsumption, setViewingConsumption] = useState<any>(null);
   const [viewingWastages, setViewingWastages] = useState<any[]>([]);
+  const [viewingAdjustments, setViewingAdjustments] = useState<any[]>([]);
   const [editingConsumption, setEditingConsumption] = useState<any>(null);
   const [editingWastageEntryId, setEditingWastageEntryId] = useState<number | null>(null);
   const [customDate, setCustomDate] = useState<string>('');
@@ -116,6 +117,8 @@ const UsageEntriesPage: React.FC = () => {
   );
   const activeItems = useMemo(() => (items || []).filter((i: any) => i.status === 1), [items]);
   const activeMenuItems = useMemo(() => menuItems.filter((m: any) => m.status === 1), [menuItems]);
+
+  const displayKannadaName = (name: string) => String(name || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
 
   const serialToItemIdMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -403,7 +406,8 @@ const UsageEntriesPage: React.FC = () => {
       }));
 
       setViewingConsumption(fullConsumption);
-      setViewingWastages([...menuWastages, ...rawAdjustments]);
+      setViewingWastages(menuWastages);
+      setViewingAdjustments(rawAdjustments);
       setViewDialogOpen(true);
     } catch {
       showError('Failed to fetch record details');
@@ -504,7 +508,7 @@ const UsageEntriesPage: React.FC = () => {
             <DialogTitle className="text-text-main">Usage Summary</DialogTitle>
             <DialogDescription className="sr-only">Usage details</DialogDescription>
           </DialogHeader>
-          <div className="mt-4 grid grid-cols-1 xl:grid-cols-[0.9fr_1.1fr_1.1fr] gap-4 px-2 items-start">
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4 px-2 items-start">
             <div className="temple-form-section h-full">
               <div className="grid grid-cols-[240px_20px_1fr] gap-y-3 text-text-main">
                 <div className="font-semibold whitespace-nowrap">Usage Date</div><div>:</div><div className="whitespace-nowrap">{formatDate(viewingConsumption?.usage_date)}</div>
@@ -521,7 +525,8 @@ const UsageEntriesPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="temple-form-section h-full">
+            <div className="contents">
+            <div className="temple-form-section">
               <div className="pb-2">
                 <span className="text-base font-bold text-text-main">Raw Usage Items</span>
               </div>
@@ -532,35 +537,31 @@ const UsageEntriesPage: React.FC = () => {
                       <th className="px-4 py-3 border-b border-border-temple">Item</th>
                       <th className="px-4 py-3 border-b border-border-temple text-right">Used</th>
                       <th className="px-4 py-3 border-b border-border-temple text-right">Returned</th>
-                      <th className="px-4 py-3 border-b border-border-temple text-right">Net</th>
                     </tr>
                   </thead>
+                  </table>
+                <div className="max-h-[640px] overflow-y-auto">
+                <table className="w-full text-sm text-left">
                   <tbody className="divide-y divide-border-temple/40">
                     {(viewingConsumption?.items || []).filter((item: any) => Number(item.quantity_used || 0) > 0 || Number(item.qty_returned || 0) > 0).length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-4 py-3 text-text-main/60 text-center">No raw items</td>
+                        <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center">No raw items</td>
                       </tr>
                     ) : (
                       (viewingConsumption?.items || [])
                         .filter((item: any) => Number(item.quantity_used || 0) > 0 || Number(item.qty_returned || 0) > 0)
                         .map((item: any) => (
                         <tr key={item.id} className="hover:bg-bg-temple/30">
-                          <td className="px-4 py-3 text-text-main">{item.item?.item_name || items?.find((it: any) => it.id === item.item_id)?.item_name || `Unknown Item (${item.item_id})`}</td>
-                          <td className="px-4 py-3 text-right text-text-main">
+                          <td className="px-3 py-2 text-text-main">{displayKannadaName(item.item?.item_name || items?.find((it: any) => it.id === item.item_id)?.item_name || `Unknown Item (${item.item_id})`)}</td>
+                          <td className="px-3 py-2 text-right text-text-main whitespace-nowrap">
                             {formatQuantityWithUnit(
                               item.quantity_used || 0,
                               item.item?.unit || items?.find((it: any) => it.id === item.item_id)?.unit
                             )}
                           </td>
-                          <td className="px-4 py-3 text-right text-text-main">
+                          <td className="px-3 py-2 text-right text-text-main whitespace-nowrap">
                             {formatQuantityWithUnit(
                               item.qty_returned || 0,
-                              item.item?.unit || items?.find((it: any) => it.id === item.item_id)?.unit
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right text-text-main">
-                            {formatQuantityWithUnit(
-                              item.net_quantity || 0,
                               item.item?.unit || items?.find((it: any) => it.id === item.item_id)?.unit
                             )}
                           </td>
@@ -569,10 +570,11 @@ const UsageEntriesPage: React.FC = () => {
                     )}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
 
-            <div className="temple-form-section h-full">
+            <div className="temple-form-section">
               <div className="pb-2">
                 <span className="text-base font-bold text-text-main">Wastage Entries</span>
               </div>
@@ -580,11 +582,14 @@ const UsageEntriesPage: React.FC = () => {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-bg-temple text-text-main uppercase text-xs font-bold tracking-wider">
                     <tr>
-                      <th className="px-4 py-3 border-b border-border-temple">Item / Dish</th>
+                      <th className="px-4 py-3 border-b border-border-temple">Menu Item</th>
                       <th className="px-4 py-3 border-b border-border-temple text-right">Qty</th>
-                      <th className="px-4 py-3 border-b border-border-temple text-right">Approx Amt</th>
+                      <th className="px-4 py-3 border-b border-border-temple text-right whitespace-nowrap">Approx Amt</th>
                     </tr>
                   </thead>
+                  </table>
+                <div className="max-h-[640px] overflow-y-auto">
+                <table className="w-full text-sm text-left">
                   <tbody className="divide-y divide-border-temple/40">
                     {viewingWastages.filter((w: any) => Number(w.quantity || 0) > 0).length === 0 ? (
                       <tr>
@@ -595,13 +600,13 @@ const UsageEntriesPage: React.FC = () => {
                         .filter((w: any) => Number(w.quantity || 0) > 0)
                         .map((w: any, idx: number) => (
                         <tr key={`${w.entryId}-${idx}`} className="hover:bg-bg-temple/30">
-                          <td className="px-4 py-3 text-text-main">
-                            {w.menu_item_name}
+                          <td className="px-3 py-2 text-text-main">
+                            {displayKannadaName(w.menu_item_name)}
                           </td>
-                          <td className="px-4 py-3 text-right text-text-main">
+                          <td className="px-3 py-2 text-right text-text-main whitespace-nowrap">
                             {formatQuantityWithUnit(w.quantity || 0, { unit_name: w.unit_name, unit_code: w.unit_code })}
                           </td>
-                          <td className="px-4 py-3 text-right text-text-main">
+                          <td className="px-3 py-2 text-right text-text-main whitespace-nowrap">
                             {w.approx_amount != null ? formatCurrency(Number(w.approx_amount || 0)) : '-'}
                           </td>
                         </tr>
@@ -609,7 +614,40 @@ const UsageEntriesPage: React.FC = () => {
                     )}
                   </tbody>
                 </table>
+                </div>
               </div>
+            </div>
+
+            <div className="temple-form-section">
+            <div className="pb-2">
+              <span className="text-base font-bold text-text-main">Stock Adjustments</span>
+            </div>
+            <div className="rounded-md border border-border-temple overflow-hidden mt-1 text-sm">
+              <div className="grid grid-cols-[1fr_auto] bg-bg-temple text-text-main uppercase text-xs font-bold tracking-wider border-b border-border-temple">
+                <div className="px-4 py-3">Item</div>
+                <div className="px-4 py-3 text-right whitespace-nowrap">Adjustment Qty</div>
+              </div>
+              <div className="max-h-[640px] overflow-y-auto">
+              {viewingAdjustments.filter((a: any) => Number(a.quantity || 0) > 0).length === 0 ? (
+                <div className="px-4 py-3 text-text-main/60 text-center">No stock adjustments</div>
+              ) : (
+                viewingAdjustments
+                  .filter((a: any) => Number(a.quantity || 0) > 0)
+                  .map((a: any, idx: number) => (
+                    <div
+                      key={`${a.entryId}-${idx}`}
+                      className="flex items-center justify-between gap-4 px-3 py-2 border-b border-border-temple/40 last:border-b-0 hover:bg-bg-temple/30"
+                    >
+                      <span className="text-text-main">{displayKannadaName(a.menu_item_name)}</span>
+                      <span className="font-semibold text-text-main whitespace-nowrap">
+                        {formatQuantityWithUnit(a.quantity || 0, { unit_name: a.unit_name, unit_code: a.unit_code })}
+                      </span>
+                    </div>
+                  ))
+              )}
+              </div>
+            </div>
+            </div>
             </div>
           </div>
           <DialogFooter className="mt-6">

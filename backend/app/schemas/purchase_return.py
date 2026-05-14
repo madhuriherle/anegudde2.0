@@ -2,6 +2,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
 from .vendor import VendorOut
+from .purchase import PurchaseEntryOut
 
 class PurchaseReturnItemBase(BaseModel):
     item_id: int
@@ -16,6 +17,8 @@ class PurchaseReturnItemOut(PurchaseReturnItemBase):
     line_total: Decimal
     created_at: datetime
     item_name: str | None = None
+    original_purchase_qty: Decimal | None = None
+    original_purchase_price: Decimal | None = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -37,4 +40,5 @@ class PurchaseReturnEntryOut(PurchaseReturnEntryBase):
     updated_at: datetime
     items: list[PurchaseReturnItemOut]
     vendor: VendorOut | None = None
+    purchase_entry: PurchaseEntryOut | None = None
     model_config = ConfigDict(from_attributes=True)

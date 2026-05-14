@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
@@ -6,15 +6,33 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../utils/currency';
 import { cn } from '../utils/cn';
+import { RefreshCw } from 'lucide-react';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const [refreshCount, setRefreshCount] = useState(0);
 
   // 1. Fetch Today Summary
-  const { data: today, isLoading: todayLoading } = useQuery({
+  const { data: today, isLoading: todayLoading, refetch: refetchToday, isFetching } = useQuery({
     queryKey: ['dashboard-today'],
     queryFn: async () => (await api.get('/dashboard/get_today_summary')).data,
   });
+
+  // Auto-refresh logic (3 times)
+  useEffect(() => {
+    if (refreshCount < 3) {
+      const timer = setInterval(() => {
+        setRefreshCount(prev => prev + 1);
+        refetchToday();
+      }, 10000); // 10 seconds
+      return () => clearInterval(timer);
+    }
+  }, [refreshCount, refetchToday]);
+
+  const handleManualRefresh = () => {
+    setRefreshCount(0);
+    refetchToday();
+  };
 
   // 2. Fetch Low Stock
   const { data: lowStock, isLoading: lowStockLoading } = useQuery({
@@ -66,7 +84,18 @@ const DashboardPage: React.FC = () => {
         {/* 1. Total Tokens (Token Issuance Activity) */}
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white text-left min-h-[400px]">
           <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider text-left">Total Tokens</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider text-left">Total Tokens</CardTitle>
+              {refreshCount >= 3 && (
+                <button 
+                  onClick={handleManualRefresh}
+                  className="p-1.5 rounded-full hover:bg-orange-50 text-[#D05E2D] transition-all hover:scale-110 active:rotate-180 duration-300"
+                  title="Refresh Tokens"
+                >
+                  <RefreshCw size={16} className={cn(isFetching && "animate-spin")} />
+                </button>
+              )}
+            </div>
             <div className="text-right">
                 <div 
                   className="text-amber-700 tracking-tight leading-none"
@@ -90,7 +119,7 @@ const DashboardPage: React.FC = () => {
                     <div className="col-span-4 text-right">Token</div>
                   </div>
                   <div className="divide-y divide-gray-50">
-                    {today.token_details.slice(0, 20).map((row: any, idx: number) => (
+                    {today.token_details.slice(0, 5).map((row: any, idx: number) => (
                       <div key={idx} className="grid grid-cols-12 items-center px-8 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
                         <div className="col-span-4 text-[13px] text-text-main font-bold">{row.receipt_no}</div>
                         <div className="col-span-4 text-center text-[11px] text-text-main/70 font-bold">
@@ -159,9 +188,6 @@ const DashboardPage: React.FC = () => {
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
           <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Usage Items</CardTitle>
-            <div className="text-right">
-                <div className="text-[28px] leading-none font-black text-[#D05E2D] tracking-tight">{formatCurrency(today?.consumption_value || 0)}</div>
-            </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
             <div className="h-[340px] overflow-y-auto">
@@ -192,9 +218,6 @@ const DashboardPage: React.FC = () => {
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
           <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Purchase Items</CardTitle>
-            <div className="text-right">
-                <div className="text-[28px] leading-none font-black text-[#D05E2D] tracking-tight">{formatCurrency(today?.purchase_amount || 0)}</div>
-            </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
             <div className="h-[340px] overflow-y-auto">
@@ -225,9 +248,6 @@ const DashboardPage: React.FC = () => {
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
           <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Wastage Items</CardTitle>
-             <div className="text-right">
-                <div className="text-[28px] leading-none font-black text-[#D05E2D] tracking-tight">{formatCurrency(today?.wastage_value || 0)}</div>
-            </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
             <div className="h-[340px] overflow-y-auto">

@@ -8,7 +8,6 @@ import OfficePage from './pages/OfficePage';
 import VendorsPage from './pages/VendorsPage';
 import ItemsPage from './pages/ItemsPage';
 import ItemHistoryPage from './pages/ItemHistoryPage';
-import ItemPriceHistoryPage from './pages/ItemPriceHistoryPage';
 import PurchasesPage from './pages/PurchasesPage';
 import PurchaseReturnsPage from './pages/PurchaseReturnsPage';
 import UsageEntriesPage from './pages/UsageEntriesPage';
@@ -38,7 +37,6 @@ function App() {
         <Route path="/vendors" element={<VendorsPage />} />
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/items/:id/history" element={<ItemHistoryPage />} />
-        <Route path="/items/:id/price-history" element={<ItemPriceHistoryPage />} />
         <Route path="/purchases" element={<PurchasesPage />} />
         <Route path="/purchases/returns" element={<PurchaseReturnsPage />} />
         <Route path="/daily-usage" element={<UsageEntriesPage />} />

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, date
 import math
+import re
 from fastapi import HTTPException
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session, joinedload
@@ -99,8 +100,27 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
         raise HTTPException(status_code=500, detail=f"Failed to issue token: {str(e)}")
 
 
-def list_token_generations(db: Session, page: int = 1, page_size: int = 20):
+def _parse_generation_query_dates(q: str | None) -> tuple[date | None, date | None]:
+    if not q:
+        return None, None
+
+    date_values = re.findall(r"\d{4}-\d{2}-\d{2}", q)
+    if len(date_values) >= 2:
+        return date.fromisoformat(date_values[0]), date.fromisoformat(date_values[1])
+    if len(date_values) == 1:
+        target_date = date.fromisoformat(date_values[0])
+        return target_date, target_date
+    return None, None
+
+
+def list_token_generations(db: Session, page: int = 1, page_size: int = 20, q: str | None = None):
     query = db.query(TokenGeneration).options(joinedload(TokenGeneration.creator))
+    start_date, end_date = _parse_generation_query_dates(q)
+
+    if start_date:
+        query = query.filter(TokenGeneration.date >= start_date)
+    if end_date:
+        query = query.filter(TokenGeneration.date <= end_date)
     
     total = query.count()
     offset = (page - 1) * page_size

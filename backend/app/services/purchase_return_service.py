@@ -9,7 +9,8 @@ def list_purchase_returns(db: Session, page: int = 1, page_size: int = 20, q: st
     query = db.query(PurchaseReturnEntry).options(
         joinedload(PurchaseReturnEntry.items).joinedload(PurchaseReturnItem.item),
         joinedload(PurchaseReturnEntry.vendor),
-        joinedload(PurchaseReturnEntry.user)
+        joinedload(PurchaseReturnEntry.user),
+        joinedload(PurchaseReturnEntry.purchase_entry)
     )
     query = query.filter(PurchaseReturnEntry.status == 1)
     
@@ -24,6 +25,17 @@ def list_purchase_returns(db: Session, page: int = 1, page_size: int = 20, q: st
     total = query.count()
     offset = (page - 1) * page_size
     items = query.order_by(PurchaseReturnEntry.id.desc()).offset(offset).limit(page_size).all()
+
+    # Map original purchase details for the View Dialog
+    for entry in items:
+        if entry.purchase_entry:
+            # Create a map of item_id -> purchase_item for quick lookup
+            purchase_map = {pi.item_id: pi for pi in entry.purchase_entry.items}
+            for ri in entry.items:
+                pi = purchase_map.get(ri.item_id)
+                if pi:
+                    ri.original_purchase_qty = pi.quantity
+                    ri.original_purchase_price = pi.price
 
     return {
         "items": items,

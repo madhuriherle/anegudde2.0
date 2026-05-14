@@ -12,6 +12,7 @@ import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/Dialog';
 import { DetailItem } from '../components/ui/DetailItem';
+import { cn } from '../utils/cn';
 
 const PurchaseReturnsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -121,17 +122,9 @@ const PurchaseReturnsPage: React.FC = () => {
     setIsAdding(true);
   };
 
-  const handleQtyChange = (itemId: number, qty: string) => {
-    const cleaned = qty.trim();
-    if (cleaned !== '' && !/^\d*\.?\d*$/.test(cleaned)) {
-      showError('Please enter valid numeric quantity');
-      return;
-    }
-
-    if (cleaned === '') {
-      setReturnItems(prev => prev.map(ri =>
-        ri.item_id === itemId ? { ...ri, return_qty: '' as any } : ri
-      ));
+  const handleQtyChange = async (itemId: number, qty: string) => {
+    // Allow numeric characters and decimal point
+    if (qty !== '' && !/^\d*\.?\d*$/.test(qty)) {
       return;
     }
 
@@ -139,17 +132,29 @@ const PurchaseReturnsPage: React.FC = () => {
     const originalItem = billItems?.find((bi: any) => bi.item_id === itemId);
     
     if (originalItem && numQty > originalItem.quantity) {
-      showError(`Cannot return more than purchased (${originalItem.quantity})`);
+      await showError(`Cannot return more than purchased (${originalItem.quantity})`);
+      // Clear the wrongly entered field after user clicks OK
+      setReturnItems(prev => prev.map(ri => 
+        ri.item_id === itemId ? { ...ri, return_qty: '' as any } : ri
+      ));
       return;
     }
 
     setReturnItems(prev => prev.map(ri => 
-      ri.item_id === itemId ? { ...ri, return_qty: numQty } : ri
+      ri.item_id === itemId ? { ...ri, return_qty: qty } : ri
     ));
   };
 
   const handleSubmit = async () => {
-    const validItems = returnItems.filter(ri => ri.return_qty > 0);
+    const validItems = returnItems.filter(ri => (parseFloat(ri.return_qty) || 0) > 0);
+    
+    // Check for any item exceeding purchased quantity
+    const exceedingItems = normalizedReturnItems.filter(ri => (parseFloat(ri.return_qty) || 0) > ri.quantity);
+    if (exceedingItems.length > 0) {
+      showError(`Cannot return more than purchased for: ${exceedingItems.map(i => i.item_name).join(', ')}`);
+      return;
+    }
+
     if (validItems.length === 0) {
       showError('Please add at least one item with a quantity to return');
       return;
@@ -164,7 +169,7 @@ const PurchaseReturnsPage: React.FC = () => {
         remarks,
         items: validItems.map(vi => ({
           item_id: vi.item_id,
-          quantity: vi.return_qty,
+          quantity: parseFloat(vi.return_qty),
           price: vi.price
         }))
       });
@@ -264,7 +269,10 @@ const PurchaseReturnsPage: React.FC = () => {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAdding} onOpenChange={setIsAdding}>
-        <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col border-border-temple overflow-hidden">
+        <DialogContent 
+          className="max-w-5xl max-h-[85vh] flex flex-col border-border-temple overflow-hidden"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="text-text-main font-temple">
               {editingReturnId ? 'Edit Purchase Return' : 'New Purchase Return'}
@@ -359,40 +367,51 @@ const PurchaseReturnsPage: React.FC = () => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border-temple/40">
-                            {normalizedReturnItems.map(ri => (
-                              <tr key={ri.item_id} className="bg-white hover:bg-bg-temple/5 transition-colors">
-                                <td className="px-4 py-3 font-medium text-text-main">{ri.item_name}</td>
-                                <td className="text-right px-4 py-3 text-text-main/70">{ri.quantity} {ri.unit_name}</td>
-                                <td className="px-4 py-3">
-                                  <Input 
-                                    type="text"
-                                    inputMode="decimal"
-                                    className="w-full text-right h-9 border-primary/30 focus:border-primary font-bold" 
-                                    value={ri.return_qty}
-                                    onFocus={() => {
-                                      if (Number(ri.return_qty) === 0) {
-                                        setReturnItems(prev => prev.map(p =>
-                                          p.item_id === ri.item_id ? { ...p, return_qty: '' as any } : p
-                                        ));
-                                      }
-                                    }}
-                                    onChange={e => handleQtyChange(ri.item_id, e.target.value)}
-                                  />
-                                </td>
-                                <td className="text-right px-4 py-3 text-text-main font-medium">₹{parseFloat(ri.price).toLocaleString()}</td>
-                                <td className="text-right px-4 py-3 font-bold text-text-main">
-                                  ₹{(ri.return_qty * ri.price).toLocaleString()}
-                                </td>
-                                <td className="px-2">
-                                  <button 
-                                    onClick={() => setReturnItems(prev => prev.filter(p => p.item_id !== ri.item_id))}
-                                    className="p-1.5 rounded-full hover:bg-red-50 text-error transition-colors"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
+                            {normalizedReturnItems.map(ri => {
+                              const isInvalid = (parseFloat(ri.return_qty) || 0) > ri.quantity;
+                              return (
+                                <tr key={ri.item_id} className={cn("bg-white hover:bg-bg-temple/5 transition-colors", isInvalid && "bg-red-50/50")}>
+                                  <td className="px-4 py-3 font-medium text-text-main">{ri.item_name}</td>
+                                  <td className="text-right px-4 py-3 text-text-main/70">{ri.quantity} {ri.unit_name}</td>
+                                  <td className="px-4 py-3">
+                                    <Input 
+                                      type="text"
+                                      inputMode="decimal"
+                                      className={cn(
+                                        "w-full text-right h-9 border-primary/30 focus:border-primary font-bold",
+                                        isInvalid && "border-red-500 focus:border-red-600 text-red-600"
+                                      )} 
+                                      value={ri.return_qty}
+                                      onFocus={() => {
+                                        if (parseFloat(ri.return_qty) === 0) {
+                                          setReturnItems(prev => prev.map(p =>
+                                            p.item_id === ri.item_id ? { ...p, return_qty: '' as any } : p
+                                          ));
+                                        }
+                                      }}
+                                      onChange={e => handleQtyChange(ri.item_id, e.target.value)}
+                                    />
+                                    {isInvalid && (
+                                      <p className="text-[10px] text-red-600 mt-1 font-bold text-right italic">
+                                        Max: {ri.quantity}
+                                      </p>
+                                    )}
+                                  </td>
+                                  <td className="text-right px-4 py-3 text-text-main font-medium">₹{parseFloat(ri.price).toLocaleString()}</td>
+                                  <td className="text-right px-4 py-3 font-bold text-text-main">
+                                    ₹{((parseFloat(ri.return_qty) || 0) * ri.price).toLocaleString()}
+                                  </td>
+                                  <td className="px-2">
+                                    <button 
+                                      onClick={() => setReturnItems(prev => prev.filter(p => p.item_id !== ri.item_id))}
+                                      className="p-1.5 rounded-full hover:bg-red-50 text-error transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -401,7 +420,7 @@ const PurchaseReturnsPage: React.FC = () => {
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-text-main/50 uppercase tracking-widest">Total Return Amount</span>
                           <span className="text-3xl font-black text-primary">
-                            ₹{normalizedReturnItems.reduce((acc, curr) => acc + (curr.return_qty * curr.price), 0).toLocaleString()}
+                            ₹{normalizedReturnItems.reduce((acc, curr) => acc + ((parseFloat(curr.return_qty) || 0) * curr.price), 0).toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -438,48 +457,95 @@ const PurchaseReturnsPage: React.FC = () => {
       </Dialog>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl border-border-temple">
+        <DialogContent className="max-w-7xl border-border-temple bg-[#FDFBF7]">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <DialogTitle className="text-text-main font-temple">Purchase Return Details</DialogTitle>
+            <DialogTitle className="text-text-main font-temple text-2xl">Purchase Return Details</DialogTitle>
           </DialogHeader>
           {viewingReturn && (
-            <div className="space-y-6 py-4">
-              <div className="space-y-0">
-                <DetailItem label="Return Date" value={new Date(viewingReturn.return_date).toLocaleDateString()} />
-                <DetailItem label="Vendor Name" value={viewingReturn.vendor?.vendor_name} />
-                <DetailItem label="Total Amount" value={`₹${parseFloat(viewingReturn.total_return_amount).toLocaleString()}`} valueClassName="font-bold text-primary text-base" />
-                <DetailItem label="Remarks" value={viewingReturn.remarks} />
-              </div>
+            <div className="py-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                {/* Left Side: Original Purchase Details */}
+                <Card className="border border-[#D8C8B8] shadow-sm bg-white overflow-hidden flex flex-col h-full">
+                  <div className="bg-[#F6EEDF] px-6 py-3 border-b border-[#D8C8B8]">
+                    <h3 className="text-sm font-black text-[#5D4037] uppercase tracking-widest">Original Purchase</h3>
+                  </div>
+                  <CardContent className="p-0 flex-1 flex flex-col">
+                    <div className="flex flex-col gap-0.5 p-6 bg-white border-b border-gray-100 min-h-[200px]">
+                      <DetailItem label="Invoice No" value={viewingReturn.purchase_entry?.bill_no || 'N/A'} valueClassName="font-bold text-[#5D4037]" />
+                      <DetailItem label="Purchase Date" value={viewingReturn.purchase_entry ? new Date(viewingReturn.purchase_entry.purchase_date).toLocaleDateString() : 'N/A'} />
+                      <DetailItem label="Bill Amount" value={viewingReturn.purchase_entry ? `₹${parseFloat(viewingReturn.purchase_entry.total_amount).toLocaleString()}` : 'N/A'} valueClassName="font-bold text-[#5D4037]" />
+                      <DetailItem label="Vendor" value={viewingReturn.vendor?.vendor_name || 'N/A'} />
+                    </div>
+                    <div className="flex-1 overflow-auto bg-gray-50/30">
+                      <table className="w-full text-sm text-left table-fixed">
+                        <thead className="bg-[#FAF7F2] border-b border-gray-200">
+                          <tr>
+                            <th className="px-6 py-3 font-bold text-[#7A5C4D]">Item</th>
+                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-28">Qty</th>
+                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-32">Price</th>
+                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-36">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {viewingReturn.items.map((it: any) => (
+                            <tr key={it.id} className="bg-white">
+                              <td className="px-6 py-4 text-[#3E2723] font-medium truncate" title={it.item_name}>{it.item_name || 'N/A'}</td>
+                              <td className="px-6 py-4 text-[#5D4037] text-right">{it.original_purchase_qty !== null ? it.original_purchase_qty : 'N/A'}</td>
+                              <td className="px-6 py-4 text-[#5D4037] text-right">₹{it.original_purchase_price !== null ? parseFloat(it.original_purchase_price).toLocaleString() : parseFloat(it.price).toLocaleString()}</td>
+                              <td className="px-6 py-4 text-[#3E2723] font-bold text-right">
+                                ₹{it.original_purchase_qty !== null && it.original_purchase_price !== null ? (parseFloat(it.original_purchase_qty) * parseFloat(it.original_purchase_price)).toLocaleString() : 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <div className="space-y-2">
-                <h4 className="text-sm font-bold text-primary uppercase tracking-wider">Returned Items</h4>
-                <div className="border rounded-lg overflow-hidden border-border-temple shadow-sm">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-bg-temple border-b border-border-temple">
-                      <tr>
-                        <th className="px-4 py-3 font-bold text-text-main">Item Name</th>
-                        <th className="px-4 py-3 font-bold text-text-main text-right">Qty</th>
-                        <th className="px-4 py-3 font-bold text-text-main text-right">Price</th>
-                        <th className="px-4 py-3 font-bold text-text-main text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-temple/40">
-                      {viewingReturn.items.map((it: any) => (
-                        <tr key={it.id} className="bg-white">
-                          <td className="px-4 py-3 text-text-main font-medium">{it.item_name || 'N/A'}</td>
-                          <td className="px-4 py-3 text-text-main text-right">{it.quantity}</td>
-                          <td className="px-4 py-3 text-text-main text-right">₹{parseFloat(it.price).toLocaleString()}</td>
-                          <td className="px-4 py-3 text-text-main text-right font-bold text-primary">₹{parseFloat(it.line_total).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {/* Right Side: Return Details */}
+                <Card className="border border-[#D8C8B8] shadow-sm bg-white overflow-hidden flex flex-col h-full">
+                  <div className="bg-[#F6EEDF] px-6 py-3 border-b border-[#D8C8B8] flex justify-between items-center">
+                    <h3 className="text-sm font-black text-[#5D4037] uppercase tracking-widest">Return Entry</h3>
+                    <span className="text-[11px] font-bold bg-[#5D4037] text-white px-2 py-0.5 rounded-full tracking-wider">RETURNED</span>
+                  </div>
+                  <CardContent className="p-0 flex-1 flex flex-col">
+                    <div className="flex flex-col gap-0.5 p-6 bg-white border-b border-gray-100 min-h-[200px]">
+                      <DetailItem label="Return Date" value={new Date(viewingReturn.return_date).toLocaleDateString()} />
+                      <DetailItem label="Total Refund" value={`₹${parseFloat(viewingReturn.total_return_amount).toLocaleString()}`} valueClassName="font-bold text-[#5D4037]" />
+                      <DetailItem label="Remarks" value={viewingReturn.remarks || 'None'} />
+                    </div>
+                    <div className="flex-1 overflow-auto bg-gray-50/30">
+                      <table className="w-full text-sm text-left table-fixed">
+                        <thead className="bg-[#FAF7F2] border-b border-gray-200">
+                          <tr>
+                            <th className="px-6 py-3 font-bold text-[#7A5C4D]">Item</th>
+                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-28">Qty</th>
+                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-32">Price</th>
+                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-36">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {viewingReturn.items.map((it: any) => (
+                            <tr key={it.id} className="bg-white">
+                              <td className="px-6 py-4 text-[#3E2723] font-medium truncate" title={it.item_name}>{it.item_name || 'N/A'}</td>
+                              <td className="px-6 py-4 text-[#5D4037] text-right">{it.quantity}</td>
+                              <td className="px-6 py-4 text-[#5D4037] text-right">₹{parseFloat(it.price).toLocaleString()}</td>
+                              <td className="px-6 py-4 text-[#3E2723] font-bold text-right">₹{parseFloat(it.line_total).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+
               </div>
             </div>
           )}
           <DialogFooter className="border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10 border-none shadow-none">Close</Button>
+            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10 border-none shadow-none uppercase font-black tracking-widest h-12 rounded-xl">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

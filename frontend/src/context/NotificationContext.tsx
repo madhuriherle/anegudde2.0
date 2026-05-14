@@ -76,7 +76,7 @@ const swalStyles = `
 interface NotificationContextType {
   showNotification: (message: string, severity?: 'success' | 'error' | 'warning' | 'info') => void;
   showSuccess: (message: string) => void;
-  showError: (message: string) => void;
+  showError: (message: string) => Promise<void>;
   showConfirm: (title: string, message: string, confirmText?: string, cancelText?: string) => Promise<boolean>;
 }
 
@@ -120,8 +120,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     });
   }, []);
 
-  const showError = useCallback((msg: string) => {
-    MySwal.fire({
+  const showError = useCallback(async (msg: string) => {
+    await MySwal.fire({
       icon: 'error',
       title: 'Oops...',
       text: msg,

@@ -165,75 +165,103 @@ export const StockSummaryPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="overflow-x-auto print:overflow-visible">
-          <table className="w-full text-[11px] border-collapse">
-            <thead className="bg-gray-50 border-b border-border-temple">
-              <tr className="text-text-main font-bold uppercase">
-                <th className="px-2 py-2 border-r border-border-temple text-left">Category</th>
-                <th className="px-2 py-2 border-r border-border-temple text-left"></th>
-                <th className="px-2 py-2 border-r border-border-temple text-right">Rate</th>
-                <th className="px-2 py-2 border-r border-border-temple text-right">Opening Stock</th>
-                <th className="px-2 py-2 border-r border-border-temple text-right">Stock Added</th>
-                <th className="px-2 py-2 border-r border-border-temple text-right">Stock Used</th>
-                <th className="px-2 py-2 border-r border-border-temple text-right">Usage Value</th>
-                <th className="px-2 py-2 border-r border-border-temple text-right">Returned to Vendor</th>
-                <th className="px-2 py-2 border-r border-border-temple text-right">Stock Adjust</th>
-                <th className="px-2 py-2 border-r border-border-temple text-right">Closing Stock</th>
-                <th className="px-2 py-2 text-right">Closing Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-temple/40">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={11} className="py-10 text-center">
-                    <div className="flex items-center justify-center gap-2 text-text-main">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Loading report...
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredRows.length === 0 ? (
-                <tr>
-                  <td colSpan={11} className="py-10 text-center text-text-main/60">No data found</td>
-                </tr>
-              ) : (
-                groupedRows.flatMap(([categoryName, rows]) =>
-                  rows.map((row: any, rowIndex: number) => (
-                    <tr key={row.item_id} className="hover:bg-bg-temple/20 transition-colors">
-                      <td className="px-2 py-1.5 border-r border-border-temple font-medium">
-                        {rowIndex === 0 ? toEnglishCategory(categoryName) : ''}
-                      </td>
-                      <td className="px-2 py-1.5 border-r border-border-temple font-medium">{row.item_name}</td>
-                      <td className="px-2 py-1.5 border-r border-border-temple text-right">{formatCurrency(row.rate)}</td>
-                      <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.opening_balance).toFixed(3)} {row.unit}</td>
-                      <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.purchase_qty).toFixed(3)} {row.unit}</td>
-                      <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.issue_qty).toFixed(3)} {row.unit}</td>
-                      <td className="px-2 py-1.5 border-r border-border-temple text-right">{formatCurrency(row.issue_value)}</td>
-                      <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
-                      <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
-                      <td className="px-2 py-1.5 border-r border-border-temple text-right font-bold">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
-                      <td className="px-2 py-1.5 text-right">{formatCurrency(row.closing_value)}</td>
-                    </tr>
-                  ))
-                )
-              )}
-            </tbody>
-            {grandTotals && (
-              <tfoot className="bg-gray-50 font-bold text-[13px] border-t border-border-temple">
-                <tr>
-                  <td colSpan={3} className="px-2 py-2 border-r border-border-temple text-left">GRAND TOTAL</td>
-                  <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.opening.toFixed(3)}</td>
-                  <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.purchase.toFixed(3)}</td>
-                  <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.issues.toFixed(3)}</td>
-                  <td className="px-2 py-2 border-r border-border-temple text-right">{formatCurrency(grandTotals.issue_val)}</td>
-                  <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.returns.toFixed(3)}</td>
-                  <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.adjust.toFixed(3)}</td>
-                  <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.closing.toFixed(3)}</td>
-                  <td className="px-2 py-2 text-right">{formatCurrency(grandTotals.closing_val)}</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
+        <div className="space-y-8 p-4 print:p-0">
+          {isLoading ? (
+            <div className="py-10 text-center">
+              <div className="flex items-center justify-center gap-2 text-text-main">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Loading report...
+              </div>
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="py-10 text-center text-text-main/60">No data found</div>
+          ) : (
+            groupedRows.map(([categoryName, rows]) => (
+              <section key={categoryName} className="space-y-3 print:break-inside-avoid">
+                <h2 className="text-sm font-black uppercase tracking-wide text-primary">
+                  {toEnglishCategory(categoryName)}
+                </h2>
+                <div className="overflow-x-auto print:overflow-visible rounded-md border border-border-temple">
+                  <table className="w-full table-fixed text-[11px] border-collapse">
+                    <colgroup>
+                      <col className="w-[17%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[10%]" />
+                      <col className="w-[10%]" />
+                      <col className="w-[9%]" />
+                      <col className="w-[10%]" />
+                      <col className="w-[12%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[9%]" />
+                      <col className="w-[7%]" />
+                    </colgroup>
+                    <thead className="bg-gray-50 border-b border-border-temple">
+                      <tr className="text-text-main font-bold uppercase">
+                        <th className="px-2 py-2 border-r border-border-temple text-left">Item Name</th>
+                        <th className="px-2 py-2 border-r border-border-temple text-right">Rate</th>
+                        <th className="px-2 py-2 border-r border-border-temple text-right">Opening Stock</th>
+                        <th className="px-2 py-2 border-r border-border-temple text-right">Stock Added</th>
+                        <th className="px-2 py-2 border-r border-border-temple text-right">Stock Used</th>
+                        <th className="px-2 py-2 border-r border-border-temple text-right">Usage Value</th>
+                        <th className="px-2 py-2 border-r border-border-temple text-right">Returned to Vendor</th>
+                        <th className="px-2 py-2 border-r border-border-temple text-right">Stock Adjust</th>
+                        <th className="px-2 py-2 border-r border-border-temple text-right">Closing Stock</th>
+                        <th className="px-2 py-2 text-right">Closing Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-temple/40">
+                      {rows.map((row: any) => (
+                        <tr key={row.item_id} className="hover:bg-bg-temple/20 transition-colors">
+                          <td className="px-2 py-1.5 border-r border-border-temple font-medium truncate" title={row.item_name}>{row.item_name}</td>
+                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{formatCurrency(row.rate)}</td>
+                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.opening_balance).toFixed(3)} {row.unit}</td>
+                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.purchase_qty).toFixed(3)} {row.unit}</td>
+                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.issue_qty).toFixed(3)} {row.unit}</td>
+                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{formatCurrency(row.issue_value)}</td>
+                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
+                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
+                          <td className="px-2 py-1.5 border-r border-border-temple text-right font-bold">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
+                          <td className="px-2 py-1.5 text-right">{formatCurrency(row.closing_value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ))
+          )}
+
+          {grandTotals && (
+            <div className="overflow-x-auto print:overflow-visible rounded-md border border-border-temple">
+              <table className="w-full table-fixed text-[11px] border-collapse">
+                <colgroup>
+                  <col className="w-[17%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[7%]" />
+                </colgroup>
+                <tfoot className="bg-gray-50 font-bold text-[13px]">
+                  <tr>
+                    <td colSpan={2} className="px-2 py-2 border-r border-border-temple text-left">GRAND TOTAL</td>
+                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.opening.toFixed(3)}</td>
+                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.purchase.toFixed(3)}</td>
+                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.issues.toFixed(3)}</td>
+                    <td className="px-2 py-2 border-r border-border-temple text-right">{formatCurrency(grandTotals.issue_val)}</td>
+                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.returns.toFixed(3)}</td>
+                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.adjust.toFixed(3)}</td>
+                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.closing.toFixed(3)}</td>
+                    <td className="px-2 py-2 text-right">{formatCurrency(grandTotals.closing_val)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
         </div>
 
       </div>

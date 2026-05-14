@@ -14,8 +14,7 @@ import {
   User,
   ChevronDown,
   ChevronRight,
-  ArrowLeft,
-  FileText
+  ArrowLeft
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Avatar from '@radix-ui/react-avatar';
@@ -199,7 +198,7 @@ const MainLayout: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-bg-temple">
+    <div className="min-h-dvh bg-bg-temple">
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 z-40 bg-secondary-dark/60 lg:hidden backdrop-blur-sm" 
@@ -218,7 +217,7 @@ const MainLayout: React.FC = () => {
         <SidebarContent />
       </aside>
 
-      <div className="lg:pl-64 flex flex-col min-h-screen">
+      <div className="lg:pl-64 flex min-h-dvh flex-col">
         <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 bg-bg-cream border-b border-border-temple sm:px-6 shadow-sm">
           <div className="flex items-center gap-4">
             <button 
@@ -286,7 +285,9 @@ const MainLayout: React.FC = () => {
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
           <Outlet />
         </main>
-        <Footer />
+        <div className="mt-auto">
+          <Footer />
+        </div>
       </div>
     </div>
   );

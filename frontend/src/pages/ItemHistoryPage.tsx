@@ -6,7 +6,6 @@ import {
   Utensils, 
   Settings2, 
   HelpCircle,
-  History,
   ArrowLeft
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
@@ -151,14 +150,6 @@ const ItemHistoryPage: React.FC = () => {
             </h2>
           </div>
         </div>
-        <Button 
-          onClick={() => navigate(`/items/${id}/price-history`)} 
-          variant="outline"
-          className="flex items-center gap-2 border-secondary/20 text-secondary hover:bg-secondary hover:text-white transition-colors"
-        >
-          <History className="h-4 w-4" />
-          Price History
-        </Button>
       </div>
 
       <Card className="border-border-temple overflow-hidden bg-white shadow-sm">

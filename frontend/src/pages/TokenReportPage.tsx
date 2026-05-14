@@ -2,14 +2,15 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search,
   Eye,
   Loader2,
-  Ticket
 } from 'lucide-react';
 import api from '../api/axios';
 import { Button } from '../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Card, CardContent } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Label } from '../components/ui/Label';
 import { formatDate } from '../utils/date';
 
 interface TokenGeneration {
@@ -19,26 +20,80 @@ interface TokenGeneration {
   created_at: string;
 }
 
+type DateFilterMode = 'today' | 'yesterday' | 'weekly' | 'custom';
+
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getPresetRange = (mode: DateFilterMode) => {
+  const today = new Date();
+  const start = new Date(today);
+  const end = new Date(today);
+
+  if (mode === 'yesterday') {
+    start.setDate(today.getDate() - 1);
+    end.setDate(today.getDate() - 1);
+  }
+
+  if (mode === 'weekly') {
+    start.setDate(today.getDate() - 6);
+  }
+
+  return {
+    startDate: toDateInputValue(start),
+    endDate: toDateInputValue(end),
+  };
+};
+
 const TokenReportPage: React.FC = () => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
+  const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('weekly');
+  const [customStartDate, setCustomStartDate] = useState(() => getPresetRange('weekly').startDate);
+  const [customEndDate, setCustomEndDate] = useState(() => getPresetRange('weekly').endDate);
+
+  const activeDateRange = useMemo(() => {
+    if (dateFilterMode === 'custom') {
+      return {
+        startDate: customStartDate,
+        endDate: customEndDate,
+      };
+    }
+    return getPresetRange(dateFilterMode);
+  }, [customEndDate, customStartDate, dateFilterMode]);
+
+  const q = useMemo(() => `${activeDateRange.startDate}..${activeDateRange.endDate}`, [activeDateRange]);
 
   // Fetch summary list
   const { data: generationsData, isLoading: isLoadingSummary } = useQuery({
-    queryKey: ['token-generations', page, pageSize],
+    queryKey: ['token-generations', page, pageSize, q],
     queryFn: async () => {
       const res = await api.get('/tokens/list_generations', {
-        params: { page, page_size: pageSize }
+        params: { page, page_size: pageSize, q }
       });
       return res.data;
     },
   });
 
-  const generations = useMemo(() => generationsData?.items ?? [], [generationsData]);
+  const generations = useMemo<TokenGeneration[]>(() => generationsData?.items ?? [], [generationsData]);
 
   const handleViewDetails = (date: string) => {
     navigate(`/reports/tokens/${date}`);
+  };
+
+  const handleDateFilterModeChange = (mode: DateFilterMode) => {
+    setDateFilterMode(mode);
+    setPage(1);
+    if (mode !== 'custom') {
+      const range = getPresetRange(mode);
+      setCustomStartDate(range.startDate);
+      setCustomEndDate(range.endDate);
+    }
   };
 
   return (
@@ -50,6 +105,54 @@ const TokenReportPage: React.FC = () => {
           </h2>
         </div>
       </div>
+
+      <Card className="border-border-temple shadow-sm">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-1.5 w-full sm:w-56">
+              <Label className="text-text-main">Date Filter</Label>
+              <Select
+                value={dateFilterMode}
+                onChange={(e) => handleDateFilterModeChange(e.target.value as DateFilterMode)}
+                className="text-text-main"
+              >
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="weekly">Weekly</option>
+                <option value="custom">Custom</option>
+              </Select>
+            </div>
+            {dateFilterMode === 'custom' && (
+              <>
+                <div className="space-y-1.5 w-full sm:w-48">
+                  <Label className="text-text-main">From Date</Label>
+                  <Input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => {
+                      setCustomStartDate(e.target.value);
+                      setPage(1);
+                    }}
+                    className="text-text-main"
+                  />
+                </div>
+                <div className="space-y-1.5 w-full sm:w-48">
+                  <Label className="text-text-main">To Date</Label>
+                  <Input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => {
+                      setCustomEndDate(e.target.value);
+                      setPage(1);
+                    }}
+                    className="text-text-main"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="border-border-temple shadow-sm">
         <CardContent className="p-0">

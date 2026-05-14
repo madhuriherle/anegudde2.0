@@ -24,6 +24,7 @@ import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 import { DetailItem } from '../components/ui/DetailItem';
 import { formatCurrency } from '../utils/currency';
+import { formatDate } from '../utils/date';
 import { formatQuantityWithUnit } from '../utils/quantity';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 import { cn } from '../utils/cn';
@@ -50,7 +51,9 @@ const ItemsPage: React.FC = () => {
   
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [priceHistoryOpen, setPriceHistoryOpen] = useState(false);
   const [viewingItem, setViewingItem] = useState<any>(null);
+  const [priceHistoryItem, setPriceHistoryItem] = useState<any>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
 
   const [deleteWarningOpen, setDeleteWarningOpen] = useState(false);
@@ -62,11 +65,10 @@ const ItemsPage: React.FC = () => {
   const [pageSize] = useState(50);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   // Fetch Data
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
-    queryKey: ['items', search, page, pageSize, selectedCategory, selectedStatus],
+    queryKey: ['items', search, page, pageSize, selectedCategory],
     queryFn: async () => {
       const params: any = { 
         page,
@@ -76,7 +78,6 @@ const ItemsPage: React.FC = () => {
         sort_order: 'asc',
       };
       if (selectedCategory) params.category_id = Number(selectedCategory);
-      if (selectedStatus !== '') params.status = Number(selectedStatus);
       const res = await api.get('/items/list_items', { params });
       return res.data;
     },
@@ -129,6 +130,17 @@ const ItemsPage: React.FC = () => {
     });
     return map;
   }, [todaySummaryData]);
+
+  const { data: priceHistory, isLoading: priceHistoryLoading } = useQuery({
+    queryKey: ['item-prices', priceHistoryItem?.id],
+    queryFn: async () => {
+      const res = await api.get(`/items/get_price_history/${priceHistoryItem.id}`);
+      return res.data;
+    },
+    enabled: priceHistoryOpen && !!priceHistoryItem?.id,
+  });
+  const priceHistoryRows = useMemo(() => (priceHistory || []) as any[], [priceHistory]);
+  const latestPriceRow = useMemo(() => priceHistoryRows[0] || null, [priceHistoryRows]);
 
   const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema) as any,
@@ -209,6 +221,11 @@ const ItemsPage: React.FC = () => {
     setViewDialogOpen(true);
   };
 
+  const handlePriceHistory = (item: any) => {
+    setPriceHistoryItem(item);
+    setPriceHistoryOpen(true);
+  };
+
   const handleDeleteClick = async (item: any) => {
     try {
       const res = await api.get('/system/check_usage', {
@@ -245,6 +262,15 @@ const ItemsPage: React.FC = () => {
       cell: (i) => <span className="text-text-main font-medium">{i.getValue() as string}</span>,
     },
     {
+      id: 'category',
+      header: 'Category',
+      cell: (i) => (
+        <span className="text-text-main">
+          {i.row.original?.category?.category_name || 'Uncategorized'}
+        </span>
+      ),
+    },
+    {
       accessorKey: 'current_stock',
       header: 'Current Stock',
       cell: (i) => (
@@ -256,7 +282,15 @@ const ItemsPage: React.FC = () => {
     {
       accessorKey: 'default_price',
       header: 'Current Price',
-      cell: (i) => formatCurrency(i.getValue() as number),
+      cell: (i) => (
+        <button
+          type="button"
+          onClick={() => handlePriceHistory(i.row.original)}
+          className="font-semibold text-primary underline-offset-2 hover:underline"
+        >
+          {formatCurrency(i.getValue() as number)}
+        </button>
+      ),
     },
     {
       accessorKey: 'status',
@@ -321,21 +355,6 @@ const ItemsPage: React.FC = () => {
                 ))}
               </Select>
             </div>
-            <div className="space-y-1.5 w-full sm:w-56">
-              <Label className="text-text-main">Status</Label>
-              <Select
-                value={selectedStatus}
-                onChange={(e) => {
-                  setSelectedStatus(e.target.value);
-                  setPage(1);
-                }}
-                className="text-text-main"
-              >
-                <option value="">All</option>
-                <option value="1">Active</option>
-                <option value="0">Disabled</option>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -351,6 +370,72 @@ const ItemsPage: React.FC = () => {
         onPageChange={(p) => setPage(p)}
         totalCount={itemsData?.total || 0}
       />
+
+      <Dialog open={priceHistoryOpen} onOpenChange={setPriceHistoryOpen}>
+        <DialogContent className="max-w-3xl border-border-temple">
+          <DialogHeader>
+            <DialogTitle>Price History: {priceHistoryItem?.item_name || ''}</DialogTitle>
+            <DialogDescription className="sr-only">Viewing item price history</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {latestPriceRow && (
+              <div className="rounded-lg border border-border-temple/50 bg-[#F8F3EC] px-4 py-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-secondary/70">Latest Price</div>
+                    <div className="mt-1 text-3xl font-black leading-none text-[#D05E2D]">{formatCurrency(latestPriceRow.price)}</div>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <div className="text-xs font-semibold text-text-main/70">{formatDate(latestPriceRow.purchase_date)}</div>
+                    <div className="text-xs font-bold text-text-main">{latestPriceRow.vendor_name || 'Unknown Vendor'}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="max-h-[50vh] overflow-auto rounded-md border border-gray-200">
+              <table className="w-full table-fixed text-left text-sm">
+                <colgroup>
+                  <col className="w-[28%]" />
+                  <col className="w-[44%]" />
+                  <col className="w-[28%]" />
+                </colgroup>
+                <thead className="bg-primary text-xs font-bold uppercase tracking-wider text-white">
+                  <tr>
+                    <th className="px-3 py-2.5">Date</th>
+                    <th className="px-3 py-2.5">Vendor / Source</th>
+                    <th className="px-3 py-2.5 text-right">Unit Price</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {priceHistoryLoading ? (
+                    <tr>
+                      <td colSpan={3} className="h-24 text-center text-gray-500">Loading...</td>
+                    </tr>
+                  ) : priceHistoryRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="h-24 text-center text-gray-500">No price history found.</td>
+                    </tr>
+                  ) : (
+                    priceHistoryRows.slice(0, 5).map((row: any, idx: number) => (
+                      <tr key={`${row.purchase_date}-${idx}`} className="odd:bg-white even:bg-[#FCFAF7] hover:bg-gray-50/80">
+                        <td className="px-3 py-2.5 text-text-main">{formatDate(row.purchase_date)}</td>
+                        <td className="px-3 py-2.5 text-text-main">{row.vendor_name || '-'}</td>
+                        <td className="px-3 py-2.5 text-right text-text-main">{formatCurrency(row.price)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setPriceHistoryOpen(false)} className="px-8 h-10 font-bold text-white bg-primary hover:bg-secondary rounded-lg">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <DeletionWarningDialog 
         open={deleteWarningOpen}
@@ -440,7 +525,12 @@ const ItemsPage: React.FC = () => {
                     name="category_id"
                     control={control}
                     render={({ field }) => (
-                      <Select {...field} className="text-text-main">
+                      <Select
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        className="text-text-main"
+                      >
                         <option value="">Select Category</option>
                         {categories?.map((c: any) => (
                           <option key={c.id} value={c.id}>{c.category_name}</option>
