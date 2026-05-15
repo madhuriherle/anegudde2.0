@@ -45,10 +45,17 @@ def generate_daily_stock_summary(summary_date: date):
                 func.sum(case((StockLedger.txn_type == 1, StockLedger.value_in), else_=0)).label("purchased_value"),
                 func.sum(case((StockLedger.txn_type == 2, StockLedger.qty_out), else_=0)).label("consumed_qty"),
                 func.sum(case((StockLedger.txn_type == 3, StockLedger.qty_out), else_=0)).label("wastage_qty"),
-                func.sum(case((StockLedger.txn_type == 4, StockLedger.qty_in - StockLedger.qty_out), else_=0)).label("adjustment_qty")
+                func.sum(case(
+                    (StockLedger.txn_type == 4, StockLedger.qty_in - StockLedger.qty_out),
+                    (StockLedger.txn_type == 5, -StockLedger.qty_out), # Purchase Return
+                    (StockLedger.txn_type == 6, StockLedger.qty_in),   # Consumption Return
+                    (StockLedger.txn_type == 7, StockLedger.qty_in),   # Donation
+                    else_=0
+                )).label("adjustment_qty")
             ).filter(
                 StockLedger.item_id == item.id,
-                StockLedger.txn_date == summary_date
+                StockLedger.txn_date == summary_date,
+                StockLedger.status == 1
             ).first()
             
             purchased_qty = ledger_data.purchased_qty or Decimal("0")

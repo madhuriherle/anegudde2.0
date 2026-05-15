@@ -133,8 +133,8 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-text-main/60 p-20 text-center text-[11px] font-bold uppercase tracking-widest">
-                  No tokens distributed yet
+                <div className="flex items-center justify-center h-full text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+                  No tokens today
                 </div>
               )}
             </div>
@@ -176,8 +176,8 @@ const DashboardPage: React.FC = () => {
                   );
                 })
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-text-main/60 p-10 text-center gap-3 font-bold uppercase tracking-widest text-[11px]">
-                  <p>No Low Stock Items</p>
+                <div className="flex items-center justify-center h-full text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+                  No low stock today
                 </div>
               )}
             </div>
@@ -191,7 +191,7 @@ const DashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
             <div className="h-[340px] overflow-y-auto">
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-50 h-full">
                 {today?.consumption_details?.length > 0 ? (
                   today.consumption_details.map((item: any, idx: number) => (
                     <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
@@ -207,7 +207,9 @@ const DashboardPage: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="py-20 text-center text-text-main/60 text-[11px] font-bold uppercase tracking-widest">No usage today</div>
+                  <div className="flex items-center justify-center h-full text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+                    No usage today
+                  </div>
                 )}
               </div>
             </div>
@@ -221,7 +223,7 @@ const DashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
             <div className="h-[340px] overflow-y-auto">
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-50 h-full">
                 {today?.purchase_details?.length > 0 ? (
                   today.purchase_details.map((item: any, idx: number) => (
                     <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
@@ -237,7 +239,9 @@ const DashboardPage: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="py-20 text-center text-text-main/60 text-[11px] font-bold uppercase tracking-widest">No purchases today</div>
+                  <div className="flex items-center justify-center h-full text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+                    No purchases today
+                  </div>
                 )}
               </div>
             </div>
@@ -251,7 +255,7 @@ const DashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
             <div className="h-[340px] overflow-y-auto">
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-50 h-full">
                 {today?.wastage_details?.length > 0 ? (
                   today.wastage_details.map((item: any, idx: number) => (
                     <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
@@ -267,7 +271,9 @@ const DashboardPage: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="py-20 text-center text-text-main/60 text-[11px] font-bold uppercase tracking-widest">No wastage today</div>
+                  <div className="flex items-center justify-center h-full text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+                    No wastage today
+                  </div>
                 )}
               </div>
             </div>

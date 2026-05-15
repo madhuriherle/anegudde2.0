@@ -12,16 +12,19 @@ import PurchasesPage from './pages/PurchasesPage';
 import PurchaseReturnsPage from './pages/PurchaseReturnsPage';
 import UsageEntriesPage from './pages/UsageEntriesPage';
 import UsersPage from './pages/UsersPage';
+import DevoteesPage from './pages/DevoteesPage';
 import ItemCategoriesPage from './pages/ItemCategoriesPage';
 import UnitsPage from './pages/UnitsPage';
 import MenuItemsPage from './pages/MenuItemsPage';
 import WastagesPage from './pages/WastagesPage';
+import DonationsPage from './pages/DonationsPage';
 import ProfilePage from './pages/ProfilePage';
 import DailyStockReportPage from './pages/DailyStockReportPage';
 import { StockSummaryPage } from './pages/StockSummaryPage';
 import MonthlyPerformanceReportPage from './pages/MonthlyPerformanceReportPage';
 import VendorOutstandingReportPage from './pages/VendorOutstandingReportPage';
 import TokenReportPage from './pages/TokenReportPage';
+import DonationReportPage from './pages/DonationReportPage';
 import TokenDetailLedgerPage from './pages/TokenDetailLedgerPage';
 import CanteenSummaryPage from './pages/CanteenSummaryPage';
 
@@ -40,16 +43,19 @@ function App() {
         <Route path="/purchases" element={<PurchasesPage />} />
         <Route path="/purchases/returns" element={<PurchaseReturnsPage />} />
         <Route path="/daily-usage" element={<UsageEntriesPage />} />
+        <Route path="/donations" element={<DonationsPage />} />
         <Route path="/wastages" element={<WastagesPage />} />
         <Route path="/reports" element={<Navigate to="/reports/stock-summary" replace />} />
         <Route path="/reports/tokens" element={<TokenReportPage />} />
         <Route path="/reports/tokens/:date" element={<TokenDetailLedgerPage />} />
         <Route path="/reports/daily-closing" element={<DailyStockReportPage />} />
+        <Route path="/reports/donations" element={<DonationReportPage />} />
         <Route path="/reports/stock-summary" element={<StockSummaryPage />} />
         <Route path="/reports/canteen-summary" element={<CanteenSummaryPage />} />
         <Route path="/reports/monthly-performance" element={<MonthlyPerformanceReportPage />} />
         <Route path="/reports/vendor-outstanding" element={<VendorOutstandingReportPage />} />
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/devotees" element={<DevoteesPage />} />
         <Route path="/settings/categories" element={<ItemCategoriesPage />} />
         <Route path="/settings/units" element={<UnitsPage />} />
         <Route path="/settings/menu-items" element={<MenuItemsPage />} />

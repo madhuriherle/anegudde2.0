@@ -12,6 +12,7 @@ import {
   LogOut, 
   Menu as MenuIcon, 
   User,
+  Heart,
   ChevronDown,
   ChevronRight,
   ArrowLeft
@@ -47,6 +48,7 @@ const MainLayout: React.FC = () => {
       '/purchases', 
       '/daily-usage', 
       '/wastages', 
+      '/donations',
       '/items', 
       '/vendors', 
       '/settings',
@@ -73,6 +75,7 @@ const MainLayout: React.FC = () => {
     { text: 'Canteen', icon: UtensilsCrossed, path: '/canteen', action: () => setActiveModule('canteen') },
     { text: 'Office', icon: Briefcase, path: '/office' },
     { text: 'Users', icon: Users, path: '/users' },
+    { text: 'Devotees', icon: Heart, path: '/devotees' },
     { text: 'Reports', icon: BarChart3, path: undefined },
     { text: 'Master Settings', icon: Settings, path: undefined },
   ];
@@ -93,6 +96,11 @@ const MainLayout: React.FC = () => {
       icon: Package,
       path: '/daily-usage'
     },
+    { 
+      text: 'Donations', 
+      icon: Heart,
+      path: '/donations'
+    },
     { text: 'Vendors', icon: Users, path: '/vendors' },
     { 
       text: 'Items', 
@@ -109,6 +117,7 @@ const MainLayout: React.FC = () => {
       children: [
         { text: 'Stock Summary', path: '/reports/stock-summary' },
         { text: 'Canteen Summary', path: '/reports/canteen-summary' },
+        { text: 'Donation Report', path: '/reports/donations' },
         { text: 'Token Issued Report', path: '/reports/tokens' },
       ]
     },

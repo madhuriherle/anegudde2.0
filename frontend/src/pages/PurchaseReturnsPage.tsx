@@ -515,11 +515,14 @@ const PurchaseReturnsPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {viewingReturn.items.map((it: any) => (
+                          {(viewingReturn.items || []).map((it: any) => (
                             <tr key={it.id} className="bg-white">
                               <td className="px-6 py-4 text-[#3E2723] font-medium truncate" title={it.item_name}>{it.item_name || 'N/A'}</td>
-                              <td className="px-6 py-4 text-[#5D4037] text-right">{it.original_purchase_qty !== null ? it.original_purchase_qty : 'N/A'}</td>
+                              <td className="px-6 py-4 text-[#5D4037] text-right">
+                                {it.original_purchase_qty !== null ? `${parseFloat(it.original_purchase_qty).toFixed(3)} ${it.unit || ''}` : 'N/A'}
+                              </td>
                               <td className="px-6 py-4 text-[#5D4037] text-right">₹{it.original_purchase_price !== null ? parseFloat(it.original_purchase_price).toLocaleString() : parseFloat(it.price).toLocaleString()}</td>
+
                               <td className="px-6 py-4 text-[#3E2723] font-bold text-right">
                                 ₹{it.original_purchase_qty !== null && it.original_purchase_price !== null ? (parseFloat(it.original_purchase_qty) * parseFloat(it.original_purchase_price)).toLocaleString() : 'N/A'}
                               </td>
@@ -554,10 +557,10 @@ const PurchaseReturnsPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {viewingReturn.items.map((it: any) => (
+                          {(viewingReturn.items || []).map((it: any) => (
                             <tr key={it.id} className="bg-white">
                               <td className="px-6 py-4 text-[#3E2723] font-medium truncate" title={it.item_name}>{it.item_name || 'N/A'}</td>
-                              <td className="px-6 py-4 text-[#5D4037] text-right">{it.quantity}</td>
+                              <td className="px-6 py-4 text-[#5D4037] text-right">{parseFloat(it.quantity).toFixed(3)} {it.unit || ''}</td>
                               <td className="px-6 py-4 text-[#5D4037] text-right">₹{parseFloat(it.price).toLocaleString()}</td>
                               <td className="px-6 py-4 text-[#3E2723] font-bold text-right">₹{parseFloat(it.line_total).toLocaleString()}</td>
                             </tr>

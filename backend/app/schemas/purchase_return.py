@@ -17,6 +17,7 @@ class PurchaseReturnItemOut(PurchaseReturnItemBase):
     line_total: Decimal
     created_at: datetime
     item_name: str | None = None
+    unit: str | None = None
     original_purchase_qty: Decimal | None = None
     original_purchase_price: Decimal | None = None
     

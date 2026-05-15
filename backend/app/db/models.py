@@ -371,6 +371,61 @@ class StockLedger(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
+class Devotee(Base):
+    __tablename__ = "devotees"
+    id = Column(Integer, primary_key=True)
+    devotee_name = Column(String(150), nullable=False)
+    phone_number = Column(String(20), unique=True, nullable=False, index=True)
+    email = Column(String(150), nullable=True)
+    address = Column(Text, nullable=True)
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    pincode = Column(String(20), nullable=True)
+    status = Column(Integer, nullable=False, default=1, index=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_by = Column(Integer, nullable=True)
+    updated_by = Column(Integer, nullable=True)
+
+    donations = relationship("DonationEntry", back_populates="devotee")
+
+class DonationEntry(Base):
+    __tablename__ = "donation_entries"
+    id = Column(Integer, primary_key=True)
+    donation_type = Column(Integer, nullable=False, default=1, server_default="1", index=True)
+    donation_date = Column(Date, nullable=False, index=True)
+    devotee_id = Column(Integer, ForeignKey("devotees.id"), nullable=True, index=True)
+    devotee_name = Column(String(150), nullable=False)
+    phone_number = Column(String(20), nullable=False)
+    email = Column(String(150), nullable=True)
+    address = Column(Text, nullable=True)
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    pincode = Column(String(20), nullable=True)
+    remarks = Column(Text, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(Integer, nullable=False, default=1, index=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])
+    devotee = relationship("Devotee", back_populates="donations")
+    items = relationship("DonationItem", back_populates="donation_entry", cascade="all, delete-orphan")
+
+class DonationItem(Base):
+    __tablename__ = "donation_items"
+    id = Column(Integer, primary_key=True)
+    donation_entry_id = Column(Integer, ForeignKey("donation_entries.id"), nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
+    quantity = Column(Numeric(15, 3), nullable=False)
+    unit_cost_at_time = Column(Numeric(15, 3), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    item = relationship("Item")
+    donation_entry = relationship("DonationEntry", back_populates="items")
+
 # ==========================================
 # 3. SYSTEM & SUMMARY TABLES
 # ==========================================
@@ -516,3 +571,7 @@ class PurchaseReturnItem(Base):
     @property
     def item_name(self):
         return self.item.item_name if self.item else None
+
+    @property
+    def unit(self):
+        return self.item.unit.unit_code if self.item and self.item.unit else ""

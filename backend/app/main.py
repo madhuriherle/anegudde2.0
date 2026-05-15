@@ -28,6 +28,7 @@ from app.api.vendors import router as vendors_router
 from app.api.menu_items import router as menu_items_router
 from app.api.wastages import router as wastages_router
 from app.api.tokens import router as tokens_router
+from app.api.donations import router as donations_router
 from app.api.debug import router as system_router
 from app.middleware.exception_handlers import register_exception_handlers
 from app.middleware.activity_audit import ActivityAuditMiddleware
@@ -158,4 +159,5 @@ app.include_router(users_router)
 app.include_router(reports_router)
 app.include_router(dashboard_router)
 app.include_router(tokens_router)
+app.include_router(donations_router)
 app.include_router(system_router)

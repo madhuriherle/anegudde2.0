@@ -7,7 +7,7 @@ from app.db.models import Item, PurchaseEntry, PurchaseItem, PurchaseReturnEntry
 
 def list_purchase_returns(db: Session, page: int = 1, page_size: int = 20, q: str = None, vendor_id: int = None):
     query = db.query(PurchaseReturnEntry).options(
-        joinedload(PurchaseReturnEntry.items).joinedload(PurchaseReturnItem.item),
+        joinedload(PurchaseReturnEntry.items).joinedload(PurchaseReturnItem.item).joinedload(Item.unit),
         joinedload(PurchaseReturnEntry.vendor),
         joinedload(PurchaseReturnEntry.user),
         joinedload(PurchaseReturnEntry.purchase_entry)
