@@ -88,6 +88,7 @@ def detailed_stock_summary_report(
                     func.sum(
                         case(
                             (StockLedger.ref_table == "consumption_entries:RAW_RETURN", StockLedger.qty_in),
+                            (StockLedger.txn_type == 7, StockLedger.qty_in),
                             else_=0
                         )
                     ),

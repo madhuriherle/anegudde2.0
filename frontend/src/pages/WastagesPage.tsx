@@ -189,7 +189,7 @@ const WastagesPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-temple/40">
-                  {viewingWastage?.items.map((item: any) => (
+                  {(viewingWastage?.items || []).map((item: any) => (
                     <tr key={item.id} className="hover:bg-bg-temple/30">
                       <td className="px-3 py-2 text-text-main">
                         {item.menu_item?.dish_name || item.item?.item_name}

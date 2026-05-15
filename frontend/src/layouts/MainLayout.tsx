@@ -12,6 +12,7 @@ import {
   LogOut, 
   Menu as MenuIcon, 
   User,
+  Heart,
   ChevronDown,
   ChevronRight,
   ArrowLeft
@@ -47,6 +48,7 @@ const MainLayout: React.FC = () => {
       '/purchases', 
       '/daily-usage', 
       '/wastages', 
+      '/donations',
       '/items', 
       '/vendors', 
       '/settings',
@@ -68,17 +70,12 @@ const MainLayout: React.FC = () => {
     navigate('/login');
   };
 
-  const goHome = () => {
-    setActiveModule('main');
-    navigate('/');
-    setIsSidebarOpen(false);
-  };
-
   const mainMenuItems: MenuItem[] = [
     { text: 'Home', icon: Home, path: '/', action: () => setActiveModule('main') },
     { text: 'Canteen', icon: UtensilsCrossed, path: '/canteen', action: () => setActiveModule('canteen') },
     { text: 'Office', icon: Briefcase, path: '/office' },
     { text: 'Users', icon: Users, path: '/users' },
+    { text: 'Devotees', icon: Heart, path: '/devotees' },
     { text: 'Reports', icon: BarChart3, path: undefined },
     { text: 'Master Settings', icon: Settings, path: undefined },
   ];
@@ -99,6 +96,11 @@ const MainLayout: React.FC = () => {
       icon: Package,
       path: '/daily-usage'
     },
+    { 
+      text: 'Donations', 
+      icon: Heart,
+      path: '/donations'
+    },
     { text: 'Vendors', icon: Users, path: '/vendors' },
     { 
       text: 'Items', 
@@ -115,6 +117,7 @@ const MainLayout: React.FC = () => {
       children: [
         { text: 'Stock Summary', path: '/reports/stock-summary' },
         { text: 'Canteen Summary', path: '/reports/canteen-summary' },
+        { text: 'Donation Report', path: '/reports/donations' },
         { text: 'Token Issued Report', path: '/reports/tokens' },
       ]
     },
@@ -174,9 +177,7 @@ const MainLayout: React.FC = () => {
     <div className="flex flex-col h-full bg-secondary border-r border-secondary-dark/20">
       <div className="h-16 border-b border-white/5 flex items-center px-4">
         <div 
-          className="bg-white p-1 rounded-lg shadow-sm w-full cursor-pointer hover:bg-gray-50 transition-colors"
-          onClick={goHome}
-          title="Back to Main Menu"
+          className="bg-white p-1 rounded-lg shadow-sm w-full"
         >
           <img 
             src={templeLogoSrc} 

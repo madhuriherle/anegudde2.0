@@ -503,30 +503,31 @@ const UsageEntriesPage: React.FC = () => {
       />
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-[92vw] overflow-y-auto max-h-[92vh] border-border-temple">
+        <DialogContent className="w-[1760px] max-w-[92vw] max-h-[92vh] overflow-hidden border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
             <DialogTitle className="text-text-main">Usage Summary</DialogTitle>
             <DialogDescription className="sr-only">Usage details</DialogDescription>
           </DialogHeader>
-          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4 px-2 items-start">
-            <div className="temple-form-section h-full">
-              <div className="grid grid-cols-[240px_20px_1fr] gap-y-3 text-text-main">
-                <div className="font-semibold whitespace-nowrap">Usage Date</div><div>:</div><div className="whitespace-nowrap">{formatDate(viewingConsumption?.usage_date)}</div>
-                <div className="font-semibold whitespace-nowrap">Regular Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cooking_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Additional Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Total Cooking Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cooking_persons || 0) + Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Regular Serving Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_serving_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Additional Serving Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_serving_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Total Serving Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_serving_persons || 0) + Number(viewingConsumption?.additional_serving_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Regular Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cleaning_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Additional Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">Total Cleaning Persons</div><div>:</div><div>{Number(viewingConsumption?.regular_cleaning_persons || 0) + Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
-                <div className="font-semibold whitespace-nowrap">No. of times cooked</div><div>:</div><div>{viewingConsumption?.times_cooked ?? 0}</div>
+          <div className="mt-4 max-h-[calc(92vh-150px)] overflow-y-auto px-2 pb-2">
+          <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4 items-start">
+            <div className="temple-form-section h-full min-w-0">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-3 text-sm text-text-main">
+                <div className="font-semibold">Usage Date</div><div className="text-right whitespace-nowrap">{formatDate(viewingConsumption?.usage_date)}</div>
+                <div className="font-semibold">Regular Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cooking_persons || 0)}</div>
+                <div className="font-semibold">Additional Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
+                <div className="font-semibold">Total Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cooking_persons || 0) + Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
+                <div className="font-semibold">Regular Serving Persons</div><div className="text-right">{Number(viewingConsumption?.regular_serving_persons || 0)}</div>
+                <div className="font-semibold">Additional Serving Persons</div><div className="text-right">{Number(viewingConsumption?.additional_serving_persons || 0)}</div>
+                <div className="font-semibold">Total Serving Persons</div><div className="text-right">{Number(viewingConsumption?.regular_serving_persons || 0) + Number(viewingConsumption?.additional_serving_persons || 0)}</div>
+                <div className="font-semibold">Regular Cleaning Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cleaning_persons || 0)}</div>
+                <div className="font-semibold">Additional Cleaning Persons</div><div className="text-right">{Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
+                <div className="font-semibold">Total Cleaning Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cleaning_persons || 0) + Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
+                <div className="font-semibold">No. of times cooked</div><div className="text-right">{viewingConsumption?.times_cooked ?? 0}</div>
               </div>
             </div>
 
             <div className="contents">
-            <div className="temple-form-section">
+            <div className="temple-form-section min-w-0">
               <div className="pb-2">
                 <span className="text-base font-bold text-text-main">Raw Usage Items</span>
               </div>
@@ -540,7 +541,7 @@ const UsageEntriesPage: React.FC = () => {
                     </tr>
                   </thead>
                   </table>
-                <div className="max-h-[640px] overflow-y-auto">
+                <div className="max-h-[44vh] 2xl:max-h-[640px] overflow-y-auto">
                 <table className="w-full text-sm text-left">
                   <tbody className="divide-y divide-border-temple/40">
                     {(viewingConsumption?.items || []).filter((item: any) => Number(item.quantity_used || 0) > 0 || Number(item.qty_returned || 0) > 0).length === 0 ? (
@@ -574,7 +575,7 @@ const UsageEntriesPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="temple-form-section">
+            <div className="temple-form-section min-w-0">
               <div className="pb-2">
                 <span className="text-base font-bold text-text-main">Wastage Entries</span>
               </div>
@@ -588,7 +589,7 @@ const UsageEntriesPage: React.FC = () => {
                     </tr>
                   </thead>
                   </table>
-                <div className="max-h-[640px] overflow-y-auto">
+                <div className="max-h-[44vh] 2xl:max-h-[640px] overflow-y-auto">
                 <table className="w-full text-sm text-left">
                   <tbody className="divide-y divide-border-temple/40">
                     {viewingWastages.filter((w: any) => Number(w.quantity || 0) > 0).length === 0 ? (
@@ -618,7 +619,7 @@ const UsageEntriesPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="temple-form-section">
+            <div className="temple-form-section min-w-0">
             <div className="pb-2">
               <span className="text-base font-bold text-text-main">Stock Adjustments</span>
             </div>
@@ -627,7 +628,7 @@ const UsageEntriesPage: React.FC = () => {
                 <div className="px-4 py-3">Item</div>
                 <div className="px-4 py-3 text-right whitespace-nowrap">Adjustment Qty</div>
               </div>
-              <div className="max-h-[640px] overflow-y-auto">
+              <div className="max-h-[44vh] 2xl:max-h-[640px] overflow-y-auto">
               {viewingAdjustments.filter((a: any) => Number(a.quantity || 0) > 0).length === 0 ? (
                 <div className="px-4 py-3 text-text-main/60 text-center">No stock adjustments</div>
               ) : (
@@ -650,7 +651,8 @@ const UsageEntriesPage: React.FC = () => {
             </div>
             </div>
           </div>
-          <DialogFooter className="mt-6">
+          </div>
+          <DialogFooter className="mt-4">
             <Button onClick={() => setViewDialogOpen(false)} className="text-text-main">Close</Button>
           </DialogFooter>
         </DialogContent>
@@ -663,7 +665,7 @@ const UsageEntriesPage: React.FC = () => {
         }
       }}>
         <DialogContent 
-          className="max-w-[92vw] overflow-y-auto max-h-[92vh]"
+          className="w-[1760px] max-w-[92vw] max-h-[92vh] overflow-hidden"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
@@ -672,17 +674,17 @@ const UsageEntriesPage: React.FC = () => {
             <DialogDescription className="sr-only">Create consumption and wastage entry</DialogDescription>
           </DialogHeader>
 
-          <div className="bg-white -mx-6 px-6 pt-4">
+          <div className="bg-white -mx-6 px-6 pt-4 max-h-[calc(92vh-150px)] overflow-y-auto">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 xl:grid-cols-10 gap-4 items-stretch min-h-[56vh]">
-              <div className="temple-form-section h-full xl:col-span-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-10 gap-4 items-stretch min-h-[56vh]">
+              <div className="temple-form-section h-full min-w-0 2xl:col-span-3">
+                <div className="grid grid-cols-1 min-[1700px]:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                  <Label className="temple-label whitespace-nowrap">Date *</Label>
+                  <Label className="temple-label leading-tight">Date *</Label>
                   <Input type="date" {...register('usage_date')} readOnly className="h-8 text-xs bg-gray-100 cursor-not-allowed" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label whitespace-nowrap">No. of times cooked</Label>
+                  <Label className="temple-label leading-tight">No. of times cooked</Label>
                   <Input 
                     type="text" 
                     {...register('times_cooked')} 
@@ -695,7 +697,7 @@ const UsageEntriesPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label whitespace-nowrap">Regular Cooking Persons</Label>
+                  <Label className="temple-label leading-tight">Regular Cooking Persons</Label>
                   <Input 
                     type="text" 
                     {...register('regular_cooking_persons')} 
@@ -708,7 +710,7 @@ const UsageEntriesPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label whitespace-nowrap">Additional Cooking Persons</Label>
+                  <Label className="temple-label leading-tight">Additional Cooking Persons</Label>
                   <Input 
                     type="text" 
                     {...register('additional_cooking_persons')} 
@@ -721,7 +723,7 @@ const UsageEntriesPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label whitespace-nowrap">Regular Serving Persons</Label>
+                  <Label className="temple-label leading-tight">Regular Serving Persons</Label>
                   <Input 
                     type="text" 
                     {...register('regular_serving_persons')} 
@@ -734,7 +736,7 @@ const UsageEntriesPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label whitespace-nowrap">Additional Serving Persons</Label>
+                  <Label className="temple-label leading-tight">Additional Serving Persons</Label>
                   <Input 
                     type="text" 
                     {...register('additional_serving_persons')} 
@@ -747,7 +749,7 @@ const UsageEntriesPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label whitespace-nowrap">Regular Cleaning Persons</Label>
+                  <Label className="temple-label leading-tight">Regular Cleaning Persons</Label>
                   <Input 
                     type="text" 
                     {...register('regular_cleaning_persons')} 
@@ -760,7 +762,7 @@ const UsageEntriesPage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="temple-label whitespace-nowrap">Additional Cleaning Persons</Label>
+                  <Label className="temple-label leading-tight">Additional Cleaning Persons</Label>
                   <Input 
                     type="text" 
                     {...register('additional_cleaning_persons')} 
@@ -775,14 +777,14 @@ const UsageEntriesPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="temple-form-section h-full xl:col-span-3">
+              <div className="temple-form-section h-full min-w-0 2xl:col-span-3">
                 <h4 className="temple-section-header mt-0 uppercase tracking-wider">Item usage</h4>
                 <div className="grid grid-cols-12 gap-2 mb-1 px-1 border-b border-border-temple/10 pb-1">
                   <div className="col-span-6"></div>
                   <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Used</div>
                   <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Returned</div>
                 </div>
-                <div className="max-h-[45vh] overflow-y-auto pr-2 space-y-2">
+                <div className="max-h-[42vh] 2xl:max-h-[45vh] overflow-y-auto pr-2 space-y-2">
                   {(items || []).filter((i: any) => i.status === 1).map((item: any) => {
                     const itemError = (errors.raw_items as any)?.[item.id];
                     return (
@@ -823,14 +825,14 @@ const UsageEntriesPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="temple-form-section h-full xl:col-span-4">
+              <div className="temple-form-section h-full min-w-0 xl:col-span-2 2xl:col-span-4">
                 <h4 className="temple-section-header mt-0 uppercase tracking-wider">Menu Item Wastage</h4>
                 <div className="grid grid-cols-12 gap-2 mb-1 px-1 border-b border-border-temple/10 pb-1">
                   <div className="col-span-6"></div>
                   <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Qty</div>
                   <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Approx Amt</div>
                 </div>
-                <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-3">
+                <div className="max-h-[42vh] 2xl:max-h-[50vh] overflow-y-auto pr-2 space-y-3">
                   {/* Menu Items Wastage */}
                   <div className="space-y-2">
                     {(menuItems || []).filter((m: any) => m.status === 1).map((menu: any) => (
@@ -928,7 +930,7 @@ const UsageEntriesPage: React.FC = () => {
                         <div className="col-span-3">
                           <Input 
                             type="text" 
-                            className="h-8 w-[120px] text-xs bg-white" 
+                            className="h-8 w-full text-xs bg-white" 
                             {...register(`raw_wastage_items.${index}.quantity` as const)}
                             onFocus={(e) => {
                               if (e.target.value === '0') {

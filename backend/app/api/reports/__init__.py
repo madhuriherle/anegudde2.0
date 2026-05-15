@@ -12,6 +12,7 @@ from .stock_finance_pdf import router as stock_finance_pdf_router
 from .purchases import router as purchases_router
 from .consumptions import router as consumptions_router
 from .wastages import router as wastages_router
+from .donations import router as donations_router
 from .stock_summary import router as stock_summary_router
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -27,4 +28,5 @@ router.include_router(stock_finance_pdf_router)
 router.include_router(purchases_router)
 router.include_router(consumptions_router)
 router.include_router(wastages_router)
+router.include_router(donations_router)
 router.include_router(stock_summary_router)
