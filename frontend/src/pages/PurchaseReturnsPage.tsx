@@ -484,16 +484,16 @@ const PurchaseReturnsPage: React.FC = () => {
       </Dialog>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-7xl border-border-temple bg-[#FDFBF7]">
+        <DialogContent className="w-[1600px] max-w-[92vw] max-h-[92vh] overflow-hidden border-border-temple bg-[#FDFBF7]">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
             <DialogTitle className="text-text-main font-temple text-2xl">Purchase Return Details</DialogTitle>
           </DialogHeader>
           {viewingReturn && (
-            <div className="py-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="py-4 max-h-[calc(92vh-155px)] overflow-y-auto pr-2">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 
                 {/* Left Side: Original Purchase Details */}
-                <Card className="border border-[#D8C8B8] shadow-sm bg-white overflow-hidden flex flex-col h-full">
+                <Card className="border border-[#D8C8B8] shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-0">
                   <div className="bg-[#F6EEDF] px-6 py-3 border-b border-[#D8C8B8]">
                     <h3 className="text-sm font-black text-[#5D4037] uppercase tracking-widest">Original Purchase</h3>
                   </div>
@@ -505,7 +505,7 @@ const PurchaseReturnsPage: React.FC = () => {
                       <DetailItem label="Vendor" value={viewingReturn.vendor?.vendor_name || 'N/A'} />
                     </div>
                     <div className="flex-1 overflow-auto bg-gray-50/30">
-                      <table className="w-full text-sm text-left table-fixed">
+                      <table className="min-w-[620px] w-full text-sm text-left table-fixed">
                         <thead className="bg-[#FAF7F2] border-b border-gray-200">
                           <tr>
                             <th className="px-6 py-3 font-bold text-[#7A5C4D]">Item</th>
@@ -532,7 +532,7 @@ const PurchaseReturnsPage: React.FC = () => {
                 </Card>
 
                 {/* Right Side: Return Details */}
-                <Card className="border border-[#D8C8B8] shadow-sm bg-white overflow-hidden flex flex-col h-full">
+                <Card className="border border-[#D8C8B8] shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-0">
                   <div className="bg-[#F6EEDF] px-6 py-3 border-b border-[#D8C8B8] flex justify-between items-center">
                     <h3 className="text-sm font-black text-[#5D4037] uppercase tracking-widest">Return Entry</h3>
                     <span className="text-[11px] font-bold bg-[#5D4037] text-white px-2 py-0.5 rounded-full tracking-wider">RETURNED</span>
@@ -544,7 +544,7 @@ const PurchaseReturnsPage: React.FC = () => {
                       <DetailItem label="Remarks" value={viewingReturn.remarks || 'None'} />
                     </div>
                     <div className="flex-1 overflow-auto bg-gray-50/30">
-                      <table className="w-full text-sm text-left table-fixed">
+                      <table className="min-w-[620px] w-full text-sm text-left table-fixed">
                         <thead className="bg-[#FAF7F2] border-b border-gray-200">
                           <tr>
                             <th className="px-6 py-3 font-bold text-[#7A5C4D]">Item</th>
