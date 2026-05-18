@@ -7,6 +7,7 @@ from app.db.models import DonationEntry, DonationItem, Item, StockLedger, User, 
 from app.schemas.donation import DonationEntryCreate
 from app.services import devotee_service
 from app.schemas.devotee import DevoteeCreate
+from app.services.receipt_sequence_service import next_donation_receipt
 
 def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = None):
     # ... (existing smart search logic remains same)
@@ -26,7 +27,7 @@ def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = Non
         joinedload(DonationEntry.items).joinedload(DonationItem.item),
         joinedload(DonationEntry.user),
         joinedload(DonationEntry.devotee)
-    ).filter(DonationEntry.status == 1, DonationEntry.donation_type == 1)
+    ).filter(DonationEntry.status == 1)
 
     if from_date:
         query = query.filter(DonationEntry.donation_date >= from_date)
@@ -79,8 +80,19 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
         current_user
     )
 
+    donation_type_id = payload.donation_type or 1
+    financial_year_id, receipt_prefix, receipt_number, receipt_display_number = next_donation_receipt(
+        db,
+        payload.donation_date,
+        donation_type_id,
+    )
+
     entry = DonationEntry(
-        donation_type=payload.donation_type or 1,
+        donation_type=donation_type_id,
+        financial_year_id=financial_year_id,
+        receipt_prefix=receipt_prefix,
+        receipt_number=receipt_number,
+        receipt_display_number=receipt_display_number,
         donation_date=payload.donation_date,
         devotee_id=devotee.id,
         devotee_name=payload.devotee_name, # Also keep snapshot in donation table
@@ -107,13 +119,10 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
         if not item:
             raise HTTPException(status_code=400, detail=f"Invalid item_id: {it.item_id}")
 
-        unit_cost = item.default_price or Decimal("0")
-        
         donation_item = DonationItem(
             donation_entry_id=entry.id,
             item_id=it.item_id,
             quantity=it.quantity,
-            unit_cost_at_time=unit_cost,
             created_at=now
         )
         db.add(donation_item)
@@ -130,11 +139,11 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
             ref_id=entry.id,
             qty_in=it.quantity,
             qty_out=0,
-            unit_cost=unit_cost,
-            value_in=it.quantity * unit_cost,
+            unit_cost=0,
+            value_in=0,
             value_out=0,
             balance=item.current_stock,
-            current_value=item.current_stock * unit_cost,
+            current_value=0,
             created_at=now,
             updated_at=now,
             created_by=current_user.id,
@@ -143,6 +152,21 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
 
     db.commit()
     db.refresh(entry)
+    return entry
+
+def get_donation(donation_id: int, db: Session) -> DonationEntry:
+    entry = (
+        db.query(DonationEntry)
+        .options(
+            joinedload(DonationEntry.items).joinedload(DonationItem.item).joinedload(Item.unit),
+            joinedload(DonationEntry.user),
+            joinedload(DonationEntry.devotee),
+        )
+        .filter(DonationEntry.id == donation_id, DonationEntry.status == 1)
+        .first()
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="Donation not found")
     return entry
 
 def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session, current_user: User) -> DonationEntry:
@@ -199,13 +223,10 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
         if not item:
             raise HTTPException(status_code=400, detail=f"Invalid item_id: {it.item_id}")
 
-        unit_cost = item.default_price or Decimal("0")
-        
         donation_item = DonationItem(
             donation_entry_id=entry.id,
             item_id=it.item_id,
             quantity=it.quantity,
-            unit_cost_at_time=unit_cost,
             created_at=now
         )
         db.add(donation_item)
@@ -222,11 +243,11 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
             ref_id=entry.id,
             qty_in=it.quantity,
             qty_out=0,
-            unit_cost=unit_cost,
-            value_in=it.quantity * unit_cost,
+            unit_cost=0,
+            value_in=0,
             value_out=0,
             balance=item.current_stock,
-            current_value=item.current_stock * unit_cost,
+            current_value=0,
             created_at=now,
             updated_at=now,
             created_by=current_user.id,
@@ -236,3 +257,31 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
     db.commit()
     db.refresh(entry)
     return entry
+
+def delete_donation(donation_id: int, db: Session, current_user: User) -> None:
+    now = datetime.now(timezone.utc)
+    entry = (
+        db.query(DonationEntry)
+        .options(joinedload(DonationEntry.items))
+        .filter(DonationEntry.id == donation_id, DonationEntry.status == 1)
+        .first()
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="Donation not found")
+
+    for donation_item in entry.items:
+        item = db.query(Item).filter(Item.id == donation_item.item_id).first()
+        if item:
+            item.current_stock = Decimal(item.current_stock or 0) - donation_item.quantity
+            item.updated_at = now
+            item.updated_by = current_user.id
+
+    db.query(StockLedger).filter(
+        StockLedger.ref_table == "donation_entries",
+        StockLedger.ref_id == donation_id
+    ).delete()
+
+    entry.status = 0
+    entry.updated_at = now
+    entry.updated_by = current_user.id
+    db.commit()

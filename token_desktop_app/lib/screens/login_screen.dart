@@ -25,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
           // Blurred Background Image
           Positioned.fill(
             child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              imageFilter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Image.asset(
                 'assets/images/login-bg.jpg',
                 fit: BoxFit.cover,
@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
           // Semi-transparent overlay to make text more readable
           Positioned.fill(
             child: Container(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withOpacity(0.15),
             ),
           ),
           // Login Form
@@ -44,14 +44,14 @@ class _LoginScreenState extends State<LoginScreen> {
               width: 400,
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9), // Slightly transparent box
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFD9C8AF)),
+                color: Colors.white.withOpacity(0.95), // Slightly more opaque
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFD9C8AF), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 25,
+                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
@@ -67,19 +67,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Text(
                     'Meal Token System',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF8B4513),
+                      color: Color(0xFF4A3728), // Updated to match dashboard
                     ),
                   ),
                   const SizedBox(height: 32),
                   TextField(
                     controller: _usernameController,
                     onSubmitted: (_) => _handleLogin(authProvider),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Username',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      prefixIcon: const Icon(Icons.person),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -89,7 +98,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     onSubmitted: (_) => _handleLogin(authProvider),
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      border: const OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -108,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
-                    height: 48,
+                    height: 52,
                     child: ElevatedButton(
                       onPressed: authProvider.isLoading
                           ? null
@@ -117,10 +135,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         backgroundColor: const Color(0xFFD9C8AF),
                         foregroundColor: const Color(0xFF4A3728),
                         elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                       ),
                       child: authProvider.isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text('LOGIN', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(strokeWidth: 3),
+                            )
+                          : const Text(
+                              'LOGIN',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
                     ),
                   ),
                 ],

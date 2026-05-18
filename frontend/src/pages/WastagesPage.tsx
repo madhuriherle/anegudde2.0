@@ -76,7 +76,7 @@ const WastagesPage: React.FC = () => {
         return (
           <div className="space-y-1 py-1">
             {items.map((it: any, idx: number) => (
-              <div key={idx} className="text-[11px] text-text-main leading-tight h-4 flex items-center">
+              <div key={idx} className="text-sm text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
                 {it.menu_item?.dish_name || it.item?.item_name || 'Unknown'}
               </div>
             ))}
@@ -92,7 +92,7 @@ const WastagesPage: React.FC = () => {
         return (
           <div className="space-y-1 py-1">
             {items.map((it: any, idx: number) => (
-              <div key={idx} className="text-[11px] text-text-main leading-tight h-4 flex items-center">
+              <div key={idx} className="text-sm text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
                 {formatQuantityWithUnit(it.quantity, it.menu_item?.unit || it.item?.unit)}
               </div>
             ))}
@@ -108,7 +108,7 @@ const WastagesPage: React.FC = () => {
         return (
           <div className="space-y-1 py-1">
             {items.map((it: any, idx: number) => (
-              <div key={idx} className="text-[11px] text-text-main leading-tight h-4 flex items-center">
+              <div key={idx} className="text-sm text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
                 {formatCurrency(Number(it.approx_amount || 0))}
               </div>
             ))}
@@ -123,7 +123,7 @@ const WastagesPage: React.FC = () => {
         const items = info.row.original.items || [];
         const total = items.reduce((sum: number, it: any) => sum + Number(it.approx_amount || 0), 0);
         return (
-          <span className="text-text-main">
+          <span className="text-base font-bold text-text-main">
             {formatCurrency(total)}
           </span>
         );
@@ -180,24 +180,24 @@ const WastagesPage: React.FC = () => {
               <span className="text-sm font-bold text-text-main">Wasted Dishes List</span>
             </div>
             <div className="mt-1 max-w-[560px] rounded-md border border-border-temple overflow-hidden">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-bg-temple text-text-main uppercase text-[11px] font-bold tracking-wider">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-bg-temple text-text-main uppercase text-xs font-bold tracking-wider">
                   <tr>
-                    <th className="px-3 py-2 border-b border-border-temple">Dish Name</th>
-                    <th className="px-3 py-2 border-b border-border-temple text-right">Quantity</th>
-                    <th className="px-3 py-2 border-b border-border-temple text-right">Approx Amt</th>
+                    <th className="px-3 py-3 border-b border-border-temple">Dish Name</th>
+                    <th className="px-3 py-3 border-b border-border-temple">Quantity</th>
+                    <th className="px-3 py-3 border-b border-border-temple">Approx Amt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-temple/40">
                   {(viewingWastage?.items || []).map((item: any) => (
                     <tr key={item.id} className="hover:bg-bg-temple/30">
-                      <td className="px-3 py-2 text-text-main">
+                      <td className="px-3 py-3 text-text-main font-medium">
                         {item.menu_item?.dish_name || item.item?.item_name}
                       </td>
-                      <td className="px-3 py-2 text-right text-text-main">
+                      <td className="px-3 py-3 text-left text-text-main">
                         {formatQuantityWithUnit(item.quantity, item.menu_item?.unit || item.item?.unit)}
                       </td>
-                      <td className="px-3 py-2 text-right text-text-main">
+                      <td className="px-3 py-3 text-left text-text-main font-bold">
                         {formatCurrency(Number(item.approx_amount || 0))}
                       </td>
                     </tr>

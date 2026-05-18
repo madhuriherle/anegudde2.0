@@ -102,3 +102,22 @@ class ReportQuery(BaseModel):
     from_date: date
     to_date: date
     group_by: str
+
+
+class ManpowerReportRow(BaseModel):
+    period: str
+    regular_cooking: int
+    additional_cooking: int
+    total_cooking: int
+    regular_serving: int
+    additional_serving: int
+    total_serving: int
+    regular_cleaning: int
+    additional_cleaning: int
+    total_cleaning: int
+
+
+class ManpowerReportResponse(BaseModel):
+    from_date: date
+    to_date: date
+    rows: list[ManpowerReportRow]

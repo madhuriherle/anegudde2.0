@@ -106,16 +106,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    height: 48,
-                    width: 48,
-                    fit: BoxFit.contain,
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.brown.withOpacity(0.1)),
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      height: 42,
+                      width: 42,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 const Text(
                   'Meal Token System',
                   style: TextStyle(
@@ -129,11 +134,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: PopupMenuButton<String>(
-                    offset: const Offset(0, 48),
+                    offset: const Offset(0, 45),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 4,
+                    elevation: 3,
                     tooltip: '',
                     onSelected: (value) {
                       if (value == 'logout') {
@@ -153,17 +158,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             SizedBox(width: 12),
                             Text(
                               'Logout',
-                              style: TextStyle(fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF4A3728),
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ],
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 5, 5, 5),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFDF2E9),
                         border: Border.all(color: const Color(0xFFE5D5C5)),
@@ -175,14 +180,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             'Hi, ${displayName.toUpperCase()}',
                             style: const TextStyle(
                               fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w800,
                               color: Color(0xFF5C2E1F),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
                           const Icon(
                             Icons.arrow_drop_down,
-                            size: 20,
+                            size: 22,
                             color: Color(0xFF5C2E1F),
                           ),
                           const SizedBox(width: 4),
@@ -230,17 +235,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             return Column(
                               children: [
                                 _buildMetricCard(
-                                  'TOTAL DEVOTEES',
-                                  '${tokenProvider.dailyTotal}',
-                                  const Color(0xFFB45309),
-                                  Icons.confirmation_num_outlined,
-                                ),
-                                const SizedBox(height: 16),
-                                _buildMetricCard(
                                   'TOTAL RECEIPTS',
                                   '${tokenProvider.totalReceipts}',
                                   const Color(0xFF4A3728),
                                   Icons.receipt_long_outlined,
+                                ),
+                                const SizedBox(height: 16),
+                                _buildMetricCard(
+                                  'TOTAL DEVOTEES',
+                                  '${tokenProvider.dailyTotal}',
+                                  const Color(0xFFB45309),
+                                  Icons.confirmation_num_outlined,
                                 ),
                               ],
                             );
@@ -250,19 +255,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               Expanded(
                                 child: _buildMetricCard(
-                                  'TOTAL DEVOTEES',
-                                  '${tokenProvider.dailyTotal}',
-                                  const Color(0xFFB45309),
-                                  Icons.confirmation_num_outlined,
+                                  'TOTAL RECEIPTS',
+                                  '${tokenProvider.totalReceipts}',
+                                  const Color(0xFF4A3728),
+                                  Icons.receipt_long_outlined,
                                 ),
                               ),
                               const SizedBox(width: 24),
                               Expanded(
                                 child: _buildMetricCard(
-                                  'TOTAL RECEIPTS',
-                                  '${tokenProvider.totalReceipts}',
-                                  const Color(0xFF4A3728),
-                                  Icons.receipt_long_outlined,
+                                  'TOTAL DEVOTEES',
+                                  '${tokenProvider.dailyTotal}',
+                                  const Color(0xFFB45309),
+                                  Icons.confirmation_num_outlined,
                                 ),
                               ),
                             ],
@@ -328,7 +333,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
-                                      'DATE : ${DateFormat('dd MMM yyyy').format(DateTime.now())}',
+                                      'Date : ${DateFormat('dd MMM yyyy').format(DateTime.now())}',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,

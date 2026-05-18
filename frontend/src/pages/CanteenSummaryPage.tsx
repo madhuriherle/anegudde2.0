@@ -247,7 +247,7 @@ const CanteenSummaryPage: React.FC = () => {
                 </h2>
 
                 <div className="overflow-x-auto print:overflow-visible rounded-md border border-border-temple">
-                  <table className="w-full table-fixed text-[11px] border-collapse">
+                  <table className="w-full table-fixed text-sm border-collapse">
                     <colgroup>
                       <col className="w-[17%]" />
                       <col className="w-[8%]" />
@@ -290,6 +290,19 @@ const CanteenSummaryPage: React.FC = () => {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot className="bg-gray-50/80 font-black border-t-2 border-border-temple text-text-main">
+                      <tr className="bg-[#FAF7F2]">
+                        <td colSpan={2} className="px-2 py-2 border-r border-border-temple text-left uppercase tracking-tighter">TOTAL</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a: number, b: any) => a + Number(b.opening_balance || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a: number, b: any) => a + Number(b.purchase_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a: number, b: any) => a + Number(b.issue_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{formatCurrency(rows.reduce((a: number, b: any) => a + Number(b.issue_value || 0), 0))}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a: number, b: any) => a + Number(b.purchase_return_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a: number, b: any) => a + Number(b.stock_adjustment_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right font-black">{rows.reduce((a: number, b: any) => a + Number(b.closing_stock || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 text-right font-black text-amber-900">{formatCurrency(rows.reduce((a: number, b: any) => a + Number(b.closing_value || 0), 0))}</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </section>
@@ -298,7 +311,7 @@ const CanteenSummaryPage: React.FC = () => {
 
           {grandTotals && (
             <div className="overflow-x-auto print:overflow-visible rounded-md border border-border-temple">
-              <table className="w-full table-fixed text-[11px] border-collapse">
+              <table className="w-full table-fixed text-sm border-collapse">
                 <colgroup>
                   <col className="w-[17%]" />
                   <col className="w-[8%]" />
@@ -311,17 +324,17 @@ const CanteenSummaryPage: React.FC = () => {
                   <col className="w-[9%]" />
                   <col className="w-[7%]" />
                 </colgroup>
-                <tfoot className="bg-gray-50 font-bold text-[13px]">
-                  <tr>
-                    <td colSpan={2} className="px-2 py-2 border-r border-border-temple text-left">GRAND TOTAL</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.opening.toFixed(3)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.purchase.toFixed(3)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.issues.toFixed(3)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{formatCurrency(grandTotals.issue_val)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.returns.toFixed(3)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.adjust.toFixed(3)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.closing.toFixed(3)}</td>
-                    <td className="px-2 py-2 text-right">{formatCurrency(grandTotals.closing_val)}</td>
+                <tfoot className="bg-amber-50 font-black text-[13px] border-t-2 border-amber-200">
+                  <tr className="text-amber-950">
+                    <td colSpan={2} className="px-2 py-3 border-r border-amber-200 text-left uppercase tracking-tight">GRAND TOTAL</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.opening.toFixed(3)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.purchase.toFixed(3)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.issues.toFixed(3)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{formatCurrency(grandTotals.issue_val)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.returns.toFixed(3)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.adjust.toFixed(3)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right font-black">{grandTotals.closing.toFixed(3)}</td>
+                    <td className="px-2 py-3 text-right font-black">{formatCurrency(grandTotals.closing_val)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -333,7 +346,7 @@ const CanteenSummaryPage: React.FC = () => {
             <div className="p-4 border-t border-border-temple print:hidden">
               <div className="grid items-start gap-3 md:grid-cols-3">
                 <div className="overflow-hidden rounded-md border border-border-temple">
-                  <table className="w-full table-fixed text-[11px] border-collapse">
+                  <table className="w-full table-fixed text-sm border-collapse">
                     <thead className="bg-gray-50 border-b border-border-temple">
                       <tr className="text-text-main font-bold uppercase">
                         <th colSpan={2} className="px-2 py-2 text-left text-primary">Day Snapshot</th>
@@ -368,7 +381,7 @@ const CanteenSummaryPage: React.FC = () => {
                 </div>
 
                 <div className="overflow-hidden rounded-md border border-border-temple">
-                  <table className="w-full table-fixed text-[11px] border-collapse">
+                  <table className="w-full table-fixed text-sm border-collapse">
                     <thead className="bg-gray-50 border-b border-border-temple">
                       <tr className="text-text-main font-bold uppercase">
                         <th colSpan={3} className="px-2 py-2 text-left text-red-700">Wastage</th>
@@ -395,7 +408,7 @@ const CanteenSummaryPage: React.FC = () => {
                 </div>
 
                 <div className="overflow-hidden rounded-md border border-border-temple">
-                  <table className="w-full table-fixed text-[11px] border-collapse">
+                  <table className="w-full table-fixed text-sm border-collapse">
                     <thead className="bg-gray-50 border-b border-border-temple">
                       <tr className="text-text-main font-bold uppercase">
                         <th colSpan={2} className="px-2 py-2 text-left text-green-700">Raw Items Returned</th>
@@ -436,14 +449,16 @@ const CanteenSummaryPage: React.FC = () => {
                     </div>
                     <table className="w-full table-fixed text-[9px] border-collapse border border-black">
                         <colgroup>
-                            <col className="w-[20%]" />
+                            <col className="w-[17%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[10%]" />
+                            <col className="w-[10%]" />
                             <col className="w-[9%]" />
-                            <col className="w-[12%]" />
-                            <col className="w-[11%]" />
                             <col className="w-[10%]" />
                             <col className="w-[12%]" />
-                            <col className="w-[12%]" />
-                            <col className="w-[14%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[7%]" />
                         </colgroup>
                         <thead>
                             <tr className="bg-gray-100 font-bold uppercase">
@@ -453,6 +468,8 @@ const CanteenSummaryPage: React.FC = () => {
                                 <th className="border border-black px-2 py-1 text-right">Stock Added</th>
                                 <th className="border border-black px-2 py-1 text-right">Stock Used</th>
                                 <th className="border border-black px-2 py-1 text-right">Usage Value</th>
+                                <th className="border border-black px-2 py-1 text-right">Returned</th>
+                                <th className="border border-black px-2 py-1 text-right">Adjust</th>
                                 <th className="border border-black px-2 py-1 text-right bg-gray-50">Closing Stock</th>
                                 <th className="border border-black px-2 py-1 text-right bg-gray-50">Closing Value</th>
                             </tr>
@@ -466,6 +483,8 @@ const CanteenSummaryPage: React.FC = () => {
                                     <td className="border border-black px-2 py-1 text-right">{Number(row.purchase_qty).toFixed(3)}</td>
                                     <td className="border border-black px-2 py-1 text-right">{Number(row.issue_qty).toFixed(3)}</td>
                                     <td className="border border-black px-2 py-1 text-right font-semibold">₹{Number(row.issue_value).toLocaleString()}</td>
+                                    <td className="border border-black px-2 py-1 text-right">{Number(row.purchase_return_qty || 0).toFixed(3)}</td>
+                                    <td className="border border-black px-2 py-1 text-right">{Number(row.stock_adjustment_qty || 0).toFixed(3)}</td>
                                     <td className="border border-black px-2 py-1 text-right font-black bg-gray-50">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
                                     <td className="border border-black px-2 py-1 text-right font-black bg-gray-50">₹{Number(row.closing_value).toLocaleString()}</td>
                                 </tr>
@@ -478,6 +497,8 @@ const CanteenSummaryPage: React.FC = () => {
                                 <td className="border border-black px-2 py-1 text-right">{rows.reduce((a, b) => a + Number(b.purchase_qty), 0).toFixed(3)}</td>
                                 <td className="border border-black px-2 py-1 text-right">{rows.reduce((a, b) => a + Number(b.issue_qty), 0).toFixed(3)}</td>
                                 <td className="border border-black px-2 py-1 text-right">₹{rows.reduce((a, b) => a + Number(b.issue_value), 0).toLocaleString()}</td>
+                                <td className="border border-black px-2 py-1 text-right">{rows.reduce((a, b) => a + Number(b.purchase_return_qty || 0), 0).toFixed(3)}</td>
+                                <td className="border border-black px-2 py-1 text-right">{rows.reduce((a, b) => a + Number(b.stock_adjustment_qty || 0), 0).toFixed(3)}</td>
                                 <td className="border border-black px-2 py-1 text-right">{rows.reduce((a, b) => a + Number(b.closing_stock), 0).toFixed(3)}</td>
                                 <td className="border border-black px-2 py-1 text-right">₹{rows.reduce((a, b) => a + Number(b.closing_value), 0).toLocaleString()}</td>
                             </tr>

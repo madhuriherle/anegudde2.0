@@ -75,9 +75,9 @@ const MainLayout: React.FC = () => {
     { text: 'Canteen', icon: UtensilsCrossed, path: '/canteen', action: () => setActiveModule('canteen') },
     { text: 'Office', icon: Briefcase, path: '/office' },
     { text: 'Users', icon: Users, path: '/users' },
-    { text: 'Devotees', icon: Heart, path: '/devotees' },
+    // { text: 'Devotees', icon: Heart, path: '/devotees' },
     { text: 'Reports', icon: BarChart3, path: undefined },
-    { text: 'Master Settings', icon: Settings, path: undefined },
+    ...(user?.role_id === 1 || user?.role_id === 2 ? [{ text: 'System Settings', icon: Settings, path: '/settings' }] : []),
   ];
 
   const canteenMenuItems: MenuItem[] = [
@@ -109,6 +109,7 @@ const MainLayout: React.FC = () => {
         { text: 'Category', path: '/settings/categories' },
         { text: 'Raw Item', path: '/items' },
         { text: 'Menu Item', path: '/settings/menu-items' },
+        { text: 'Donation Type', path: '/settings/donation-types' },
       ]
     },
     {
@@ -117,6 +118,7 @@ const MainLayout: React.FC = () => {
       children: [
         { text: 'Stock Summary', path: '/reports/stock-summary' },
         { text: 'Canteen Summary', path: '/reports/canteen-summary' },
+        { text: 'Manpower Report', path: '/reports/manpower' },
         { text: 'Donation Report', path: '/reports/donations' },
         { text: 'Token Issued Report', path: '/reports/tokens' },
       ]
@@ -228,7 +230,7 @@ const MainLayout: React.FC = () => {
               <MenuIcon className="w-6 h-6" />
             </button>
             <div className="bg-[#F8E6D1] border border-[#B08968] px-4 py-2 rounded-[10px] shadow-[0_2px_6px_rgba(90,46,31,0.08)]">
-               <span className="text-sm font-bold text-[#5C2E1F] leading-none block whitespace-nowrap">
+               <span className="text-base font-bold text-[#5C2E1F] leading-none block whitespace-nowrap">
                   Financial Year : {user?.active_financial_year?.name || (() => {
                     const now = new Date();
                     const year = now.getFullYear();
@@ -242,7 +244,7 @@ const MainLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="hidden sm:block text-xs font-medium text-gray-700 mr-2">
+            <span className="hidden sm:block text-base font-medium text-gray-700 mr-2">
               {user?.full_name}
             </span>
 

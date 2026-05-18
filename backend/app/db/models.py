@@ -20,6 +20,42 @@ class FinancialYear(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, nullable=True)
 
+class SystemSettings(Base):
+    __tablename__ = "system_settings"
+    id = Column(Integer, primary_key=True)
+    # Temple Details
+    temple_name = Column(String(255), nullable=False, default="Anegudde Sri Vinayaka Temple")
+    temple_address = Column(Text, nullable=True)
+    temple_contact = Column(String(100), nullable=True)
+    
+    # Receipt Formats
+    token_prefix = Column(String(20), nullable=False, default="TOK-")
+    purchase_prefix = Column(String(20), nullable=False, default="PUR-")
+    receipt_padding = Column(Integer, nullable=False, default=4) # e.g., 4 results in 0001
+    
+    # Financial Year
+    current_financial_year_id = Column(Integer, ForeignKey("financial_years.id"), nullable=True)
+    
+    # Meta
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    current_year = relationship("FinancialYear", foreign_keys=[current_financial_year_id])
+
+class ReceiptSequence(Base):
+    __tablename__ = "receipt_sequences"
+    id = Column(Integer, primary_key=True)
+    financial_year_id = Column(Integer, ForeignKey("financial_years.id"), nullable=False, index=True)
+    sequence_type = Column(String(30), nullable=False, index=True)
+    donation_type_id = Column(Integer, ForeignKey("donation_types.id"), nullable=True, index=True)
+    prefix = Column(String(20), nullable=False)
+    last_number = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+    financial_year = relationship("FinancialYear", foreign_keys=[financial_year_id])
+    donation_type = relationship("DonationType", foreign_keys=[donation_type_id])
+
 # ==========================================
 # 1. MASTER TABLES (STANDARD - NOT PARTITIONED)
 # ==========================================
@@ -111,6 +147,17 @@ class ItemType(Base):
     __tablename__ = "item_types"
     id = Column(Integer, primary_key=True)
     type_name = Column(String(100), unique=True, nullable=False)
+    status = Column(Integer, nullable=False, default=1, index=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+class DonationType(Base):
+    __tablename__ = "donation_types"
+    id = Column(Integer, primary_key=True)
+    type_name = Column(String(100), unique=True, nullable=False)
+    receipt_prefix = Column(String(20), nullable=False)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -375,7 +422,7 @@ class Devotee(Base):
     __tablename__ = "devotees"
     id = Column(Integer, primary_key=True)
     devotee_name = Column(String(150), nullable=False)
-    phone_number = Column(String(20), unique=True, nullable=False, index=True)
+    phone_number = Column(String(20), nullable=False, index=True)
     email = Column(String(150), nullable=True)
     address = Column(Text, nullable=True)
     city = Column(String(100), nullable=True)
@@ -392,7 +439,11 @@ class Devotee(Base):
 class DonationEntry(Base):
     __tablename__ = "donation_entries"
     id = Column(Integer, primary_key=True)
-    donation_type = Column(Integer, nullable=False, default=1, server_default="1", index=True)
+    donation_type = Column(Integer, ForeignKey("donation_types.id"), nullable=False, default=1, server_default="1", index=True)
+    financial_year_id = Column(Integer, ForeignKey("financial_years.id"), nullable=True, index=True)
+    receipt_prefix = Column(String(20), nullable=True)
+    receipt_number = Column(Integer, nullable=True)
+    receipt_display_number = Column(String(50), nullable=True, index=True)
     donation_date = Column(Date, nullable=False, index=True)
     devotee_id = Column(Integer, ForeignKey("devotees.id"), nullable=True, index=True)
     devotee_name = Column(String(150), nullable=False)
@@ -411,6 +462,8 @@ class DonationEntry(Base):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     user = relationship("User", foreign_keys=[user_id])
+    donation_type_master = relationship("DonationType", foreign_keys=[donation_type])
+    financial_year = relationship("FinancialYear", foreign_keys=[financial_year_id])
     devotee = relationship("Devotee", back_populates="donations")
     items = relationship("DonationItem", back_populates="donation_entry", cascade="all, delete-orphan")
 
@@ -420,7 +473,6 @@ class DonationItem(Base):
     donation_entry_id = Column(Integer, ForeignKey("donation_entries.id"), nullable=False, index=True)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
     quantity = Column(Numeric(15, 3), nullable=False)
-    unit_cost_at_time = Column(Numeric(15, 3), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     item = relationship("Item")
@@ -522,7 +574,10 @@ class TokenDetail(Base):
     __tablename__ = "token_details"
     id = Column(Integer, primary_key=True)
     generation_id = Column(Integer, ForeignKey("token_generations.id"), nullable=False, index=True)
+    financial_year_id = Column(Integer, ForeignKey("financial_years.id"), nullable=True, index=True)
+    receipt_prefix = Column(String(20), nullable=True)
     receipt_number = Column(Integer, nullable=False)
+    receipt_display_number = Column(String(50), nullable=True, index=True)
     token_count = Column(Integer, nullable=False)
     created_at = Column(DateTime, primary_key=True, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -530,6 +585,7 @@ class TokenDetail(Base):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     
     creator = relationship("User", foreign_keys=[created_by])
+    financial_year = relationship("FinancialYear", foreign_keys=[financial_year_id])
     
     __table_args__ = (
         {"postgresql_partition_by": "RANGE (created_at)"}

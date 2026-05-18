@@ -262,7 +262,7 @@ const TokensPage: React.FC = () => {
                     details?.map((detail: any) => (
                       <tr key={detail.id} className="hover:bg-bg-temple/30">
                         <td className="px-4 py-3 text-text-main font-bold">
-                          {detail.receipt_number}
+                          {detail.receipt_display_number || detail.receipt_number}
                         </td>
                         <td className="px-4 py-3 text-center text-text-main/70">
                           {new Date(detail.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

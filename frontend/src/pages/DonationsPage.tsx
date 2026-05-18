@@ -21,7 +21,7 @@ import { cn } from '../utils/cn';
 import { Plus, Trash2, Search } from 'lucide-react';
 
 const formSchema = z.object({
-  donation_type: z.coerce.number().default(1),
+  donation_type: z.coerce.number().min(1, 'Donation type is required'),
   donation_date: z.string().min(1, 'Date is required'),
   devotee_name: z.string().min(1, 'Devotee name is required'),
   phone_number: z.string().min(1, 'Phone number is required'),
@@ -32,6 +32,7 @@ const formSchema = z.object({
   pincode: z.string().optional(),
   remarks: z.string().optional(),
   items: z.array(z.object({
+    search_id: z.string().optional(),
     item_id: z.coerce.number().min(1, 'Item is required'),
     quantity: z.coerce.number().min(0.001, 'Quantity is required'),
   })).min(1, 'At least one item is required'),
@@ -93,9 +94,12 @@ const DonationsPage: React.FC = () => {
   const [editingDonation, setEditingDonation] = useState<any>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingDonation, setViewingDonation] = useState<any>(null);
+  const [matchedDevotee, setMatchedDevotee] = useState<any>(null);
+  const [devoteeMatchOpen, setDevoteeMatchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
+  const [donationPrefixInput, setDonationPrefixInput] = useState('');
 
   const { data: donationsData, isLoading: donationsLoading } = useQuery({
     queryKey: ['donations', searchTerm, page, pageSize],
@@ -111,17 +115,63 @@ const DonationsPage: React.FC = () => {
     queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data,
   });
 
+  const { data: donationTypesData } = useQuery({
+    queryKey: ['donation-types'],
+    queryFn: async () => (await api.get('/donation-types/list_donation_types', { params: { status: null, page_size: 1000 } })).data,
+  });
+
   const items = useMemo(
     () => (Array.isArray(itemsData) ? itemsData : (itemsData?.items || [])),
     [itemsData]
   );
   const activeItems = useMemo(() => (items || []).filter((i: any) => i.status === 1), [items]);
+  const donationTypes = useMemo(() => donationTypesData?.items || [], [donationTypesData]);
+  const activeDonationTypes = useMemo(() => donationTypes.filter((type: any) => Number(type.status) === 1), [donationTypes]);
+  const donationTypeNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    donationTypes.forEach((type: any) => map.set(Number(type.id), type.type_name));
+    return map;
+  }, [donationTypes]);
+  const donationTypeByPrefix = useMemo(() => {
+    const map = new Map<string, any>();
+    activeDonationTypes.forEach((type: any) => {
+      const prefix = String(type.receipt_prefix || '').trim().toUpperCase();
+      if (prefix) map.set(prefix, type);
+    });
+    return map;
+  }, [activeDonationTypes]);
+  const donationTypePrefixById = useMemo(() => {
+    const map = new Map<number, string>();
+    donationTypes.forEach((type: any) => map.set(Number(type.id), type.receipt_prefix || ''));
+    return map;
+  }, [donationTypes]);
+
+  const serialToItemIdMap = useMemo(() => {
+    const map = new Map<string, number>();
+    items.forEach((i: any) => {
+      (i.serial_numbers || []).forEach((s: any) => {
+        const serial = String(s?.serial_number || '').trim().toLowerCase();
+        if (serial) map.set(serial, i.id);
+      });
+    });
+    return map;
+  }, [items]);
+
+  const itemCodeByItemIdMap = useMemo(() => {
+    const map = new Map<number, string>();
+    items.forEach((i: any) => {
+      const serial = (i.serial_numbers || [])
+        .find((s: any) => Number(s?.status ?? 1) === 1)?.serial_number;
+      if (serial) map.set(i.id, serial);
+    });
+    return map;
+  }, [items]);
 
   const { register, handleSubmit, reset, control, setValue, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
       donation_date: toDateInputValue(new Date()),
-      donation_type: 1,
+      donation_type: 0,
       devotee_name: '',
       phone_number: '',
       email: '',
@@ -139,22 +189,43 @@ const DonationsPage: React.FC = () => {
     name: 'items',
   });
 
-  // Auto-fill logic based on phone number
+  const watchedItemsList = watch('items');
+  const watchedDonationType = watch('donation_type');
+
+  useEffect(() => {
+    const prefix = donationTypePrefixById.get(Number(watchedDonationType));
+    if (prefix !== undefined) {
+      setDonationPrefixInput(prefix);
+    } else if (!watchedDonationType) {
+      setDonationPrefixInput('');
+    }
+  }, [donationTypePrefixById, watchedDonationType]);
+
+  // Initialize search_ids when items load or change
+  useEffect(() => {
+    if (activeItems.length > 0 && watchedItemsList) {
+      watchedItemsList.forEach((item, index) => {
+        if (item.item_id && !item.search_id) {
+          const code = itemCodeByItemIdMap.get(item.item_id);
+          if (code) {
+            setValue(`items.${index}.search_id`, code);
+          }
+        }
+      });
+    }
+  }, [activeItems, watchedItemsList, itemCodeByItemIdMap, setValue]);
+
+  // Suggest existing devotee details based on phone number.
   const watchedPhone = watch('phone_number');
   useEffect(() => {
-    if (watchedPhone?.length === 10 && !editingDonation) {
+    if (open && watchedPhone?.length === 10 && !editingDonation) {
       const fetchDevotee = async () => {
         try {
           const res = await api.get(`/donations/get_devotee_by_phone/${watchedPhone}`);
           const d = res.data;
           if (d) {
-            setValue('devotee_name', d.devotee_name);
-            setValue('email', d.email || '');
-            setValue('address', d.address || '');
-            setValue('city', d.city || '');
-            setValue('state', d.state || 'Karnataka');
-            setValue('pincode', d.pincode || '');
-            showSuccess(`Found existing devotee: ${d.devotee_name}`);
+            setMatchedDevotee(d);
+            setDevoteeMatchOpen(true);
           }
         } catch (err) {
           // If not found, it's a new devotee, ignore 404
@@ -162,18 +233,53 @@ const DonationsPage: React.FC = () => {
       };
       fetchDevotee();
     }
-  }, [watchedPhone, setValue, editingDonation, showSuccess]);
+  }, [open, watchedPhone, setValue, editingDonation]);
+
+  const closeDevoteeMatch = () => {
+    setDevoteeMatchOpen(false);
+    setMatchedDevotee(null);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }, 0);
+  };
+
+  const useMatchedDevotee = () => {
+    if (!matchedDevotee) return;
+    setValue('devotee_name', matchedDevotee.devotee_name);
+    setValue('email', matchedDevotee.email || '');
+    setValue('address', matchedDevotee.address || '');
+    setValue('city', matchedDevotee.city || '');
+    setValue('state', matchedDevotee.state || 'Karnataka');
+    setValue('pincode', matchedDevotee.pincode || '');
+    closeDevoteeMatch();
+  };
+
+  const enterNewDevotee = () => {
+    setValue('devotee_name', '');
+    setValue('email', '');
+    setValue('address', '');
+    setValue('city', '');
+    setValue('state', 'Karnataka');
+    setValue('pincode', '');
+    closeDevoteeMatch();
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (payload: FormValues) => {
+      // Remove search_id before sending to backend
+      const cleanedItems = payload.items.map(({ item_id, quantity }) => ({ item_id, quantity }));
       if (editingDonation) {
         return await api.put(`/donations/update_donation/${editingDonation.id}`, {
           ...payload,
+          items: cleanedItems,
           user_id: user?.id,
         });
       }
       return await api.post('/donations/create_donation', {
         ...payload,
+        items: cleanedItems,
         user_id: user?.id,
       });
     },
@@ -211,10 +317,12 @@ const DonationsPage: React.FC = () => {
   };
 
   const handleEdit = (donation: any) => {
+    setDevoteeMatchOpen(false);
+    setMatchedDevotee(null);
     setEditingDonation(donation);
     reset({
       donation_date: donation.donation_date,
-      donation_type: donation.donation_type || 1,
+      donation_type: donation.donation_type || 0,
       devotee_name: donation.devotee_name,
       phone_number: donation.phone_number,
       email: donation.email || '',
@@ -223,12 +331,33 @@ const DonationsPage: React.FC = () => {
       state: donation.state || 'Karnataka',
       pincode: donation.pincode || '',
       remarks: donation.remarks || '',
-      items: (donation.items || []).map((it: any) => ({
-        item_id: it.item_id,
-        quantity: it.quantity,
-      })),
+      items: (donation.items || []).map((it: any) => {
+        const itemObj = items.find((i: any) => i.id === it.item_id);
+        const code = itemObj?.serial_numbers?.[0]?.serial_number || '';
+        return {
+          search_id: code,
+          item_id: it.item_id,
+          quantity: it.quantity,
+        };
+      }),
     });
     setOpen(true);
+  };
+
+  const handleDonationTypeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const donationTypeId = Number(event.target.value);
+    setValue('donation_type', donationTypeId);
+    setDonationPrefixInput(donationTypePrefixById.get(donationTypeId) || '');
+  };
+
+  const handleDonationPrefixChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextPrefix = event.target.value.toUpperCase();
+    setDonationPrefixInput(nextPrefix);
+
+    const matchedType = donationTypeByPrefix.get(nextPrefix.trim());
+    if (matchedType) {
+      setValue('donation_type', Number(matchedType.id));
+    }
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -244,9 +373,32 @@ const DonationsPage: React.FC = () => {
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
+      accessorKey: 'receipt_display_number',
+      header: 'Receipt No',
+      cell: info => <span className="text-text-main font-black">{info.getValue() as string || '-'}</span>,
+    },
+    {
       accessorKey: 'donation_date',
       header: 'Date',
       cell: (i) => formatDate(i.getValue() as string),
+    },
+    {
+      accessorKey: 'donation_type',
+      header: 'Type',
+      cell: info => {
+        const val = info.getValue() as number;
+        return (
+          <span className={cn(
+            "px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter",
+            val === 2 ? "bg-emerald-100 text-emerald-700" : 
+            val === 3 ? "bg-amber-100 text-amber-700" :
+            val === 4 ? "bg-purple-100 text-purple-700" :
+            "bg-blue-100 text-blue-700"
+          )}>
+            {donationTypeNameById.get(Number(val)) || 'General Donation'}
+          </span>
+        );
+      }
     },
     {
       accessorKey: 'devotee_name',
@@ -294,7 +446,7 @@ const DonationsPage: React.FC = () => {
         </div>
       )
     }
-  ], [deleteMutation, showConfirm]);
+  ], [deleteMutation, donationTypeNameById, showConfirm]);
 
   return (
     <div className="space-y-6">
@@ -304,7 +456,7 @@ const DonationsPage: React.FC = () => {
           setEditingDonation(null);
           reset({
             donation_date: toDateInputValue(new Date()),
-            donation_type: 1,
+            donation_type: 0,
             devotee_name: '',
             phone_number: '',
             email: '',
@@ -355,52 +507,58 @@ const DonationsPage: React.FC = () => {
       </div>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl border-border-temple">
-          <DialogHeader className="border-b border-border-temple/40 pb-4">
+        <DialogContent className="max-w-2xl !flex !flex-col !p-0 !max-h-[95vh] border-border-temple">
+          <DialogHeader className="!m-0 !mt-0 !mb-0 border-b border-border-temple/40 !px-6 !py-5">
             <DialogTitle className="text-text-main font-temple">Donation Details</DialogTitle>
             <DialogDescription className="sr-only">Detailed breakdown of the selected donation.</DialogDescription>
           </DialogHeader>
-          {viewingDonation && (
-            <div className="space-y-6 mt-4">
-              <div className="space-y-0 px-1">
-                <DetailItem label="Devotee Name" value={viewingDonation.devotee_name} />
-                <DetailItem label="Date" value={formatDate(viewingDonation.donation_date)} />
-                <DetailItem label="Phone" value={viewingDonation.phone_number} />
-                <DetailItem label="Email" value={viewingDonation.email} />
-                <DetailItem label="Address" value={viewingDonation.address} />
-                <DetailItem label="City" value={viewingDonation.city} />
-                <DetailItem label="State" value={viewingDonation.state} />
-                <DetailItem label="Pincode" value={viewingDonation.pincode} />
-                <DetailItem label="Remarks" value={viewingDonation.remarks} />
-              </div>
+          <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar bg-white">
+            {viewingDonation && (
+              <div className="space-y-8">
+                <div className="space-y-0">
+                  <DetailItem label="Receipt No" value={viewingDonation.receipt_display_number} />
+                  <DetailItem label="Devotee Name" value={viewingDonation.devotee_name} />
+                  <DetailItem label="Date" value={formatDate(viewingDonation.donation_date)} />
+                  <DetailItem label="Donation Type" value={(() => {
+                    return donationTypeNameById.get(Number(viewingDonation.donation_type)) || 'General Donation';
+                  })()} />
+                  <DetailItem label="Phone" value={viewingDonation.phone_number} />
+                  <DetailItem label="Email" value={viewingDonation.email} />
+                  <DetailItem label="Address" value={viewingDonation.address} />
+                  <DetailItem label="City" value={viewingDonation.city} />
+                  <DetailItem label="State" value={viewingDonation.state} />
+                  <DetailItem label="Pincode" value={viewingDonation.pincode} />
+                  <DetailItem label="Remarks" value={viewingDonation.remarks} />
+                </div>
 
-              <div className="space-y-2">
-                <h4 className="text-sm font-bold text-primary uppercase tracking-wider">Donated Items</h4>
-                <div className="rounded-lg border border-border-temple overflow-hidden">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-bg-temple border-b border-border-temple">
-                      <tr>
-                        <th className="px-4 py-2 font-bold text-text-main">Item</th>
-                        <th className="px-4 py-2 font-bold text-text-main text-right">Quantity</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-temple/40">
-                      {(viewingDonation.items || []).map((it: any) => (
-                        <tr key={it.id} className="bg-white">
-                          <td className="px-4 py-2 text-text-main">{it.item?.item_name}</td>
-                          <td className="px-4 py-2 text-text-main text-right font-medium">
-                            {formatQuantityWithUnit(it.quantity, it.item?.unit)}
-                          </td>
+                <div className="space-y-4">
+                  <h4 className="text-base font-black text-primary uppercase tracking-widest ml-1">Donated Items</h4>
+                  <div className="rounded-xl border border-border-temple overflow-hidden shadow-sm">
+                    <table className="w-full text-base text-left">
+                      <thead className="bg-[#F6EEDF] border-b border-border-temple">
+                        <tr>
+                          <th className="px-5 py-3 font-bold text-text-main">Item</th>
+                          <th className="px-5 py-3 font-bold text-text-main text-right">Quantity</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-border-temple/30">
+                        {(viewingDonation.items || []).map((it: any) => (
+                          <tr key={it.id} className="bg-white hover:bg-bg-temple/20 transition-colors">
+                            <td className="px-5 py-3 text-text-main font-medium">{it.item?.item_name}</td>
+                            <td className="px-5 py-3 text-text-main text-right font-black">
+                              {formatQuantityWithUnit(it.quantity, it.item?.unit)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          <DialogFooter className="mt-8 border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10 border-none shadow-none">Close</Button>
+            )}
+          </div>
+          <DialogFooter className="!m-0 !mt-0 !space-x-0 !p-4 border-t border-border-temple/40">
+            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-12 h-11 border-none shadow-md font-bold uppercase tracking-widest rounded-xl">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -416,28 +574,51 @@ const DonationsPage: React.FC = () => {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="text-text-main">Donation Date *</Label>
+                <Input type="date" {...register('donation_date')} className="h-10 text-text-main" />
+                {errors.donation_date && <p className="text-xs text-error font-medium">{errors.donation_date.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main">Receipt Prefix</Label>
+                <Input
+                  value={donationPrefixInput}
+                  onChange={handleDonationPrefixChange}
+                  className="h-10 text-text-main font-mono uppercase"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main">Donation Type *</Label>
+                <Select {...register('donation_type')} onChange={handleDonationTypeChange} className="h-10 text-text-main">
+                  <option value={0}>Select Donation Type</option>
+                  {activeDonationTypes.map((type: any) => (
+                    <option key={type.id} value={type.id}>{type.type_name}</option>
+                  ))}
+                </Select>
+                {errors.donation_type && <p className="text-xs text-error font-medium">{errors.donation_type.message}</p>}
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Mobile Number *</Label>
-                <Input {...register('phone_number')} placeholder="Contact Number" className="h-10 text-text-main" />
+                <Input {...register('phone_number')} className="h-10 text-text-main" />
                 {errors.phone_number && <p className="text-xs text-error font-medium">{errors.phone_number.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Devotee Name *</Label>
-                <Input {...register('devotee_name')} placeholder="Full Name" className="h-10 text-text-main" />
+                <Input {...register('devotee_name')} className="h-10 text-text-main" />
                 {errors.devotee_name && <p className="text-xs text-error font-medium">{errors.devotee_name.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Email</Label>
-                <Input {...register('email')} placeholder="Optional" className="h-10 text-text-main" />
+                <Input {...register('email')} className="h-10 text-text-main" />
                 {errors.email && <p className="text-xs text-error font-medium">{errors.email.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Address</Label>
-                <Input {...register('address')} placeholder="Devotee's address" className="h-10 text-text-main" />
+                <Input {...register('address')} className="h-10 text-text-main" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">City</Label>
-                <Input {...register('city')} placeholder="City" className="h-10 text-text-main" />
+                <Input {...register('city')} className="h-10 text-text-main" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">State</Label>
@@ -449,29 +630,66 @@ const DonationsPage: React.FC = () => {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Pincode</Label>
-                <Input {...register('pincode')} placeholder="Pincode" className="h-10 text-text-main" />
+                <Input {...register('pincode')} className="h-10 text-text-main" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Remarks</Label>
-                <Input {...register('remarks')} placeholder="Any additional notes" className="h-10 text-text-main" />
+                <Input {...register('remarks')} className="h-10 text-text-main" />
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-2">
-                <h4 className="text-sm font-bold text-primary uppercase tracking-widest">Donated Items</h4>
+                <h4 className="text-base font-bold text-primary uppercase tracking-widest">Donated Items</h4>
               </div>
 
               <div className="space-y-3">
                 {fields.map((field, index) => (
                   <div key={field.id} className="grid grid-cols-12 gap-3 items-end bg-white p-3 rounded-lg border border-border-temple/40 shadow-sm relative">
-                    <div className="col-span-7 space-y-1.5">
-                      <Label className="text-xs font-bold text-text-main">Item</Label>
+                    <div className="col-span-2 space-y-1.5">
+                      <Label className="text-base font-bold text-text-main">Code</Label>
+                      <Input
+                        type="text"
+                        className="h-10 text-base text-center font-bold text-text-main border-primary/30 px-1"
+                        {...register(`items.${index}.search_id` as any)}
+                        onChange={(e) => {
+                          const val = String(e.target.value || '').trim().toLowerCase();
+                          setValue(`items.${index}.search_id` as any, e.target.value);
+                          if (val) {
+                            const matchedId = serialToItemIdMap.get(val);
+                            // Verify item exists AND is active before selecting
+                            const isActive = activeItems.some((ai: any) => Number(ai.id) === Number(matchedId));
+                            
+                            if (matchedId && isActive) {
+                              setValue(`items.${index}.item_id` as any, matchedId);
+                            } else {
+                              // Clear selection if not found or disabled
+                              setValue(`items.${index}.item_id` as any, 0);
+                            }
+                          } else {
+                            setValue(`items.${index}.item_id` as any, 0);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-5 space-y-1.5">
+                      <Label className="text-base font-bold text-text-main">Item</Label>
                       <Controller
                         name={`items.${index}.item_id`}
                         control={control}
                         render={({ field: selectField }) => (
-                          <Select {...selectField} className="h-9 text-sm">
+                          <Select 
+                            {...selectField} 
+                            className="h-10 text-base"
+                            onChange={(e) => {
+                              const itemId = Number(e.target.value);
+                              selectField.onChange(e);
+                              const code = itemCodeByItemIdMap.get(itemId);
+                              if (code) {
+                                setValue(`items.${index}.search_id` as any, code);
+                              }
+                            }}
+                          >
                             <option value={0} disabled>Select Item</option>
                             {activeItems.map((i: any) => (
                               <option key={i.id} value={i.id}>{i.item_name}</option>
@@ -481,7 +699,7 @@ const DonationsPage: React.FC = () => {
                       />
                     </div>
                     <div className="col-span-4 space-y-1.5">
-                      <Label className="text-xs font-bold text-text-main">Quantity</Label>
+                      <Label className="text-base font-bold text-text-main">Quantity</Label>
                       <Input 
                         type="text"
                         inputMode="decimal"
@@ -498,7 +716,7 @@ const DonationsPage: React.FC = () => {
                             setValue(`items.${index}.quantity` as any, '' as any);
                           }
                         }}
-                        className="h-9 text-sm"
+                        className="h-10 text-base"
                       />
                     </div>
                     <div className="col-span-1 flex justify-end">
@@ -529,7 +747,7 @@ const DonationsPage: React.FC = () => {
                   size="sm" 
                   variant="outline" 
                   onClick={() => append({ item_id: 0, quantity: 0 })}
-                  className="h-10 text-xs font-bold border-primary text-primary hover:bg-primary hover:text-white"
+                  className="h-10 text-base font-bold border-primary text-primary hover:bg-primary hover:text-white"
                 >
                   <Plus className="h-3 w-3 mr-1" /> Add Item
                 </Button>
@@ -546,6 +764,48 @@ const DonationsPage: React.FC = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={devoteeMatchOpen} onOpenChange={(open) => open ? setDevoteeMatchOpen(true) : closeDevoteeMatch()}>
+        <DialogContent
+          className="max-w-3xl border-border-temple"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur();
+            }
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-text-main font-temple text-2xl">Existing Devotee Found</DialogTitle>
+            <DialogDescription className="text-base leading-6">
+              This mobile number is already linked to a devotee. Use those details or enter a new devotee with the same mobile number.
+            </DialogDescription>
+          </DialogHeader>
+
+          {matchedDevotee && (
+            <div className="mt-4 rounded-xl border border-border-temple bg-[#FFF8F0] p-5">
+              <div className="grid grid-cols-1 gap-3">
+                <DetailItem className="grid-cols-[130px_18px_1fr] text-base" label="Name" value={matchedDevotee.devotee_name} />
+                <DetailItem className="grid-cols-[130px_18px_1fr] text-base" label="Phone" value={matchedDevotee.phone_number} />
+                <DetailItem className="grid-cols-[130px_18px_1fr] text-base" label="Email" value={matchedDevotee.email} />
+                <DetailItem className="grid-cols-[130px_18px_1fr] text-base" label="Address" value={matchedDevotee.address} />
+                <DetailItem className="grid-cols-[130px_18px_1fr] text-base" label="City" value={matchedDevotee.city} />
+                <DetailItem className="grid-cols-[130px_18px_1fr] text-base" label="State" value={matchedDevotee.state} />
+                <DetailItem className="grid-cols-[130px_18px_1fr] text-base" label="Pincode" value={matchedDevotee.pincode} />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-6 gap-3">
+            <Button type="button" variant="ghost" onClick={enterNewDevotee} className="h-12 px-6 bg-white border border-border-temple text-text-main hover:bg-bg-temple font-bold">
+              No, Cancel
+            </Button>
+            <Button type="button" onClick={useMatchedDevotee} className="h-12 px-8 bg-primary hover:bg-secondary text-white font-bold">
+              Yes, Confirm
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -9,6 +9,7 @@ import {
   RotateCw,
   Settings2,
   Utensils,
+  Heart,
   type LucideIcon,
 } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
@@ -50,6 +51,11 @@ const txnTypes: Record<number, { label: string; className: string; icon: LucideI
     label: 'Return to Stock',
     className: 'bg-sky-100 text-sky-800 border-sky-300',
     icon: RotateCw,
+  },
+  7: {
+    label: 'Donation',
+    className: 'bg-amber-100 text-amber-800 border-amber-300',
+    icon: Heart,
   },
 };
 
@@ -114,6 +120,9 @@ const ItemHistoryPage: React.FC = () => {
       header: () => <div className="text-right">Stocks Used (-)</div>,
       cell: info => {
         const val = Number(info.getValue());
+        if (info.row.original.txn_type === 7) {
+          return <div className="text-right text-text-main">0</div>;
+        }
         return (
           <div className={`text-right font-medium ${val > 0 ? 'text-red-600' : 'text-text-main/20'}`}>
             {val > 0 ? formatQuantityWithUnit(val, item?.unit) : '-'}
@@ -142,6 +151,9 @@ const ItemHistoryPage: React.FC = () => {
       header: () => <div className="text-right">Added Cost</div>,
       cell: info => {
         const val = Number(info.getValue());
+        if (info.row.original.txn_type === 7) {
+          return <div className="text-right text-text-main">{formatCurrency(0)}</div>;
+        }
         return <div className="text-right text-text-main">{val > 0 ? formatCurrency(val) : '-'}</div>;
       }
     },
@@ -150,6 +162,9 @@ const ItemHistoryPage: React.FC = () => {
       header: () => <div className="text-right">Usage Cost</div>,
       cell: info => {
         const val = Number(info.getValue());
+        if (info.row.original.txn_type === 7) {
+          return <div className="text-right text-text-main">{formatCurrency(0)}</div>;
+        }
         return <div className="text-right text-text-main text-orange-600">{val > 0 ? formatCurrency(val) : '-'}</div>;
       }
     },

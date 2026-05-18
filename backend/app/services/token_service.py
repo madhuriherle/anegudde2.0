@@ -6,6 +6,7 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import TokenGeneration, TokenDetail, User
 from app.schemas.token import TokenDetailCreate
+from app.services.receipt_sequence_service import next_token_receipt
 
 def _ensure_token_partition_for_timestamp(db: Session, ts: datetime) -> None:
     year = ts.year
@@ -65,18 +66,17 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     max_id = db.query(func.max(TokenDetail.id)).scalar() or 0
     next_id = max_id + 1
 
-    # 3. Calculate Receipt Number (Scoped to today's generation)
-    # Since we have a lock on 'generation', this calculation is now thread-safe
-    max_receipt = db.query(func.max(TokenDetail.receipt_number)).filter(
-        TokenDetail.generation_id == generation.id
-    ).scalar() or 0
-    next_receipt = max_receipt + 1
+    # 3. Calculate Receipt Number (Scoped to financial year)
+    financial_year_id, receipt_prefix, next_receipt, receipt_display_number = next_token_receipt(db, target_date)
 
     # 4. Save Token Detail
     new_detail = TokenDetail(
         id=next_id,
         generation_id=generation.id,
+        financial_year_id=financial_year_id,
+        receipt_prefix=receipt_prefix,
         receipt_number=next_receipt,
+        receipt_display_number=receipt_display_number,
         token_count=payload.token_count,
         # created_at is the partitioning key, use UTC but keep it consistent
         created_at=now_utc,

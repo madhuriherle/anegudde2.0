@@ -74,33 +74,33 @@ const DashboardPage: React.FC = () => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-2">
         <div>
-          <h1 className="text-xl font-bold text-text-main tracking-tight font-temple uppercase text-left">Canteen Dashboard</h1>
+          <h1 className="text-2xl font-bold text-text-main tracking-tight font-temple text-left">Canteen Dashboard</h1>
         </div>
       </div>
 
       {/* 3x2 Grid Layout */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 text-left">
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3 text-left">
         
         {/* 1. Total Tokens (Token Issuance Activity) */}
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white text-left min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider text-left">Total Tokens</CardTitle>
+          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider text-left truncate">Total Tokens</CardTitle>
               {refreshCount >= 3 && (
                 <button 
                   onClick={handleManualRefresh}
-                  className="p-1.5 rounded-full hover:bg-orange-50 text-[#D05E2D] transition-all hover:scale-110 active:rotate-180 duration-300"
+                  className="p-1.5 rounded-full hover:bg-orange-50 text-[#D05E2D] transition-all hover:scale-110 active:rotate-180 duration-300 flex-shrink-0"
                   title="Refresh Tokens"
                 >
                   <RefreshCw size={16} className={cn(isFetching && "animate-spin")} />
                 </button>
               )}
             </div>
-            <div className="text-right">
+            <div className="text-right flex-shrink-0">
                 <div 
                   className="text-amber-700 tracking-tight leading-none"
                   style={{ 
-                    fontSize: '34px', 
+                    fontSize: '28px', 
                     fontWeight: '800',
                     display: 'block',
                   }}
@@ -113,19 +113,19 @@ const DashboardPage: React.FC = () => {
              <div className="h-[340px] overflow-y-auto">
               {today?.token_details?.length > 0 ? (
                 <div>
-                  <div className="grid grid-cols-12 px-8 py-2.5 border-b border-gray-100 bg-gray-50/70 text-[11px] uppercase tracking-wider text-text-main/80 font-bold">
-                    <div className="col-span-4">Receipt No</div>
-                    <div className="col-span-4 text-center">Time</div>
-                    <div className="col-span-4 text-right">Token</div>
+                  <div className="grid grid-cols-3 px-6 py-2 border-b border-gray-100 bg-gray-50/70 text-[10px] uppercase tracking-wider text-text-main/80 font-bold items-center">
+                    <div className="text-left">Receipt No</div>
+                    <div className="text-center">Time</div>
+                    <div className="text-right pr-1">Token</div>
                   </div>
                   <div className="divide-y divide-gray-50">
                     {today.token_details.slice(0, 5).map((row: any, idx: number) => (
-                      <div key={idx} className="grid grid-cols-12 items-center px-8 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
-                        <div className="col-span-4 text-[13px] text-text-main font-bold">{row.receipt_no}</div>
-                        <div className="col-span-4 text-center text-[11px] text-text-main/70 font-bold">
+                      <div key={idx} className="grid grid-cols-3 items-center px-6 py-3 hover:bg-[#FAF7F2] transition-colors group cursor-default">
+                        <div className="text-left text-[12px] text-text-main font-bold truncate pr-2">{row.receipt_no}</div>
+                        <div className="text-center text-[10px] text-text-main/70 font-bold">
                           {new Date(row.issued_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                        <div className="col-span-4 text-right text-sm font-black text-amber-900 group-hover:text-amber-950 transition-colors">
+                        <div className="text-right text-xs font-black text-amber-900 group-hover:text-amber-950 transition-colors pr-1">
                           {Number(row.token_count || 0).toLocaleString()}
                         </div>
                       </div>
@@ -147,8 +147,8 @@ const DashboardPage: React.FC = () => {
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Low Stock</CardTitle>
             <Button 
               onClick={() => navigate('/items')}
-              variant="ghost"
-              className="text-[9px] text-text-main font-bold uppercase tracking-widest border border-gray-200 hover:bg-gray-50 px-2.5 h-6 rounded-lg"
+              variant="outline"
+              className="text-[10px] bg-white text-primary font-black uppercase tracking-widest border-2 border-primary/20 hover:bg-primary hover:text-white hover:border-primary px-3 h-7 rounded-xl shadow-sm transition-all active:scale-95"
             >
               Inventory
             </Button>
@@ -161,8 +161,8 @@ const DashboardPage: React.FC = () => {
                   return (
                     <div key={idx} className="px-8 py-4 hover:bg-[#FAF7F2] transition-colors group cursor-pointer text-left" onClick={() => navigate('/items')}>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[13px] font-bold text-text-main group-hover:text-red-900 transition-colors">{item.item_name}</span>
-                        <span className="text-[12px] font-black text-red-700 uppercase tracking-wider">
+                        <span className="text-[12px] font-bold text-text-main group-hover:text-red-900 transition-colors">{item.item_name}</span>
+                        <span className="text-[11px] font-black text-red-700 uppercase tracking-wider">
                           {Number(item.current_stock).toFixed(2)} left
                         </span>
                       </div>
@@ -176,7 +176,7 @@ const DashboardPage: React.FC = () => {
                   );
                 })
               ) : (
-                <div className="flex items-center justify-center h-full text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+                <div className="flex items-center justify-center h-full text-text-main/60 text-[10px] font-bold uppercase tracking-widest">
                   No low stock today
                 </div>
               )}
@@ -194,20 +194,24 @@ const DashboardPage: React.FC = () => {
               <div className="divide-y divide-gray-50 h-full">
                 {today?.consumption_details?.length > 0 ? (
                   today.consumption_details.map((item: any, idx: number) => (
-                    <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
-                      <div className="col-span-5 text-left text-[13px] font-bold text-text-main group-hover:text-[#B8860B] transition-colors pr-2 break-words leading-5">
-                        {item.item_name}
+                    <div key={idx} className="flex items-center justify-between gap-4 px-6 py-3 hover:bg-[#FAF7F2] transition-colors group cursor-default text-left">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12px] font-bold text-text-main group-hover:text-primary transition-colors truncate leading-tight" title={item.item_name}>
+                          {item.item_name}
+                        </div>
                       </div>
-                      <div className="col-span-4 text-center text-[11px] font-bold text-text-main/80 group-hover:text-text-main/70 transition-colors uppercase whitespace-nowrap">
-                        {Number(item.quantity).toLocaleString()} {item.unit_name}
-                      </div>
-                      <div className="col-span-3 text-right text-[13px] font-bold text-text-main group-hover:text-[#B8860B]/80 transition-colors">
-                        {formatCurrency(item.amount)}
+                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                        <div className="text-[10px] font-black text-text-main/80 uppercase whitespace-nowrap">
+                          {Number(item.quantity).toLocaleString()} {item.unit_name}
+                        </div>
+                        <div className="text-[11px] font-black text-[#8B1E1E]">
+                          {formatCurrency(item.amount)}
+                        </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="flex items-center justify-center h-full text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+                  <div className="flex items-center justify-center h-full text-text-main/60 text-[10px] font-bold uppercase tracking-widest">
                     No usage today
                   </div>
                 )}
@@ -226,20 +230,24 @@ const DashboardPage: React.FC = () => {
               <div className="divide-y divide-gray-50 h-full">
                 {today?.purchase_details?.length > 0 ? (
                   today.purchase_details.map((item: any, idx: number) => (
-                    <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
-                      <div className="col-span-5 text-left text-[13px] font-bold text-text-main group-hover:text-[#8B1E1E] transition-colors pr-2 break-words leading-5">
-                        {item.item_name}
+                    <div key={idx} className="flex items-center justify-between gap-4 px-6 py-3 hover:bg-[#FAF7F2] transition-colors group cursor-default text-left">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12px] font-bold text-text-main group-hover:text-[#8B1E1E] transition-colors truncate leading-tight" title={item.item_name}>
+                          {item.item_name}
+                        </div>
                       </div>
-                      <div className="col-span-4 text-center text-[11px] font-bold text-text-main/80 group-hover:text-text-main transition-colors uppercase whitespace-nowrap">
-                        {Number(item.quantity).toLocaleString()} {item.unit_name}
-                      </div>
-                      <div className="col-span-3 text-right text-[13px] font-bold text-text-main group-hover:text-[#8B1E1E] transition-colors">
-                        {formatCurrency(item.amount)}
+                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                        <div className="text-[10px] font-black text-text-main/80 uppercase whitespace-nowrap">
+                          {Number(item.quantity).toLocaleString()} {item.unit_name}
+                        </div>
+                        <div className="text-[11px] font-black text-[#8B1E1E]">
+                          {formatCurrency(item.amount)}
+                        </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="flex items-center justify-center h-full text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+                  <div className="flex items-center justify-center h-full text-text-main/60 text-[10px] font-bold uppercase tracking-widest">
                     No purchases today
                   </div>
                 )}
@@ -258,20 +266,24 @@ const DashboardPage: React.FC = () => {
               <div className="divide-y divide-gray-50 h-full">
                 {today?.wastage_details?.length > 0 ? (
                   today.wastage_details.map((item: any, idx: number) => (
-                    <div key={idx} className="grid grid-cols-12 items-center px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors group cursor-default">
-                      <div className="col-span-5 text-left text-[13px] font-bold text-text-main group-hover:text-[#4A3728] transition-colors pr-2 break-words leading-5">
-                        {item.menu_item_name}
+                    <div key={idx} className="flex items-center justify-between gap-4 px-6 py-3 hover:bg-[#FAF7F2] transition-colors group cursor-default text-left">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12px] font-bold text-text-main group-hover:text-[#4A3728] transition-colors truncate leading-tight" title={item.menu_item_name}>
+                          {item.menu_item_name}
+                        </div>
                       </div>
-                      <div className="col-span-4 text-center text-[11px] font-bold text-text-main/80 group-hover:text-text-main transition-colors uppercase whitespace-nowrap">
-                        {Number(item.quantity).toLocaleString()} {item.unit_name}
-                      </div>
-                      <div className="col-span-3 text-right text-[13px] font-bold text-text-main group-hover:text-[#4A3728]/80 transition-colors">
-                        {formatCurrency(item.amount)}
+                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                        <div className="text-[10px] font-black text-text-main/80 uppercase whitespace-nowrap">
+                          {Number(item.quantity).toLocaleString()} {item.unit_name}
+                        </div>
+                        <div className="text-[11px] font-black text-[#8B1E1E]">
+                          {formatCurrency(item.amount)}
+                        </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="flex items-center justify-center h-full text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+                  <div className="flex items-center justify-center h-full text-text-main/60 text-[10px] font-bold uppercase tracking-widest">
                     No wastage today
                   </div>
                 )}
@@ -284,27 +296,42 @@ const DashboardPage: React.FC = () => {
         <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 bg-white overflow-hidden min-h-[400px]">
           <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-extrabold text-[#D05E2D] uppercase tracking-wider">Top 5 Menu Wastage (Weekly)</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/wastages')} className="text-[9px] text-primary font-bold uppercase tracking-widest border border-primary/20 hover:bg-primary/5 px-2.5 h-6 rounded-lg">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/wastages')} 
+              className="text-[10px] bg-white text-primary font-black uppercase tracking-widest border-2 border-primary/20 hover:bg-primary hover:text-white hover:border-primary px-3 h-7 rounded-xl shadow-sm transition-all active:scale-95"
+            >
               Details
             </Button>
           </CardHeader>
           <CardContent className="p-0 h-[340px] overflow-y-auto">
             {weeklyTopWastage.length > 0 ? (
               <div>
-                <div className="grid grid-cols-12 px-6 py-2.5 border-b border-gray-100 bg-gray-50/70 text-[11px] uppercase tracking-wider text-text-main/80 font-bold">
-                  <div className="col-span-6">Menu Item</div>
-                  <div className="col-span-3 text-right">Qty</div>
-                  <div className="col-span-3 text-right">Loss</div>
+                <div className="flex items-center px-6 py-2 border-b border-gray-100 bg-gray-50/70 text-[10px] uppercase tracking-wider text-text-main/80 font-bold">
+                  <div className="flex-1">Menu Item</div>
+                  <div className="w-24 text-right">Qty</div>
+                  <div className="w-24 text-right">Loss</div>
                 </div>
                 <div className="divide-y divide-gray-50">
                   {weeklyTopWastage.map((row: any, idx: number) => (
-                    <div key={`${row.menu_item_name}-${idx}`} className="px-6 py-3.5 hover:bg-[#FAF7F2] transition-colors">
-                      <div className="grid grid-cols-12 items-center gap-2">
-                        <div className="col-span-6 text-[13px] text-text-main font-bold break-words leading-5">{row.menu_item_name}</div>
-                        <div className="col-span-3 text-right text-[11px] text-text-main/70 font-bold">{row.quantity.toFixed(3)} {row.unit_name}</div>
-                        <div className="col-span-3 text-right text-[13px] font-bold text-[#8B1E1E]">{formatCurrency(row.amount)}</div>
+                    <div key={`${row.menu_item_name}-${idx}`} className="px-6 py-3 hover:bg-[#FAF7F2] transition-colors">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[12px] text-text-main font-bold truncate leading-tight" title={row.menu_item_name}>
+                            {row.menu_item_name}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                          <div className="text-[10px] text-text-main/70 font-bold whitespace-nowrap">
+                            {row.quantity.toFixed(3)} {row.unit_name}
+                          </div>
+                          <div className="text-[12px] font-bold text-[#8B1E1E]">
+                            {formatCurrency(row.amount)}
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-1.5 h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div className="mt-2 h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                         <div className="h-full bg-[#8B1E1E]/80 transition-all duration-500" style={{ width: `${row.width}%` }} />
                       </div>
                     </div>
@@ -312,7 +339,7 @@ const DashboardPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="py-20 text-center text-text-main/60 text-[11px] font-bold uppercase tracking-widest">
+              <div className="py-20 text-center text-text-main/60 text-[10px] font-bold uppercase tracking-widest">
                 No weekly wastage data
               </div>
             )}

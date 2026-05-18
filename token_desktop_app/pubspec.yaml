@@ -58,6 +58,16 @@ flutter_launcher_icons:
     generate: true
     image_path: "assets/images/logo.png"
 
+msix_config:
+  display_name: Meal Token System
+  publisher_display_name: D-apps
+  publisher: CN=D-apps
+  identity_name: com.dapps.mealtoken
+  msix_version: 1.0.0.0
+  logo_path: assets/images/logo.png
+  capabilities: internetClient, privateNetworkClientServer
+  install_certificate: true # This will auto-generate a test certificate for you
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

@@ -503,15 +503,18 @@ const UsageEntriesPage: React.FC = () => {
       />
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="w-[1760px] max-w-[92vw] max-h-[92vh] overflow-hidden border-border-temple">
+        <DialogContent className="w-[1840px] max-w-[96vw] max-h-[94vh] overflow-hidden border-border-temple">
           <DialogHeader className="border-b border-border-temple/40 pb-4">
             <DialogTitle className="text-text-main">Usage Summary</DialogTitle>
             <DialogDescription className="sr-only">Usage details</DialogDescription>
           </DialogHeader>
-          <div className="mt-4 max-h-[calc(92vh-150px)] overflow-y-auto px-2 pb-2">
-          <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4 items-start">
-            <div className="temple-form-section h-full min-w-0">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-3 text-sm text-text-main">
+          <div className="mt-5 max-h-[calc(94vh-150px)] overflow-y-auto px-4 pb-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-12 gap-6 items-start">
+            <div className="temple-form-section min-w-0 2xl:col-span-3">
+              <div className="pb-3">
+                <span className="text-lg font-bold text-primary uppercase tracking-wider">Daily Service Details</span>
+              </div>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-4 text-base text-text-main">
                 <div className="font-semibold">Usage Date</div><div className="text-right whitespace-nowrap">{formatDate(viewingConsumption?.usage_date)}</div>
                 <div className="font-semibold">Regular Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cooking_persons || 0)}</div>
                 <div className="font-semibold">Additional Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
@@ -527,13 +530,13 @@ const UsageEntriesPage: React.FC = () => {
             </div>
 
             <div className="contents">
-            <div className="temple-form-section min-w-0">
+            <div className="temple-form-section min-w-0 2xl:col-span-3">
               <div className="pb-2">
-                <span className="text-base font-bold text-text-main">Raw Usage Items</span>
+                <span className="text-lg font-bold text-primary uppercase tracking-wider">Raw Usage Items</span>
               </div>
               <div className="rounded-md border border-border-temple overflow-hidden mt-1">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-bg-temple text-text-main uppercase text-xs font-bold tracking-wider">
+                <table className="w-full text-base text-left">
+                  <thead className="bg-bg-temple text-text-main uppercase text-base font-bold tracking-wider">
                     <tr>
                       <th className="px-4 py-3 border-b border-border-temple">Item</th>
                       <th className="px-4 py-3 border-b border-border-temple text-right">Used</th>
@@ -541,19 +544,23 @@ const UsageEntriesPage: React.FC = () => {
                     </tr>
                   </thead>
                   </table>
-                <div className="max-h-[44vh] 2xl:max-h-[640px] overflow-y-auto">
-                <table className="w-full text-sm text-left">
+                <div>
+                <table className="w-full text-base text-left">
                   <tbody className="divide-y divide-border-temple/40">
                     {(viewingConsumption?.items || []).filter((item: any) => Number(item.quantity_used || 0) > 0 || Number(item.qty_returned || 0) > 0).length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center">No raw items</td>
+                        <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center text-sm">No raw items</td>
                       </tr>
                     ) : (
                       (viewingConsumption?.items || [])
                         .filter((item: any) => Number(item.quantity_used || 0) > 0 || Number(item.qty_returned || 0) > 0)
                         .map((item: any) => (
                         <tr key={item.id} className="hover:bg-bg-temple/30">
-                          <td className="px-3 py-2 text-text-main">{displayKannadaName(item.item?.item_name || items?.find((it: any) => it.id === item.item_id)?.item_name || `Unknown Item (${item.item_id})`)}</td>
+                          <td className="px-3 py-2 text-text-main">
+                            <span className="text-base font-normal">
+                              {displayKannadaName(item.item?.item_name || items?.find((it: any) => it.id === item.item_id)?.item_name || `Unknown Item (${item.item_id})`)}
+                            </span>
+                          </td>
                           <td className="px-3 py-2 text-right text-text-main whitespace-nowrap">
                             {formatQuantityWithUnit(
                               item.quantity_used || 0,
@@ -575,13 +582,13 @@ const UsageEntriesPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="temple-form-section min-w-0">
+            <div className="temple-form-section min-w-0 2xl:col-span-3">
               <div className="pb-2">
-                <span className="text-base font-bold text-text-main">Wastage Entries</span>
+                <span className="text-lg font-bold text-primary uppercase tracking-wider">Wastage Entries</span>
               </div>
               <div className="rounded-md border border-border-temple overflow-hidden mt-1">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-bg-temple text-text-main uppercase text-xs font-bold tracking-wider">
+                <table className="w-full text-base text-left">
+                  <thead className="bg-bg-temple text-text-main uppercase text-base font-bold tracking-wider">
                     <tr>
                       <th className="px-4 py-3 border-b border-border-temple">Menu Item</th>
                       <th className="px-4 py-3 border-b border-border-temple text-right">Qty</th>
@@ -589,12 +596,12 @@ const UsageEntriesPage: React.FC = () => {
                     </tr>
                   </thead>
                   </table>
-                <div className="max-h-[44vh] 2xl:max-h-[640px] overflow-y-auto">
-                <table className="w-full text-sm text-left">
+                <div>
+                <table className="w-full text-base text-left">
                   <tbody className="divide-y divide-border-temple/40">
                     {viewingWastages.filter((w: any) => Number(w.quantity || 0) > 0).length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center">No linked wastage rows</td>
+                        <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center text-sm">No linked wastage rows</td>
                       </tr>
                     ) : (
                       viewingWastages
@@ -602,7 +609,9 @@ const UsageEntriesPage: React.FC = () => {
                         .map((w: any, idx: number) => (
                         <tr key={`${w.entryId}-${idx}`} className="hover:bg-bg-temple/30">
                           <td className="px-3 py-2 text-text-main">
-                            {displayKannadaName(w.menu_item_name)}
+                            <span className="text-base font-normal">
+                              {displayKannadaName(w.menu_item_name)}
+                            </span>
                           </td>
                           <td className="px-3 py-2 text-right text-text-main whitespace-nowrap">
                             {formatQuantityWithUnit(w.quantity || 0, { unit_name: w.unit_name, unit_code: w.unit_code })}
@@ -619,18 +628,18 @@ const UsageEntriesPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="temple-form-section min-w-0">
+            <div className="temple-form-section min-w-0 2xl:col-span-3">
             <div className="pb-2">
-              <span className="text-base font-bold text-text-main">Stock Adjustments</span>
+              <span className="text-lg font-bold text-primary uppercase tracking-wider">Stock Adjustments</span>
             </div>
-            <div className="rounded-md border border-border-temple overflow-hidden mt-1 text-sm">
+            <div className="rounded-md border border-border-temple overflow-hidden mt-1 text-base">
               <div className="grid grid-cols-[1fr_auto] bg-bg-temple text-text-main uppercase text-xs font-bold tracking-wider border-b border-border-temple">
                 <div className="px-4 py-3">Item</div>
                 <div className="px-4 py-3 text-right whitespace-nowrap">Adjustment Qty</div>
               </div>
-              <div className="max-h-[44vh] 2xl:max-h-[640px] overflow-y-auto">
+              <div>
               {viewingAdjustments.filter((a: any) => Number(a.quantity || 0) > 0).length === 0 ? (
-                <div className="px-4 py-3 text-text-main/60 text-center">No stock adjustments</div>
+                <div className="px-4 py-3 text-text-main/60 text-center text-sm">No stock adjustments</div>
               ) : (
                 viewingAdjustments
                   .filter((a: any) => Number(a.quantity || 0) > 0)
@@ -639,8 +648,8 @@ const UsageEntriesPage: React.FC = () => {
                       key={`${a.entryId}-${idx}`}
                       className="flex items-center justify-between gap-4 px-3 py-2 border-b border-border-temple/40 last:border-b-0 hover:bg-bg-temple/30"
                     >
-                      <span className="text-text-main">{displayKannadaName(a.menu_item_name)}</span>
-                      <span className="font-semibold text-text-main whitespace-nowrap">
+                      <span className="text-base font-normal text-text-main">{displayKannadaName(a.menu_item_name)}</span>
+                      <span className="text-base font-semibold text-text-main whitespace-nowrap">
                         {formatQuantityWithUnit(a.quantity || 0, { unit_name: a.unit_name, unit_code: a.unit_code })}
                       </span>
                     </div>
@@ -665,30 +674,31 @@ const UsageEntriesPage: React.FC = () => {
         }
       }}>
         <DialogContent 
-          className="w-[1760px] max-w-[92vw] max-h-[92vh] overflow-hidden"
+          className="w-[1760px] max-w-[94vw] max-h-[96vh] overflow-hidden"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle>{editingConsumption ? 'Edit Usage Entry' : 'Add Usage Entry'}</DialogTitle>
+            <DialogTitle className="text-2xl font-bold font-temple">{editingConsumption ? 'Edit Usage Entry' : 'Add Usage Entry'}</DialogTitle>
             <DialogDescription className="sr-only">Create consumption and wastage entry</DialogDescription>
           </DialogHeader>
 
-          <div className="bg-white -mx-6 px-6 pt-4 max-h-[calc(92vh-150px)] overflow-y-auto">
+          <div className="bg-white -mx-6 px-6 pt-4 max-h-[calc(96vh-150px)] overflow-y-auto">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-10 gap-4 items-stretch min-h-[56vh]">
-              <div className="temple-form-section h-full min-w-0 2xl:col-span-3">
-                <div className="grid grid-cols-1 min-[1700px]:grid-cols-2 gap-3">
-                  <div className="space-y-1">
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-10 gap-4 items-start min-h-[56vh]">
+              <div className="temple-form-section min-w-0 2xl:col-span-3">
+                <h4 className="temple-section-header mt-0 text-lg uppercase tracking-wider">Daily Service Details</h4>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-[1fr_220px] items-center gap-3">
                   <Label className="temple-label leading-tight">Date *</Label>
-                  <Input type="date" {...register('usage_date')} readOnly className="h-8 text-xs bg-gray-100 cursor-not-allowed" />
+                  <Input type="date" {...register('usage_date')} readOnly className="h-10 text-base bg-gray-100 cursor-not-allowed" />
                 </div>
-                <div className="space-y-1">
+                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
                   <Label className="temple-label leading-tight">No. of times cooked</Label>
                   <Input 
                     type="text" 
                     {...register('times_cooked')} 
-                    className="h-8 text-xs" 
+                    className="h-10 text-base" 
                     onFocus={(e) => {
                       if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
                         setValue('times_cooked', '' as any);
@@ -696,12 +706,12 @@ const UsageEntriesPage: React.FC = () => {
                     }}
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
                   <Label className="temple-label leading-tight">Regular Cooking Persons</Label>
                   <Input 
                     type="text" 
                     {...register('regular_cooking_persons')} 
-                    className="h-8 text-xs" 
+                    className="h-10 text-base" 
                     onFocus={(e) => {
                       if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
                         setValue('regular_cooking_persons', '' as any);
@@ -709,12 +719,12 @@ const UsageEntriesPage: React.FC = () => {
                     }}
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
                   <Label className="temple-label leading-tight">Additional Cooking Persons</Label>
                   <Input 
                     type="text" 
                     {...register('additional_cooking_persons')} 
-                    className="h-8 text-xs" 
+                    className="h-10 text-base" 
                     onFocus={(e) => {
                       if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
                         setValue('additional_cooking_persons', '' as any);
@@ -722,12 +732,12 @@ const UsageEntriesPage: React.FC = () => {
                     }}
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
                   <Label className="temple-label leading-tight">Regular Serving Persons</Label>
                   <Input 
                     type="text" 
                     {...register('regular_serving_persons')} 
-                    className="h-8 text-xs" 
+                    className="h-10 text-base" 
                     onFocus={(e) => {
                       if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
                         setValue('regular_serving_persons', '' as any);
@@ -735,12 +745,12 @@ const UsageEntriesPage: React.FC = () => {
                     }}
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
                   <Label className="temple-label leading-tight">Additional Serving Persons</Label>
                   <Input 
                     type="text" 
                     {...register('additional_serving_persons')} 
-                    className="h-8 text-xs" 
+                    className="h-10 text-base" 
                     onFocus={(e) => {
                       if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
                         setValue('additional_serving_persons', '' as any);
@@ -748,12 +758,12 @@ const UsageEntriesPage: React.FC = () => {
                     }}
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
                   <Label className="temple-label leading-tight">Regular Cleaning Persons</Label>
                   <Input 
                     type="text" 
                     {...register('regular_cleaning_persons')} 
-                    className="h-8 text-xs" 
+                    className="h-10 text-base" 
                     onFocus={(e) => {
                       if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
                         setValue('regular_cleaning_persons', '' as any);
@@ -761,12 +771,12 @@ const UsageEntriesPage: React.FC = () => {
                     }}
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
                   <Label className="temple-label leading-tight">Additional Cleaning Persons</Label>
                   <Input 
                     type="text" 
                     {...register('additional_cleaning_persons')} 
-                    className="h-8 text-xs" 
+                    className="h-10 text-base" 
                     onFocus={(e) => {
                       if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
                         setValue('additional_cleaning_persons', '' as any);
@@ -777,25 +787,25 @@ const UsageEntriesPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="temple-form-section h-full min-w-0 2xl:col-span-3">
-                <h4 className="temple-section-header mt-0 uppercase tracking-wider">Item usage</h4>
+              <div className="temple-form-section min-w-0 2xl:col-span-3">
+                <h4 className="temple-section-header mt-0 text-lg uppercase tracking-wider">Item usage</h4>
                 <div className="grid grid-cols-12 gap-2 mb-1 px-1 border-b border-border-temple/10 pb-1">
                   <div className="col-span-6"></div>
-                  <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Used</div>
-                  <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Returned</div>
+                  <div className="col-span-3 text-base font-bold text-text-main uppercase">Used</div>
+                  <div className="col-span-3 text-base font-bold text-text-main uppercase">Returned</div>
                 </div>
-                <div className="max-h-[42vh] 2xl:max-h-[45vh] overflow-y-auto pr-2 space-y-2">
+                <div className="pr-2 space-y-2">
                   {(items || []).filter((i: any) => i.status === 1).map((item: any) => {
                     const itemError = (errors.raw_items as any)?.[item.id];
                     return (
                       <div key={item.id} className="grid grid-cols-12 gap-2 items-center min-h-[32px]">
-                        <div className="col-span-6 text-sm font-medium text-text-main leading-5">
+                        <div className="col-span-6 text-base font-medium text-text-main leading-6">
                           {item.item_name}{item.unit?.unit_code ? ` (${item.unit.unit_code})` : ''}
                         </div>
                         <div className="col-span-3">
                           <Input 
                             type="text" 
-                            className={cn("h-8 text-xs", itemError?.quantity_used && "border-red-500")} 
+                            className={cn("h-10 text-base", itemError?.quantity_used && "border-red-500")} 
                             {...register(`raw_items.${item.id}.quantity_used` as const)} 
                             onFocus={(e) => {
                               if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
@@ -807,7 +817,7 @@ const UsageEntriesPage: React.FC = () => {
                         <div className="col-span-3">
                           <Input 
                             type="text" 
-                            className={cn("h-8 text-xs", itemError?.qty_returned && "border-red-500 bg-red-50")} 
+                            className={cn("h-10 text-base", itemError?.qty_returned && "border-red-500 bg-red-50")} 
                             {...register(`raw_items.${item.id}.qty_returned` as const)} 
                             onFocus={(e) => {
                               if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
@@ -816,7 +826,7 @@ const UsageEntriesPage: React.FC = () => {
                             }}
                           />
                           {itemError?.qty_returned && (
-                             <p className="text-[8px] text-red-500 font-black leading-tight mt-0.5 uppercase tracking-tighter">Exceeds Used</p>
+                             <p className="text-sm text-red-500 font-black leading-tight mt-0.5 uppercase">Exceeds Used</p>
                           )}
                         </div>
                       </div>
@@ -825,25 +835,25 @@ const UsageEntriesPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="temple-form-section h-full min-w-0 xl:col-span-2 2xl:col-span-4">
-                <h4 className="temple-section-header mt-0 uppercase tracking-wider">Menu Item Wastage</h4>
+              <div className="temple-form-section min-w-0 xl:col-span-2 2xl:col-span-4">
+                <h4 className="temple-section-header mt-0 text-lg uppercase tracking-wider">Menu Item Wastage</h4>
                 <div className="grid grid-cols-12 gap-2 mb-1 px-1 border-b border-border-temple/10 pb-1">
                   <div className="col-span-6"></div>
-                  <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Qty</div>
-                  <div className="col-span-3 text-[10px] font-bold text-text-main uppercase">Approx Amt</div>
+                  <div className="col-span-3 text-base font-bold text-text-main uppercase">Qty</div>
+                  <div className="col-span-3 text-base font-bold text-text-main uppercase">Approx Amt</div>
                 </div>
-                <div className="max-h-[42vh] 2xl:max-h-[50vh] overflow-y-auto pr-2 space-y-3">
+                <div className="pr-2 space-y-3">
                   {/* Menu Items Wastage */}
                   <div className="space-y-2">
                     {(menuItems || []).filter((m: any) => m.status === 1).map((menu: any) => (
                       <div key={menu.id} className="grid grid-cols-12 gap-2 items-center min-h-[32px]">
-                        <div className="col-span-6 text-sm font-medium text-text-main leading-5">
+                        <div className="col-span-6 text-base font-medium text-text-main leading-6">
                           {menu.dish_name}{menu.unit?.unit_code ? ` (${menu.unit.unit_code})` : ''}
                         </div>
                         <div className="col-span-3">
                           <Input 
                             type="text" 
-                            className="h-8 text-xs" 
+                            className="h-10 text-base" 
                             {...register(`wastage_items.${menu.id}.quantity` as const)} 
                             onFocus={(e) => {
                               if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
@@ -855,7 +865,7 @@ const UsageEntriesPage: React.FC = () => {
                         <div className="col-span-3">
                           <Input 
                             type="text" 
-                            className="h-8 text-xs" 
+                            className="h-10 text-base" 
                             {...register(`wastage_items.${menu.id}.approx_amount` as const)} 
                             onFocus={(e) => {
                               if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
@@ -870,17 +880,17 @@ const UsageEntriesPage: React.FC = () => {
 
                   {/* Raw Items Wastage */}
                   <div className="space-y-2 mt-6 pt-2">
-                    <h5 className="text-xs font-bold uppercase tracking-wide text-primary">Stock Adjustment</h5>
+                    <h5 className="text-lg font-bold uppercase tracking-wider text-primary">Stock Adjustment</h5>
                     {rawWastageFields.length > 0 && (
                       <div className="grid grid-cols-12 gap-2 items-center px-2">
                         <div className="col-span-4">
-                          <Label className="text-[10px] block">Item Code</Label>
+                          <Label className="text-sm block">Item Code</Label>
                         </div>
                         <div className="col-span-4">
-                          <Label className="text-[10px] block">Item Name</Label>
+                          <Label className="text-sm block">Item Name</Label>
                         </div>
                         <div className="col-span-3">
-                          <Label className="text-[10px] block">Adjustment Qty</Label>
+                          <Label className="text-sm block">Adjustment Qty</Label>
                         </div>
                         <div className="col-span-1" />
                       </div>
@@ -890,7 +900,7 @@ const UsageEntriesPage: React.FC = () => {
                         <div className="col-span-4">
                           <Input
                             type="text"
-                            className="h-8 text-[11px] bg-white"
+                            className="h-10 text-base bg-white"
                            
                             {...register(`raw_wastage_items.${index}.serial_id` as const)}
                             onChange={(e) => {
@@ -917,7 +927,7 @@ const UsageEntriesPage: React.FC = () => {
                             render={({ field: selectField }) => (
                               <Select 
                                 {...selectField} 
-                                className="h-8 text-[11px] bg-white"
+                                className="h-10 text-base bg-white"
                               >
                                 <option value={0} disabled hidden>Select Item</option>
                                 {activeItems.map((i: any) => (
@@ -930,7 +940,7 @@ const UsageEntriesPage: React.FC = () => {
                         <div className="col-span-3">
                           <Input 
                             type="text" 
-                            className="h-8 w-full text-xs bg-white" 
+                            className="h-10 w-full text-base bg-white" 
                             {...register(`raw_wastage_items.${index}.quantity` as const)}
                             onFocus={(e) => {
                               if (e.target.value === '0') {
@@ -945,7 +955,7 @@ const UsageEntriesPage: React.FC = () => {
                             variant="ghost" 
                             size="sm" 
                             onClick={() => removeRawWastage(index)}
-                            className="h-8 w-8 p-0 text-error hover:bg-error/10"
+                            className="h-10 w-10 p-0 text-error hover:bg-error/10"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -960,7 +970,7 @@ const UsageEntriesPage: React.FC = () => {
                       variant="ghost" 
                       size="sm" 
                       onClick={() => appendRawWastage({ serial_id: '', item_id: 0, quantity: 0 })}
-                      className="h-8 px-3 text-xs bg-primary-main/20 text-primary-main hover:bg-primary-main/30 border border-primary-main/30 font-bold"
+                      className="h-10 px-3 text-sm bg-primary-main/20 text-primary-main hover:bg-primary-main/30 border border-primary-main/30 font-bold"
                     >
                       <Plus className="w-4 h-4 mr-1" />
                       Raw Item
@@ -973,7 +983,7 @@ const UsageEntriesPage: React.FC = () => {
             {/* Robust Error Display */}
             {Object.keys(errors).length > 0 && (
               <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
-                <p className="text-[10px] text-red-700 font-black mb-2 uppercase tracking-[0.2em]">Validation Alerts ({Object.keys(errors).length})</p>
+                <p className="text-sm text-red-700 font-black mb-2 uppercase tracking-[0.2em]">Validation Alerts ({Object.keys(errors).length})</p>
                 <ul className="space-y-1.5">
                   {Object.entries(errors).map(([key, error]: [string, any]) => {
                     const messages: React.ReactNode[] = [];
@@ -1008,7 +1018,7 @@ const UsageEntriesPage: React.FC = () => {
                     }
 
                     return messages.map((m, i) => (
-                      <li key={`${key}-${i}`} className="text-[11px] text-red-600 font-bold flex items-center gap-2">
+                      <li key={`${key}-${i}`} className="text-sm text-red-600 font-bold flex items-center gap-2">
                         <div className="h-1 w-1 rounded-full bg-red-600" />
                         {m}
                       </li>

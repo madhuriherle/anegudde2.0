@@ -45,7 +45,17 @@ const DonationReportPage: React.FC = () => {
     queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data,
   });
 
+  const { data: donationTypesData } = useQuery({
+    queryKey: ['donation-types'],
+    queryFn: async () => (await api.get('/donation-types/list_donation_types', { params: { status: null, page_size: 1000 } })).data,
+  });
+
   const items = useMemo(() => itemsData?.items || [], [itemsData]);
+  const donationTypeNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    (donationTypesData?.items || []).forEach((type: any) => map.set(Number(type.id), type.type_name));
+    return map;
+  }, [donationTypesData]);
 
   const handlePrint = () => {
     window.print();
@@ -135,16 +145,20 @@ const DonationReportPage: React.FC = () => {
         <div className="overflow-x-auto pt-3 print:overflow-visible">
           <table className="min-w-[700px] w-full table-fixed text-left text-sm print:min-w-full">
             <colgroup>
-              <col className="w-[12%]" />
-              <col className="w-[21%]" />
-              <col className="w-[15%]" />
-              <col className="w-[19%]" />
-              <col className="w-[12%]" />
-              <col className="w-[21%]" />
+              <col className="w-[9%]" />
+              <col className="w-[11%]" />
+              <col className="w-[10%]" />
+              <col className="w-[17%]" />
+              <col className="w-[13%]" />
+              <col className="w-[17%]" />
+              <col className="w-[9%]" />
+              <col className="w-[14%]" />
             </colgroup>
             <thead>
               <tr className="border-b border-[#ead9c9] bg-[#f8efe5] text-xs font-bold uppercase tracking-wider text-text-main print:bg-gray-100">
                 <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Receipt No</th>
+                <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Devotee</th>
                 <th className="px-4 py-3">Phone</th>
                 <th className="px-3 py-3">Donated Item</th>
@@ -155,7 +169,7 @@ const DonationReportPage: React.FC = () => {
             <tbody className="divide-y divide-[#f0e5da]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-sm font-medium text-text-light">
+                  <td colSpan={8} className="px-4 py-12 text-center text-sm font-medium text-text-light">
                     <div className="flex items-center justify-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Loading donation report...
@@ -167,6 +181,12 @@ const DonationReportPage: React.FC = () => {
                   <tr key={`${row.donation_date}-${row.id}-${index}`} className="transition-colors hover:bg-[#fffaf4] align-top text-text-main print:break-inside-avoid">
                     <td className="whitespace-nowrap px-4 py-4 text-sm font-normal">
                       {formatDate(row.donation_date)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-sm font-bold">
+                      {row.receipt_display_number || '-'}
+                    </td>
+                    <td className="px-4 py-4 text-xs font-bold uppercase">
+                      {donationTypeNameById.get(Number(row.donation_type)) || 'General Donation'}
                     </td>
                     <td className="px-4 py-4">
                       <div className="font-normal">{row.devotee_name || '-'}</div>
@@ -205,7 +225,7 @@ const DonationReportPage: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center font-bold text-text-main">
+                  <td colSpan={8} className="px-5 py-12 text-center font-bold text-text-main">
                     No donations found
                   </td>
                 </tr>

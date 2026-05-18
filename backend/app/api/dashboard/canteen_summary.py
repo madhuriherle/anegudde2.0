@@ -6,7 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.db.models import TokenGeneration, WastageEntry, WastageItem, User
+from app.db.models import TokenGeneration, WastageEntry, WastageItem, User, DonationEntry, DonationItem, Item, DonationType
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -17,12 +17,18 @@ class WastageItemDetail(BaseModel):
     amount: Decimal
     unit_name: str
 
+class DonationTypeSummary(BaseModel):
+    type_name: str
+    total_items: int
+    total_value: Decimal
+
 class CanteenSummaryStats(BaseModel):
     daily_tokens: int
     weekly_tokens: int
     monthly_tokens: int
     wastage_today: Decimal
     wastage_items: list[WastageItemDetail]
+    donation_summary: list[DonationTypeSummary]
 
 @router.get("/canteen_summary", response_model=CanteenSummaryStats)
 def get_canteen_summary_stats(
@@ -92,10 +98,41 @@ def get_canteen_summary_stats(
         ) for r in wastage_items_raw
     ]
 
+    # Donation Summary (Kind Donations)
+    donation_types = db.query(DonationType).filter(DonationType.status == 1).order_by(DonationType.type_name.asc()).all()
+    donation_summary = []
+    
+    for donation_type in donation_types:
+        # Count total items donated today for this type
+        total_items = (
+            db.query(func.count(DonationItem.id))
+            .join(DonationEntry, DonationEntry.id == DonationItem.donation_entry_id)
+            .filter(DonationEntry.donation_date == today, DonationEntry.donation_type == donation_type.id, DonationEntry.status == 1)
+            .scalar()
+            or 0
+        )
+        
+        # Calculate approximate value (qty * item.default_price)
+        total_value = (
+            db.query(func.coalesce(func.sum(DonationItem.quantity * Item.default_price), 0))
+            .join(DonationEntry, DonationEntry.id == DonationItem.donation_entry_id)
+            .join(Item, Item.id == DonationItem.item_id)
+            .filter(DonationEntry.donation_date == today, DonationEntry.donation_type == donation_type.id, DonationEntry.status == 1)
+            .scalar()
+            or Decimal("0")
+        )
+        
+        donation_summary.append(DonationTypeSummary(
+            type_name=donation_type.type_name,
+            total_items=total_items,
+            total_value=total_value
+        ))
+
     return CanteenSummaryStats(
         daily_tokens=daily_tokens,
         weekly_tokens=weekly_tokens,
         monthly_tokens=monthly_tokens,
         wastage_today=wastage_total,
-        wastage_items=wastage_items
+        wastage_items=wastage_items,
+        donation_summary=donation_summary
     )

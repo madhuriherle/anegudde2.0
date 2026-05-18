@@ -182,7 +182,7 @@ export const StockSummaryPage: React.FC = () => {
                   {toEnglishCategory(categoryName)}
                 </h2>
                 <div className="overflow-x-auto print:overflow-visible rounded-md border border-border-temple">
-                  <table className="w-full table-fixed text-[11px] border-collapse">
+                  <table className="w-full table-fixed text-sm border-collapse">
                     <colgroup>
                       <col className="w-[17%]" />
                       <col className="w-[8%]" />
@@ -225,6 +225,19 @@ export const StockSummaryPage: React.FC = () => {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot className="bg-gray-50/80 font-black border-t-2 border-border-temple text-text-main">
+                      <tr className="bg-[#FAF7F2]">
+                        <td colSpan={2} className="px-2 py-2 border-r border-border-temple text-left uppercase tracking-tighter">TOTAL</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a: number, b: any) => a + Number(b.opening_balance || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a: number, b: any) => a + Number(b.purchase_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a: number, b: any) => a + Number(b.issue_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{formatCurrency(rows.reduce((a: number, b: any) => a + Number(b.issue_value || 0), 0))}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a: number, b: any) => a + Number(b.purchase_return_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a: number, b: any) => a + Number(b.stock_adjustment_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 border-r border-border-temple text-right font-black">{rows.reduce((a: number, b: any) => a + Number(b.closing_stock || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
+                        <td className="px-2 py-2 text-right font-black text-amber-900">{formatCurrency(rows.reduce((a: number, b: any) => a + Number(b.closing_value || 0), 0))}</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </section>
@@ -233,7 +246,7 @@ export const StockSummaryPage: React.FC = () => {
 
           {grandTotals && (
             <div className="overflow-x-auto print:overflow-visible rounded-md border border-border-temple">
-              <table className="w-full table-fixed text-[11px] border-collapse">
+              <table className="w-full table-fixed text-sm border-collapse">
                 <colgroup>
                   <col className="w-[17%]" />
                   <col className="w-[8%]" />
@@ -246,17 +259,17 @@ export const StockSummaryPage: React.FC = () => {
                   <col className="w-[9%]" />
                   <col className="w-[7%]" />
                 </colgroup>
-                <tfoot className="bg-gray-50 font-bold text-[13px]">
-                  <tr>
-                    <td colSpan={2} className="px-2 py-2 border-r border-border-temple text-left">GRAND TOTAL</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.opening.toFixed(3)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.purchase.toFixed(3)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.issues.toFixed(3)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{formatCurrency(grandTotals.issue_val)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.returns.toFixed(3)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.adjust.toFixed(3)}</td>
-                    <td className="px-2 py-2 border-r border-border-temple text-right">{grandTotals.closing.toFixed(3)}</td>
-                    <td className="px-2 py-2 text-right">{formatCurrency(grandTotals.closing_val)}</td>
+                <tfoot className="bg-amber-50 font-black text-[13px] border-t-2 border-amber-200">
+                  <tr className="text-amber-950">
+                    <td colSpan={2} className="px-2 py-3 border-r border-amber-200 text-left uppercase tracking-tight">GRAND TOTAL</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.opening.toFixed(3)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.purchase.toFixed(3)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.issues.toFixed(3)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{formatCurrency(grandTotals.issue_val)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.returns.toFixed(3)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.adjust.toFixed(3)}</td>
+                    <td className="px-2 py-3 border-r border-amber-200 text-right font-black">{grandTotals.closing.toFixed(3)}</td>
+                    <td className="px-2 py-3 text-right font-black">{formatCurrency(grandTotals.closing_val)}</td>
                   </tr>
                 </tfoot>
               </table>

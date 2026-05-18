@@ -4,10 +4,27 @@ from app.schemas.devotee import DevoteeCreate, DevoteeUpdate
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from math import ceil
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 def get_devotee_by_phone(phone: str, db: Session) -> Devotee:
-    return db.query(Devotee).filter(Devotee.phone_number == phone.strip(), Devotee.status == 1).first()
+    return (
+        db.query(Devotee)
+        .filter(Devotee.phone_number == phone.strip(), Devotee.status == 1)
+        .order_by(Devotee.updated_at.desc(), Devotee.id.desc())
+        .first()
+    )
+
+def get_matching_devotee(payload: DevoteeCreate, db: Session) -> Devotee:
+    return (
+        db.query(Devotee)
+        .filter(
+            Devotee.phone_number == payload.phone_number.strip(),
+            func.lower(Devotee.devotee_name) == payload.devotee_name.strip().lower(),
+            Devotee.status == 1,
+        )
+        .order_by(Devotee.updated_at.desc(), Devotee.id.desc())
+        .first()
+    )
 
 def get_devotee_details(devotee_id: int, db: Session) -> Devotee:
     devotee = (
@@ -66,7 +83,7 @@ def list_devotees(db: Session, page: int = 1, page_size: int = 20, q: str = None
 
 def create_or_update_devotee(payload: DevoteeCreate, db: Session, current_user: User) -> Devotee:
     now = datetime.now(timezone.utc)
-    existing = get_devotee_by_phone(payload.phone_number, db)
+    existing = get_matching_devotee(payload, db)
     
     if existing:
         # Update existing info

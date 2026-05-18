@@ -64,48 +64,71 @@
   }
 
   .action-btn-view {
-    @apply px-3 py-1.5 rounded-md text-xs font-semibold bg-action-view-bg text-action-view-text hover:bg-secondary hover:text-white transition-colors;
+    @apply px-3 py-1.5 rounded-md text-sm font-semibold bg-action-view-bg text-action-view-text hover:bg-secondary hover:text-white transition-colors;
   }
 
   .action-btn-edit {
-    @apply px-3 py-1.5 rounded-md text-xs font-semibold bg-action-edit-bg text-action-edit-text hover:bg-action-edit-hover transition-colors;
+    @apply px-3 py-1.5 rounded-md text-sm font-semibold bg-action-edit-bg text-action-edit-text hover:bg-action-edit-hover transition-colors;
   }
 
   .action-btn-delete {
-    @apply px-3 py-1.5 rounded-md text-xs font-semibold bg-action-delete-bg text-action-delete-text hover:bg-action-delete-hover transition-colors;
+    @apply px-3 py-1.5 rounded-md text-sm font-semibold bg-action-delete-bg text-action-delete-text hover:bg-action-delete-hover transition-colors;
   }
 }
 
 @layer base {
   body {
     @apply bg-bg-temple text-text-main antialiased font-sans;
-    font-size: 14px;
+    font-size: 17px;
     font-weight: 400;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply text-text-main font-sans;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 400;
     text-transform: none;
     letter-spacing: normal;
   }
 
   h2 {
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 600;
     line-height: 1.2;
   }
 
-  p, label, input, select, textarea {
-    font-size: 14px !important;
+  p, input, select, textarea, button, td {
+    font-size: 17px !important;
     font-weight: 400 !important;
     color: var(--color-text-main);
+  }
+
+  label {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: var(--color-text-main);
+  }
+
+  th {
+    font-size: 15px !important;
   }
 }
 
 
 @layer utilities {
+  .text-xs,
+  .text-\[10px\],
+  .text-\[11px\],
+  .text-\[12px\] {
+    font-size: 1rem !important;
+    line-height: 1.5rem !important;
+  }
+
+  .text-sm {
+    font-size: 1.0625rem !important;
+    line-height: 1.625rem !important;
+  }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;

@@ -29,12 +29,14 @@ from app.api.menu_items import router as menu_items_router
 from app.api.wastages import router as wastages_router
 from app.api.tokens import router as tokens_router
 from app.api.donations import router as donations_router
+from app.api.donation_types import router as donation_types_router
+from app.api.settings import router as settings_router
 from app.api.debug import router as system_router
 from app.middleware.exception_handlers import register_exception_handlers
 from app.middleware.activity_audit import ActivityAuditMiddleware
 from app.utils.tasks import run_daily_snapshot_task, run_monthly_summary_task, audit_stock_integrity
 from app.db.session import SessionLocal
-from app.db.models import FinancialYear
+from app.db.models import FinancialYear, SystemSettings
 from apscheduler.schedulers.background import BackgroundScheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -96,6 +98,12 @@ def _ensure_active_financial_year() -> None:
         # Ensure exactly one active FY
         db.query(FinancialYear).update({FinancialYear.is_active: False}, synchronize_session=False)
         target.is_active = True
+        
+        # ALSO UPDATE SYSTEM SETTINGS to point to this FY
+        settings = db.query(SystemSettings).first()
+        if settings:
+            settings.current_financial_year_id = target.id
+            
         db.commit()
     except Exception:
         db.rollback()
@@ -160,4 +168,6 @@ app.include_router(reports_router)
 app.include_router(dashboard_router)
 app.include_router(tokens_router)
 app.include_router(donations_router)
+app.include_router(donation_types_router)
+app.include_router(settings_router)
 app.include_router(system_router)

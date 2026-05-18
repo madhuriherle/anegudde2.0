@@ -609,9 +609,9 @@ const PurchasesPage: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <h4 className="text-sm font-bold text-primary uppercase tracking-wider">Items Purchased</h4>
+                <h4 className="text-base font-bold text-primary uppercase tracking-wider">Items Purchased</h4>
                 <div className="rounded-lg border border-border-temple overflow-hidden">
-                  <table className="w-full text-sm text-left">
+                  <table className="w-full text-base text-left">
                     <thead className="bg-bg-temple border-b border-border-temple">
                       <tr>
                         <th className="px-4 py-2 font-bold text-text-main">Item Name</th>
@@ -639,7 +639,7 @@ const PurchasesPage: React.FC = () => {
               <Card className="bg-bg-temple/40 border-border-temple/40 border shadow-none">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-primary font-bold uppercase text-sm">Grand Total</span>
+                    <span className="text-primary font-bold uppercase text-base">Grand Total</span>
                     <span className="text-primary font-bold text-xl">
                       {formatCurrency(viewingPurchase?.total_amount)}
                     </span>
@@ -660,7 +660,7 @@ const PurchasesPage: React.FC = () => {
 
                 <div className="rounded-lg border border-border-temple bg-white overflow-hidden h-[72vh] min-h-[620px] w-full xl:w-[calc(100%-var(--summary-width))] xl:pl-3">
                   <div className="px-4 py-2 border-b border-border-temple bg-bg-temple/40 flex items-center justify-between">
-                    <span className="text-sm font-bold text-primary uppercase tracking-wider">Uploaded Bill Preview</span>
+                    <span className="text-base font-bold text-primary uppercase tracking-wider">Uploaded Bill Preview</span>
                     <button
                       type="button"
                       className="action-btn-view"
@@ -702,7 +702,7 @@ const PurchasesPage: React.FC = () => {
         }
       }}>
         <DialogContent 
-          className="max-w-4xl max-h-[90vh] overflow-y-auto border-border-temple"
+          className="max-w-5xl max-h-[90vh] overflow-y-auto border-border-temple"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
@@ -714,7 +714,7 @@ const PurchasesPage: React.FC = () => {
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4 pb-0">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 justify-items-start">
-              <div className="space-y-1.5 w-full max-w-[280px]">
+              <div className="space-y-1.5 w-full max-w-[320px]">
                 <Label className="text-text-main">Select Vendor *</Label>
                 <Controller
                   name="vendor_id"
@@ -735,12 +735,12 @@ const PurchasesPage: React.FC = () => {
                   </p>
                 )}
               </div>
-              <div className="space-y-1.5 w-full max-w-[280px]">
+              <div className="space-y-1.5 w-full max-w-[320px]">
                 <Label className="text-text-main">Purchase Date *</Label>
                 <Input type="date" {...register('purchase_date')} className="h-10 text-text-main" />
                 {errors.purchase_date && <p className="text-xs text-red-500 font-medium">{(errors.purchase_date as any).message}</p>}
               </div>
-              <div className="space-y-1.5 w-full max-w-[280px]">
+              <div className="space-y-1.5 w-full max-w-[320px]">
                 <Label className="text-text-main">Invoice/Bill Number</Label>
                 <Input {...register('bill_no')} className="h-10 text-text-main" />
               </div>
@@ -748,18 +748,18 @@ const PurchasesPage: React.FC = () => {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-2">
-                <h4 className="text-sm font-bold text-primary uppercase tracking-widest">Items in Purchase</h4>
+                <h4 className="text-base font-bold text-primary uppercase tracking-widest">Items in Purchase</h4>
               </div>
               
               <div className="space-y-4">
                 {fields.map((field, index) => (
                   <div key={field.id} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-white p-3 rounded-lg border border-border-temple/40 shadow-sm relative">
-                    <div className="sm:col-span-2 space-y-1.5">
-                      {index === 0 && <Label className="text-xs font-bold text-text-main">Item Code</Label>}
+                    <div className="sm:col-span-1 space-y-1.5">
+                      {index === 0 && <Label className="text-sm font-bold text-text-main">Code</Label>}
                       <Input 
                         type="text" 
                        
-                        className="h-9 text-sm text-center font-bold text-text-main border-primary/30"
+                        className="h-10 text-base text-center font-bold text-text-main border-primary/30 px-1"
                         {...register(`items.${index}.search_id` as const)}
                         onChange={(e) => {
                           const val = String(e.target.value || '').trim();
@@ -779,15 +779,15 @@ const PurchasesPage: React.FC = () => {
                         }}
                       />
                     </div>
-                    <div className="sm:col-span-3 space-y-1.5">
-                      {index === 0 && <Label className="text-xs font-bold text-text-main">Item Name *</Label>}
+                    <div className="sm:col-span-5 space-y-1.5">
+                      {index === 0 && <Label className="text-base font-bold text-text-main">Item Name *</Label>}
                       <Controller
                         name={`items.${index}.item_id` as const}
                         control={control}
                         render={({ field: itemField }) => (
                           <Select 
                             {...itemField} 
-                            className="w-full h-9 text-sm text-text-main font-bold"
+                            className="w-full h-10 text-base text-text-main font-bold"
                             onChange={(val) => {
                               itemField.onChange(val);
                               const itemId = Number(val.target.value);
@@ -804,11 +804,11 @@ const PurchasesPage: React.FC = () => {
                       {(errors.items as any)?.[index]?.item_id && <p className="text-[10px] text-red-500 font-bold">Required</p>}
                     </div>
                     <div className="sm:col-span-2 space-y-1.5">
-                      {index === 0 && <Label className="text-xs font-bold text-text-main">Qty *</Label>}
+                      {index === 0 && <Label className="text-base font-bold text-text-main">Qty *</Label>}
                       <Input 
                         type="text" 
                         {...register(`items.${index}.quantity` as const)} 
-                        className="h-9 text-sm font-bold text-text-main" 
+                        className="h-10 text-base font-bold text-text-main" 
                         onFocus={(e) => {
                           if (!editingPurchase && e.target.value === '0') {
                             setValue(`items.${index}.quantity`, '' as any);
@@ -818,11 +818,11 @@ const PurchasesPage: React.FC = () => {
                       {(errors.items as any)?.[index]?.quantity && <p className="text-[10px] text-red-500 font-bold">{((errors.items as any)[index]?.quantity as any).message}</p>}
                     </div>
                     <div className="sm:col-span-2 space-y-1.5">
-                      {index === 0 && <Label className="text-xs font-bold text-text-main">Price *</Label>}
+                      {index === 0 && <Label className="text-base font-bold text-text-main">Price *</Label>}
                       <Input 
                         type="text" 
                         {...register(`items.${index}.price` as const)} 
-                        className="h-9 text-sm font-bold text-text-main" 
+                        className="h-10 text-base font-bold text-text-main" 
                         onFocus={(e) => {
                           if (!editingPurchase && e.target.value === '0') {
                             setValue(`items.${index}.price`, '' as any);
@@ -831,10 +831,10 @@ const PurchasesPage: React.FC = () => {
                       />
                       {(errors.items as any)?.[index]?.price && <p className="text-[10px] text-red-500 font-bold uppercase">{((errors.items as any)[index]?.price as any).message}</p>}
                     </div>
-                    <div className="sm:col-span-2 space-y-1.5">
-                       {index === 0 && <Label className="text-xs font-bold text-text-main w-full">Subtotal</Label>}
+                    <div className="sm:col-span-1 space-y-1.5">
+                       {index === 0 && <Label className="text-base font-bold text-text-main w-full">Total</Label>}
                        <div className="h-9 flex items-center">
-                         <span className="font-black text-primary text-base">
+                         <span className="font-black text-primary text-sm whitespace-nowrap">
                           {formatCurrency((Number(watchedItems?.[index]?.quantity) || 0) * (Number(watchedItems?.[index]?.price) || 0))}
                          </span>
                        </div>
@@ -849,7 +849,7 @@ const PurchasesPage: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between pt-4">
-                <Button type="button" size="sm" variant="outline" onClick={() => append({ item_id: '' as any, quantity: '0', price: '0', search_id: '' })} className="h-10 text-xs font-bold border-primary text-primary hover:bg-primary hover:text-white transition-colors">
+                <Button type="button" size="sm" variant="outline" onClick={() => append({ item_id: '' as any, quantity: '0', price: '0', search_id: '' })} className="h-10 text-base font-bold border-primary text-primary hover:bg-primary hover:text-white transition-colors">
                   <Plus className="h-3 w-3 mr-1" /> Add Item
                 </Button>
                 
@@ -900,7 +900,7 @@ const PurchasesPage: React.FC = () => {
     <input
       id="bill-file-upload"
       type="file"
-      accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
+      accept=".pdf,.jpg,.jpeg,.png,.webp"
       onChange={(e) => handleBillFileChange(e.target.files?.[0] || null)}
       className="hidden"
     />

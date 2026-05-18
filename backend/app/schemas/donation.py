@@ -31,7 +31,6 @@ class DonationItemOut(BaseModel):
     donation_entry_id: int
     item_id: int
     quantity: Decimal
-    unit_cost_at_time: Decimal | None = None
     created_at: datetime
     item: ItemOut | None = None
 
@@ -41,6 +40,10 @@ class DonationItemOut(BaseModel):
 class DonationEntryOut(BaseModel):
     id: int
     donation_type: int = 1
+    financial_year_id: int | None = None
+    receipt_prefix: str | None = None
+    receipt_number: int | None = None
+    receipt_display_number: str | None = None
     donation_date: date
     devotee_id: int | None = None
     devotee_name: str

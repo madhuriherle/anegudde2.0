@@ -18,6 +18,8 @@ import UnitsPage from './pages/UnitsPage';
 import MenuItemsPage from './pages/MenuItemsPage';
 import WastagesPage from './pages/WastagesPage';
 import DonationsPage from './pages/DonationsPage';
+import DonationTypesPage from './pages/DonationTypesPage';
+import SettingsPage from './pages/SettingsPage';
 import ProfilePage from './pages/ProfilePage';
 import DailyStockReportPage from './pages/DailyStockReportPage';
 import { StockSummaryPage } from './pages/StockSummaryPage';
@@ -27,6 +29,7 @@ import TokenReportPage from './pages/TokenReportPage';
 import DonationReportPage from './pages/DonationReportPage';
 import TokenDetailLedgerPage from './pages/TokenDetailLedgerPage';
 import CanteenSummaryPage from './pages/CanteenSummaryPage';
+import ManpowerReportPage from './pages/ManpowerReportPage';
 
 function App() {
   return (
@@ -52,6 +55,7 @@ function App() {
         <Route path="/reports/donations" element={<DonationReportPage />} />
         <Route path="/reports/stock-summary" element={<StockSummaryPage />} />
         <Route path="/reports/canteen-summary" element={<CanteenSummaryPage />} />
+        <Route path="/reports/manpower" element={<ManpowerReportPage />} />
         <Route path="/reports/monthly-performance" element={<MonthlyPerformanceReportPage />} />
         <Route path="/reports/vendor-outstanding" element={<VendorOutstandingReportPage />} />
         <Route path="/users" element={<UsersPage />} />
@@ -59,6 +63,8 @@ function App() {
         <Route path="/settings/categories" element={<ItemCategoriesPage />} />
         <Route path="/settings/units" element={<UnitsPage />} />
         <Route path="/settings/menu-items" element={<MenuItemsPage />} />
+        <Route path="/settings/donation-types" element={<DonationTypesPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
 

@@ -1,0 +1,200 @@
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ColumnDef } from '@tanstack/react-table';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import api from '../api/axios';
+import { useNotification } from '../context/NotificationContext';
+import { Button } from '../components/ui/Button';
+import { Card, CardContent } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
+import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
+import { Input } from '../components/ui/Input';
+import { Label } from '../components/ui/Label';
+
+const donationTypeSchema = z.object({
+  type_name: z.string().min(1, 'Type name is required'),
+  receipt_prefix: z.string().min(1, 'Prefix is required'),
+  status: z.coerce.number().default(1),
+});
+
+type DonationTypeFormValues = z.infer<typeof donationTypeSchema>;
+
+const DonationTypesPage: React.FC = () => {
+  const queryClient = useQueryClient();
+  const { showConfirm, showError, showSuccess } = useNotification();
+  const [editingType, setEditingType] = useState<any>(null);
+
+  const { data: donationTypes, isLoading } = useQuery({
+    queryKey: ['donation-types'],
+    queryFn: async () => (await api.get('/donation-types/list_donation_types', { params: { status: null, page_size: 1000 } })).data,
+  });
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<DonationTypeFormValues>({
+    resolver: zodResolver(donationTypeSchema) as any,
+    defaultValues: {
+      type_name: '',
+      receipt_prefix: '',
+      status: 1,
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (payload: DonationTypeFormValues & { id?: number; isEditMode?: boolean }) => {
+      const { id, isEditMode, ...data } = payload;
+      if (isEditMode && id) return api.put(`/donation-types/update_donation_type/${id}`, data);
+      return api.post('/donation-types/create_donation_type', data);
+    },
+    onSuccess: (_res, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['donation-types'] });
+      showSuccess(variables?.isEditMode ? 'Donation type updated' : 'Donation type added');
+      handleCancel();
+    },
+    onError: (err: any) => showError(err.response?.data?.detail || 'Operation failed'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => api.delete(`/donation-types/delete_donation_type/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['donation-types'] });
+      showSuccess('Donation type removed');
+    },
+    onError: (err: any) => showError(err.response?.data?.detail || 'Delete failed'),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: number }) => api.put(`/donation-types/update_donation_type/${id}`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['donation-types'] });
+      showSuccess('Status updated');
+    },
+    onError: (err: any) => showError(err.response?.data?.detail || 'Status update failed'),
+  });
+
+  const handleEdit = (type: any) => {
+    setEditingType(type);
+    reset({
+      type_name: type.type_name,
+      receipt_prefix: type.receipt_prefix,
+      status: type.status,
+    });
+  };
+
+  const handleCancel = () => {
+    setEditingType(null);
+    reset({ type_name: '', receipt_prefix: '', status: 1 });
+  };
+
+  const onSubmit = async (data: DonationTypeFormValues) => {
+    const isEditMode = Boolean(editingType);
+    const confirmed = await showConfirm(
+      isEditMode ? 'Update Donation Type' : 'Add Donation Type',
+      isEditMode ? 'Update this donation type?' : 'Add this donation type?'
+    );
+    if (confirmed) {
+      mutation.mutate({ ...data, id: editingType?.id, isEditMode });
+    }
+  };
+
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: 'type_name',
+      header: 'Donation Type',
+      cell: info => <span className="font-medium text-text-main">{info.getValue() as string}</span>,
+    },
+    {
+      accessorKey: 'receipt_prefix',
+      header: 'Receipt Prefix',
+      cell: info => <span className="font-mono font-black text-primary">{info.getValue() as string}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: info => (
+        <InlineStatusSelect
+          value={Number(info.getValue() ?? 1)}
+          disabled={statusMutation.isPending}
+          onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })}
+        />
+      ),
+    },
+    {
+      id: 'actions',
+      header: () => <div className="text-center">Actions</div>,
+      cell: info => (
+        <div className="flex items-center justify-center gap-2">
+          <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>
+          <button
+            onClick={async () => {
+              const confirmed = await showConfirm('Delete Donation Type', `Delete "${info.row.original.type_name}"? Existing donations will disable it instead.`);
+              if (confirmed) deleteMutation.mutate(info.row.original.id);
+            }}
+            className="action-btn-delete"
+          >
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ], [deleteMutation, showConfirm, statusMutation]);
+
+  const sortedTypes = useMemo(() => {
+    const list = donationTypes?.items || [];
+    return [...list].sort((a, b) => {
+      if (a.status !== b.status) return b.status - a.status;
+      return a.type_name.localeCompare(b.type_name);
+    });
+  }, [donationTypes]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="page-title">Manage Donation Types</h2>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4">
+          <Card className="border-border-temple sticky top-6">
+            <CardContent className="p-6">
+              <div className="flex flex-col space-y-1.5 bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-6 select-none rounded-t-lg">
+                <h3 className="text-[18px] font-bold text-[#2F1F14] m-0">
+                  {editingType ? 'Edit Donation Type' : 'Add Donation Type'}
+                </h3>
+              </div>
+
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-text-main font-medium">Donation Type *</Label>
+                  <Input {...register('type_name')} className="border-border-temple/50" />
+                  {errors.type_name && <p className="text-xs text-error">{errors.type_name.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-text-main font-medium">Receipt Prefix *</Label>
+                  <Input {...register('receipt_prefix')} className="border-border-temple/50 font-mono uppercase" />
+                  {errors.receipt_prefix && <p className="text-xs text-error">{errors.receipt_prefix.message}</p>}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button type="button" onClick={handleSubmit(onSubmit)} disabled={mutation.isPending} className="flex-1 font-bold">Save</Button>
+                  {editingType && (
+                    <Button type="button" variant="ghost" onClick={handleCancel} className="flex-1 bg-white border border-[#D9C8AF]">Cancel</Button>
+                  )}
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-8">
+          <Card className="border-border-temple shadow-sm overflow-hidden">
+            <DataTable columns={columns} data={sortedTypes} loading={isLoading} />
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DonationTypesPage;

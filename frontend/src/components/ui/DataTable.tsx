@@ -74,8 +74,8 @@ export function DataTable<TData, TValue>({
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
-        <table className="w-full text-sm text-left">
-          <thead className="bg-primary text-white text-xs font-bold uppercase tracking-wider">
+        <table className="w-full text-[16px] text-left">
+          <thead className="bg-primary text-white text-[14px] font-bold uppercase tracking-wider">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
@@ -107,7 +107,7 @@ export function DataTable<TData, TValue>({
                   {row.getVisibleCells().map((cell) => (
                     <td 
                       key={cell.id} 
-                      className="px-3 py-2.5 text-sm text-text-main"
+                      className="px-3 py-2.5 text-[16px] text-text-main"
                       style={{ width: cell.column.columnDef.size !== 150 ? cell.column.columnDef.size : undefined }}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -129,7 +129,7 @@ export function DataTable<TData, TValue>({
       {/* Pagination Controls */}
       {manualPagination && (
         <div className="flex items-center justify-between px-2 py-1">
-          <div className="flex-1 text-xs text-gray-500 font-medium">
+          <div className="flex-1 text-sm text-gray-500 font-medium">
             {totalCount !== undefined ? (
               <>Showing {totalCount > 0 ? (pageIndex * pageSize) + 1 : 0} to {Math.min((pageIndex + 1) * pageSize, totalCount)} of {totalCount} results</>
             ) : (
@@ -138,7 +138,7 @@ export function DataTable<TData, TValue>({
           </div>
           <div className="flex items-center space-x-6 lg:space-x-8">
             <div className="flex items-center space-x-2">
-              <p className="text-xs font-bold text-gray-700">Page {pageIndex + 1} of{' '}
+              <p className="text-sm font-bold text-gray-700">Page {pageIndex + 1} of{' '}
                 {Math.max(1, pageCount)}</p>
             </div>
             <div className="flex items-center space-x-2">

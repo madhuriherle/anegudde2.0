@@ -35,8 +35,7 @@ def donations_report(
         .filter(
             DonationEntry.donation_date >= from_date, 
             DonationEntry.donation_date <= to_date,
-            DonationEntry.status == 1,
-            DonationEntry.donation_type == 1
+            DonationEntry.status == 1
         )
         .group_by(period)
         .order_by(period)
@@ -72,7 +71,7 @@ def detailed_donations_report(
     query = db.query(DonationEntry).options(
         joinedload(DonationEntry.items).joinedload(DonationItem.item),
         joinedload(DonationEntry.user)
-    ).filter(DonationEntry.status == 1, DonationEntry.donation_type == 1)
+    ).filter(DonationEntry.status == 1)
 
     if from_date:
         query = query.filter(DonationEntry.donation_date >= from_date)

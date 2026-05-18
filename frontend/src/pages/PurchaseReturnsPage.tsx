@@ -13,6 +13,7 @@ import { Select } from '../components/ui/Select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/Dialog';
 import { DetailItem } from '../components/ui/DetailItem';
 import { cn } from '../utils/cn';
+import { formatDate } from '../utils/date';
 
 const PurchaseReturnsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -200,9 +201,9 @@ const PurchaseReturnsPage: React.FC = () => {
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
       accessorKey: 'return_date',
-      header: 'Date',
-      cell: info => new Date(info.getValue() as string).toLocaleDateString()
-    },
+      header: 'Return Date',
+      cell: info => formatDate(info.getValue() as string)
+      },
     {
       accessorKey: 'vendor.vendor_name',
       header: 'Vendor',
@@ -345,7 +346,7 @@ const PurchaseReturnsPage: React.FC = () => {
                         <option value="">Select Bill</option>
                         {bills?.map((b: any) => (
                           <option key={b.id} value={b.id}>
-                            Inv: {b.bill_no || 'N/A'} | {new Date(b.purchase_date).toLocaleDateString()} | ₹{parseFloat(b.total_amount).toLocaleString()}
+                            Inv: {b.bill_no || 'N/A'} | {formatDate(b.purchase_date)} | ₹{parseFloat(b.total_amount).toLocaleString()}
                           </option>
                         ))}
                       </Select>
@@ -360,29 +361,29 @@ const PurchaseReturnsPage: React.FC = () => {
 
               <Card className="xl:col-span-2 border-border-temple">
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-bold text-primary uppercase tracking-widest mb-6">Return Items</h3>
+                  <h3 className="text-base font-bold text-primary uppercase tracking-widest mb-6">Return Items</h3>
                   {selectedBill ? (
                     <div className="space-y-6">
                       <div className="flex flex-wrap gap-2 p-3 bg-bg-temple/20 rounded-lg border border-border-temple/40">
-                        <p className="w-full text-[10px] font-bold text-text-main/50 uppercase tracking-widest mb-1">Add Items from Bill:</p>
+                        <p className="w-full text-base font-bold text-text-main/70 uppercase tracking-widest mb-1">Add Items from Bill:</p>
                         {availableBillItems.map((bi: any) => (
                           <Button 
                             key={bi.item_id} 
                             variant="ghost" 
                             size="sm" 
-                            className="bg-white hover:bg-bg-temple border border-border-temple/60 text-text-main text-xs"
+                            className="bg-white hover:bg-bg-temple border border-border-temple/60 text-text-main text-base"
                             onClick={() => handleAddItem(bi)}
                           >
                             + {bi.item_name}
                           </Button>
                         ))}
                         {availableBillItems.length === 0 && (
-                          <span className="text-sm text-text-main/50 italic py-1 px-2">All bill items added</span>
+                          <span className="text-base text-text-main/50 italic py-1 px-2">All bill items added</span>
                         )}
                       </div>
 
                       <div className="rounded-xl border border-border-temple overflow-hidden shadow-sm">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-base">
                           <thead className="bg-bg-temple border-b border-border-temple">
                             <tr>
                               <th className="text-left px-4 py-3 font-bold text-text-main">Item</th>
@@ -445,7 +446,7 @@ const PurchaseReturnsPage: React.FC = () => {
 
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-text-main/50 uppercase tracking-widest">Total Return Amount</span>
+                          <span className="text-base font-bold text-text-main/70 uppercase tracking-widest">Total Return Amount</span>
                           <span className="text-3xl font-black text-primary">
                             ₹{normalizedReturnItems.reduce((acc, curr) => acc + ((parseFloat(curr.return_qty) || 0) * curr.price), 0).toLocaleString()}
                           </span>
@@ -455,7 +456,7 @@ const PurchaseReturnsPage: React.FC = () => {
                   ) : (
                     <div className="flex flex-col items-center justify-center h-64 text-text-main/30 border-2 border-dashed border-border-temple/60 rounded-xl bg-bg-temple/5">
                       <FileText className="w-16 h-16 mb-3 opacity-20" />
-                      <p className="font-bold uppercase tracking-widest text-xs">Please select a vendor and bill first</p>
+                      <p className="font-bold uppercase tracking-widest text-base">Please select a vendor and bill first</p>
                     </div>
                   )}
                 </CardContent>
@@ -495,17 +496,17 @@ const PurchaseReturnsPage: React.FC = () => {
                 {/* Left Side: Original Purchase Details */}
                 <Card className="border border-[#D8C8B8] shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-0">
                   <div className="bg-[#F6EEDF] px-6 py-3 border-b border-[#D8C8B8]">
-                    <h3 className="text-sm font-black text-[#5D4037] uppercase tracking-widest">Original Purchase</h3>
+                    <h3 className="text-base font-black text-primary uppercase tracking-widest">Original Purchase</h3>
                   </div>
                   <CardContent className="p-0 flex-1 flex flex-col">
-                    <div className="flex flex-col gap-0.5 p-6 bg-white border-b border-gray-100 min-h-[200px]">
-                      <DetailItem label="Invoice No" value={viewingReturn.purchase_entry?.bill_no || 'N/A'} valueClassName="font-bold text-[#5D4037]" />
-                      <DetailItem label="Purchase Date" value={viewingReturn.purchase_entry ? new Date(viewingReturn.purchase_entry.purchase_date).toLocaleDateString() : 'N/A'} />
-                      <DetailItem label="Bill Amount" value={viewingReturn.purchase_entry ? `₹${parseFloat(viewingReturn.purchase_entry.total_amount).toLocaleString()}` : 'N/A'} valueClassName="font-bold text-[#5D4037]" />
-                      <DetailItem label="Vendor" value={viewingReturn.vendor?.vendor_name || 'N/A'} />
+                    <div className="flex flex-col gap-1 p-6 bg-white border-b border-gray-100 min-h-[200px]">
+                      <DetailItem className="text-base" label="Invoice No" value={viewingReturn.purchase_entry?.bill_no || 'N/A'} valueClassName="font-bold text-[#5D4037]" />
+                      <DetailItem className="text-base" label="Purchase Date" value={viewingReturn.purchase_entry ? formatDate(viewingReturn.purchase_entry.purchase_date) : 'N/A'} />
+                      <DetailItem className="text-base" label="Bill Amount" value={viewingReturn.purchase_entry ? `₹${parseFloat(viewingReturn.purchase_entry.total_amount).toLocaleString()}` : 'N/A'} valueClassName="font-bold text-[#5D4037]" />
+                      <DetailItem className="text-base" label="Vendor" value={viewingReturn.vendor?.vendor_name || 'N/A'} />
                     </div>
                     <div className="flex-1 overflow-auto bg-gray-50/30">
-                      <table className="min-w-[620px] w-full text-sm text-left table-fixed">
+                      <table className="min-w-[620px] w-full text-base text-left table-fixed">
                         <thead className="bg-[#FAF7F2] border-b border-gray-200">
                           <tr>
                             <th className="px-6 py-3 font-bold text-[#7A5C4D]">Item</th>
@@ -537,17 +538,17 @@ const PurchaseReturnsPage: React.FC = () => {
                 {/* Right Side: Return Details */}
                 <Card className="border border-[#D8C8B8] shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-0">
                   <div className="bg-[#F6EEDF] px-6 py-3 border-b border-[#D8C8B8] flex justify-between items-center">
-                    <h3 className="text-sm font-black text-[#5D4037] uppercase tracking-widest">Return Entry</h3>
-                    <span className="text-[11px] font-bold bg-[#5D4037] text-white px-2 py-0.5 rounded-full tracking-wider">RETURNED</span>
+                    <h3 className="text-base font-black text-primary uppercase tracking-widest">Return Entry</h3>
+                    <span className="text-sm font-bold bg-[#5D4037] text-white px-3 py-1 rounded-full tracking-wider">RETURNED</span>
                   </div>
                   <CardContent className="p-0 flex-1 flex flex-col">
-                    <div className="flex flex-col gap-0.5 p-6 bg-white border-b border-gray-100 min-h-[200px]">
-                      <DetailItem label="Return Date" value={new Date(viewingReturn.return_date).toLocaleDateString()} />
-                      <DetailItem label="Total Refund" value={`₹${parseFloat(viewingReturn.total_return_amount).toLocaleString()}`} valueClassName="font-bold text-[#5D4037]" />
-                      <DetailItem label="Remarks" value={viewingReturn.remarks || 'None'} />
+                    <div className="flex flex-col gap-1 p-6 bg-white border-b border-gray-100 min-h-[200px]">
+                      <DetailItem className="text-base" label="Return Date" value={formatDate(viewingReturn.return_date)} />
+                      <DetailItem className="text-base" label="Total Refund" value={`₹${parseFloat(viewingReturn.total_return_amount).toLocaleString()}`} valueClassName="font-bold text-[#5D4037]" />
+                      <DetailItem className="text-base" label="Remarks" value={viewingReturn.remarks || 'None'} />
                     </div>
                     <div className="flex-1 overflow-auto bg-gray-50/30">
-                      <table className="min-w-[620px] w-full text-sm text-left table-fixed">
+                      <table className="min-w-[620px] w-full text-base text-left table-fixed">
                         <thead className="bg-[#FAF7F2] border-b border-gray-200">
                           <tr>
                             <th className="px-6 py-3 font-bold text-[#7A5C4D]">Item</th>

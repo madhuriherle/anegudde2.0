@@ -286,7 +286,7 @@ const ItemsPage: React.FC = () => {
         <button
           type="button"
           onClick={() => handlePriceHistory(i.row.original)}
-          className="font-semibold text-primary underline-offset-2 hover:underline"
+          className="px-3 py-1.5 rounded-lg bg-primary/5 text-primary font-bold text-sm border border-primary/20 hover:bg-primary hover:text-white transition-all active:scale-95 whitespace-nowrap shadow-sm"
         >
           {formatCurrency(i.getValue() as number)}
         </button>
@@ -383,25 +383,25 @@ const ItemsPage: React.FC = () => {
               <div className="rounded-lg border border-border-temple/50 bg-[#F8F3EC] px-4 py-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-secondary/70">Latest Price</div>
+                    <div className="text-base font-bold uppercase tracking-[0.14em] text-secondary/70">Latest Price</div>
                     <div className="mt-1 text-3xl font-black leading-none text-[#D05E2D]">{formatCurrency(latestPriceRow.price)}</div>
                   </div>
                   <div className="text-left sm:text-right">
-                    <div className="text-xs font-semibold text-text-main/70">{formatDate(latestPriceRow.purchase_date)}</div>
-                    <div className="text-xs font-bold text-text-main">{latestPriceRow.vendor_name || 'Unknown Vendor'}</div>
+                    <div className="text-base font-semibold text-text-main/70">{formatDate(latestPriceRow.purchase_date)}</div>
+                    <div className="text-base font-bold text-text-main">{latestPriceRow.vendor_name || 'Unknown Vendor'}</div>
                   </div>
                 </div>
               </div>
             )}
 
             <div className="max-h-[50vh] overflow-auto rounded-md border border-gray-200">
-              <table className="w-full table-fixed text-left text-sm">
+              <table className="w-full table-fixed text-left text-base">
                 <colgroup>
                   <col className="w-[28%]" />
                   <col className="w-[44%]" />
                   <col className="w-[28%]" />
                 </colgroup>
-                <thead className="bg-primary text-xs font-bold uppercase tracking-wider text-white">
+                <thead className="bg-primary text-base font-bold uppercase tracking-wider text-white">
                   <tr>
                     <th className="px-3 py-2.5">Date</th>
                     <th className="px-3 py-2.5">Vendor / Source</th>

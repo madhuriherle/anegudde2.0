@@ -16,7 +16,10 @@ class TokenDetailCreate(BaseModel):
 class TokenDetailResponse(BaseModel):
     id: int
     generation_id: int
+    financial_year_id: Optional[int] = None
+    receipt_prefix: Optional[str] = None
     receipt_number: int
+    receipt_display_number: Optional[str] = None
     token_count: int
     created_at: dt_datetime
     creator: Optional[UserMinimal] = None

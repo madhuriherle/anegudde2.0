@@ -140,7 +140,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   ) => {
     const result = await MySwal.fire({
       title: title,
-      text: message,
+      html: message.replace(/\n/g, '<br />'),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#A14D2A',
