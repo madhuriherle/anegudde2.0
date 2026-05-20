@@ -429,28 +429,34 @@ const UsageEntriesPage = () => {
   {
     accessorKey: 'usage_date',
     header: 'Date',
-    cell: (i) => formatDate(i.getValue())
+    cell: (i) => <span className="text-base text-text-main">{formatDate(i.getValue())}</span>
   },
   {
     id: 'total_cooking',
     header: 'Total Cooking Persons',
     cell: (i) =>
-    Number(i.row.original.regular_cooking_persons || 0) +
-    Number(i.row.original.additional_cooking_persons || 0)
+    <span className="text-base text-text-main">
+      {Number(i.row.original.regular_cooking_persons || 0) +
+      Number(i.row.original.additional_cooking_persons || 0)}
+    </span>
   },
   {
     id: 'total_serving',
     header: 'Total Serving Persons',
     cell: (i) =>
-    Number(i.row.original.regular_serving_persons || 0) +
-    Number(i.row.original.additional_serving_persons || 0)
+    <span className="text-base text-text-main">
+      {Number(i.row.original.regular_serving_persons || 0) +
+      Number(i.row.original.additional_serving_persons || 0)}
+    </span>
   },
   {
     id: 'total_cleaning',
     header: 'Total Cleaning Persons',
     cell: (i) =>
-    Number(i.row.original.regular_cleaning_persons || 0) +
-    Number(i.row.original.additional_cleaning_persons || 0)
+    <span className="text-base text-text-main">
+      {Number(i.row.original.regular_cleaning_persons || 0) +
+      Number(i.row.original.additional_cleaning_persons || 0)}
+    </span>
   },
   {
     id: 'actions',
@@ -639,7 +645,7 @@ const UsageEntriesPage = () => {
               <span className="text-lg font-bold text-primary uppercase tracking-wider">Stock Adjustments</span>
             </div>
             <div className="rounded-md border border-border-temple overflow-hidden mt-1 text-base">
-              <div className="grid grid-cols-[1fr_auto] bg-bg-temple text-text-main uppercase text-xs font-bold tracking-wider border-b border-border-temple">
+              <div className="grid grid-cols-[1fr_auto] bg-bg-temple text-text-main uppercase text-base font-bold tracking-wider border-b border-border-temple">
                 <div className="px-4 py-3">Item</div>
                 <div className="px-4 py-3 text-right whitespace-nowrap">Adjustment Qty</div>
               </div>
@@ -1036,7 +1042,7 @@ const UsageEntriesPage = () => {
 
             </div>
 
-            <DialogFooter className="gap-3 m-0">
+            <DialogFooter className="gap-3 m-0 bg-[#F3E8D4]">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">Cancel</Button>
               <Button type="submit" disabled={saveMutation.isPending} className="w-28 h-10 text-text-main">
                 {saveMutation.isPending ? 'Saving...' : 'Save'}

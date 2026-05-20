@@ -154,56 +154,71 @@ const DonationReportPage = () => {
           }
           `}</style>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
-          <h2 className="page-title text-2xl font-black text-text-main">Donation Report</h2>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleDownloadPDF} disabled={isExporting || !reportData?.length} className="border-primary text-primary hover:bg-primary hover:!text-white">
-              {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
-              Download PDF
-            </Button>
-            <Button variant="outline" onClick={handlePrint} className="border-primary text-primary hover:bg-primary hover:!text-white">
-              <Printer className="w-4 h-4 mr-2" />
-              Print
-            </Button>
-          </div>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+        <h2 className="page-title">Donation Report</h2>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleDownloadPDF}
+            disabled={isExporting || !reportData?.length}
+            className="text-text-main"
+          >
+            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
+            Download PDF
+          </Button>
+          <Button variant="outline" onClick={handlePrint} className="text-text-main">
+            <Printer className="w-4 h-4 mr-2" />
+            Print
+          </Button>
+        </div>
+      </div>
 
-          <Card className="border-border-temple shadow-sm bg-white/50 print:hidden">
-          {/* ... CardContent remains same ... */}
-          <CardContent className="p-4 sm:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[180px_180px_minmax(220px,320px)_245px] gap-4 items-end">
+      <Card className="border-border-temple print:hidden">
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-end">
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold uppercase text-text-main">From Date</Label>
-              <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-10 bg-white" />
+              <Label className="text-text-main font-medium">From Date</Label>
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="h-10 text-text-main" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold uppercase text-text-main">To Date</Label>
-              <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-10 bg-white" />
+              <Label className="text-text-main font-medium">To Date</Label>
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="h-10 text-text-main" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold uppercase text-text-main">Search Devotee / Phone</Label>
+              <Label className="text-text-main font-medium">Search Devotee / Phone</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-main/40" />
                 <Input
                   placeholder="Name or Phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-10 bg-white" />
-
+                  className="pl-10 h-10 text-text-main" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-bold uppercase text-text-main">Item Filter</Label>
-              <Select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} className="h-10 bg-white">
+              <Label className="text-text-main font-medium">Item Filter</Label>
+              <select
+                value={selectedItemId}
+                onChange={(e) => setSelectedItemId(e.target.value)}
+                className="h-10 w-full rounded-md border border-border-temple/50 bg-white px-3 text-sm text-text-main outline-none focus:border-primary transition-all"
+              >
                 <option value="">All Items</option>
-                {items.map((i) =>
-                <option key={i.id} value={i.id}>{i.item_name}</option>
-                )}
-              </Select>
+                {items.map((i) => (
+                  <option key={i.id} value={i.id}>{i.item_name}</option>
+                ))}
+              </select>
             </div>
           </div>
-          </CardContent>
-          </Card>
+        </CardContent>
+      </Card>
 
           <div className="overflow-hidden rounded-xl border border-border-temple bg-white shadow-sm print:border-none print:shadow-none">
           <div className="border-b border-border-temple bg-white px-5 pb-7 pt-5">

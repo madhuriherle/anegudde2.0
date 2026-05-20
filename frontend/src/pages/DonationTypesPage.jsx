@@ -127,7 +127,13 @@ const DonationTypesPage = () => {
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
       disabled={statusMutation.isPending || !canWrite}
-      onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
+      onChange={async (nextStatus) => {
+        const confirmed = await showConfirm(
+          'Update Status',
+          `Are you sure you want to ${Number(nextStatus) === 1 ? 'activate' : 'deactivate'} "${info.row.original.type_name}"?`
+        );
+        if (confirmed) statusMutation.mutate({ id: info.row.original.id, status: nextStatus });
+      }} />
 
 
   },
@@ -149,7 +155,7 @@ const DonationTypesPage = () => {
         </div>
 
   }],
-  [statusMutation, canWrite, canDelete]);
+  [statusMutation, showConfirm, deleteMutation, canWrite, canDelete]);
 
   const sortedTypes = useMemo(() => {
     const list = donationTypes?.items || [];

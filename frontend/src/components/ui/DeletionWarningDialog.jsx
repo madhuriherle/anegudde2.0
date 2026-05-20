@@ -5,20 +5,10 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle } from
-"./Dialog";
+  DialogTitle
+} from "./Dialog";
 import { Button } from "./Button";
 import { AlertTriangle } from 'lucide-react';
-
-
-
-
-
-
-
-
-
-
 
 export const DeletionWarningDialog = ({
   open,

@@ -37,9 +37,11 @@ def list_wastages(db: Session, page: int = 1, page_size: int = 20, q: str = None
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
+from app.utils.date_utils import get_today_ist
+
 def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User) -> WastageEntry:
     now = datetime.now(timezone.utc)
-    today = now.date()
+    today = get_today_ist()
     
     # --- SAFETY BLOCK: Prevent Future Dates ---
     if payload.wastage_date > today:
@@ -149,7 +151,7 @@ def delete_wastage(wastage_id: int, db: Session, current_user: User) -> None:
 def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, current_user: User) -> WastageEntry:
     entry = get_wastage(wastage_id, db)
     now = datetime.now(timezone.utc)
-    today = now.date()
+    today = get_today_ist()
 
     if payload.wastage_date > today:
         raise HTTPException(status_code=400, detail="Wastage date cannot be in the future.")

@@ -254,6 +254,17 @@ const ItemsPage = () => {
     }
   };
 
+  const onSubmit = async (data) => {
+    const confirmed = await showConfirm(
+      editingItem ? 'Confirm Update' : 'Confirm Save',
+      `Are you sure you want to ${editingItem ? 'update' : 'save'} this item?`
+    );
+
+    if (confirmed) {
+      mutation.mutate({ ...data, id: editingItem?.id, isEditMode: Boolean(editingItem) });
+    }
+  };
+
   const columns = useMemo(() => [
   {
     id: 'item_code',
@@ -303,7 +314,13 @@ const ItemsPage = () => {
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
       disabled={statusMutation.isPending || !canWrite}
-      onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
+      onChange={async (nextStatus) => {
+        const confirmed = await showConfirm(
+          'Update Status',
+          `Are you sure you want to ${Number(nextStatus) === 1 ? 'activate' : 'deactivate'} "${info.row.original.item_name}"?`
+        );
+        if (confirmed) statusMutation.mutate({ id: info.row.original.id, status: nextStatus });
+      }} />
 
 
   },
@@ -319,7 +336,7 @@ const ItemsPage = () => {
         </div>
 
   }],
-  [navigate, statusMutation, canWrite, canDelete]);
+  [navigate, statusMutation, showConfirm, canWrite, canDelete]);
 
   return (
     <div className="space-y-6">
@@ -508,7 +525,7 @@ const ItemsPage = () => {
             <DialogTitle>{editingItem ? 'Edit Item' : 'Add New Item'}</DialogTitle>
             <DialogDescription className="sr-only">Item details form</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit((data) => mutation.mutate({ ...data, id: editingItem?.id, isEditMode: Boolean(editingItem) }))} className="bg-white flex flex-col" autoComplete="off">
+          <form onSubmit={handleSubmit(onSubmit)} className="bg-white flex flex-col" autoComplete="off">
             <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <div>

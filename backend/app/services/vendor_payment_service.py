@@ -48,9 +48,11 @@ def list_vendor_payments(db: Session, page: int = 1, page_size: int = 20, q: str
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
+from app.utils.date_utils import get_today_ist
+
 def create_vendor_payment(payload, db: Session, current_user: User) -> VendorPayment:
     now = datetime.now(timezone.utc)
-    today = now.date()
+    today = get_today_ist()
     
     # --- SAFETY BLOCK: Prevent Future Dates ---
     if payload.payment_date > today:

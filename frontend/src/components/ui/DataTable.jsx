@@ -1,28 +1,13 @@
 import React from 'react';
 import {
-
   flexRender,
   getCoreRowModel,
   useReactTable,
   getPaginationRowModel,
-  getSortedRowModel } from
-
-'@tanstack/react-table';
+  getSortedRowModel
+} from '@tanstack/react-table';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from 'lucide-react';
 import { Button } from './Button';
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export function DataTable({
   columns,

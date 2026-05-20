@@ -58,9 +58,11 @@ def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = Non
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
+from app.utils.date_utils import get_today_ist
+
 def create_donation(payload: DonationEntryCreate, db: Session, current_user: User) -> DonationEntry:
     now = datetime.now(timezone.utc)
-    today = now.date()
+    today = get_today_ist()
     
     if payload.donation_date > today:
         raise HTTPException(status_code=400, detail="Donation date cannot be in the future.")
@@ -171,6 +173,11 @@ def get_donation(donation_id: int, db: Session) -> DonationEntry:
 
 def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session, current_user: User) -> DonationEntry:
     now = datetime.now(timezone.utc)
+    today = get_today_ist()
+    
+    if payload.donation_date > today:
+        raise HTTPException(status_code=400, detail="Donation date cannot be in the future.")
+
     entry = db.query(DonationEntry).filter(DonationEntry.id == donation_id).first()
     if not entry:
         raise HTTPException(status_code=404, detail="Donation not found")

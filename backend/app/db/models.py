@@ -17,8 +17,9 @@ class FinancialYear(Base):
     is_active = Column(Boolean, default=False, nullable=False)
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 class SystemSettings(Base):
     __tablename__ = "system_settings"
@@ -53,11 +54,13 @@ class SystemSettings(Base):
     receipt_padding = Column(Integer, nullable=False, default=4) # e.g., 4 results in 0001
     
     # Financial Year
-    current_financial_year_id = Column(Integer, ForeignKey("financial_years.id"), nullable=True)
+    current_financial_year_id = Column(Integer, ForeignKey("financial_years.id"), nullable=True, index=True)
     
     # Meta
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     
     current_year = relationship("FinancialYear", foreign_keys=[current_financial_year_id])
 
@@ -71,6 +74,8 @@ class ReceiptSequence(Base):
     last_number = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     financial_year = relationship("FinancialYear", foreign_keys=[financial_year_id])
     donation_type = relationship("DonationType", foreign_keys=[donation_type_id])
@@ -86,9 +91,9 @@ class Role(Base):
     is_all_access = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, nullable=True)
-    updated_by = Column(Integer, nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     privileges = relationship("RolePrivilege", back_populates="role", cascade="all, delete-orphan")
 
@@ -99,9 +104,9 @@ class Privilege(Base):
     description = Column(Text, nullable=True)
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, nullable=True)
-    updated_by = Column(Integer, nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     roles = relationship("RolePrivilege", back_populates="privilege")
 
@@ -116,9 +121,9 @@ class User(Base):
     phone = Column(String(20), nullable=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     
     role = relationship("Role", foreign_keys=[role_id])
 
@@ -129,9 +134,9 @@ class RolePrivilege(Base):
     privilege_id = Column(Integer, ForeignKey("privileges.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, nullable=True)
-    updated_by = Column(Integer, nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     role = relationship("Role", back_populates="privileges")
     privilege = relationship("Privilege", back_populates="roles")
@@ -156,9 +161,9 @@ class Vendor(Base):
     notes = Column(Text, nullable=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 class Unit(Base):
     __tablename__ = "units"
@@ -167,9 +172,9 @@ class Unit(Base):
     unit_code = Column(String(20), nullable=False)
     status = Column(Integer, nullable=False, server_default=text("1"), index=True) # 1: Active, 0: Inactive
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 class ItemType(Base):
     __tablename__ = "item_types"
@@ -177,9 +182,9 @@ class ItemType(Base):
     type_name = Column(String(100), unique=True, nullable=False)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 class DonationType(Base):
     __tablename__ = "donation_types"
@@ -188,9 +193,9 @@ class DonationType(Base):
     receipt_prefix = Column(String(20), nullable=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 class MenuItem(Base):
     __tablename__ = "menu_items"
@@ -199,9 +204,9 @@ class MenuItem(Base):
     unit_id = Column(Integer, ForeignKey("units.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, server_default=text("1"), index=True) # 1: Active, 0: Disabled
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     # Relationships
     unit = relationship("Unit", foreign_keys=[unit_id])
@@ -215,9 +220,9 @@ class ItemCategory(Base):
     category_name = Column(String(100), nullable=False)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     item_type = relationship("ItemType", foreign_keys=[type_id])
 
 class Item(Base):
@@ -234,9 +239,9 @@ class Item(Base):
     max_stock_level = Column(Numeric(15, 3), nullable=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     category = relationship("ItemCategory", foreign_keys=[category_id])
     unit = relationship("Unit", foreign_keys=[unit_id])
     serial_numbers = relationship("ItemSerialNumber", back_populates="item", cascade="all, delete-orphan")
@@ -248,6 +253,9 @@ class ItemSerialNumber(Base):
     serial_number = Column(String(50), unique=True, nullable=False)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     
     item = relationship("Item", back_populates="serial_numbers")
 
@@ -258,7 +266,9 @@ class ItemPrice(Base):
     price = Column(Numeric(15, 3), nullable=False)
     purchase_entry_id = Column(Integer, ForeignKey("purchase_entries.id"), nullable=True, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     
     item = relationship("Item", backref="prices")
     purchase = relationship("PurchaseEntry")
@@ -278,9 +288,9 @@ class PurchaseEntry(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     vendor = relationship("Vendor", foreign_keys=[vendor_id])
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("PurchaseItem", back_populates="purchase_entry", cascade="all, delete-orphan")
@@ -294,6 +304,9 @@ class PurchaseBill(Base):
     file_path = Column(String(500), nullable=False)
     file_type = Column(String(100), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     
     purchase_entry = relationship("PurchaseEntry", back_populates="bills")
 
@@ -308,9 +321,9 @@ class PurchaseItem(Base):
     line_total = Column(Numeric(15, 3), nullable=False)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     item = relationship("Item", foreign_keys=[item_id])
     purchase_entry = relationship("PurchaseEntry", back_populates="items")
 
@@ -333,9 +346,9 @@ class ConsumptionEntry(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("ConsumptionItem", back_populates="consumption_entry", cascade="all, delete-orphan")
     wastage_items = relationship("WastageItem", back_populates="consumption_entry", cascade="all, delete-orphan")
@@ -354,9 +367,9 @@ class ConsumptionItem(Base):
     unit_cost_at_time = Column(Numeric(15, 3), nullable=True)
     line_total = Column(Numeric(15, 3), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     item = relationship("Item", foreign_keys=[item_id])
     consumption_entry = relationship("ConsumptionEntry", back_populates="items")
 
@@ -369,9 +382,9 @@ class WastageEntry(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("WastageItem", back_populates="wastage_entry", cascade="all, delete-orphan")
     consumption_entry = relationship("ConsumptionEntry", back_populates="wastages")
@@ -387,9 +400,9 @@ class WastageItem(Base):
     quantity = Column(Numeric(15, 3), nullable=False)
     approx_amount = Column(Numeric(15, 3), nullable=False, default=0, server_default=text("0"))
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     menu_item = relationship("MenuItem")
     item = relationship("Item")
     wastage_entry = relationship("WastageEntry", back_populates="items")
@@ -405,7 +418,9 @@ class StockAdjustment(Base):
     reason = Column(String(255), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     consumption_entry = relationship("ConsumptionEntry", back_populates="stock_adjustments")
     item = relationship("Item")
 
@@ -421,9 +436,9 @@ class VendorPayment(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 class StockLedger(Base):
     __tablename__ = "stock_ledger"
@@ -442,9 +457,9 @@ class StockLedger(Base):
     current_value = Column(Numeric(15, 3), nullable=False, default=0)
     status = Column(Integer, nullable=False, default=1, server_default=text("1"), index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 class Devotee(Base):
     __tablename__ = "devotees"
@@ -458,9 +473,9 @@ class Devotee(Base):
     pincode = Column(String(20), nullable=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, nullable=True)
-    updated_by = Column(Integer, nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     donations = relationship("DonationEntry", back_populates="devotee")
 
@@ -485,9 +500,9 @@ class DonationEntry(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     user = relationship("User", foreign_keys=[user_id])
     donation_type_master = relationship("DonationType", foreign_keys=[donation_type])
@@ -502,6 +517,9 @@ class DonationItem(Base):
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
     quantity = Column(Numeric(15, 3), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     item = relationship("Item")
     donation_entry = relationship("DonationEntry", back_populates="items")
@@ -525,6 +543,9 @@ class LoginHistory(Base):
     session_id = Column(String(64), nullable=True)
     logged_out_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 class ActivityLog(Base):
     __tablename__ = "activity_logs"
@@ -546,9 +567,9 @@ class ActivityLog(Base):
     error_code = Column(String(64), nullable=True)
     meta = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     user = relationship("User", foreign_keys=[user_id])
 
@@ -566,7 +587,9 @@ class DailyStockSummary(Base):
     avg_purchase_price = Column(Numeric(15, 2), nullable=True)
     stock_value = Column(Numeric(15, 2), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 class MonthlyStockSummary(Base):
     __tablename__ = "monthly_stock_summary"
@@ -582,7 +605,9 @@ class MonthlyStockSummary(Base):
     avg_purchase_price = Column(Numeric(15, 2), nullable=True)
     closing_stock_value = Column(Numeric(15, 2), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
 # ==========================================
 # 4. TOKEN SYSTEM (PARTITIONED)
@@ -594,9 +619,9 @@ class TokenGeneration(Base):
     date = Column(Date, unique=True, nullable=False)
     total_tokens = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     
     creator = relationship("User", foreign_keys=[created_by])
 
@@ -611,8 +636,8 @@ class TokenDetail(Base):
     token_count = Column(Integer, nullable=False)
     created_at = Column(DateTime, primary_key=True, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     
     creator = relationship("User", foreign_keys=[created_by])
     financial_year = relationship("FinancialYear", foreign_keys=[financial_year_id])
@@ -632,9 +657,9 @@ class PurchaseReturnEntry(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     vendor = relationship("Vendor")
     purchase_entry = relationship("PurchaseEntry")
@@ -650,6 +675,9 @@ class PurchaseReturnItem(Base):
     price = Column(Numeric(15, 3), nullable=False)
     line_total = Column(Numeric(15, 3), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     item = relationship("Item")
     return_entry = relationship("PurchaseReturnEntry", back_populates="items")

@@ -240,7 +240,13 @@ const VendorsPage = () => {
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
       disabled={statusMutation.isPending || !canWrite}
-      onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
+      onChange={async (nextStatus) => {
+        const confirmed = await showConfirm(
+          'Update Status',
+          `Are you sure you want to ${Number(nextStatus) === 1 ? 'activate' : 'deactivate'} "${info.row.original.vendor_name}"?`
+        );
+        if (confirmed) statusMutation.mutate({ id: info.row.original.id, status: nextStatus });
+      }} />
 
 
   },
@@ -255,7 +261,7 @@ const VendorsPage = () => {
         </div>
 
   }],
-  [statusMutation, canWrite, canDelete]);
+  [statusMutation, showConfirm, canWrite, canDelete]);
 
   const sortedVendors = useMemo(() => {
     return [...vendors].sort((a, b) => {
@@ -342,16 +348,16 @@ const VendorsPage = () => {
 
       <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
         <DialogContent
-          className="max-w-2xl border-border-temple"
+          className="max-w-2xl border-border-temple p-0 overflow-hidden"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}>
           
-          <DialogHeader className="mb-0">
+          <DialogHeader className="m-0">
             <DialogTitle>{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</DialogTitle>
             <DialogDescription className="sr-only">Vendor form</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="bg-white flex flex-col" autoComplete="off">
-            <div className="space-y-4 px-6 pt-4 pb-6 overflow-y-auto max-h-[60vh]">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col overflow-hidden" autoComplete="off">
+            <div className="bg-white space-y-4 px-6 pt-4 pb-6 overflow-y-auto max-h-[60vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                 <div>
                   <Label className="text-text-main">Vendor Name (Shop Name) *</Label>
@@ -398,16 +404,17 @@ const VendorsPage = () => {
                     <Input {...register('state')} className="text-text-main" />
                   </div>
                   <div>
-                    <Label className="text-text-main">Postal Code</Label>
+                    <Label className="text-text-main">Pin Code</Label>
                     <Input {...register('postal_code')} className="text-text-main" />
                     {errors.postal_code && <p className="text-xs text-red-500">{errors.postal_code.message}</p>}
                   </div>
                 </div>
               </div>
             </div>
-            <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 bg-gray-50">
+            <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 m-0 bg-[#F3E8D4]">
               <Button type="button" variant="ghost" onClick={() => {setOpen(false);setEditingVendor(null);}}>Cancel</Button>
-              <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Saving...' : 'Save'}</Button>
+              <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

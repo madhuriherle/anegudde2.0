@@ -519,7 +519,7 @@ const DonationsPage = () => {
                   placeholder="Name, phone or remarks..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 text-text-main" />
+                  className="pl-10 h-10 text-text-main" />
                 
               </div>
             </div>

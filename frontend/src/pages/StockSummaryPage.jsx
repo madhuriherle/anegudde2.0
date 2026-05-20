@@ -163,16 +163,16 @@ export const StockSummaryPage = () => {
           <div className="flex flex-col sm:flex-row sm:items-end gap-2">
             <div className="space-y-1.5 w-full sm:w-[280px]">
               <Label className="text-text-main font-medium">Date</Label>
-              <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="h-11 text-text-main" />
+              <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="h-10 text-text-main" />
             </div>
             <div className="space-y-1.5 w-full sm:w-[280px]">
-              <Label className="text-text-main font-semibold">Category</Label>
+              <Label className="text-text-main font-medium">Category</Label>
               <div className="relative">
                 <Filter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-main/60" />
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-border-temple bg-white pl-9 pr-9 text-sm font-medium text-text-main shadow-sm outline-none transition focus:border-amber-700 focus:ring-2 focus:ring-amber-100">
+                  className="h-10 w-full rounded-md border border-border-temple/50 bg-white pl-9 text-sm text-text-main outline-none focus:border-primary transition-all">
                   
                   {categoryOptions.map((category) =>
                   <option key={category} value={category}>

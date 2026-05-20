@@ -171,7 +171,13 @@ const UsersPage = () => {
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
       disabled={statusMutation.isPending || !canWrite}
-      onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
+      onChange={async (nextStatus) => {
+        const confirmed = await showConfirm(
+          'Update Status',
+          `Are you sure you want to ${Number(nextStatus) === 1 ? 'activate' : 'deactivate'} "${info.row.original.username}"?`
+        );
+        if (confirmed) statusMutation.mutate({ id: info.row.original.id, status: nextStatus });
+      }} />
 
 
   },

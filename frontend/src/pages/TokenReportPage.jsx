@@ -137,22 +137,22 @@ const TokenReportPage = () => {
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1.5 w-full sm:w-56">
-              <Label className="text-text-main">Date Filter</Label>
-              <Select
+              <Label className="text-text-main font-medium">Date Filter</Label>
+              <select
                 value={dateFilterMode}
                 onChange={(e) => handleDateFilterModeChange(e.target.value)}
-                className="text-text-main">
+                className="h-10 w-full rounded-md border border-border-temple/50 bg-white px-3 text-sm text-text-main outline-none focus:border-primary transition-all">
                 
                 <option value="today">Today</option>
                 <option value="yesterday">Yesterday</option>
                 <option value="weekly">Weekly</option>
                 <option value="custom">Custom</option>
-              </Select>
+              </select>
             </div>
             {dateFilterMode === 'custom' &&
             <>
                 <div className="space-y-1.5 w-full sm:w-48">
-                  <Label className="text-text-main">From Date</Label>
+                  <Label className="text-text-main font-medium">From Date</Label>
                   <Input
                   type="date"
                   value={customStartDate}
@@ -160,11 +160,11 @@ const TokenReportPage = () => {
                     setCustomStartDate(e.target.value);
                     setPage(1);
                   }}
-                  className="text-text-main" />
+                  className="h-10 text-text-main" />
                 
                 </div>
                 <div className="space-y-1.5 w-full sm:w-48">
-                  <Label className="text-text-main">To Date</Label>
+                  <Label className="text-text-main font-medium">To Date</Label>
                   <Input
                   type="date"
                   value={customEndDate}
@@ -172,7 +172,7 @@ const TokenReportPage = () => {
                     setCustomEndDate(e.target.value);
                     setPage(1);
                   }}
-                  className="text-text-main" />
+                  className="h-10 text-text-main" />
                 
                 </div>
               </>

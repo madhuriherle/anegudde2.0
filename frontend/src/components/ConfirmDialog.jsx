@@ -6,21 +6,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription } from
-'./ui/Dialog';
+  DialogDescription
+} from './ui/Dialog';
 import { Button } from './ui/Button';
-
-
-
-
-
-
-
-
-
-
-
-
 
 const ConfirmDialog = ({
   open,

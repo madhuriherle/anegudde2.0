@@ -66,7 +66,7 @@ const WastagesPage = () => {
   {
     accessorKey: 'wastage_date',
     header: 'Date',
-    cell: (info) => formatDate(info.getValue())
+    cell: (info) => <span className="text-base text-text-main">{formatDate(info.getValue())}</span>
   },
   {
     id: 'dish_details',
@@ -76,7 +76,7 @@ const WastagesPage = () => {
       return (
         <div className="space-y-1 py-1">
             {items.map((it, idx) =>
-          <div key={idx} className="text-sm text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
+          <div key={idx} className="text-base text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
                 {it.menu_item?.dish_name || it.item?.item_name || 'Unknown'}
               </div>
           )}
@@ -92,7 +92,7 @@ const WastagesPage = () => {
       return (
         <div className="space-y-1 py-1">
             {items.map((it, idx) =>
-          <div key={idx} className="text-sm text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
+          <div key={idx} className="text-base text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
                 {formatQuantityWithUnit(it.quantity, it.menu_item?.unit || it.item?.unit)}
               </div>
           )}
@@ -108,7 +108,7 @@ const WastagesPage = () => {
       return (
         <div className="space-y-1 py-1">
             {items.map((it, idx) =>
-          <div key={idx} className="text-sm text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
+          <div key={idx} className="text-base text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
                 {formatCurrency(Number(it.approx_amount || 0))}
               </div>
           )}
@@ -123,7 +123,7 @@ const WastagesPage = () => {
       const items = info.row.original.items || [];
       const total = items.reduce((sum, it) => sum + Number(it.approx_amount || 0), 0);
       return (
-        <span className="text-base font-bold text-text-main">
+        <span className="text-base text-text-main">
             {formatCurrency(total)}
           </span>);
 

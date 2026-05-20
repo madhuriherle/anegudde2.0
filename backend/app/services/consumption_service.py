@@ -56,10 +56,12 @@ def list_consumptions(db: Session, page: int = 1, page_size: int = 20, q: str = 
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
+from app.utils.date_utils import get_today_ist
+
 def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_user: User) -> ConsumptionEntry:
     now = datetime.now(timezone.utc)
     # --- SAFETY BLOCK: Prevent Future Dates ---
-    if payload.usage_date > now.date():
+    if payload.usage_date > get_today_ist():
         raise HTTPException(status_code=400, detail="Usage date cannot be in the future.")
 
     for manpower_value in [
@@ -260,7 +262,7 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
     existing = get_consumption(consumption_id, db)
     now = datetime.now(timezone.utc)
 
-    if payload.usage_date > now.date():
+    if payload.usage_date > get_today_ist():
         raise HTTPException(status_code=400, detail="Usage date cannot be in the future.")
     for manpower_value in [
         payload.regular_cooking_persons,

@@ -165,24 +165,24 @@ const ManpowerReportPage = () => {
       <Card className="border-border-temple print:hidden">
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-wrap gap-6 items-end">
-            <div className="space-y-2 min-w-[180px]">
-              <Label className="text-[10px] font-black text-text-light uppercase tracking-widest ml-1">Report Year</Label>
+            <div className="space-y-1.5 min-w-[180px]">
+              <Label className="text-text-main font-medium">Report Year</Label>
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="h-11 w-full rounded-xl border border-gray-100 bg-gray-50 px-4 text-sm font-bold text-text-main outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+                className="h-10 w-full rounded-md border border-border-temple/50 bg-white px-3 text-sm text-text-main outline-none focus:border-primary transition-all">
                 
                 {years.map((year) =>
                 <option key={year} value={year}>{year}</option>
                 )}
               </select>
             </div>
-            <div className="space-y-2 min-w-[240px]">
-              <Label className="text-[10px] font-black text-text-light uppercase tracking-widest ml-1">Report Month</Label>
+            <div className="space-y-1.5 min-w-[240px]">
+              <Label className="text-text-main font-medium">Report Month</Label>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="h-11 w-full rounded-xl border border-gray-100 bg-gray-50 px-4 text-sm font-bold text-text-main outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+                className="h-10 w-full rounded-md border border-border-temple/50 bg-white px-3 text-sm text-text-main outline-none focus:border-primary transition-all">
                 
                 {months.map((m) =>
                 <option key={m.value} value={m.value}>{m.label}</option>

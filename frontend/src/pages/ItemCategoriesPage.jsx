@@ -1,14 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-
-
-
-
-
-
-
-
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,9 +11,8 @@ import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
 import { Label } from '../components/ui/Label';
-
+import { cn } from '../utils/cn';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
-
 import { usePermission } from '../hooks/usePermission';
 
 const categorySchema = z.object({
@@ -158,7 +148,13 @@ const ItemCategoriesPage = () => {
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
       disabled={statusMutation.isPending || !canWrite}
-      onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
+      onChange={async (nextStatus) => {
+        const confirmed = await showConfirm(
+          'Update Status',
+          `Are you sure you want to ${Number(nextStatus) === 1 ? 'activate' : 'deactivate'} "${info.row.original.category_name}"?`
+        );
+        if (confirmed) statusMutation.mutate({ id: info.row.original.id, status: nextStatus });
+      }} />
 
 
   },
@@ -172,7 +168,7 @@ const ItemCategoriesPage = () => {
         </div>
 
   }],
-  [statusMutation, canWrite, canDelete]);
+  [statusMutation, showConfirm, canWrite, canDelete]);
 
   const sortedCategories = useMemo(() => {
     const categoryList = categories?.items || [];

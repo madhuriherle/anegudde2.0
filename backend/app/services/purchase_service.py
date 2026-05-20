@@ -58,9 +58,11 @@ def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = Non
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
+from app.utils.date_utils import get_today_ist
+
 def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: User) -> PurchaseEntry:
     now = datetime.now(timezone.utc)
-    today = now.date()
+    today = get_today_ist()
     
     # --- SAFETY BLOCK 1: Prevent Future Dates ---
     if payload.purchase_date > today:
@@ -204,7 +206,7 @@ def update_purchase(purchase_id: int, payload: PurchaseEntryUpdate, db: Session,
         raise HTTPException(status_code=404, detail="Not found")
 
     now = datetime.now(timezone.utc)
-    today = now.date()
+    today = get_today_ist()
 
     if payload.purchase_date > today:
         raise HTTPException(status_code=400, detail="Purchase date cannot be in the future.")

@@ -185,7 +185,7 @@ const VendorOutstandingReportPage = () => {
       <Card className="border-border-temple">
         <CardContent className="p-4 sm:p-6">
           <div className="max-w-md">
-            <Label className="text-text-main">Quick Search</Label>
+            <Label className="text-text-main font-medium">Quick Search</Label>
             <div className="relative mt-1.5">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -193,7 +193,7 @@ const VendorOutstandingReportPage = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10 text-text-main" />
-              
+
             </div>
           </div>
         </CardContent>
