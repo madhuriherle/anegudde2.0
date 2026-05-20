@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, PermissionChecker
 from app.db.models import MenuItem, User
 from app.schemas.menu_item import MenuItemCreate, MenuItemOut
 
@@ -11,7 +11,7 @@ router = APIRouter()
 def create_menu_item(
     payload: MenuItemCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(PermissionChecker("menu_items.write"))
 ):
     # Check duplicates
     existing = (

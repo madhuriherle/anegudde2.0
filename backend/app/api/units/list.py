@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import Unit, User
 from app.schemas.unit import UnitOut
 
@@ -9,7 +9,7 @@ router = APIRouter()
 @router.get("/list_units", response_model=list[UnitOut])
 def list_units(
     db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user),
+    _: User = Depends(PermissionChecker("units.read")),
     q: str | None = Query(None),
     status: int | None = Query(1),
     search_field: str | None = Query(None),

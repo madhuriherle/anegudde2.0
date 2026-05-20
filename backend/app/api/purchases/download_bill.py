@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import PurchaseEntry, User, PurchaseBill
 
 router = APIRouter()
@@ -15,7 +15,7 @@ BASE_DIR = Path(__file__).resolve().parents[3]
 def download_purchase_bill(
     purchase_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(PermissionChecker("purchases.read")),
 ):
     # Get the latest bill for this purchase
     bill = db.query(PurchaseBill).filter(PurchaseBill.purchase_id == purchase_id).order_by(PurchaseBill.created_at.desc()).first()

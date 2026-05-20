@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_db, PermissionChecker
 from app.db.models import User
 from app.schemas.item import ItemOut
 from app.schemas.base import PaginatedResponse
@@ -13,7 +13,7 @@ router = APIRouter()
 @router.get("/list_items", response_model=PaginatedResponse[ItemOut])
 def list_items(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(PermissionChecker("items.read")),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=1000),
     q: str | None = Query(None),

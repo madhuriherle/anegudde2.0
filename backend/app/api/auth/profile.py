@@ -20,4 +20,10 @@ def me(
 
     user_out = AuthUserOut.model_validate(current_user)
     user_out.active_financial_year = active_fy
+    user_out.is_all_access = current_user.role.is_all_access
+    user_out.privileges = [
+        rp.privilege.privilege_name 
+        for rp in current_user.role.privileges 
+        if rp.status == 1
+    ]
     return user_out

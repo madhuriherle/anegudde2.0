@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_db, PermissionChecker
 from app.db.models import User, Vendor
 from app.schemas.vendor import VendorCreate, VendorOut
 
@@ -14,7 +14,7 @@ router = APIRouter()
 def create_vendor(
     payload: VendorCreate, 
     db: Session = Depends(get_db), 
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(PermissionChecker("vendors.write"))
 ):
     data = payload.model_dump()
     

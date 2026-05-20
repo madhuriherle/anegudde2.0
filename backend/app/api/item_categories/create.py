@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import ItemCategory, ItemType, User
 from app.schemas.item_category import ItemCategoryCreate, ItemCategoryOut
 router = APIRouter()
@@ -9,7 +9,7 @@ router = APIRouter()
 def create_category(
     payload: ItemCategoryCreate, 
     db: Session = Depends(get_db), 
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(PermissionChecker("item_categories.write"))
 ):
     resolved_type_id = payload.type_id
     if resolved_type_id is None:

@@ -67,6 +67,10 @@
     @apply px-3 py-1.5 rounded-md text-sm font-semibold bg-action-view-bg text-action-view-text hover:bg-secondary hover:text-white transition-colors;
   }
 
+  .action-btn-receipt {
+    @apply px-3 py-1.5 rounded-md text-sm font-semibold bg-[#F0FDFA] text-[#0D9488] border border-[#99F6E4] hover:bg-[#0D9488] hover:text-white transition-colors;
+  }
+
   .action-btn-edit {
     @apply px-3 py-1.5 rounded-md text-sm font-semibold bg-action-edit-bg text-action-edit-text hover:bg-action-edit-hover transition-colors;
   }
@@ -116,19 +120,6 @@
 
 
 @layer utilities {
-  .text-xs,
-  .text-\[10px\],
-  .text-\[11px\],
-  .text-\[12px\] {
-    font-size: 1rem !important;
-    line-height: 1.5rem !important;
-  }
-
-  .text-sm {
-    font-size: 1.0625rem !important;
-    line-height: 1.625rem !important;
-  }
-
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;

@@ -24,13 +24,32 @@ class SystemSettings(Base):
     __tablename__ = "system_settings"
     id = Column(Integer, primary_key=True)
     # Temple Details
-    temple_name = Column(String(255), nullable=False, default="Anegudde Sri Vinayaka Temple")
+    temple_name = Column(String(255), nullable=True, default="Anegudde Sri Vinayaka Temple")
+    temple_name_kn = Column(String(255), nullable=True)
+    temple_subtitle = Column(String(255), nullable=True, default="Inventory & Donation Management")
     temple_address = Column(Text, nullable=True)
     temple_contact = Column(String(100), nullable=True)
+    alternate_contact = Column(String(100), nullable=True)
+    temple_email = Column(String(150), nullable=True)
+    temple_website = Column(String(255), nullable=True)
+    temple_logo = Column(String(500), nullable=True)
+    opening_time = Column(String(50), nullable=True)
+    closing_time = Column(String(50), nullable=True)
+    google_maps_link = Column(String(500), nullable=True)
+    footer_note = Column(Text, nullable=True)
+    
+    # Display Toggles
+    show_temple_name = Column(Boolean, default=True, nullable=False, server_default=text("true"))
+    show_temple_name_kn = Column(Boolean, default=True, nullable=False, server_default=text("true"))
+    show_temple_address = Column(Boolean, default=True, nullable=False, server_default=text("true"))
+    show_temple_contact = Column(Boolean, default=True, nullable=False, server_default=text("true"))
+    show_alternate_contact = Column(Boolean, default=True, nullable=False, server_default=text("true"))
+    show_temple_email = Column(Boolean, default=True, nullable=False, server_default=text("true"))
+    show_temple_website = Column(Boolean, default=True, nullable=False, server_default=text("true"))
+    show_temple_timings = Column(Boolean, default=True, nullable=False, server_default=text("true"))
+    show_google_maps_link = Column(Boolean, default=True, nullable=False, server_default=text("true"))
     
     # Receipt Formats
-    token_prefix = Column(String(20), nullable=False, default="TOK-")
-    purchase_prefix = Column(String(20), nullable=False, default="PUR-")
     receipt_padding = Column(Integer, nullable=False, default=4) # e.g., 4 results in 0001
     
     # Financial Year
@@ -64,11 +83,14 @@ class Role(Base):
     __tablename__ = "roles"
     id = Column(Integer, primary_key=True)
     role_name = Column(String(50), unique=True, nullable=False)
+    is_all_access = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, nullable=True)
     updated_by = Column(Integer, nullable=True)
+
+    privileges = relationship("RolePrivilege", back_populates="role", cascade="all, delete-orphan")
 
 class Privilege(Base):
     __tablename__ = "privileges"
@@ -80,6 +102,8 @@ class Privilege(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, nullable=True)
     updated_by = Column(Integer, nullable=True)
+
+    roles = relationship("RolePrivilege", back_populates="privilege")
 
 class User(Base):
     __tablename__ = "users"
@@ -95,6 +119,7 @@ class User(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
     role = relationship("Role", foreign_keys=[role_id])
 
 class RolePrivilege(Base):
@@ -107,6 +132,9 @@ class RolePrivilege(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, nullable=True)
     updated_by = Column(Integer, nullable=True)
+
+    role = relationship("Role", back_populates="privileges")
+    privilege = relationship("Privilege", back_populates="roles")
 
 class Vendor(Base):
     __tablename__ = "vendors"
@@ -157,7 +185,7 @@ class DonationType(Base):
     __tablename__ = "donation_types"
     id = Column(Integer, primary_key=True)
     type_name = Column(String(100), unique=True, nullable=False)
-    receipt_prefix = Column(String(20), nullable=False)
+    receipt_prefix = Column(String(20), nullable=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -521,6 +549,8 @@ class ActivityLog(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])
 
 class DailyStockSummary(Base):
     __tablename__ = "daily_stock_summary"

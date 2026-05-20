@@ -5,8 +5,19 @@ from pydantic import BaseModel, ConfigDict
 class RoleOut(BaseModel):
     id: int
     role_name: str
+    is_all_access: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+class PrivilegeOut(BaseModel):
+    id: int
+    privilege_name: str
+    description: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class RolePrivilegeUpdate(BaseModel):
+    privilege_ids: list[int]
 
 class UserBase(BaseModel):
     username: str

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import ConsumptionEntry, ConsumptionItem, PurchaseEntry, PurchaseItem, User, VendorPayment, WastageEntry, WastageItem, TokenGeneration, TokenDetail, Item, MenuItem, Unit
 from app.schemas.dashboard import DashboardToday, DailyItemDetail, DailyWastageDetail, DailyTokenDetail
 
@@ -15,7 +15,7 @@ router = APIRouter()
 @router.get("/get_today_summary", response_model=DashboardToday)
 def today_summary(
     db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user)
+    _: User = Depends(PermissionChecker("dashboard.read"))
 ):
     today = date.today()
 
@@ -167,7 +167,7 @@ def today_summary(
 @router.get("/get_weekly_menu_wastage")
 def get_weekly_menu_wastage(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(PermissionChecker("dashboard.read")),
 ):
     today = date.today()
     from_date = today - timedelta(days=6)

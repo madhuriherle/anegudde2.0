@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import ConsumptionEntry, PurchaseEntry, User, Vendor, VendorPayment, WastageEntry
 from app.schemas.dashboard import RecentActivityRow
 
@@ -11,7 +11,7 @@ router = APIRouter()
 @router.get("/get_recent_activity", response_model=list[RecentActivityRow])
 def recent_activity(
     db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user)
+    _: User = Depends(PermissionChecker("dashboard.read"))
 ):
     activities: list[RecentActivityRow] = []
 

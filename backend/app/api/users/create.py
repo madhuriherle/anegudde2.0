@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.core.security import hash_password
 from app.db.models import Role, User
 from app.schemas.user import UserCreate, UserOut
@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.post("/create_user", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_user(payload: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("users.write"))):
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
     if not db.query(Role).filter(Role.id == payload.role_id).first():

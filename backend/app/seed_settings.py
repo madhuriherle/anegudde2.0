@@ -14,8 +14,6 @@ def seed_system_settings():
                 temple_name="Anegudde Sri Vinayaka Temple",
                 temple_address="Kumbhashi, Udupi, Karnataka - 576257",
                 temple_contact="08254-261257",
-                token_prefix="TOK-",
-                purchase_prefix="PUR-",
                 receipt_padding=4,
                 current_financial_year_id=fy.id if fy else None
             )

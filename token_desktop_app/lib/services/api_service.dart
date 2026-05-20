@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Updated to match the running backend port
-  static const String baseUrl = 'http://127.0.0.1:2403';
+  static const String baseUrl = 'http://localhost:2407';
 
   Future<String?> get token async {
     final prefs = await SharedPreferences.getInstance();

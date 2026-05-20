@@ -17,6 +17,8 @@ class AuthUserOut(BaseModel):
     username: str
     full_name: str
     role_id: int
+    is_all_access: bool = False
+    privileges: list[str] = []
     email: str | None = None
     phone: str | None = None
     active_financial_year: FinancialYearOut | None = None

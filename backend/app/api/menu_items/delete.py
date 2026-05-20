@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, PermissionChecker
 from app.db.models import MenuItem, User
 
 router = APIRouter()
@@ -10,7 +10,7 @@ router = APIRouter()
 def delete_menu_item(
     item_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(PermissionChecker("menu_items.delete"))
 ):
     db_item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     if not db_item:

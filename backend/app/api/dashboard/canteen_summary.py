@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import TokenGeneration, WastageEntry, WastageItem, User, DonationEntry, DonationItem, Item, DonationType
 from pydantic import BaseModel
 
@@ -33,7 +33,7 @@ class CanteenSummaryStats(BaseModel):
 @router.get("/canteen_summary", response_model=CanteenSummaryStats)
 def get_canteen_summary_stats(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user)
+    _: User = Depends(PermissionChecker("dashboard.read"))
 ):
     today = date.today()
     start_of_week = today - timedelta(days=today.weekday())

@@ -10,8 +10,16 @@ from app.schemas.auth import LoginRequest, Token
 
 
 def login_user(payload: LoginRequest, db: Session) -> Token:
+    print(f"DEBUG: Login attempt for username: '{payload.username}'")
     user = db.query(User).filter(User.username == payload.username).first()
     now = datetime.now(timezone.utc)
+
+    if not user:
+        print(f"DEBUG: User '{payload.username}' not found in DB")
+    elif not verify_password(payload.password, user.password):
+        print(f"DEBUG: Password mismatch for user '{payload.username}'. Received: '{payload.password}', Expected: '{user.password}'")
+    elif user.status != 1:
+        print(f"DEBUG: User '{payload.username}' has status {user.status} (expected 1)")
 
     if not user or not verify_password(payload.password, user.password) or user.status != 1:
         db.add(

@@ -1,0 +1,621 @@
+
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          @page { size: A4 landscape; margin: 10mm; }
+          body {
+            font-family: "Nirmala UI", "Nirmala", "Segoe UI", Arial, sans-serif;
+            color: #2b1d17;
+            font-size: 10px;
+            line-height: 1.35;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .report-header { text-align: center; border-bottom: 2px solid #5A2D1F; padding-bottom: 10px; margin-bottom: 12px; }
+          .report-logo { height: 58px; margin-bottom: 5px; }
+          .temple-kn { font-size: 20px; font-weight: 800; color: #5A2D1F; margin: 0; }
+          .temple-en { font-size: 13px; font-weight: 800; text-transform: uppercase; margin: 2px 0; }
+          .temple-info { font-size: 9px; color: #4B4B4B; margin: 1px 0; }
+          .report-title { text-align: center; margin: 10px 0 12px; }
+          .report-title h1 { font-size: 14px; margin: 0; text-transform: uppercase; text-decoration: underline; }
+          .report-title .subtitle { margin-top: 3px; font-size: 10px; font-weight: 700; }
+          .report-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 12px; }
+          .report-table th { background: #FAF7F2; color: #5A2D1F; border: 1px solid #E7D8CC; padding: 5px 4px; font-size: 8px; text-transform: uppercase; }
+          .report-table td { border: 1px solid #E7D8CC; padding: 5px 4px; font-size: 9px; vertical-align: top; word-wrap: break-word; }
+          .section-title { background: #FAF7F2; border: 1px solid #E7D8CC; color: #5A2D1F; font-weight: 800; padding: 5px 7px; text-transform: uppercase; margin-top: 10px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+          .summary-box { border: 1px solid #E7D8CC; padding: 8px; background: #FFFDFB; break-inside: avoid; }
+          .summary-row { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid #FAF7F2; padding: 2px 0; }
+          .r { text-align: right; }
+          .c { text-align: center; }
+          .empty { padding: 16px !important; color: #777; }
+          .report-footer { margin-top: 18px; border-top: 1px solid #FAF7F2; padding-top: 8px; text-align: center; color: #777; font-size: 8px; font-style: italic; }
+        </style>
+      </head>
+      <body>
+        <div class="report-header">
+          <img src="file:///C:/anegudde/Anegudde_Inventory_System/frontend/public/temple-logo-permanent.png" class="report-logo" />
+          
+          <div class="temple-en">Anegudde Sri Vinayaka Temple</div>
+          <div class="temple-info">Kumbhashi, Udupi, Karnataka - 576257</div>
+          <div class="temple-info">Contact: +91 7406093533</div>
+        </div>
+        <div class="report-title">
+          <h1>Stock Summary Report</h1>
+          <div class="subtitle">From 20-05-2026 To 20-05-2026</div>
+        </div>
+        
+      <style>
+        .stock-summary-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 12px; }
+        .stock-summary-table th { background: #FAF7F2; color: #5A2D1F; border: 1px solid #E7D8CC; padding: 6px 2px; font-size: 8px; text-transform: uppercase; line-height: 1.2; }
+        .stock-summary-table td { border: 1px solid #E7D8CC; padding: 5px 3px; font-size: 9px; vertical-align: middle; word-wrap: break-word; }
+        .stock-summary-table .category-row td { background: #FAF7F2; color: #5A2D1F; font-size: 10px; font-weight: 800; border-bottom: 2px solid #E7D8CC; }
+        .stock-summary-table .total-row td { background: #FAF7F2; color: #5A2D1F; font-size: 9px; font-weight: 800; }
+        .stock-summary-table .grand-row td { background: #FAF7F2; color: #5A2D1F; font-size: 10px; font-weight: 900; border-top: 2px solid #5A2D1F; }
+      </style>
+      <table class="stock-summary-table">
+        <thead>
+          <tr>
+            <th style="width:24%;">ITEM NAME</th>
+            <th style="width:7%;" class="r">RATE</th>
+            <th style="width:8%;" class="r">OPENING STOCK</th>
+            <th style="width:8%;" class="r">STOCK ADDED</th>
+            <th style="width:8%;" class="r">STOCK USED</th>
+            <th style="width:9%;" class="r">USAGE VALUE</th>
+            <th style="width:10%;" class="r">RETURNED TO VENDOR</th>
+            <th style="width:8%;" class="r">STOCK ADJUST</th>
+            <th style="width:9%;" class="r">CLOSING STOCK</th>
+            <th style="width:9%;" class="r">CLOSING VALUE</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr class="category-row">
+            <td colspan="10">ಇಂಧನ ಸಾಮಗ್ರಿಗಳು (Fuel Items)</td>
+          </tr>
+        
+              <tr>
+                <td>ಗ್ಯಾಸ್ (Gas)</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000 nos</td>
+                <td class="r">₹0.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಇಂಧನ ಮರ (Firewood)</td>
+                <td class="r">₹55.00</td>
+                <td class="r">77.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">77.000</td>
+                <td class="r">154.000 kg</td>
+                <td class="r">₹8,470.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">77.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">77.000</td>
+            <td class="r">154.000</td>
+            <td class="r">₹8,470.00</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ಎಣ್ಣೆ ಮತ್ತು ತುಪ್ಪ (Oils &amp; Ghee)</td>
+          </tr>
+        
+              <tr>
+                <td>ತುಪ್ಪ (Ghee)</td>
+                <td class="r">₹99.00</td>
+                <td class="r">539.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">77.000</td>
+                <td class="r">616.000 kg</td>
+                <td class="r">₹60,984.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">539.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">77.000</td>
+            <td class="r">616.000</td>
+            <td class="r">₹60,984.00</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ತರಕಾರಿಗಳು (Vegetables)</td>
+          </tr>
+        
+              <tr>
+                <td>ಸೌತೆಕಾಯಿ (Cucumber)</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000 kg</td>
+                <td class="r">₹0.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಹಸಿಮೆಣಸಿನಕಾಯಿ (Green Chilli)</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000 kg</td>
+                <td class="r">₹0.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಆಲೂಗಡ್ಡೆ (Potato)</td>
+                <td class="r">₹10.00</td>
+                <td class="r">99.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">100.000</td>
+                <td class="r">199.000 kg</td>
+                <td class="r">₹1,990.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಕುಂಬಳಕಾಯಿ (Pumpkin)</td>
+                <td class="r">₹33.00</td>
+                <td class="r">66.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">66.000 kg</td>
+                <td class="r">₹2,178.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಕ್ಯಾರೆಟ್ (Carrot)</td>
+                <td class="r">₹66.00</td>
+                <td class="r">66.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">66.000 kg</td>
+                <td class="r">₹4,356.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಬೀನ್ಸ್ (Beans)</td>
+                <td class="r">₹66.00</td>
+                <td class="r">399.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">399.000 kg</td>
+                <td class="r">₹26,334.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">630.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">100.000</td>
+            <td class="r">730.000</td>
+            <td class="r">₹34,858.00</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ಧಾನ್ಯಗಳು (Grains)</td>
+          </tr>
+        
+              <tr>
+                <td>ಗೋಧಿ ಕಡಿ (Wheat Rava)</td>
+                <td class="r">₹100.00</td>
+                <td class="r">153.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">44.000</td>
+                <td class="r">197.000 kg</td>
+                <td class="r">₹19,700.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಅಕ್ಕಿ (Rice)</td>
+                <td class="r">₹22.00</td>
+                <td class="r">203.200</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">11.000</td>
+                <td class="r">214.200 kg</td>
+                <td class="r">₹4,712.40</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">356.200</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">55.000</td>
+            <td class="r">411.200</td>
+            <td class="r">₹24,412.40</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ಬೇಳೆಕಾಳುಗಳು (Pulses &amp; Lentils)</td>
+          </tr>
+        
+              <tr>
+                <td>ತೊಗರಿ ಬೇಳೆ (Toor Dal)</td>
+                <td class="r">₹33.00</td>
+                <td class="r">49.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">33.000</td>
+                <td class="r">82.000 kg</td>
+                <td class="r">₹2,706.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">49.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">33.000</td>
+            <td class="r">82.000</td>
+            <td class="r">₹2,706.00</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ಮಸಾಲೆ ಪದಾರ್ಥಗಳು (Spices &amp; Masalas)</td>
+          </tr>
+        
+              <tr>
+                <td>ಶುಂಠಿ (Ginger)</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000 kg</td>
+                <td class="r">₹0.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಕೆಂಪು ಮೆಣಸಿನಕಾಯಿ (Red Chilly)</td>
+                <td class="r">₹99.00</td>
+                <td class="r">93.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">99.000</td>
+                <td class="r">192.000 kg</td>
+                <td class="r">₹19,008.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಮೆಣಸು (Pepper)</td>
+                <td class="r">₹0.00</td>
+                <td class="r">66.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">66.000 kg</td>
+                <td class="r">₹0.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಹಿಂಗು (Hing)</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000 kg</td>
+                <td class="r">₹0.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಒಣಮೆಣಸು (Dry Chilli)</td>
+                <td class="r">₹55.00</td>
+                <td class="r">104.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">55.000</td>
+                <td class="r">159.000 kg</td>
+                <td class="r">₹8,745.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">263.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">154.000</td>
+            <td class="r">417.000</td>
+            <td class="r">₹27,753.00</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ಸಾಂಬಾರ ಪದಾರ್ಥಗಳು (Sambar Ingredients)</td>
+          </tr>
+        
+              <tr>
+                <td>ಹುಣಸೆ ಹಣ್ಣು (Tamarind)</td>
+                <td class="r">₹99.00</td>
+                <td class="r">158.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">66.000</td>
+                <td class="r">224.000 kg</td>
+                <td class="r">₹22,176.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">158.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">66.000</td>
+            <td class="r">224.000</td>
+            <td class="r">₹22,176.00</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ಸಾಮಾನ್ಯ ಸಾಮಗ್ರಿಗಳು (General Kitchen Items)</td>
+          </tr>
+        
+              <tr>
+                <td>ಉಪ್ಪು (Salt)</td>
+                <td class="r">₹88.00</td>
+                <td class="r">82.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">88.000</td>
+                <td class="r">170.000 pkt</td>
+                <td class="r">₹14,960.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">82.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">88.000</td>
+            <td class="r">170.000</td>
+            <td class="r">₹14,960.00</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ಸಿಹಿ ಪದಾರ್ಥಗಳು (Sweet Items)</td>
+          </tr>
+        
+              <tr>
+                <td>ಬೆಲ್ಲ (Jaggery)</td>
+                <td class="r">₹99.00</td>
+                <td class="r">119.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">22.000</td>
+                <td class="r">141.000 kg</td>
+                <td class="r">₹13,959.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">119.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">22.000</td>
+            <td class="r">141.000</td>
+            <td class="r">₹13,959.00</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ಹಣ್ಣುಗಳು (Fruits)</td>
+          </tr>
+        
+              <tr>
+                <td>ತೆಂಗಿನಕಾಯಿ (Coconut)</td>
+                <td class="r">₹66.00</td>
+                <td class="r">73.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">73.000 nos</td>
+                <td class="r">₹4,818.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಬಾಳೆಹಣ್ಣು (Banana)</td>
+                <td class="r">₹7.00</td>
+                <td class="r">469.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">469.000 nos</td>
+                <td class="r">₹3,283.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">542.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">542.000</td>
+            <td class="r">₹8,101.00</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ಹಸಿರು ತರಕಾರಿಗಳು (Leafy Vegetables)</td>
+          </tr>
+        
+              <tr>
+                <td>ಕೊತ್ತಂಬರಿ ಸೊಪ್ಪು (Coriander Leaves)</td>
+                <td class="r">₹55.00</td>
+                <td class="r">55.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">55.000 kg</td>
+                <td class="r">₹3,025.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಕರಿಬೇವು (Curry Leaves)</td>
+                <td class="r">₹11.00</td>
+                <td class="r">11.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">11.000 kg</td>
+                <td class="r">₹121.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">66.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">66.000</td>
+            <td class="r">₹3,146.00</td>
+          </tr>
+        
+          <tr class="category-row">
+            <td colspan="10">ಹಾಲಿನ ಪದಾರ್ಥಗಳು (Dairy Products)</td>
+          </tr>
+        
+              <tr>
+                <td>ಹಾಲು (Milk)</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000 ltr</td>
+                <td class="r">₹0.00</td>
+              </tr>
+            
+              <tr>
+                <td>ಮೊಸರು (Curd)</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">₹0.00</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000</td>
+                <td class="r">0.000 ltr</td>
+                <td class="r">₹0.00</td>
+              </tr>
+            
+          <tr class="total-row">
+            <td colspan="2" class="c">TOTAL</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+          </tr>
+        
+          <tr class="grand-row">
+            <td colspan="2" class="c">GRAND TOTAL</td>
+            <td class="r">2881.200</td>
+            <td class="r">0.000</td>
+            <td class="r">0.000</td>
+            <td class="r">₹0.00</td>
+            <td class="r">0.000</td>
+            <td class="r">672.000</td>
+            <td class="r">3553.200</td>
+            <td class="r">₹221,525.40</td>
+          </tr>
+        </tbody>
+      </table>
+    
+        <div class="report-footer">Generated by Anegudde Inventory Management System on 20-05-2026 08:33 PM</div>
+      </body>
+    </html>
+    

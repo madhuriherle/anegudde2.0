@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import PurchaseEntry, User, PurchaseBill
 
 router = APIRouter()
@@ -18,7 +18,7 @@ async def upload_purchase_bill(
     purchase_id: int,
     bill_file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(PermissionChecker("purchases.write")),
 ):
     print(f"DEBUG: upload_purchase_bill called for purchase_id={purchase_id}, filename={bill_file.filename}")
     try:

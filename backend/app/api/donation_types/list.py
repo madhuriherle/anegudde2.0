@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import String
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import DonationType, User
 from app.schemas.base import PaginatedResponse
 from app.schemas.donation_type import DonationTypeOut
@@ -15,7 +15,7 @@ router = APIRouter()
 @router.get("/list_donation_types", response_model=PaginatedResponse[DonationTypeOut])
 def list_donation_types(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(PermissionChecker("donation_types.read")),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=1000),
     q: str | None = Query(None),

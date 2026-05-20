@@ -10,21 +10,33 @@ from app.db.session import SessionLocal
 ROLE_NAMES = [
     "Super Admin",
     "Temple Trustee",
-    "Temple Manager",
+    "Canteen Manager",
     "Admin",
 ]
 
+ALL_ACCESS_ROLES = ["Super Admin", "Temple Trustee"]
+
 PRIVILEGES = [
-    "vendors.read", "vendors.write",
-    "items.read", "items.write",
-    "units.read", "units.write",
-    "item_categories.read", "item_categories.write",
-    "purchases.read", "purchases.write",
-    "consumptions.read", "consumptions.write",
-    "wastages.read", "wastages.write",
-    "vendor_payments.read", "vendor_payments.write",
+    "vendors.read", "vendors.write", "vendors.delete",
+    "items.read", "items.write", "items.delete",
+    "units.read", "units.write", "units.delete",
+    "item_categories.read", "item_categories.write", "item_categories.delete",
+    "item_types.read", "item_types.write", "item_types.delete",
+    "purchases.read", "purchases.write", "purchases.delete",
+    "purchase_returns.read", "purchase_returns.write", "purchase_returns.delete",
+    "consumptions.read", "consumptions.write", "consumptions.delete",
+    "wastages.read", "wastages.write", "wastages.delete",
+    "vendor_payments.read", "vendor_payments.write", "vendor_payments.delete",
+    "tokens.read", "tokens.write", "tokens.delete",
+    "menu_items.read", "menu_items.write", "menu_items.delete",
+    "donations.read", "donations.write", "donations.delete",
+    "donation_types.read", "donation_types.write", "donation_types.delete",
+    "devotees.read", "devotees.write", "devotees.delete",
+    "stock_adjustments.read", "stock_adjustments.write", "stock_adjustments.delete",
     "reports.read", "dashboard.read",
-    "users.read", "users.write",
+    "users.read", "users.write", "users.delete",
+    "settings.read", "settings.write", "settings.delete",
+    "activity_logs.read",
 ]
 
 
@@ -47,15 +59,29 @@ def seed_roles(db: Session) -> dict[str, int]:
 
     for name in ROLE_NAMES:
         role = db.query(Role).filter(Role.role_name == name).first()
+        
+        # Check for rename: if 'Temple Manager' exists and 'Canteen Manager' doesn't, rename it
+        if name == "Canteen Manager":
+            old_mgr = db.query(Role).filter(Role.role_name == "Temple Manager").first()
+            if old_mgr:
+                old_mgr.role_name = "Canteen Manager"
+                role = old_mgr
+
         if not role:
             role = Role(
                 role_name=name,
+                is_all_access=(name in ALL_ACCESS_ROLES),
                 status=1,
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
             )
             db.add(role)
             db.flush()
+        else:
+            # Update is_all_access for existing roles
+            role.is_all_access = (name in ALL_ACCESS_ROLES)
+            db.flush()
+            
         role_ids[name] = role.id
     return role_ids
 
@@ -114,15 +140,16 @@ def seed_role_privileges(db: Session, role_ids: dict[str, int], privilege_ids: d
     trustee_privs = set(privilege_ids.values()) # Trustee also has all privs
     
     manager_priv_names = [
-        "vendors.read", "vendors.write",
         "items.read", "items.write",
-        "units.read", "units.write",
         "item_categories.read", "item_categories.write",
-        "purchases.read", "purchases.write",
+        "item_types.read", "item_types.write",
+        "menu_items.read", "menu_items.write",
         "consumptions.read", "consumptions.write",
         "wastages.read", "wastages.write",
-        "vendor_payments.read", "vendor_payments.write",
+        "tokens.read", "tokens.write",
         "reports.read", "dashboard.read",
+        "units.read",
+        "stock_adjustments.read", "stock_adjustments.write",
     ]
     manager_privs = {privilege_ids[n] for n in manager_priv_names if n in privilege_ids}
     
@@ -135,7 +162,7 @@ def seed_role_privileges(db: Session, role_ids: dict[str, int], privilege_ids: d
     mapping = {
         role_ids["Super Admin"]: super_admin_privs,
         role_ids["Temple Trustee"]: trustee_privs,
-        role_ids["Temple Manager"]: manager_privs,
+        role_ids["Canteen Manager"]: manager_privs,
         role_ids["Admin"]: admin_privs,
     }
 

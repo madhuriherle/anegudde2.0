@@ -13,6 +13,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from fastapi.staticfiles import StaticFiles
+
 from app.api.auth import router as auth_router
 from app.api.usage_entries import router as usage_entries_router
 from app.api.dashboard import router as dashboard_router
@@ -31,6 +33,7 @@ from app.api.tokens import router as tokens_router
 from app.api.donations import router as donations_router
 from app.api.donation_types import router as donation_types_router
 from app.api.settings import router as settings_router
+from app.api.audit import router as audit_router
 from app.api.debug import router as system_router
 from app.middleware.exception_handlers import register_exception_handlers
 from app.middleware.activity_audit import ActivityAuditMiddleware
@@ -47,16 +50,7 @@ app.add_middleware(ActivityAuditMiddleware)
 # STANDARDIZED CORS - ALLOWS FRONTEND ORIGINS
 app.add_middleware(
     CORSMiddleware,
-allow_origins=[
-    "http://localhost:5176",
-    "http://127.0.0.1:5176",
-    "http://localhost:5175",
-    "http://127.0.0.1:5175",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -152,6 +146,10 @@ register_exception_handlers(app)
 @app.get('/')
 def read_root(): return {'status': 'live'}
 
+# Create uploads directory if it doesn't exist
+os.makedirs("uploads/logos", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 app.include_router(auth_router)
 app.include_router(vendors_router)
 app.include_router(menu_items_router)
@@ -170,4 +168,5 @@ app.include_router(tokens_router)
 app.include_router(donations_router)
 app.include_router(donation_types_router)
 app.include_router(settings_router)
+app.include_router(audit_router)
 app.include_router(system_router)

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, cast, Numeric
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import Item, ItemCategory, Unit, User, Vendor
 from app.schemas.dashboard import DashboardOverview
 
@@ -14,7 +14,7 @@ router = APIRouter()
 @router.get("/get_overview", response_model=DashboardOverview)
 def overview(
     db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user)
+    _: User = Depends(PermissionChecker("dashboard.read"))
 ):
     total_vendors = db.query(func.count(Vendor.id)).scalar() or 0
     total_items = db.query(func.count(Item.id)).scalar() or 0

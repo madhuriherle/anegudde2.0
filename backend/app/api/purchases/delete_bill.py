@@ -2,7 +2,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import PurchaseEntry, PurchaseBill, User
 
 router = APIRouter()
@@ -14,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parents[3]
 def delete_purchase_bill(
     purchase_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    _: User = Depends(PermissionChecker("purchases.delete")),
 ):
     entry = db.query(PurchaseEntry).filter(PurchaseEntry.id == purchase_id).first()
     if not entry:

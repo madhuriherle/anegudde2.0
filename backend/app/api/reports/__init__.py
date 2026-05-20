@@ -15,6 +15,7 @@ from .wastages import router as wastages_router
 from .donations import router as donations_router
 from .stock_summary import router as stock_summary_router
 from .manpower import router as manpower_router
+from .tokens import router as tokens_router
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 router.include_router(monthly_performance_router)
@@ -32,3 +33,4 @@ router.include_router(wastages_router)
 router.include_router(donations_router)
 router.include_router(stock_summary_router)
 router.include_router(manpower_router)
+router.include_router(tokens_router)

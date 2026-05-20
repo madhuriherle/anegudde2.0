@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import Item, StockAdjustment, StockLedger, User, ConsumptionEntry
 from app.schemas.stock_adjustment import StockAdjustmentCreate
 from typing import List
@@ -14,7 +14,7 @@ def sync_for_consumption(
     consumption_id: int,
     payload: List[StockAdjustmentCreate],
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(PermissionChecker("stock_adjustments.write"))
 ):
     consumption = db.query(ConsumptionEntry).filter(ConsumptionEntry.id == consumption_id).first()
     if not consumption:

@@ -8,6 +8,7 @@ from app.db.models import DonationType, FinancialYear, ReceiptSequence, SystemSe
 
 TOKEN_SEQUENCE = "TOKEN"
 DONATION_SEQUENCE = "DONATION"
+TOKEN_RECEIPT_PREFIX = "TOK-"
 
 
 def _get_financial_year_for_date(db: Session, target_date: date) -> FinancialYear:
@@ -32,15 +33,18 @@ def _get_settings(db: Session) -> SystemSettings:
     return settings
 
 
-def _format_receipt(prefix: str, number: int, padding: int) -> str:
-    return f"{prefix}{str(number).zfill(padding)}"
+def _format_receipt(prefix: str | None, number: int, padding: int, fy_name: str | None = None) -> str:
+    formatted_prefix = prefix or ""
+    if fy_name and "{FY}" in formatted_prefix:
+        formatted_prefix = formatted_prefix.replace("{FY}", fy_name)
+    return f"{formatted_prefix}{str(number).zfill(padding)}"
 
 
 def _next_sequence_number(
     db: Session,
     financial_year_id: int,
     sequence_type: str,
-    prefix: str,
+    prefix: str | None,
     donation_type_id: int | None = None,
 ) -> int:
     query = db.query(ReceiptSequence).filter(
@@ -54,12 +58,13 @@ def _next_sequence_number(
 
     sequence = query.with_for_update().first()
     now = datetime.now(timezone.utc)
+    db_prefix = prefix or ""
     if not sequence:
         sequence = ReceiptSequence(
             financial_year_id=financial_year_id,
             sequence_type=sequence_type,
             donation_type_id=donation_type_id,
-            prefix=prefix,
+            prefix=db_prefix,
             last_number=0,
             created_at=now,
             updated_at=now,
@@ -73,7 +78,7 @@ def _next_sequence_number(
             .first()
         )
 
-    sequence.prefix = prefix
+    sequence.prefix = db_prefix
     sequence.last_number += 1
     sequence.updated_at = now
     return sequence.last_number
@@ -82,9 +87,9 @@ def _next_sequence_number(
 def next_token_receipt(db: Session, target_date: date) -> tuple[int, str, int, str]:
     settings = _get_settings(db)
     financial_year = _get_financial_year_for_date(db, target_date)
-    prefix = settings.token_prefix
+    prefix = TOKEN_RECEIPT_PREFIX
     number = _next_sequence_number(db, financial_year.id, TOKEN_SEQUENCE, prefix)
-    display_number = _format_receipt(prefix, number, settings.receipt_padding)
+    display_number = _format_receipt(prefix, number, settings.receipt_padding, financial_year.name)
     return financial_year.id, prefix, number, display_number
 
 
@@ -101,5 +106,28 @@ def next_donation_receipt(db: Session, target_date: date, donation_type_id: int)
 
     prefix = donation_type.receipt_prefix
     number = _next_sequence_number(db, financial_year.id, DONATION_SEQUENCE, prefix, donation_type_id)
-    display_number = _format_receipt(prefix, number, settings.receipt_padding)
+    display_number = _format_receipt(prefix, number, settings.receipt_padding, financial_year.name)
     return financial_year.id, prefix, number, display_number
+
+
+def preview_next_donation_receipt(db: Session, target_date: date, donation_type_id: int) -> str:
+    settings = _get_settings(db)
+    financial_year = _get_financial_year_for_date(db, target_date)
+    donation_type = (
+        db.query(DonationType)
+        .filter(DonationType.id == donation_type_id, DonationType.status == 1)
+        .first()
+    )
+    if not donation_type:
+        return ""
+
+    prefix = donation_type.receipt_prefix
+    query = db.query(ReceiptSequence).filter(
+        ReceiptSequence.financial_year_id == financial_year.id,
+        ReceiptSequence.sequence_type == DONATION_SEQUENCE,
+        ReceiptSequence.donation_type_id == donation_type_id,
+    )
+    sequence = query.first()
+    next_number = (sequence.last_number + 1) if sequence else 1
+    return _format_receipt(prefix, next_number, settings.receipt_padding, financial_year.name)
+

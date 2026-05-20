@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import ItemCategory, ItemType, User
 from app.schemas.item_category import ItemCategoryOut, ItemCategoryUpdate
 router = APIRouter()
 @router.put("/update_category/{category_id}", response_model=ItemCategoryOut)
-def update_category(category_id: int, payload: ItemCategoryUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_category(category_id: int, payload: ItemCategoryUpdate, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("item_categories.write"))):
     row = db.query(ItemCategory).filter(ItemCategory.id == category_id).first()
     if not row: raise HTTPException(status_code=404, detail="Category not found")
     if payload.type_id is not None:

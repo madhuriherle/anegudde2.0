@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import User
 
 router = APIRouter()
 
 
 @router.delete("/delete_user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("users.delete"))):
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
     

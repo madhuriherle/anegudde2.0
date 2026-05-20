@@ -4,7 +4,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 import logging
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import DailyStockSummary, StockLedger, User
 
 router = APIRouter()
@@ -12,7 +12,7 @@ router = APIRouter()
 @router.get("/get_stock_trend")
 def stock_trend(
     db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user)
+    _: User = Depends(PermissionChecker("dashboard.read"))
 ):
     today = date.today()
     thirty_days_ago = today - timedelta(days=30)
@@ -86,7 +86,7 @@ def stock_trend(
     return trend
 
 @router.post("/backfill_stock_trend")
-def backfill_trend(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def backfill_trend(db: Session = Depends(get_db), _: User = Depends(PermissionChecker("dashboard.read"))):
     from app.utils.tasks import generate_daily_stock_summary
     from datetime import date, timedelta
     

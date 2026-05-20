@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import ItemType, User
 from app.schemas.item_type import ItemTypeCreate, ItemTypeOut
 
@@ -14,7 +14,7 @@ router = APIRouter()
 def create_item_type(
     payload: ItemTypeCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(PermissionChecker("item_types.write")),
 ):
     exists = db.query(ItemType).filter(ItemType.type_name == payload.type_name).first()
     if exists:

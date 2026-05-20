@@ -3,11 +3,18 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import DonationType, User
 from app.schemas.donation_type import DonationTypeOut, DonationTypeUpdate
 
 router = APIRouter()
+
+
+def normalize_receipt_prefix(value: str) -> str:
+    prefix = value.strip().upper()
+    if prefix and prefix[-1].isalnum():
+        return f"{prefix}-"
+    return prefix
 
 
 @router.put("/update_donation_type/{donation_type_id}", response_model=DonationTypeOut)
@@ -15,7 +22,7 @@ def update_donation_type(
     donation_type_id: int,
     payload: DonationTypeUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(PermissionChecker("donation_types.write")),
 ):
     row = db.query(DonationType).filter(DonationType.id == donation_type_id).first()
     if not row:
@@ -32,7 +39,7 @@ def update_donation_type(
             raise HTTPException(status_code=400, detail="Donation type already exists")
         row.type_name = type_name
     if "receipt_prefix" in data and data["receipt_prefix"] is not None:
-        row.receipt_prefix = data["receipt_prefix"].strip().upper()
+        row.receipt_prefix = normalize_receipt_prefix(data["receipt_prefix"])
     if "status" in data and data["status"] is not None:
         row.status = data["status"]
 

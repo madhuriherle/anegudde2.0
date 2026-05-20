@@ -1,13 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.api.deps import get_db
-from app.db.models import ItemSerialNumber, Item
+from app.api.deps import get_db, PermissionChecker
+from app.db.models import ItemSerialNumber, Item, User
 from app.schemas.item import ItemOut
 
 router = APIRouter()
 
 @router.get("/by_serial/{serial_no}", response_model=ItemOut)
-async def get_item_by_serial(serial_no: str, db: Session = Depends(get_db)):
+async def get_item_by_serial(
+    serial_no: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("items.read"))
+):
     serial = db.query(ItemSerialNumber).filter(
         ItemSerialNumber.serial_number == serial_no,
         ItemSerialNumber.status == 1

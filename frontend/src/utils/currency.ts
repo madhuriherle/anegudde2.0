@@ -1,8 +1,0 @@
-export const formatCurrency = (value: unknown): string => {
-  const num = Number(value ?? 0);
-  if (!Number.isFinite(num)) return '₹0.00';
-  return `₹${num.toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-};

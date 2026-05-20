@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import DonationEntry, DonationType, User
 
 router = APIRouter()
@@ -13,7 +13,7 @@ router = APIRouter()
 def delete_donation_type(
     donation_type_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(PermissionChecker("donation_types.delete")),
 ):
     row = db.query(DonationType).filter(DonationType.id == donation_type_id).first()
     if not row:

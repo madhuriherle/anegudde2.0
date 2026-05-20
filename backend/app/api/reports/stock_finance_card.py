@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import StockLedger, User, VendorPayment
 from app.schemas.report import StockFinanceCardRow
 from .common import period_expr
@@ -19,7 +19,7 @@ def stock_finance_card(
     to_date: date = Query(...),
     group_by: str = Query("day"),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user)
+    _: User = Depends(PermissionChecker("reports.read"))
 ):
     if group_by not in {"day", "month"}:
         raise HTTPException(status_code=400, detail="group_by must be day or month")

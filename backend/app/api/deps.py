@@ -1,11 +1,11 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 import os
 
 from app.db.session import SessionLocal
-from app.db.models import User
+from app.db.models import User, Role, RolePrivilege, Privilege
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -37,7 +37,38 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.username == username).first()
+    user = (
+        db.query(User)
+        .options(
+            joinedload(User.role).joinedload(Role.privileges).joinedload(RolePrivilege.privilege)
+        )
+        .filter(User.username == username)
+        .first()
+    )
+    
     if not user or user.status != 1:
         raise credentials_exception
     return user
+
+
+class PermissionChecker:
+    def __init__(self, required_privilege: str):
+        self.required_privilege = required_privilege
+
+    def __call__(self, current_user: User = Depends(get_current_user)):
+        # Check for all-access flag instead of hardcoded names
+        if current_user.role.is_all_access:
+            return current_user
+
+        user_privileges = [
+            rp.privilege.privilege_name 
+            for rp in current_user.role.privileges 
+            if rp.status == 1
+        ]
+
+        if self.required_privilege not in user_privileges:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Not enough permissions. Required: {self.required_privilege}",
+            )
+        return current_user

@@ -6,7 +6,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from xhtml2pdf import pisa
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import User
 from .stock_finance_card import stock_finance_card
 
@@ -18,7 +18,7 @@ def stock_finance_pdf(
     from_date: date = Query(...),
     to_date: date = Query(...),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user)
+    _: User = Depends(PermissionChecker("reports.read"))
 ):
     data = stock_finance_card(from_date=from_date, to_date=to_date, group_by="day", db=db, _=_)
 
