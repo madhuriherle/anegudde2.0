@@ -9,7 +9,7 @@ import { UtensilsCrossed, TrendingUp, Calendar, Hash, Loader2, Heart } from 'luc
 const ModulesPage = () => {
   const { data: canteenStats, isLoading } = useQuery({
     queryKey: ['canteen-summary-stats'],
-    queryFn: async () => (await api.get('/dashboard/canteen_summary')).data,
+    queryFn: async () => (await api.get('/dashboard/get_canteen_summary')).data,
     refetchInterval: 30000
   });
 

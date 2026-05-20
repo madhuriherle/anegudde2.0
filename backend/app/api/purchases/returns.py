@@ -47,12 +47,16 @@ def delete_return(
     purchase_return_service.delete_purchase_return(return_id, db, current_user)
     return None
 
-@router.get("/vendor_bills/{vendor_id}")
+@router.get("/list_vendor_bills/{vendor_id}")
 def get_vendor_bills(vendor_id: int, db: Session = Depends(get_db), _: User = Depends(PermissionChecker("purchase_returns.read"))):
     bills = purchase_return_service.get_vendor_bills(vendor_id, db)
     return [{"id": b.id, "bill_no": b.bill_no, "purchase_date": b.purchase_date, "total_amount": b.total_amount} for b in bills]
 
-@router.get("/bill_items/{purchase_id}")
+@router.get("/vendor_bills/{vendor_id}")
+def get_vendor_bills_legacy(vendor_id: int, db: Session = Depends(get_db), _: User = Depends(PermissionChecker("purchase_returns.read"))):
+    return get_vendor_bills(vendor_id, db, _)
+
+@router.get("/list_bill_items/{purchase_id}")
 def get_bill_items(purchase_id: int, db: Session = Depends(get_db), _: User = Depends(PermissionChecker("purchase_returns.read"))):
     items = purchase_return_service.get_bill_items(purchase_id, db)
     return [
@@ -65,3 +69,7 @@ def get_bill_items(purchase_id: int, db: Session = Depends(get_db), _: User = De
         }
         for i in items
     ]
+
+@router.get("/bill_items/{purchase_id}")
+def get_bill_items_legacy(purchase_id: int, db: Session = Depends(get_db), _: User = Depends(PermissionChecker("purchase_returns.read"))):
+    return get_bill_items(purchase_id, db, _)

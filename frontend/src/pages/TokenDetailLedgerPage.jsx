@@ -54,7 +54,7 @@ const TokenDetailLedgerPage = () => {
         start_date: selectedDate || null,
         end_date: selectedDate || null
       };
-      const res = await api.get('/tokens/view_history_ledger', { params });
+      const res = await api.get('/tokens/get_token_history_ledger', { params });
       return res.data;
     }
   });

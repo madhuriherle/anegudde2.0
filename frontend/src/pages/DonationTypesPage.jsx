@@ -13,6 +13,9 @@ import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 
+import { usePermission } from '../hooks/usePermission';
+import { cn } from '../utils/cn';
+
 const donationTypeSchema = z.object({
   type_name: z.string().min(1, 'Type name is required'),
   receipt_prefix: z.string().optional(),
@@ -28,6 +31,10 @@ const normalizeReceiptPrefix = (value) => {
 const DonationTypesPage = () => {
   const queryClient = useQueryClient();
   const { showConfirm, showError, showSuccess } = useNotification();
+  const { hasPermission } = usePermission();
+  const canWrite = hasPermission('donation_types.write');
+  const canDelete = hasPermission('donation_types.delete');
+
   const [editingType, setEditingType] = useState(null);
 
   const { data: donationTypes, isLoading } = useQuery({
@@ -119,7 +126,7 @@ const DonationTypesPage = () => {
     cell: (info) =>
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
-      disabled={statusMutation.isPending}
+      disabled={statusMutation.isPending || !canWrite}
       onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
 
 
@@ -129,8 +136,8 @@ const DonationTypesPage = () => {
     header: () => <div className="text-center">Actions</div>,
     cell: (info) =>
     <div className="flex items-center justify-center gap-2">
-          <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>
-          <button
+          {canWrite && <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>}
+          {canDelete && <button
         onClick={async () => {
           const confirmed = await showConfirm('Delete Donation Type', `Delete "${info.row.original.type_name}"? Existing donations will disable it instead.`);
           if (confirmed) deleteMutation.mutate(info.row.original.id);
@@ -138,11 +145,11 @@ const DonationTypesPage = () => {
         className="action-btn-delete">
         
             Delete
-          </button>
+          </button>}
         </div>
 
   }],
-  [deleteMutation, showConfirm, statusMutation]);
+  [statusMutation, canWrite, canDelete]);
 
   const sortedTypes = useMemo(() => {
     const list = donationTypes?.items || [];
@@ -159,7 +166,7 @@ const DonationTypesPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4">
+        {canWrite && <div className="lg:col-span-4">
           <Card className="border-border-temple sticky top-6">
             <CardContent className="p-6">
               <div className="flex flex-col space-y-1.5 bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-6 select-none rounded-t-lg">
@@ -190,9 +197,9 @@ const DonationTypesPage = () => {
               </form>
             </CardContent>
           </Card>
-        </div>
+        </div>}
 
-        <div className="lg:col-span-8">
+        <div className={cn("lg:col-span-8", !canWrite && "lg:col-span-12")}>
           <Card className="border-border-temple shadow-sm overflow-hidden">
             <DataTable columns={columns} data={sortedTypes} loading={isLoading} />
           </Card>

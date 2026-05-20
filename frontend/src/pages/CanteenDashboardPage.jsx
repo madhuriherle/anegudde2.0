@@ -308,11 +308,6 @@ const DashboardPage = () => {
           <CardContent className="p-0 h-[340px] overflow-y-auto">
             {weeklyTopWastage.length > 0 ?
             <div>
-                <div className="flex items-center px-6 py-2 border-b border-gray-100 bg-gray-50/70 text-sm tracking-wide text-text-main/80 font-bold">
-                  <div className="flex-1">Menu Item</div>
-                  <div className="w-24 text-right">Qty</div>
-                  <div className="w-24 text-right">Loss</div>
-                </div>
                 <div className="divide-y divide-gray-50">
                   {weeklyTopWastage.map((row, idx) =>
                 <div key={`${row.menu_item_name}-${idx}`} className="px-6 py-3 hover:bg-[#FAF7F2] transition-colors">

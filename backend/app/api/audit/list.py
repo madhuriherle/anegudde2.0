@@ -8,7 +8,7 @@ import math
 
 router = APIRouter()
 
-@router.get("/list", response_model=PaginatedResponse[ActivityLogOut])
+@router.get("/list_activity_logs", response_model=PaginatedResponse[ActivityLogOut])
 def list_activity_logs(
     db: Session = Depends(get_db),
     _: User = Depends(PermissionChecker("activity_logs.read")),
@@ -57,3 +57,15 @@ def list_activity_logs(
         "page_size": page_size,
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
+
+
+@router.get("/list", response_model=PaginatedResponse[ActivityLogOut])
+def list_activity_logs_legacy(
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionChecker("activity_logs.read")),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    username: str | None = Query(None),
+    status: str | None = Query(None),
+):
+    return list_activity_logs(db, _, page, page_size, username, status)

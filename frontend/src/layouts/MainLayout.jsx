@@ -22,6 +22,7 @@ import * as Avatar from '@radix-ui/react-avatar';
 import { useAuth } from '../context/AuthContext';
 import { usePermission } from '../hooks/usePermission';
 import { cn } from '../utils/cn';
+import { getDefaultPath, hasCanteenAccess, hasMainAccess } from '../utils/navigation';
 import Footer from '../components/Footer';
 
 const templeLogoSrc = '/temple-logo-permanent.png';
@@ -34,6 +35,8 @@ const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeModule, setActiveModule] = useState('main');
   const [expandedMenus, setExpandedMenus] = useState({});
+  const canAccessMain = hasMainAccess(user);
+  const canAccessCanteen = hasCanteenAccess(user);
 
   useEffect(() => {
     const path = location.pathname;
@@ -49,14 +52,26 @@ const MainLayout = () => {
       '/settings/menu-items',
       '/reports'];
 
-    if (path === '/settings' || path.startsWith('/settings/donation-types')) {
+    if (
+      path === '/settings' ||
+      path.startsWith('/settings/temple') ||
+      path.startsWith('/settings/receipt') ||
+      path.startsWith('/settings/cleanup') ||
+      path.startsWith('/settings/donation-types')
+    ) {
       setActiveModule('main');
     } else if (canteenPaths.some((p) => path.startsWith(p))) {
       setActiveModule('canteen');
     } else if (path === '/') {
-      setActiveModule('main');
+      setActiveModule(canAccessMain ? 'main' : 'canteen');
     }
-  }, [location.pathname]);
+  }, [location.pathname, canAccessMain]);
+
+  useEffect(() => {
+    if (location.pathname === '/' && !canAccessMain) {
+      navigate(getDefaultPath(user), { replace: true });
+    }
+  }, [location.pathname, navigate, user, canAccessMain]);
 
   const toggleExpand = (key) => {
     setExpandedMenus((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -68,13 +83,13 @@ const MainLayout = () => {
   };
 
   const mainMenuItems = [
-  { text: 'Home', icon: Home, path: '/', action: () => setActiveModule('main') },
+  { text: 'Home', icon: Home, path: '/', action: () => setActiveModule('main'), hidden: !canAccessMain },
   { 
     text: 'Canteen', 
     icon: UtensilsCrossed, 
     path: '/canteen', 
     action: () => setActiveModule('canteen'),
-    hidden: !hasPermission('dashboard.read') && !hasPermission('items.read') 
+    hidden: !canAccessCanteen
   },
   { 
     text: 'Office', 
@@ -111,7 +126,7 @@ const MainLayout = () => {
 
 
   const canteenMenuItems = [
-  { text: 'Home', icon: Home, path: '/', action: () => setActiveModule('main') },
+  { text: 'Home', icon: Home, path: '/', action: () => setActiveModule('main'), hidden: !canAccessMain },
   { 
     text: 'Dashboard', 
     icon: UtensilsCrossed, 
@@ -159,15 +174,15 @@ const MainLayout = () => {
     text: 'Reports',
     icon: BarChart3,
     children: [
-      { text: 'Stock Summary', path: '/reports/stock-summary' },
-      { text: 'Canteen Summary', path: '/reports/canteen-summary' },
-      { text: 'Manpower Report', path: '/reports/manpower' },
-      { text: 'Donation Report', path: '/reports/donations' },
-      { text: 'Token Issued Report', path: '/reports/tokens' }
-    ],
+      { text: 'Stock Summary', path: '/reports/stock-summary', hidden: !hasPermission('reports.read') },
+      { text: 'Canteen Summary', path: '/reports/canteen-summary', hidden: !hasPermission('reports.read') },
+      { text: 'Manpower Report', path: '/reports/manpower', hidden: !hasPermission('reports.read') },
+      { text: 'Donation Report', path: '/reports/donations', hidden: !hasPermission('reports.read') },
+      { text: 'Token Issued Report', path: '/reports/tokens', hidden: !hasPermission('reports.read') }
+    ].filter(i => !i.hidden),
     hidden: !hasPermission('reports.read')
   },
-  { text: 'Back', icon: ArrowLeft, path: '/', action: () => setActiveModule('main') }
+  { text: 'Back', icon: ArrowLeft, path: '/', action: () => setActiveModule('main'), hidden: !canAccessMain }
 ].filter(i => !i.hidden);
 
 
@@ -240,7 +255,7 @@ const MainLayout = () => {
             {activeModule === 'canteen' ? 'Canteen Module' : 'Main Menu'}
           </span>
         </div>
-        {(activeModule === 'canteen' ? canteenMenuItems : mainMenuItems).map((item) => renderMenuItem(item))}
+        {(activeModule === 'canteen' || !canAccessMain ? canteenMenuItems : mainMenuItems).map((item) => renderMenuItem(item))}
       </nav>
     </div>;
 

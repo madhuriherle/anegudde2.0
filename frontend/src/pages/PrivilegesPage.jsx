@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings } from 'lucide-react';
+import { Building2, CheckCircle2, Settings, UtensilsCrossed } from 'lucide-react';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
 import { Button } from '../components/ui/Button';
@@ -19,24 +19,63 @@ const Checkbox = ({ checked, onCheckedChange, disabled }) => (
 );
 
 const MODULE_GROUPS = {
-  'Master': [
-    'items', 'item_categories', 'item_types', 'units', 'menu_items', 'vendors', 'devotees', 'donation_types'
+  'Main Module': [
+    { prefix: 'users', parent: 'Users', label: 'Users', subItems: ['User Management', 'User Privileges'] },
+    { prefix: 'settings', parent: 'Master Settings', label: 'System Settings', subItems: ['Temple Identity', 'Receipt Settings', 'Data Cleanup'] },
+    { prefix: 'donation_types', parent: 'Master Settings', label: 'Donation Type' },
+    { prefix: 'activity_logs', parent: 'Users', label: 'User Activity' },
+    { prefix: 'devotees', parent: 'Office', label: 'Devotees' },
   ],
-  'Transaction': [
-    'purchases', 'purchase_returns', 'consumptions', 'wastages', 'tokens', 'donations', 'stock_adjustments'
-  ],
-  'Report': [
-    'reports'
-  ],
-  'System & Security': [
-    'users', 'privileges', 'activity_logs', 'settings', 'dashboard'
+  'Canteen Module': [
+    { prefix: 'dashboard', parent: 'Canteen', label: 'Dashboard' },
+    { prefix: 'purchases', parent: 'Purchase', label: 'Purchase Entry' },
+    { prefix: 'purchase_returns', parent: 'Purchase', label: 'Purchase Returns' },
+    { prefix: 'consumptions', parent: 'Canteen', label: 'Daily Usage Entry' },
+    { prefix: 'donations', parent: 'Canteen', label: 'Donations' },
+    { prefix: 'vendors', parent: 'Canteen', label: 'Vendors' },
+    { prefix: 'item_categories', parent: 'Items', label: 'Category' },
+    { prefix: 'items', parent: 'Items', label: 'Raw Item' },
+    { prefix: 'menu_items', parent: 'Items', label: 'Menu Item' },
+    { prefix: 'item_types', parent: 'Items', label: 'Item Types' },
+    { prefix: 'units', parent: 'Items', label: 'Units' },
+    { prefix: 'wastages', parent: 'Canteen', label: 'Wastages' },
+    { prefix: 'tokens', parent: 'Reports', label: 'Token Issued Report' },
+    { prefix: 'reports', parent: 'Reports', label: 'Reports', subItems: ['Stock Summary', 'Canteen Summary', 'Manpower Report', 'Donation Report'] },
+    { prefix: 'stock_adjustments', parent: 'Inventory', label: 'Stock Adjustments' },
+    { prefix: 'vendor_payments', parent: 'Vendors', label: 'Vendor Payments' },
   ]
+};
+
+const MODULE_DETAILS = {
+  'Main Module': {
+    icon: Building2,
+  },
+  'Canteen Module': {
+    icon: UtensilsCrossed,
+  },
+};
+
+const getModuleEntries = (moduleName) => MODULE_GROUPS[moduleName] || [];
+
+const formatFeatureName = (prefix) =>
+  prefix.replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+
+const getModulePrivilegeIds = (moduleName, allPrivileges = []) => {
+  const modulePrefixes = getModuleEntries(moduleName).map((entry) => entry.prefix);
+
+  return allPrivileges
+    .filter((privilege) => {
+      const [modulePrefix] = privilege.privilege_name.split('.');
+      return modulePrefixes.includes(modulePrefix);
+    })
+    .map((privilege) => privilege.id);
 };
 
 const PrivilegesPage = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
   const [selectedRoleId, setSelectedRoleId] = useState('');
+  const [enabledModules, setEnabledModules] = useState({});
 
   // Fetch Roles
   const { data: roles } = useQuery({
@@ -73,6 +112,7 @@ const PrivilegesPage = () => {
   React.useEffect(() => {
     if (rolePrivilegeIds) {
       setLocalPrivIds(rolePrivilegeIds);
+      setEnabledModules({});
     }
   }, [rolePrivilegeIds]);
 
@@ -99,9 +139,15 @@ const PrivilegesPage = () => {
     );
   };
 
+  const handleModuleAccessToggle = (moduleName, enabled) => {
+    if (isProtectedRole) return;
+
+    setEnabledModules((prev) => ({ ...prev, [moduleName]: enabled }));
+  };
+
   const handleModuleToggle = (moduleName, type) => {
     if (isProtectedRole) return;
-    const modulePrefixes = MODULE_GROUPS[moduleName];
+    const modulePrefixes = getModuleEntries(moduleName).map((entry) => entry.prefix);
     const privsToToggle = allPrivileges?.filter(p => {
       const [mod, action] = p.privilege_name.split('.');
       return modulePrefixes.includes(mod) && action === type;
@@ -129,14 +175,53 @@ const PrivilegesPage = () => {
     }
   };
 
+  const renderModuleAccessCard = (moduleName) => {
+    const details = MODULE_DETAILS[moduleName];
+    const Icon = details.icon;
+    const enabled = Boolean(enabledModules[moduleName]) || isProtectedRole;
+
+    return (
+      <button
+        key={moduleName}
+        type="button"
+        disabled={isProtectedRole}
+        onClick={() => handleModuleAccessToggle(moduleName, !enabled)}
+        className={`min-h-[120px] rounded-2xl border p-6 text-left transition-all ${
+          enabled
+            ? 'border-[#C97B63] bg-[#FFF7ED] shadow-sm ring-2 ring-[#C97B63]/10'
+            : 'border-[#E7D8CC] bg-white hover:border-[#C97B63]/50 hover:bg-[#FFFDFB]'
+        } ${isProtectedRole ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+      >
+        <div className="flex h-full items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className={`rounded-xl p-3 ${enabled ? 'bg-[#C97B63] text-white' : 'bg-[#F8F4EE] text-[#8B4513]'}`}>
+              <Icon className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-black text-[#2B2B2B]">{moduleName}</h3>
+          </div>
+          {enabled ? (
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#C97B63] px-3 py-1 text-xs font-black uppercase tracking-widest text-white">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Selected
+            </div>
+          ) : (
+            <div className="rounded-full bg-[#F3E8DE] px-3 py-1 text-xs font-black uppercase tracking-widest text-[#8B4513]">
+              Select
+            </div>
+          )}
+        </div>
+      </button>
+    );
+  };
+
   const renderModulePrivileges = (moduleName) => {
-    const modulePrefixes = MODULE_GROUPS[moduleName];
+    const moduleEntries = getModuleEntries(moduleName);
     
     return (
       <Card key={moduleName} className="border-border-temple mb-6">
         <CardHeader className="bg-[#FAF7F2] border-b border-border-temple/40 py-3">
           <div className="flex justify-between items-center">
-            <CardTitle className="text-text-main text-lg">{moduleName} Module</CardTitle>
+            <CardTitle className="text-text-main text-lg">{moduleName} Pages</CardTitle>
             <div className="flex gap-4">
               <Button 
                 variant="ghost" 
@@ -179,15 +264,34 @@ const PrivilegesPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {modulePrefixes.map(prefix => {
+              {moduleEntries.map(({ prefix, parent, label, subItems }) => {
                 const readPriv = allPrivileges?.find(p => p.privilege_name === `${prefix}.read`);
                 const writePriv = allPrivileges?.find(p => p.privilege_name === `${prefix}.write`);
                 const deletePriv = allPrivileges?.find(p => p.privilege_name === `${prefix}.delete`);
                 
                 return (
                   <tr key={prefix} className="hover:bg-gray-50/50">
-                    <td className="px-6 py-3 font-medium text-text-main capitalize">
-                      {prefix.replace('_', ' ')}
+                    <td className="px-6 py-3 font-medium text-text-main">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-black uppercase tracking-widest text-[#8B4513]/60">
+                          {parent}
+                        </span>
+                        <span className="text-[15px] font-bold text-[#2B2B2B]">
+                          {label || formatFeatureName(prefix)}
+                        </span>
+                        {subItems?.length > 0 && (
+                          <span className="mt-1 flex flex-wrap gap-1.5">
+                            {subItems.map((item) => (
+                              <span
+                                key={item}
+                                className="rounded-full border border-[#E7D8CC] bg-[#FAF7F2] px-2 py-0.5 text-[11px] font-semibold text-[#6B5B4B]"
+                              >
+                                {item}
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-3 text-center">
                       {readPriv && (
@@ -270,8 +374,34 @@ const PrivilegesPage = () => {
       </Card>
 
       {selectedRoleId ? (
-        <div className="pb-10">
-          {Object.keys(MODULE_GROUPS).map(groupName => renderModulePrivileges(groupName))}
+        <div className="space-y-6 pb-10">
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-lg font-black text-[#2B2B2B]">Select Module</h3>
+            </div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {Object.keys(MODULE_GROUPS).map(renderModuleAccessCard)}
+            </div>
+          </div>
+
+          {(Object.keys(MODULE_GROUPS).some((groupName) => enabledModules[groupName] || isProtectedRole)) && (
+            <div className="space-y-6 border-t border-[#E7D8CC] pt-6">
+              <div>
+                <h3 className="text-lg font-black text-[#2B2B2B]">Related Page Permissions</h3>
+              </div>
+              {Object.keys(MODULE_GROUPS)
+                .filter((groupName) => enabledModules[groupName] || isProtectedRole)
+                .map(groupName => renderModulePrivileges(groupName))}
+            </div>
+          )}
+
+          {!Object.keys(MODULE_GROUPS).some((groupName) => enabledModules[groupName] || isProtectedRole) && (
+            <div className="rounded-2xl border border-dashed border-[#D9C8AF] bg-white p-8 text-center">
+              <p className="text-base font-bold text-[#6B6B6B]">
+                Select a module to show permissions.
+              </p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 bg-white border border-dashed border-gray-300 rounded-lg">

@@ -23,6 +23,8 @@ import { Label } from '../components/ui/Label';
 
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 
+import { usePermission } from '../hooks/usePermission';
+
 const categorySchema = z.object({
   category_name: z.string().min(1, 'Name is required'),
   status: z.coerce.number().default(1)
@@ -33,6 +35,9 @@ const categorySchema = z.object({
 const ItemCategoriesPage = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
+  const { hasPermission } = usePermission();
+  const canWrite = hasPermission('item_categories.write');
+  const canDelete = hasPermission('item_categories.delete');
 
   // Filter States
   const [pageSize, setPageSize] = useState(50);
@@ -152,7 +157,7 @@ const ItemCategoriesPage = () => {
     cell: (info) =>
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
-      disabled={statusMutation.isPending}
+      disabled={statusMutation.isPending || !canWrite}
       onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
 
 
@@ -162,12 +167,12 @@ const ItemCategoriesPage = () => {
     header: () => <div className="text-center">Actions</div>,
     cell: (info) =>
     <div className="flex items-center justify-center gap-2">
-          <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>
-          <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>
+          {canWrite && <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>}
+          {canDelete && <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>}
         </div>
 
   }],
-  [statusMutation]);
+  [statusMutation, canWrite, canDelete]);
 
   const sortedCategories = useMemo(() => {
     const categoryList = categories?.items || [];
@@ -184,7 +189,7 @@ const ItemCategoriesPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4 space-y-6">
+        {canWrite && <div className="lg:col-span-4 space-y-6">
           <Card className="border-border-temple sticky top-6">
             <CardContent className="p-6">
               <div className="flex flex-col space-y-1.5 bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-6 select-none rounded-t-lg">
@@ -207,9 +212,9 @@ const ItemCategoriesPage = () => {
               </form>
             </CardContent>
           </Card>
-        </div>
+        </div>}
 
-        <div className="lg:col-span-8">
+        <div className={cn("lg:col-span-8", !canWrite && "lg:col-span-12")}>
           <Card className="border-border-temple shadow-sm overflow-hidden">
             <DataTable columns={columns} data={sortedCategories} loading={isLoading} />
           </Card>

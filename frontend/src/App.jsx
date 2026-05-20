@@ -22,6 +22,9 @@ import WastagesPage from './pages/WastagesPage';
 import DonationsPage from './pages/DonationsPage';
 import DonationTypesPage from './pages/DonationTypesPage';
 import SettingsPage from './pages/SettingsPage';
+import TempleIdentitySettingsPage from './pages/TempleIdentitySettingsPage';
+import ReceiptSettingsPage from './pages/ReceiptSettingsPage';
+import DataCleanupPage from './pages/DataCleanupPage';
 import ProfilePage from './pages/ProfilePage';
 import DailyStockReportPage from './pages/DailyStockReportPage';
 import { StockSummaryPage } from './pages/StockSummaryPage';
@@ -32,6 +35,18 @@ import DonationReportPage from './pages/DonationReportPage';
 import TokenDetailLedgerPage from './pages/TokenDetailLedgerPage';
 import CanteenSummaryPage from './pages/CanteenSummaryPage';
 import ManpowerReportPage from './pages/ManpowerReportPage';
+import { useAuth } from './context/AuthContext';
+import { getDefaultPath, hasMainAccess } from './utils/navigation';
+
+const DefaultRoute = () => {
+  const { user } = useAuth();
+
+  if (!hasMainAccess(user)) {
+    return <Navigate to={getDefaultPath(user)} replace />;
+  }
+
+  return <ModulesPage />;
+};
 
 function App() {
   return (
@@ -39,7 +54,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
 
       <Route element={<MainLayout />}>
-        <Route path="/" element={<ProtectedRoute><ModulesPage /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><DefaultRoute /></ProtectedRoute>} />
         <Route path="/canteen" element={<ProtectedRoute requiredPermission="dashboard.read"><CanteenDashboardPage /></ProtectedRoute>} />
         <Route path="/office" element={<ProtectedRoute requiredPermission="donations.read"><OfficePage /></ProtectedRoute>} />
         <Route path="/vendors" element={<ProtectedRoute requiredPermission="vendors.read"><VendorsPage /></ProtectedRoute>} />
@@ -71,6 +86,9 @@ function App() {
         <Route path="/settings/menu-items" element={<ProtectedRoute requiredPermission="menu_items.read"><MenuItemsPage /></ProtectedRoute>} />
         <Route path="/settings/donation-types" element={<ProtectedRoute requiredPermission="donation_types.read"><DonationTypesPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute requiredPermission="settings.read"><SettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/temple" element={<ProtectedRoute requiredPermission="settings.read"><TempleIdentitySettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/receipt" element={<ProtectedRoute requiredPermission="settings.read"><ReceiptSettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/cleanup" element={<ProtectedRoute requiredPermission="settings.read"><DataCleanupPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       </Route>
 

@@ -20,6 +20,8 @@ import { formatQuantityWithUnit } from '../utils/quantity';
 import { cn } from '../utils/cn';
 import { Plus, Trash2, Search } from 'lucide-react';
 
+import { usePermission } from '../hooks/usePermission';
+
 const formSchema = z.object({
   donation_type: z.coerce.number().min(1, 'Donation type is required'),
   donation_date: z.string().min(1, 'Date is required'),
@@ -90,6 +92,10 @@ const DonationsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showConfirm, showError, showSuccess } = useNotification();
+  const { hasPermission } = usePermission();
+  const canWrite = hasPermission('donations.write');
+  const canDelete = hasPermission('donations.delete');
+
   const [open, setOpen] = useState(false);
   const [editingDonation, setEditingDonation] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -462,8 +468,8 @@ const DonationsPage = () => {
             Receipt
           </button>
           <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
-          <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>
-          <button
+          {canWrite && <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>}
+          {canDelete && <button
         onClick={async () => {
           const confirmed = await showConfirm('Delete Donation', `Are you sure? This will reverse the stock update.`);
           if (confirmed) deleteMutation.mutate(info.row.original.id);
@@ -471,17 +477,17 @@ const DonationsPage = () => {
         className="action-btn-delete">
         
             Delete
-          </button>
+          </button>}
         </div>
 
   }],
-  [deleteMutation, donationTypeNameById, showConfirm]);
+  [deleteMutation, donationTypeNameById, showConfirm, canWrite, canDelete]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="page-title">Donations</h2>
-        <Button onClick={() => {
+        {canWrite && <Button onClick={() => {
           setEditingDonation(null);
           reset({
             donation_date: toDateInputValue(new Date()),
@@ -499,7 +505,7 @@ const DonationsPage = () => {
           setOpen(true);
         }} className="flex items-center gap-2">
           Record New Donation
-        </Button>
+        </Button>}
       </div>
 
       <Card className="border-border-temple">

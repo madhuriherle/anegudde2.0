@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,10 +12,13 @@ import {
   CalendarDays,
   ChevronRight,
   DatabaseBackup,
+  DatabaseZap,
   FileText,
   MapPin,
   Printer,
   ReceiptText,
+  ShieldCheck,
+  Trash2,
   XCircle,
 } from 'lucide-react';
 
@@ -26,7 +30,6 @@ import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
 import { Label } from '../components/ui/Label';
 import { Switch } from '../components/ui/Switch';
-import { useAuth } from '../context/AuthContext';
 
 const settingsSchema = z
   .object({
@@ -104,6 +107,29 @@ const VisibilityToggle = ({ label, name, control }) => (
 
 const ToggleField = VisibilityToggle;
 
+const cleanupGroups = [
+  {
+    id: 'canteen_tokens',
+    title: 'Canteen Token Data',
+    description: 'Token generations and token receipt details.',
+  },
+  {
+    id: 'inventory_transactions',
+    title: 'Inventory Transactions',
+    description: 'Purchases, returns, usage, wastage, adjustments, stock ledger, summaries, and vendor payments.',
+  },
+  {
+    id: 'donation_records',
+    title: 'Donation Records',
+    description: 'Donation receipts and donated item lines. Donation types stay protected.',
+  },
+  {
+    id: 'system_logs',
+    title: 'System Logs',
+    description: 'Login history and activity audit logs.',
+  },
+];
+
 const textSettingFields = [
   'temple_name',
   'temple_name_kn',
@@ -118,6 +144,19 @@ const textSettingFields = [
   'footer_note',
 ];
 
+const templeIdentityFields = [
+  ...textSettingFields,
+  'show_temple_name',
+  'show_temple_name_kn',
+  'show_temple_address',
+  'show_temple_contact',
+  'show_alternate_contact',
+  'show_temple_email',
+  'show_temple_website',
+  'show_temple_timings',
+  'show_google_maps_link',
+];
+
 const normalizeSettings = (settingsData) => {
   if (!settingsData) return settingsData;
 
@@ -129,15 +168,17 @@ const normalizeSettings = (settingsData) => {
   };
 };
 
-const SettingsPage = () => {
-  const { user } = useAuth();
+const SettingsPage = ({ section = null }) => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showConfirm, showError, showSuccess } = useNotification();
-  const [activeSection, setActiveSection] = useState(null);
+  const [cleanupSelections, setCleanupSelections] = useState([]);
+  const [cleanupPhrase, setCleanupPhrase] = useState('');
+  const activeSection = section;
 
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ['system-settings'],
-    queryFn: async () => (await api.get('/settings/get')).data,
+    queryFn: async () => (await api.get('/settings/get_current_settings')).data,
   });
 
   const {
@@ -160,6 +201,19 @@ const SettingsPage = () => {
 
   const updateAllMutation = useMutation({
     mutationFn: async (settingsData) => {
+      if (section === 'temple') {
+        const payload = Object.fromEntries(
+          templeIdentityFields.map((field) => [field, settingsData[field]])
+        );
+        return (await api.put('/settings/update_temple_identity_settings', payload)).data;
+      }
+
+      if (section === 'receipt') {
+        return (await api.put('/settings/update_receipt_settings', {
+          receipt_padding: settingsData.receipt_padding,
+        })).data;
+      }
+
       return (await api.put('/settings/update', settingsData)).data;
     },
     onSuccess: (savedSettings) => {
@@ -171,6 +225,23 @@ const SettingsPage = () => {
     },
     onError: (err) =>
       showError(err.response?.data?.detail || 'Update failed'),
+  });
+
+  const cleanupMutation = useMutation({
+    mutationFn: async (payload) => {
+      return (await api.post('/settings/clear_operational_data', payload)).data;
+    },
+    onSuccess: (result) => {
+      const deletedTotal = Object.values(result.deleted_counts || {}).reduce(
+        (total, value) => total + Number(value || 0),
+        0
+      );
+      setCleanupSelections([]);
+      setCleanupPhrase('');
+      showSuccess(`Operational data cleared. ${deletedTotal} records removed.`);
+    },
+    onError: (err) =>
+      showError(err.response?.data?.detail || 'Cleanup failed'),
   });
 
   const onSubmit = async (data) => {
@@ -198,21 +269,43 @@ const SettingsPage = () => {
     reset(normalizeSettings(settings));
   };
 
+  const toggleCleanupSelection = (groupId) => {
+    setCleanupSelections((current) =>
+      current.includes(groupId)
+        ? current.filter((id) => id !== groupId)
+        : [...current, groupId]
+    );
+  };
+
+  const handleCleanup = async () => {
+    if (cleanupSelections.length === 0) {
+      showError('Select at least one data group to clear.');
+      return;
+    }
+
+    if (cleanupPhrase !== 'CLEAR DATA') {
+      showError('Type CLEAR DATA exactly to confirm.');
+      return;
+    }
+
+    const confirmed = await showConfirm(
+      'Clear Operational Data',
+      'This will permanently clear only the selected operational records. Master data like items, menu items, categories, vendors, donation types, settings, and users will not be deleted.\n\nTake a database backup before continuing.',
+      'Clear Selected Data'
+    );
+
+    if (!confirmed) return;
+
+    await cleanupMutation.mutateAsync({
+      groups: cleanupSelections,
+      confirmation_phrase: cleanupPhrase,
+    });
+  };
+
   if (settingsLoading) {
     return (
       <div className="flex h-64 items-center justify-center !text-[18px] text-[#6B6B6B]">
         Loading...
-      </div>
-    );
-  }
-
-  if (user?.role_id !== 1 && user?.role_id !== 2) {
-    return (
-      <div className="flex h-96 flex-col items-center justify-center gap-4">
-        <AlertTriangle className="h-12 w-12 text-error" />
-        <h2 className="!text-[22px] font-bold text-[#2B2B2B]">
-          Access Denied
-        </h2>
       </div>
     );
   }
@@ -249,6 +342,7 @@ const SettingsPage = () => {
       description: 'Manage name, address, contact info, and logo.',
       icon: Building2,
       action: 'Configure',
+      path: '/settings/temple',
     },
     {
       id: 'receipt',
@@ -256,6 +350,16 @@ const SettingsPage = () => {
       description: 'Configure receipt ID format and numbering.',
       icon: ReceiptText,
       action: 'Configure',
+      path: '/settings/receipt',
+    },
+    {
+      id: 'cleanup',
+      title: 'Data Cleanup',
+      description: 'Clear operational history while keeping master setup data protected.',
+      icon: DatabaseZap,
+      action: 'Open',
+      danger: true,
+      path: '/settings/cleanup',
     },
   ];
 
@@ -264,6 +368,8 @@ const SettingsPage = () => {
       ? 'Temple Identity'
       : activeSection === 'receipt'
         ? 'Receipt Settings'
+        : activeSection === 'cleanup'
+          ? 'Data Cleanup'
         : 'System Settings';
 
   return (
@@ -276,7 +382,7 @@ const SettingsPage = () => {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setActiveSection(null)}
+              onClick={() => navigate('/settings')}
               className="h-9 w-9 rounded-full p-0 bg-white shadow-sm border border-[#E7D8CC]"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -291,7 +397,7 @@ const SettingsPage = () => {
       </div>
 
       {!activeSection && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
           {settingsCards.map((card) => {
             const Icon = card.icon;
 
@@ -300,37 +406,53 @@ const SettingsPage = () => {
                 key={card.id}
                 onClick={() => {
                   if (!card.disabled) {
-                    setActiveSection(card.id);
+                    navigate(card.path);
                   }
                 }}
                 className={cn(
                   "group relative bg-white p-7 rounded-3xl border-2 border-[#E7D8CC]/30 shadow-sm transition-all duration-500 hover:shadow-2xl hover:border-[#C97B63]/30 hover:-translate-y-2 cursor-pointer overflow-hidden",
+                  card.danger && "hover:border-[#B91C1C]/30",
                   card.disabled && "opacity-60 cursor-not-allowed hover:translate-y-0 hover:shadow-sm"
                 )}
               >
                 {/* Decorative Background Icon */}
-                <div className="absolute -right-8 -bottom-8 opacity-[0.03] transition-transform duration-700 group-hover:scale-125 group-hover:rotate-12 text-[#C97B63]">
+                <div className={cn(
+                  "absolute -right-8 -bottom-8 opacity-[0.03] transition-transform duration-700 group-hover:scale-125 group-hover:rotate-12",
+                  card.danger ? "text-[#B91C1C]" : "text-[#C97B63]"
+                )}>
                   <Icon size={200} />
                 </div>
 
                 <div className="relative space-y-6">
                   <div className="flex items-center justify-between">
-                    <div className="p-5 rounded-2xl bg-[#C97B63]/10 text-[#C97B63] transition-transform group-hover:scale-110 duration-500 shadow-sm">
+                    <div className={cn(
+                      "p-5 rounded-2xl transition-transform group-hover:scale-110 duration-500 shadow-sm",
+                      card.danger ? "bg-[#FEE2E2] text-[#B91C1C]" : "bg-[#C97B63]/10 text-[#C97B63]"
+                    )}>
                       <Icon size={32} />
                     </div>
                     
                     {!card.disabled && (
-                      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF7F2] border border-[#E7D8CC]/50 transition-colors group-hover:bg-[#C97B63]/10 group-hover:border-[#C97B63]/30">
-                        <span className="text-[11px] font-black text-[#C97B63] uppercase tracking-widest">
+                      <div className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF7F2] border border-[#E7D8CC]/50 transition-colors",
+                        card.danger ? "group-hover:bg-[#FEE2E2] group-hover:border-[#B91C1C]/30" : "group-hover:bg-[#C97B63]/10 group-hover:border-[#C97B63]/30"
+                      )}>
+                        <span className={cn(
+                          "text-[11px] font-black uppercase tracking-widest",
+                          card.danger ? "text-[#B91C1C]" : "text-[#C97B63]"
+                        )}>
                           {card.action}
                         </span>
-                        <ChevronRight size={14} className="text-[#C97B63] transition-transform group-hover:translate-x-1" />
+                        <ChevronRight size={14} className={cn(
+                          "transition-transform group-hover:translate-x-1",
+                          card.danger ? "text-[#B91C1C]" : "text-[#C97B63]"
+                        )} />
                       </div>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="text-xl font-black text-[#2B2B2B] font-temple uppercase tracking-tight">
+                    <h3 className="text-xl font-black text-[#2B2B2B] font-temple">
                       {card.title}
                     </h3>
                     <p className="text-[#6B6B6B] text-[15px] leading-relaxed font-medium">
@@ -340,7 +462,10 @@ const SettingsPage = () => {
                 </div>
 
                 {/* Bottom Border Accent */}
-                <div className="absolute bottom-0 left-0 h-1.5 w-0 bg-[#C97B63] transition-all duration-700 group-hover:w-full opacity-60"></div>
+                <div className={cn(
+                  "absolute bottom-0 left-0 h-1.5 w-0 transition-all duration-700 group-hover:w-full opacity-60",
+                  card.danger ? "bg-[#B91C1C]" : "bg-[#C97B63]"
+                )}></div>
               </div>
             );
           })}
@@ -718,6 +843,101 @@ const SettingsPage = () => {
             </CardContent>
           </Card>
         </form>
+      )}
+
+      {activeSection === 'cleanup' && (
+        <div className="max-w-6xl space-y-6">
+          <div className="flex items-start gap-4 rounded-2xl border border-[#FCA5A5] bg-[#FEF2F2] p-5">
+            <div className="rounded-2xl bg-white p-3 text-[#B91C1C] shadow-sm">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="!text-[19px] font-black text-[#7F1D1D]">
+                Clear only operational records
+              </h3>
+              <p className="mt-1 text-[15px] font-medium leading-relaxed text-[#7F1D1D]/80">
+                Select operational data to clear. Master setup data stays protected.
+              </p>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-[#E7D8CC] bg-white shadow-sm">
+            <div className="grid grid-cols-[1.1fr_1.4fr_88px] border-b border-[#E7D8CC] bg-[#F8F4EE] px-5 py-4 text-[15px] font-black uppercase tracking-[0.15em] text-[#8B4513]">
+              <span>Data Group</span>
+              <span>Description</span>
+              <span className="text-center">Clear</span>
+            </div>
+
+            {cleanupGroups.map((group) => {
+              const checked = cleanupSelections.includes(group.id);
+
+              return (
+                <label
+                  key={group.id}
+                  className={cn(
+                    "grid cursor-pointer grid-cols-[1.1fr_1.4fr_88px] items-center border-b border-[#F3E8DE] px-5 py-5 transition-colors last:border-b-0",
+                    checked ? "bg-[#FFF7ED]" : "hover:bg-[#FFFDFB]"
+                  )}
+                >
+                  <span className="text-[18px] font-black text-[#2B2B2B]">
+                    {group.title}
+                  </span>
+                  <span className="text-[18px] font-medium leading-relaxed text-[#6B6B6B]">
+                    {group.description}
+                  </span>
+                  <span className="flex justify-center">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleCleanupSelection(group.id)}
+                      className="h-5 w-5 accent-[#B45309]"
+                    />
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-3 rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] p-4">
+            <div className="rounded-xl bg-white p-2 text-[#15803D] shadow-sm">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="!text-[17px] font-black text-[#14532D]">
+                Will not be deleted
+              </h3>
+              <p className="mt-0.5 text-[13px] font-semibold text-[#166534]/80">
+                Master setup data stays protected.
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-[#E7D8CC] pt-6">
+            <Label className={labelClass}>Confirmation Text</Label>
+            <div className="flex flex-col gap-3 md:flex-row">
+              <Input
+                value={cleanupPhrase}
+                onChange={(event) => setCleanupPhrase(event.target.value)}
+                className={`${fieldClass} flex-1 font-bold`}
+                placeholder="Type CLEAR DATA"
+              />
+              <Button
+                type="button"
+                variant="error"
+                disabled={
+                  cleanupSelections.length === 0 ||
+                  cleanupPhrase !== 'CLEAR DATA' ||
+                  cleanupMutation.isPending
+                }
+                onClick={handleCleanup}
+                className="h-12 shrink-0 rounded-xl px-6 !text-[16px] font-black"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {cleanupMutation.isPending ? 'Clearing...' : 'Clear Selected Data'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

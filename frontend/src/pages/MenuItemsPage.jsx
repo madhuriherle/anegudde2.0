@@ -21,6 +21,8 @@ import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
 import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 
+import { usePermission } from '../hooks/usePermission';
+
 const menuItemSchema = z.object({
   dish_name: z.string().min(1, 'Dish name is required'),
   unit_id: z.coerce.number().min(1, 'Unit is required'),
@@ -32,6 +34,9 @@ const menuItemSchema = z.object({
 const MenuItemsPage = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
+  const { hasPermission } = usePermission();
+  const canWrite = hasPermission('menu_items.write');
+  const canDelete = hasPermission('menu_items.delete');
 
   const [editingMenuItem, setEditingMenuItem] = useState(null);
 
@@ -157,7 +162,7 @@ const MenuItemsPage = () => {
     cell: (info) =>
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
-      disabled={statusMutation.isPending}
+      disabled={statusMutation.isPending || !canWrite}
       onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
 
 
@@ -168,8 +173,8 @@ const MenuItemsPage = () => {
     size: 150,
     cell: (info) =>
     <div className="flex items-center justify-center gap-2">
-          <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>
-          <button
+          {canWrite && <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>}
+          {canDelete && <button
         onClick={async () => {
           const confirmed = await showConfirm('Delete Menu Item', `Are you sure you want to delete this menu item?`);
           if (confirmed) {
@@ -179,11 +184,11 @@ const MenuItemsPage = () => {
         className="action-btn-delete">
         
             Delete
-          </button>
+          </button>}
         </div>
 
   }],
-  [deleteMutation, showConfirm, statusMutation]);
+  [deleteMutation, showConfirm, statusMutation, canWrite, canDelete]);
 
   const sortedMenuItems = useMemo(() => {
     if (!menuItems) return [];
@@ -211,7 +216,7 @@ const MenuItemsPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* Left Side: Form (30%) */}
-        <div className="lg:col-span-4 space-y-6">
+        {canWrite && <div className="lg:col-span-4 space-y-6">
           <Card className="border-border-temple sticky top-6">
             <CardContent className="p-6">
               <div className="flex flex-col space-y-1.5 bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-6 select-none rounded-t-lg">
@@ -281,10 +286,10 @@ const MenuItemsPage = () => {
               </form>
             </CardContent>
           </Card>
-        </div>
+        </div>}
 
         {/* Right Side: List (70%) */}
-        <div className="lg:col-span-8 space-y-4">
+        <div className={cn("lg:col-span-8 space-y-4", !canWrite && "lg:col-span-12")}>
           <Card className="border-border-temple shadow-sm overflow-hidden">
             <div className="bg-white">
               <DataTable

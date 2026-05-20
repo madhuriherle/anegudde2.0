@@ -26,7 +26,7 @@ const VendorOutstandingReportPage = () => {
   const { data: vendorData, isLoading } = useQuery({
     queryKey: ['vendor-outstanding'],
     queryFn: async () => {
-      const res = await api.get('/reports/vendor-outstanding');
+      const res = await api.get('/reports/get_vendor_outstanding');
       return res.data;
     }
   });
@@ -84,7 +84,7 @@ const VendorOutstandingReportPage = () => {
     }
     try {
       setIsExportingPdf(true);
-      const response = await api.get('/reports/vendor-outstanding/pdf', { responseType: 'blob' });
+      const response = await api.get('/reports/get_vendor_outstanding_pdf', { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;

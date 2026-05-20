@@ -22,6 +22,8 @@ import {
 '../components/ui/Dialog';
 import { Select } from '../components/ui/Select';
 
+import { usePermission } from '../hooks/usePermission';
+
 const userSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
@@ -37,6 +39,9 @@ const userSchema = z.object({
 const UsersPage = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
+  const { hasPermission } = usePermission();
+  const canWrite = hasPermission('users.write');
+  const canDelete = hasPermission('users.delete');
 
   // Filter States
   const pageSize = 50;
@@ -165,7 +170,7 @@ const UsersPage = () => {
     cell: (info) =>
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
-      disabled={statusMutation.isPending}
+      disabled={statusMutation.isPending || !canWrite}
       onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
 
 
@@ -175,8 +180,8 @@ const UsersPage = () => {
     header: () => <div className="text-center">Actions</div>,
     cell: (info) =>
     <div className="flex items-center justify-center gap-2 px-4">
-          <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
-          <button
+          {canWrite && <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>}
+          {canDelete && <button
         onClick={async () => {
           const confirmed = await showConfirm('Delete User', `Are you sure you want to delete user "${info.row.original.username}"?`);
           if (confirmed) {
@@ -186,11 +191,11 @@ const UsersPage = () => {
         className="action-btn-delete">
         
             Delete
-          </button>
+          </button>}
         </div>
 
   }],
-  [roles, showConfirm, statusMutation]);
+  [roles, showConfirm, statusMutation, canWrite, canDelete]);
 
   return (
     <div className="space-y-6">
@@ -198,12 +203,12 @@ const UsersPage = () => {
         <div>
           <h2 className="page-title">User Management</h2>
         </div>
-        <Button
+        {canWrite && <Button
           onClick={() => handleOpen()}
           className="text-text-main font-bold px-6">
           
           Add New User
-        </Button>
+        </Button>}
       </div>
 
       <Card className="border-border-temple">

@@ -28,7 +28,7 @@ const DailyStockReportPage = () => {
   const { data: snapshotData, isLoading, refetch } = useQuery({
     queryKey: ['daily-closing-stock', targetDate],
     queryFn: async () => {
-      const res = await api.get('/reports/daily-closing-stock', {
+      const res = await api.get('/reports/get_daily_closing_stock', {
         params: { target_date: targetDate }
       });
       return res.data;
@@ -87,7 +87,7 @@ const DailyStockReportPage = () => {
     }
     try {
       setIsExportingPdf(true);
-      const response = await api.get('/reports/daily-closing-stock/pdf', {
+      const response = await api.get('/reports/get_daily_closing_stock_pdf', {
         params: { target_date: targetDate },
         responseType: 'blob'
       });

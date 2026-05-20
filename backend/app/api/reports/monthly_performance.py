@@ -9,7 +9,6 @@ from app.utils.report_pdf import render_report_pdf, table_html, money, qty
 router = APIRouter()
 
 
-@router.get("/monthly-performance")
 @router.get("/get_monthly_performance")
 def monthly_performance_report(
     db: Session = Depends(get_db), 
@@ -38,7 +37,15 @@ def monthly_performance_report(
     ]
 
 
-@router.get("/monthly-performance/pdf")
+@router.get("/monthly-performance")
+def monthly_performance_report_legacy(
+    db: Session = Depends(get_db), 
+    _: User = Depends(PermissionChecker("reports.read"))
+):
+    return monthly_performance_report(db, _)
+
+
+@router.get("/get_monthly_performance_pdf")
 def monthly_performance_report_pdf(
     db: Session = Depends(get_db),
     _: User = Depends(PermissionChecker("reports.read"))
@@ -73,3 +80,11 @@ def monthly_performance_report_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=monthly_performance_report.pdf"},
     )
+
+
+@router.get("/monthly-performance/pdf")
+def monthly_performance_report_pdf_legacy(
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionChecker("reports.read"))
+):
+    return monthly_performance_report_pdf(db, _)

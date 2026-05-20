@@ -74,6 +74,7 @@ const VendorsPage = () => {
   const { showConfirm, showError, showSuccess } = useNotification();
   const { hasPermission } = usePermission();
   const canWrite = hasPermission('vendors.write');
+  const canDelete = hasPermission('vendors.delete');
 
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -238,7 +239,7 @@ const VendorsPage = () => {
     cell: (info) =>
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
-      disabled={statusMutation.isPending}
+      disabled={statusMutation.isPending || !canWrite}
       onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
 
 
@@ -250,11 +251,11 @@ const VendorsPage = () => {
     <div className="flex items-center justify-center gap-2">
           <button onClick={() => {setViewingVendor(info.row.original);setViewDialogOpen(true);}} className="action-btn-view">View</button>
           {canWrite && <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>}
-          {canWrite && <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>}
+          {canDelete && <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>}
         </div>
 
   }],
-  [statusMutation, canWrite]);
+  [statusMutation, canWrite, canDelete]);
 
   const sortedVendors = useMemo(() => {
     return [...vendors].sort((a, b) => {

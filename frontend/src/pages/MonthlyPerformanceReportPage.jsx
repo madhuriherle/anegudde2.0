@@ -21,7 +21,7 @@ const MonthlyPerformanceReportPage = () => {
   const { data: monthlyData, isLoading } = useQuery({
     queryKey: ['monthly-performance'],
     queryFn: async () => {
-      const res = await api.get('/reports/monthly-performance');
+      const res = await api.get('/reports/get_monthly_performance');
       return res.data;
     }
   });
@@ -81,7 +81,7 @@ const MonthlyPerformanceReportPage = () => {
     }
     try {
       setIsExportingPdf(true);
-      const response = await api.get('/reports/monthly-performance/pdf', { responseType: 'blob' });
+      const response = await api.get('/reports/get_monthly_performance_pdf', { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;

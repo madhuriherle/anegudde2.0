@@ -51,6 +51,7 @@ const ItemsPage = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   const { hasPermission } = usePermission();
   const canWrite = hasPermission('items.write');
+  const canDelete = hasPermission('items.delete');
 
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -301,7 +302,7 @@ const ItemsPage = () => {
     cell: (info) =>
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
-      disabled={statusMutation.isPending}
+      disabled={statusMutation.isPending || !canWrite}
       onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
 
 
@@ -313,12 +314,12 @@ const ItemsPage = () => {
     <div className="flex items-center justify-center gap-2">
           <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
           {canWrite && <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>}
-          {canWrite && <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>}
+          {canDelete && <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>}
           <button onClick={() => navigate(`/items/${info.row.original.id}/history`)} className="action-btn-view bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200">History</button>
         </div>
 
   }],
-  [navigate, statusMutation, canWrite]);
+  [navigate, statusMutation, canWrite, canDelete]);
 
   return (
     <div className="space-y-6">

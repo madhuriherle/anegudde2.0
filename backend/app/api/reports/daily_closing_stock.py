@@ -11,7 +11,6 @@ from app.utils.report_pdf import render_report_pdf, table_html, money, qty
 router = APIRouter()
 
 
-@router.get("/daily-closing-stock")
 @router.get("/get_daily_closing_stock")
 def get_daily_closing_stock(
     target_date: date = Query(...), 
@@ -42,7 +41,16 @@ def get_daily_closing_stock(
     ]
 
 
-@router.get("/daily-closing-stock/pdf")
+@router.get("/daily-closing-stock")
+def get_daily_closing_stock_legacy(
+    target_date: date = Query(...), 
+    db: Session = Depends(get_db), 
+    _: User = Depends(PermissionChecker("reports.read"))
+):
+    return get_daily_closing_stock(target_date, db, _)
+
+
+@router.get("/get_daily_closing_stock_pdf")
 def get_daily_closing_stock_pdf(
     target_date: date = Query(...),
     db: Session = Depends(get_db),
@@ -78,3 +86,12 @@ def get_daily_closing_stock_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=daily_closing_stock_{target_date}.pdf"},
     )
+
+
+@router.get("/daily-closing-stock/pdf")
+def get_daily_closing_stock_pdf_legacy(
+    target_date: date = Query(...),
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionChecker("reports.read"))
+):
+    return get_daily_closing_stock_pdf(target_date, db, _)

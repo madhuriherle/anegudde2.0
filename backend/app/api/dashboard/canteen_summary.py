@@ -30,7 +30,7 @@ class CanteenSummaryStats(BaseModel):
     wastage_items: list[WastageItemDetail]
     donation_summary: list[DonationTypeSummary]
 
-@router.get("/canteen_summary", response_model=CanteenSummaryStats)
+@router.get("/get_canteen_summary", response_model=CanteenSummaryStats)
 def get_canteen_summary_stats(
     db: Session = Depends(get_db),
     _: User = Depends(PermissionChecker("dashboard.read"))
@@ -136,3 +136,11 @@ def get_canteen_summary_stats(
         wastage_items=wastage_items,
         donation_summary=donation_summary
     )
+
+
+@router.get("/canteen_summary", response_model=CanteenSummaryStats)
+def get_canteen_summary_stats_legacy(
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionChecker("dashboard.read"))
+):
+    return get_canteen_summary_stats(db, _)

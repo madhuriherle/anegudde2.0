@@ -9,7 +9,6 @@ from app.utils.report_pdf import render_report_pdf, table_html, money
 router = APIRouter()
 
 
-@router.get("/vendor-outstanding")
 @router.get("/get_vendor_outstanding")
 def vendor_outstanding_report(
     db: Session = Depends(get_db), 
@@ -33,7 +32,15 @@ def vendor_outstanding_report(
     ]
 
 
-@router.get("/vendor-outstanding/pdf")
+@router.get("/vendor-outstanding")
+def vendor_outstanding_report_legacy(
+    db: Session = Depends(get_db), 
+    _: User = Depends(PermissionChecker("reports.read"))
+):
+    return vendor_outstanding_report(db, _)
+
+
+@router.get("/get_vendor_outstanding_pdf")
 def vendor_outstanding_report_pdf(
     db: Session = Depends(get_db),
     _: User = Depends(PermissionChecker("reports.read"))
@@ -64,3 +71,11 @@ def vendor_outstanding_report_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=vendor_outstanding_report.pdf"},
     )
+
+
+@router.get("/vendor-outstanding/pdf")
+def vendor_outstanding_report_pdf_legacy(
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionChecker("reports.read"))
+):
+    return vendor_outstanding_report_pdf(db, _)

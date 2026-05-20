@@ -14,7 +14,7 @@ ROLE_NAMES = [
     "Admin",
 ]
 
-ALL_ACCESS_ROLES = ["Super Admin", "Temple Trustee"]
+ALL_ACCESS_ROLES = ["Temple Trustee"]
 
 PRIVILEGES = [
     "vendors.read", "vendors.write", "vendors.delete",

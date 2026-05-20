@@ -21,7 +21,7 @@ const ActivityLogsPage = () => {
       if (username) params.append('username', username);
       if (status) params.append('status', status);
       
-      const res = await api.get(`/audit/list?${params.toString()}`);
+      const res = await api.get(`/audit/list_activity_logs?${params.toString()}`);
       return res.data;
     }
   });

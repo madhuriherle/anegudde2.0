@@ -14,10 +14,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { DetailItem } from '../components/ui/DetailItem';
 import { cn } from '../utils/cn';
 import { formatDate } from '../utils/date';
+import { usePermission } from '../hooks/usePermission';
 
 const PurchaseReturnsPage = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
+  const { hasPermission } = usePermission();
+  const canWrite = hasPermission('purchase_returns.write');
+  const canDelete = hasPermission('purchase_returns.delete');
 
   const [isAdding, setIsAdding] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState('');
@@ -54,7 +58,7 @@ const PurchaseReturnsPage = () => {
     queryKey: ['vendor-bills', selectedVendor],
     queryFn: async () => {
       if (!selectedVendor) return [];
-      const res = await api.get(`/purchases/vendor_bills/${selectedVendor}`);
+      const res = await api.get(`/purchases/list_vendor_bills/${selectedVendor}`);
       return res.data;
     },
     enabled: !!selectedVendor
@@ -64,7 +68,7 @@ const PurchaseReturnsPage = () => {
     queryKey: ['bill-items', selectedBill],
     queryFn: async () => {
       if (!selectedBill) return [];
-      const res = await api.get(`/purchases/bill_items/${selectedBill}`);
+      const res = await api.get(`/purchases/list_bill_items/${selectedBill}`);
       return res.data;
     },
     enabled: !!selectedBill
@@ -232,13 +236,13 @@ const PurchaseReturnsPage = () => {
         
             View
           </button>
-          <button
+          {canWrite && <button
         onClick={() => openEdit(info.row.original)}
         className="action-btn-edit">
         
             Edit
-          </button>
-          <button
+          </button>}
+          {canDelete && <button
         onClick={async () => {
           const ok = await showConfirm('Delete Return', 'Are you sure you want to delete this purchase return?');
           if (ok) deleteMutation.mutate(info.row.original.id);
@@ -246,17 +250,17 @@ const PurchaseReturnsPage = () => {
         className="action-btn-delete">
         
             Delete
-          </button>
+          </button>}
         </div>
 
   }],
-  [deleteMutation, showConfirm]);
+  [deleteMutation, showConfirm, canWrite, canDelete]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="page-title">Purchase Returns</h2>
-        <Button
+        {canWrite && <Button
           onClick={() => {
             resetForm();
             setIsAdding(true);
@@ -264,7 +268,7 @@ const PurchaseReturnsPage = () => {
           className="flex items-center gap-2">
           
           Record Return
-        </Button>
+        </Button>}
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-end gap-3 rounded-xl border border-border-temple bg-white p-4 shadow-sm">

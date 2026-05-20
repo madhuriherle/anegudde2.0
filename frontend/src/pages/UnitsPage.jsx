@@ -30,6 +30,8 @@ import { Select } from '../components/ui/Select';
 
 import { DetailItem } from '../components/ui/DetailItem';
 
+import { usePermission } from '../hooks/usePermission';
+
 const unitSchema = z.object({
   unit_name: z.string().min(1, 'Name is required'),
   unit_code: z.string().min(1, 'Code is required'),
@@ -41,6 +43,9 @@ const unitSchema = z.object({
 const UnitsPage = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
+  const { hasPermission } = usePermission();
+  const canWrite = hasPermission('units.write');
+  const canDelete = hasPermission('units.delete');
 
   // Filter States
   const [pageSize, setPageSize] = useState(50);
@@ -155,7 +160,7 @@ const UnitsPage = () => {
     cell: (info) =>
     <InlineStatusSelect
       value={Number(info.getValue() ?? 1)}
-      disabled={statusMutation.isPending}
+      disabled={statusMutation.isPending || !canWrite}
       onChange={(nextStatus) => statusMutation.mutate({ id: info.row.original.id, status: nextStatus })} />
 
 
@@ -166,8 +171,8 @@ const UnitsPage = () => {
     cell: (info) =>
     <div className="flex items-center justify-center gap-2">
           <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
-          <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>
-          <button
+          {canWrite && <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>}
+          {canDelete && <button
         onClick={async () => {
           const confirmed = await showConfirm('Delete Unit', `Are you sure you want to delete unit "${info.row.original.unit_name}"?`);
           if (confirmed) {
@@ -177,11 +182,11 @@ const UnitsPage = () => {
         className="action-btn-delete">
         
             Delete
-          </button>
+          </button>}
         </div>
 
   }],
-  [deleteMutation, showConfirm, statusMutation]);
+  [deleteMutation, showConfirm, statusMutation, canWrite, canDelete]);
 
   return (
     <div className="space-y-6">
@@ -189,13 +194,13 @@ const UnitsPage = () => {
         <div>
           <h2 className="page-title">Units of Measurement</h2>
         </div>
-        <Button
+        {canWrite && <Button
           onClick={() => handleOpen()}
           className="text-text-main font-bold px-6">
           
        
           Add Unit
-        </Button>
+        </Button>}
       </div>
 
       <Card className="border-border-temple">

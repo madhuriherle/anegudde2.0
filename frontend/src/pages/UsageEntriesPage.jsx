@@ -80,6 +80,7 @@ const UsageEntriesPage = () => {
   const { showConfirm, showError, showSuccess } = useNotification();
   const { hasPermission } = usePermission();
   const canWrite = hasPermission('consumptions.write');
+  const canDelete = hasPermission('consumptions.delete');
 
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -458,7 +459,7 @@ const UsageEntriesPage = () => {
     <div className="flex items-center justify-center gap-2">
           <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
           {canWrite && <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>}
-          {canWrite && <button
+          {canDelete && <button
         onClick={async () => {
           const confirmed = await showConfirm('Delete Entry', `Are you sure? This cannot be undone.`);
           if (confirmed) deleteMutation.mutate(info.row.original.id);
@@ -470,7 +471,7 @@ const UsageEntriesPage = () => {
         </div>
 
   }],
-  [deleteMutation, showConfirm, canWrite]);
+  [deleteMutation, showConfirm, canWrite, canDelete]);
 
   return (
     <div className="space-y-6">

@@ -65,6 +65,7 @@ const PurchasesPage = () => {
   const { showSuccess, showError, showConfirm } = useNotification();
   const { hasPermission } = usePermission();
   const canWrite = hasPermission('purchases.write');
+  const canDelete = hasPermission('purchases.delete');
 
   // Filter States
   const [page, setPage] = useState(1);
@@ -513,7 +514,7 @@ const PurchasesPage = () => {
     <div className="flex items-center justify-center gap-2">
           <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
           {canWrite && <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>}
-          {canWrite && <button
+          {canDelete && <button
         onClick={async () => {
           const confirmed = await showConfirm('Delete Purchase', `Are you sure you want to delete this purchase entry?`);
           if (confirmed) deleteMutation.mutate(info.row.original.id);
@@ -525,7 +526,7 @@ const PurchasesPage = () => {
         </div>
 
   }],
-  [vendors, deleteMutation, showConfirm, canWrite]);
+  [vendors, deleteMutation, showConfirm, canWrite, canDelete]);
 
   return (
     <div className="space-y-6">
