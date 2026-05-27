@@ -569,7 +569,7 @@ const UsageEntriesPage = () => {
                         : "bg-white text-text-main border-border-temple/40 hover:bg-bg-temple/40"
                     )}
                   >
-                    Raw Item Usage
+                    Raw Usage
                   </button>
                   <button
                     type="button"
@@ -581,7 +581,7 @@ const UsageEntriesPage = () => {
                         : "bg-white text-text-main border-border-temple/40 hover:bg-bg-temple/40"
                     )}
                   >
-                    Wastage Items
+                    Wastage
                   </button>
                   <button
                     type="button"
@@ -593,13 +593,19 @@ const UsageEntriesPage = () => {
                         : "bg-white text-text-main border-border-temple/40 hover:bg-bg-temple/40"
                     )}
                   >
-                    Stock Adjustment
+                    Adjustments
                   </button>
                 </div>
 
                 <div className="rounded-xl border border-border-temple/30 overflow-hidden shadow-sm bg-white">
                   {viewTab === 'raw' && (
                     <table className="w-full text-base text-left border-collapse">
+                      <thead className="bg-[#FAF7F2] border-b border-border-temple/30">
+                        <tr>
+                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider">Item Name</th>
+                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider text-right">Qty</th>
+                        </tr>
+                      </thead>
                       <tbody className="divide-y divide-border-temple/10">
                         {(viewingConsumption?.items || []).filter((item) => Number(item.quantity_used || 0) > 0).length === 0 ?
                           <tr>
@@ -629,10 +635,17 @@ const UsageEntriesPage = () => {
 
                   {viewTab === 'wastage' && (
                     <table className="w-full text-base text-left border-collapse">
+                      <thead className="bg-[#FAF7F2] border-b border-border-temple/30">
+                        <tr>
+                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider">Dish Name</th>
+                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider text-right">Qty</th>
+                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider text-right">Approx</th>
+                        </tr>
+                      </thead>
                       <tbody className="divide-y divide-border-temple/10">
                         {viewingWastages.filter((w) => Number(w.quantity || 0) > 0).length === 0 ?
                           <tr>
-                            <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center text-sm italic">No wastage items recorded</td>
+                            <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center text-sm italic">No wastage recorded</td>
                           </tr> :
                           viewingWastages.
                             filter((w) => Number(w.quantity || 0) > 0).
@@ -661,7 +674,7 @@ const UsageEntriesPage = () => {
                       <tbody className="divide-y divide-border-temple/10">
                         {viewingAdjustments.filter((a) => Number(a.quantity || 0) !== 0).length === 0 ? (
                           <tr>
-                            <td className="px-4 py-3 text-text-main/60 text-center text-sm italic">No stock adjustment recorded</td>
+                            <td className="px-4 py-3 text-text-main/60 text-center text-sm italic">No stock adjustments</td>
                           </tr>
                         ) : (
                           viewingAdjustments
@@ -709,7 +722,7 @@ const UsageEntriesPage = () => {
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="bg-white px-6 pt-4 pb-12 max-h-[calc(96vh-150px)] overflow-y-auto space-y-4">
+            <div className="bg-white px-6 pt-4 max-h-[calc(96vh-150px)] overflow-y-auto space-y-4">
               <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-12 gap-4 items-start min-h-[56vh]">
               {canReadUsage && (
                 <div className="temple-form-section min-w-0 2xl:col-span-4">
@@ -823,7 +836,7 @@ const UsageEntriesPage = () => {
 
               {canReadUsage && (
                 <div className="temple-form-section min-w-0 2xl:col-span-4">
-                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">Raw Item Usage</h4>
+                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">Item Usage</h4>
                   <div className="grid grid-cols-[1fr_100px] gap-3 mb-1 px-1 border-b border-border-temple/10 pb-1">
                     <div></div>
                     <div className="text-base font-bold text-text-main text-center">Used</div>
@@ -859,7 +872,7 @@ const UsageEntriesPage = () => {
               <div className="temple-form-section min-w-0 xl:col-span-2 2xl:col-span-4">
                 {canReadUsage && (
                   <div className="mb-8">
-                    <h4 className="temple-section-header mt-0 text-lg tracking-wider">Wastage Items</h4>
+                    <h4 className="temple-section-header mt-0 text-lg tracking-wider">Menu Item Wastage</h4>
                     <div className="grid grid-cols-[1fr_80px_110px] gap-3 mb-1 px-1 border-b border-border-temple/10 pb-1">
                       <div></div>
                       <div className="text-base font-bold text-text-main text-center">Qty</div>

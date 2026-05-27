@@ -129,7 +129,23 @@ const ManpowerReportPage = () => {
   };
 
   return (
-    <div className="space-y-6 print:space-y-2 manpower-report-print report-print-container">
+    <div className="space-y-6 print:space-y-2 manpower-report-print">
+      <style>{`
+        @media print {
+          @page { size: A4 landscape; margin: 10mm; }
+          header, aside, footer { display: none !important; }
+          main { padding: 0 !important; }
+          .lg\\:pl-64 { padding-left: 0 !important; }
+          .manpower-report-print { padding-top: 5mm !important; }
+          .manpower-report-print table { border-collapse: collapse; width: 100%; border: 1px solid #d7c9ba !important; }
+          .manpower-report-print thead { display: table-header-group !important; }
+          .manpower-report-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+          .manpower-report-print th, .manpower-report-print td { border: 1px solid #d7c9ba !important; padding: 4px 6px !important; }
+          .manpower-report-print th { border-top: 1px solid #d7c9ba !important; background-color: #f3f4f6 !important; }
+          .manpower-report-print tfoot td { border: 1px solid #cab7a4 !important; }
+        }
+      `}</style>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <h2 className="page-title">{selectedMonth === 'ALL' ? 'Yearly' : 'Monthly'} Manpower Report</h2>
         <div className="flex items-center gap-2">
@@ -238,7 +254,7 @@ const ManpowerReportPage = () => {
                 )}
                 </tbody>
                 {grandTotals &&
-                <tbody className="bg-[#FAF3E7] border-t-2 border-border-temple/60 text-black">
+                <tbody className="bg-[#EAD9C9] text-black font-black text-[15px] border-t-2 border-border-temple/60">
                     <tr className="grand-total-row text-black">
                       <td className="px-4 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] font-black">GRAND TOTAL</td>
                       <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.regular_cooking}</td>

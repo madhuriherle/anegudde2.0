@@ -317,7 +317,7 @@ const PurchaseReturnsPage = () => {
             </DialogTitle>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto p-8 pb-12">
+          <div className="flex-1 overflow-y-auto p-6">
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               <Card className="xl:col-span-1 border-border-temple">
                 <CardContent className="p-6 space-y-5">
@@ -386,7 +386,7 @@ const PurchaseReturnsPage = () => {
                         key={bi.item_id}
                         variant="ghost"
                         size="sm"
-                        className="bg-white hover:bg-bg-temple border border-border-temple/60 text-text-main text-base font-normal"
+                        className="bg-white hover:bg-bg-temple border border-border-temple/60 text-text-main text-base"
                         onClick={() => handleAddItem(bi)}>
                         
                             + {bi.item_name}
@@ -459,10 +459,10 @@ const PurchaseReturnsPage = () => {
                         </table>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-4">
-                        <div className="flex flex-col items-end">
-                          <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">Total Return Amount</span>
-                          <span className="text-2xl font-black text-primary">
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+                        <div className="flex flex-col">
+                          <span className="text-base font-normal text-text-main/70">Total Return Amount</span>
+                          <span className="text-3xl font-normal text-primary">
                             ₹{normalizedReturnItems.reduce((acc, curr) => acc + (parseFloat(curr.return_qty) || 0) * curr.price, 0).toLocaleString()}
                           </span>
                         </div>
@@ -484,11 +484,11 @@ const PurchaseReturnsPage = () => {
               type="button"
               variant="ghost"
               onClick={() => setIsAdding(false)}
-              className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
+              className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-normal">
               Cancel
             </Button>
             <Button
-              className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg border-none"
+              className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-normal shadow-lg border-none"
               onClick={handleSubmit}
               disabled={mutation.isPending || normalizedReturnItems.length === 0}>
               {mutation.isPending ? 'Saving...' : 'Save'}

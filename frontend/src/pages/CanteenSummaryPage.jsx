@@ -187,7 +187,40 @@ const CanteenSummaryPage = () => {
   const wastageRowsForDisplay = wastageRowsAllItems.length > 0 ? wastageRowsAllItems : wastageRowsFallback;
 
   return (
-    <div className="space-y-6 print:space-y-2 canteen-summary-print report-print-container">
+    <div className="space-y-6 print:space-y-2 canteen-summary-print">
+      <style>{`
+        @media print {
+          @page { size: A4 landscape; margin: 10mm; }
+          header, aside, footer { display: none !important; }
+          main { padding: 0 !important; }
+          .lg\\:pl-64 { padding-left: 0 !important; }
+          .canteen-summary-print { padding-top: 8mm !important; }
+          .canteen-summary-print, .canteen-summary-print * { overflow: visible !important; }
+          .canteen-summary-print { font-size: 11px; }
+          .canteen-summary-print table { table-layout: fixed; width: 100%; border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid #d7c9ba !important; }
+          .canteen-summary-print thead { display: table-header-group !important; }
+          .canteen-summary-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+          .canteen-summary-print th, .canteen-summary-print td { padding: 4px 6px !important; border-right: 1px solid #d7c9ba !important; border-bottom: 1px solid #d7c9ba !important; }
+          .canteen-summary-print th { border-top: 1px solid #d7c9ba !important; }
+          .canteen-summary-print tr td:last-child, .canteen-summary-print tr th:last-child { border-right: none !important; }
+          .canteen-summary-print tfoot td { border: 1px solid #cab7a4 !important; }
+          .canteen-summary-print .report-table-wrap { border: 1px solid #d7c9ba !important; }
+          .canteen-summary-print .grand-total-row td { border-top: 2px solid #bfa892 !important; border-bottom: 1px solid #bfa892 !important; }
+          .canteen-summary-print .footer-table { border-collapse: collapse; width: 100%; margin-top: 4mm; }
+          .canteen-summary-print .footer-table th, .canteen-summary-print .footer-table td { border: 1px solid #e2e8f0 !important; }
+          .canteen-summary-print .footer-table th { background-color: #f8fafc !important; }
+          .canteen-summary-print .footer-table { page-break-inside: avoid; break-inside: avoid; }
+          .canteen-summary-print .footer-section-title { font-size: 9px !important; letter-spacing: 0.02em; }
+          .canteen-summary-print .footer-section-cell { padding: 7px 8px !important; vertical-align: top; }
+          .canteen-summary-print .footer-summary-grid { display: grid; grid-template-columns: 160px 1fr; gap: 3px 10px; }
+          .canteen-summary-print .footer-return-grid,
+          .canteen-summary-print .footer-wastage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 18px; }
+          .canteen-summary-print .footer-manpower-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px 16px; }
+          .canteen-summary-print .footer-metric-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px; line-height: 1.25; }
+          .canteen-summary-print .footer-metric-row span:first-child { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
+          .canteen-summary-print .no-wrap-print { white-space: nowrap !important; }
+        }
+      `}</style>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <h2 className="page-title">Canteen Summary Report</h2>
         <div className="flex items-center gap-2">
@@ -267,7 +300,7 @@ const CanteenSummaryPage = () => {
           !groupByCategory ? (
             /* FLAT LIST (Default) - Single Table */
             <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white">
-              <table className="w-full table-fixed text-sm border-collapse canteen-main-table">
+              <table className="w-full table-fixed text-sm border-collapse">
                 <thead className="bg-[#FFF4E6] border-b border-border-temple">
                   <tr className="text-text-main font-normal uppercase">
                     <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
@@ -299,7 +332,7 @@ const CanteenSummaryPage = () => {
                   ))}
                 </tbody>
                 {grandTotals && (
-                  <tbody className="bg-[#FAF3E7] text-black font-black text-[15px] border-t-2 border-border-temple/60">
+                  <tbody className="bg-[#EAD9C9] text-black font-black text-[15px] border-t-2 border-border-temple/60">
                     <tr className="grand-total-row text-black">
                       <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] font-black">GRAND TOTAL</td>
                       <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap font-black">{grandTotals.opening.toFixed(3)}</td>
@@ -324,7 +357,7 @@ const CanteenSummaryPage = () => {
                     {toEnglishCategory(categoryName)}
                   </h2>
                   <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white">
-                    <table className="w-full table-fixed text-sm border-collapse canteen-main-table">
+                    <table className="w-full table-fixed text-sm border-collapse">
                       <thead className="bg-[#FFF4E6] border-b border-border-temple">
                         <tr className="text-text-main font-normal uppercase">
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
@@ -376,17 +409,17 @@ const CanteenSummaryPage = () => {
               {grandTotals && (
                 <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white mt-8">
                   <table className="w-full table-fixed text-sm border-collapse">
-                    <tbody className="bg-[#FAF3E7] border-t-2 border-border-temple/60 text-black">
+                    <tbody className="bg-[#D9C8AF] border-t-2 border-border-temple/60 text-black">
                       <tr className="grand-total-row font-black text-[15px]">
-                        <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] font-black">GRAND TOTAL</td>
-                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap font-black">{grandTotals.opening.toFixed(3)}</td>
-                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap font-black">{grandTotals.purchase.toFixed(3)}</td>
-                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap font-black">{grandTotals.issues.toFixed(3)}</td>
-                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap font-black">{formatCurrency(grandTotals.issue_val)}</td>
-                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap font-black">{grandTotals.returns.toFixed(3)}</td>
-                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap font-black">{grandTotals.adjust.toFixed(3)}</td>
-                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap font-black">{grandTotals.closing.toFixed(3)}</td>
-                        <td className="px-3 py-5 text-left whitespace-nowrap font-black text-secondary">{formatCurrency(grandTotals.closing_val)}</td>
+                        <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em]">GRAND TOTAL</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap">{grandTotals.opening.toFixed(3)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap">{grandTotals.purchase.toFixed(3)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap">{grandTotals.issues.toFixed(3)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap">{formatCurrency(grandTotals.issue_val)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap">{grandTotals.returns.toFixed(3)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap">{grandTotals.adjust.toFixed(3)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap">{grandTotals.closing.toFixed(3)}</td>
+                        <td className="px-3 py-5 text-left whitespace-nowrap">{formatCurrency(grandTotals.closing_val)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -464,7 +497,7 @@ const CanteenSummaryPage = () => {
                 <div className="overflow-hidden rounded-md border border-border-temple shadow-sm bg-white">
                   <table className="w-full table-auto text-sm border-collapse">
                     <thead className="bg-[#FAF7F2] border-b border-border-temple">
-                      <tr className="text-text-main font-bold uppercase">
+                      <tr className="text-text-main font-normal uppercase">
                         <th colSpan={2} className="px-3 py-2 text-left text-primary">Stock Adjustments</th>
                       </tr>
                     </thead>
@@ -488,6 +521,165 @@ const CanteenSummaryPage = () => {
             </div>
         }
         </div>
+
+      <div className="hidden print:hidden font-sans">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ (ಅನ್ನದಾನ)</h1>
+          <div className="text-md font-bold uppercase tracking-widest mt-1">
+            CANTEEN SUMMARY REPORT : <span className="font-black underline">{formatDate(selectedDate)}</span>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+            {groupedRows.map(([categoryName, rows]) =>
+          <div key={`print-group-${categoryName}`} className="space-y-2" style={{ pageBreakInside: 'avoid' }}>
+                    <div className="flex items-center gap-2 border-b-2 border-black pb-1">
+                        <h2 className="text-sm font-black uppercase tracking-widest">{categoryName}</h2>
+                    </div>
+                    <table className="w-full table-auto text-[9px] border-collapse border border-black">
+                        <thead>
+                            <tr className="bg-gray-100 font-bold uppercase">
+                                <th className="border border-black px-2 py-1 text-left">Item Name</th>
+                                <th className="border border-black px-2 py-1 text-left">Rate</th>
+                                <th className="border border-black px-2 py-1 text-left">Opening Stock</th>
+                                <th className="border border-black px-2 py-1 text-left">Stock Added</th>
+                                <th className="border border-black px-2 py-1 text-left">Stock Used</th>
+                                <th className="border border-black px-2 py-1 text-left">Usage Value</th>
+                                <th className="border border-black px-2 py-1 text-left">Returned</th>
+                                <th className="border border-black px-2 py-1 text-left">Adjust</th>
+                                <th className="border border-black px-2 py-1 text-left bg-gray-50">Closing Stock</th>
+                                <th className="border border-black px-2 py-1 text-left bg-gray-50">Closing Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.map((row) =>
+                <tr key={`print-row-${row.item_id}`}>
+                                    <td className="border border-black px-2 py-1 font-bold">{row.item_name}</td>
+                                    <td className="border border-black px-2 py-1 text-left italic">₹{Number(row.rate).toLocaleString()}</td>
+                                    <td className="border border-black px-2 py-1 text-left">{Number(row.opening_balance).toFixed(3)}</td>
+                                    <td className="border border-black px-2 py-1 text-left">{Number(row.purchase_qty).toFixed(3)}</td>
+                                    <td className="border border-black px-2 py-1 text-left">{Number(row.issue_qty).toFixed(3)}</td>
+                                    <td className="border border-black px-2 py-1 text-left font-semibold">₹{Number(row.issue_value).toLocaleString()}</td>
+                                    <td className="border border-black px-2 py-1 text-left">{Number(row.purchase_return_qty || 0).toFixed(3)}</td>
+                                    <td className="border border-black px-2 py-1 text-left">{Number(row.stock_adjustment_qty || 0).toFixed(3)}</td>
+                                    <td className="border border-black px-2 py-1 text-left font-black bg-gray-50">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
+                                    <td className="border border-black px-2 py-1 text-left font-black bg-gray-50">₹{Number(row.closing_value).toLocaleString()}</td>
+                                </tr>
+                )}
+                        </tbody>
+                        <tbody className="bg-gray-50 font-black border-t-2 border-black">
+                            <tr>
+                                <td colSpan={2} className="border border-black px-2 py-1 text-[8px] uppercase">Category Totals</td>
+                                <td className="border border-black px-2 py-1 text-left">{rows.reduce((a, b) => a + Number(b.opening_balance), 0).toFixed(3)}</td>
+                                <td className="border border-black px-2 py-1 text-left">{rows.reduce((a, b) => a + Number(b.purchase_qty), 0).toFixed(3)}</td>
+                                <td className="border border-black px-2 py-1 text-left">{rows.reduce((a, b) => a + Number(b.issue_qty), 0).toFixed(3)}</td>
+                                <td className="border border-black px-2 py-1 text-left">₹{rows.reduce((a, b) => a + Number(b.issue_value), 0).toLocaleString()}</td>
+                                <td className="border border-black px-2 py-1 text-left">{rows.reduce((a, b) => a + Number(b.purchase_return_qty || 0), 0).toFixed(3)}</td>
+                                <td className="border border-black px-2 py-1 text-left">{rows.reduce((a, b) => a + Number(b.stock_adjustment_qty || 0), 0).toFixed(3)}</td>
+                                <td className="border border-black px-2 py-1 text-left">{rows.reduce((a, b) => a + Number(b.closing_stock), 0).toFixed(3)}</td>
+                                <td className="border border-black px-2 py-1 text-left">₹{rows.reduce((a, b) => a + Number(b.closing_value), 0).toLocaleString()}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+          )}
+        </div>
+
+        {grandTotals &&
+        <div className="mt-8 border-t-4 border-black pt-4" style={{ pageBreakInside: 'avoid' }}>
+                <h3 className="text-xs font-black uppercase tracking-widest mb-4">Grand Summary Totals</h3>
+                <table className="w-full text-[10px] border-collapse border-2 border-black">
+                    <tbody>
+                        <tr className="bg-gray-100 font-black">
+                            <td className="border border-black px-3 py-2">TOTAL OPENING</td>
+                            <td className="border border-black px-3 py-2 text-left">{grandTotals.opening.toFixed(3)}</td>
+                            <td className="border border-black px-3 py-2">TOTAL PURCHASE</td>
+                            <td className="border border-black px-3 py-2 text-left">{grandTotals.purchase.toFixed(3)}</td>
+                        </tr>
+                        <tr className="bg-white font-black">
+                            <td className="border border-black px-3 py-2 text-orange-900">TOTAL STOCK USED</td>
+                            <td className="border border-black px-3 py-2 text-left text-orange-900">{grandTotals.issues.toFixed(3)}</td>
+                            <td className="border border-black px-3 py-2 text-orange-900">TOTAL USAGE VALUE</td>
+                            <td className="border border-black px-3 py-2 text-left text-orange-900">₹{grandTotals.issue_val.toLocaleString()}</td>
+                        </tr>
+                        <tr className="bg-gray-50 font-black text-lg">
+                            <td className="border border-black px-3 py-2 underline">GRAND BALANCE</td>
+                            <td className="border border-black px-3 py-2 text-left underline">{grandTotals.closing.toFixed(3)}</td>
+                            <td className="border border-black px-3 py-2 underline">GRAND TOTAL VALUE</td>
+                            <td className="border border-black px-3 py-2 text-left underline">₹{grandTotals.closing_val.toLocaleString()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <table className="w-full mt-2 text-[8px] border-collapse border border-black footer-table" style={{ pageBreakInside: 'avoid' }}>
+          <thead>
+            <tr className="bg-gray-100 uppercase font-bold footer-section-title">
+              <th className="border border-black p-1 text-left">Daily Summary & Raw Returns</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="border border-black p-2 align-top footer-section-cell">
+                <div className="footer-summary-grid mb-2">
+                  <b>No. of Mahaprasada Devotees</b> 
+                  <span className="font-bold">: {devotees}</span>
+                  <b>No. of Times Cooked</b> 
+                  <span className="font-bold">: {timesCooked}</span>
+                </div>
+                
+                <div className="pt-1 border-t border-black/20">
+                  <div className="font-bold mb-1 uppercase text-[7px] opacity-70">Raw Returns (Remained)</div>
+                  <div className="footer-return-grid">
+                    {stockAdjustmentRowsForDisplay.map((r) =>
+                    <div key={`print-return-${r.item_name}`} className="footer-metric-row">
+                        <span title={r.item_name}>{r.item_name}</span>
+                        <span className="font-bold">: {r.qty_adjusted > 0 ? '+' : ''}{Number(r.qty_adjusted).toFixed(3)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <tr className="bg-gray-100 uppercase font-bold footer-section-title">
+              <th className="border border-black p-1 text-left">Manpower</th>
+            </tr>
+            <tr>
+              <td className="border border-black p-2 align-top footer-section-cell">
+                <div className="footer-manpower-grid">
+                  {personRows.map(([label, value]) =>
+                  <div key={`print-person-${label}`} className="footer-metric-row">
+                      <span>{label}</span>
+                      <span className="font-bold">: {fmt2(value)}</span>
+                    </div>
+                  )}
+                </div>
+              </td>
+            </tr>
+            <tr className="bg-gray-100 uppercase font-bold footer-section-title">
+              <th className="border border-black p-1 text-left">Wastage</th>
+            </tr>
+            <tr>
+              <td className="border border-black p-2 align-top footer-section-cell">
+                <div className="flex flex-col h-full">
+                  <div className="footer-wastage-grid flex-1">
+                    {wastageRowsForDisplay.map((w) =>
+                    <div key={`print-waste-${w.item_name}`} className="footer-metric-row">
+                        <span title={w.item_name}>{w.item_name}</span>
+                        <span className="font-semibold">: {Number(w.qty).toFixed(3)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-left font-bold mt-2 pt-1 border-t border-black text-[9px]">
+                    Total Wastage: {formatCurrency(wastageTotal || 0)}
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>);
 
 };

@@ -33,10 +33,10 @@ const ModulesPage = () => {
         {
           label: 'Today Tokens',
           value: canteenStats?.daily_tokens ?? 0,
-          color: 'from-orange-500 to-orange-600',
+          color: 'from-amber-500 to-amber-600',
           icon: Hash,
-          bg: 'bg-orange-50/50',
-          borderColor: 'border-orange-100'
+          bg: 'bg-amber-50/50',
+          borderColor: 'border-amber-100'
         },
         {
           label: 'Weekly Tokens',
@@ -49,10 +49,10 @@ const ModulesPage = () => {
         {
           label: 'Monthly Tokens',
           value: canteenStats?.monthly_tokens ?? 0,
-          color: 'from-orange-500 to-orange-600',
+          color: 'from-orange-700 to-orange-800',
           icon: TrendingUp,
           bg: 'bg-orange-50/50',
-          borderColor: 'border-orange-100'
+          borderColor: 'border-orange-200'
         }].
         map((stat, i) =>
         <div key={i} className={cn(

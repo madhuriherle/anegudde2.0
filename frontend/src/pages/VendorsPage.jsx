@@ -351,77 +351,72 @@ const VendorsPage = () => {
 
       <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
         <DialogContent
-          className="max-w-2xl border-border-temple !p-0 overflow-hidden shadow-2xl"
+          className="max-w-2xl border-border-temple p-0 overflow-hidden"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}>
           
-          <DialogHeader className="shrink-0 bg-[#F3E8D4] border-b border-border-temple/40 !p-6 !m-0">
-            <DialogTitle className="text-text-main font-temple text-xl font-normal">
-              {editingVendor ? 'Edit Vendor' : 'Add New Vendor'}
-            </DialogTitle>
+          <DialogHeader className="m-0">
+            <DialogTitle>{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</DialogTitle>
             <DialogDescription className="sr-only">Vendor form</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="bg-white flex flex-col" autoComplete="off">
-            <div className="p-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <Label className="text-text-main font-normal">Vendor Name (Shop Name) *</Label>
-                  <Input {...register('vendor_name')} placeholder="Enter shop name" className="h-11 text-base text-text-main" />
-                  {errors.vendor_name && <p className="text-xs text-red-500 font-bold uppercase">{errors.vendor_name.message}</p>}
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col overflow-hidden" autoComplete="off">
+            <div className="bg-white space-y-4 px-6 pt-4 pb-6 overflow-y-auto max-h-[60vh]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <Label className="text-text-main">Vendor Name (Shop Name) *</Label>
+                  <Input {...register('vendor_name')} className="text-text-main" />
+                  {errors.vendor_name && <p className="text-xs text-red-500">{errors.vendor_name.message}</p>}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-text-main font-normal">Contact Person</Label>
-                  <Input {...register('contact_person')} placeholder="Enter name" className="h-11 text-base text-text-main" />
+                <div>
+                  <Label className="text-text-main">Contact Person</Label>
+                  <Input {...register('contact_person')} className="text-text-main" />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-text-main font-normal">Primary Contact *</Label>
-                  <Input {...register('contact_number')} placeholder="Enter number" className="h-11 text-base text-text-main" />
-                  {errors.contact_number && <p className="text-xs text-red-500 font-bold uppercase">{errors.contact_number.message}</p>}
+                <div>
+                  <Label className="text-text-main">Primary Contact *</Label>
+                  <Input {...register('contact_number')} className="text-text-main" />
+                  {errors.contact_number && <p className="text-xs text-red-500">{errors.contact_number.message}</p>}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-text-main font-normal">Opening Balance *</Label>
+                <div>
+                  <Label className="text-text-main">Opening Balance *</Label>
                   <Input
                     type="text"
                     inputMode="decimal"
                     {...register('opening_balance')}
-                    className="h-11 text-base text-text-main bg-gray-50 cursor-not-allowed"
+                    className="text-text-main bg-gray-50 cursor-not-allowed"
                     readOnly />
                   
-                  {errors.opening_balance && <p className="text-xs text-red-500 font-bold uppercase">{errors.opening_balance.message}</p>}
+                  {errors.opening_balance && <p className="text-xs text-red-500">{errors.opening_balance.message}</p>}
                 </div>
 
-                <div className="md:col-span-2 space-y-1.5">
-                  <Label className="text-text-main font-normal">Address Line 1 *</Label>
-                  <Input {...register('address_line1')} placeholder="Street, area, etc." className="h-11 text-base text-text-main" />
-                  {errors.address_line1 && <p className="text-xs text-red-500 font-bold uppercase">{errors.address_line1.message}</p>}
+                <div className="md:col-span-2">
+                  <Label className="text-text-main">Address Line 1 *</Label>
+                  <Input {...register('address_line1')} className="text-text-main" />
+                  {errors.address_line1 && <p className="text-xs text-red-500">{errors.address_line1.message}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 md:col-span-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-text-main font-normal">City</Label>
-                    <Input {...register('city')} className="h-11 text-base text-text-main" />
+                  <div>
+                    <Label className="text-text-main">City</Label>
+                    <Input {...register('city')} className="text-text-main" />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-text-main font-normal">State</Label>
-                    <Input {...register('state')} className="h-11 text-base text-text-main" />
+                  <div>
+                    <Label className="text-text-main">State</Label>
+                    <Input {...register('state')} className="text-text-main" />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-text-main font-normal">Pin Code</Label>
-                    <Input {...register('postal_code')} className="h-11 text-base text-text-main" />
-                    {errors.postal_code && <p className="text-xs text-red-500 font-bold uppercase">{errors.postal_code.message}</p>}
+                  <div>
+                    <Label className="text-text-main">Pin Code</Label>
+                    <Input {...register('postal_code')} className="text-text-main" />
+                    {errors.postal_code && <p className="text-xs text-red-500">{errors.postal_code.message}</p>}
                   </div>
                 </div>
               </div>
             </div>
-            <DialogFooter className="gap-3 !p-6 !m-0 border-t border-border-temple/40 bg-[#F3E8D4] shrink-0">
-              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
-                Cancel
-              </Button>
-              <Button type="submit" disabled={mutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg border-none">
-                {mutation.isPending ? 'Saving...' : 'Save'}
+            <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 m-0 bg-[#F3E8D4]">
+              <Button type="button" variant="ghost" onClick={() => {setOpen(false);setEditingVendor(null);}}>Cancel</Button>
+              <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>

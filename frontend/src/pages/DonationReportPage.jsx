@@ -63,7 +63,75 @@ const DonationReportPage = () => {
   })();
 
   return (
-    <div className="space-y-6 donation-report-print report-print-container">
+    <div className="space-y-6 donation-report-print">
+      <style>{`
+        @media print {
+          @page { 
+            size: A4 landscape; 
+            margin: 8mm; 
+          }
+          header, aside, footer, .print\\:hidden { 
+            display: none !important; 
+          }
+          main { 
+            padding: 0 !important; 
+            margin: 0 !important; 
+          }
+          .lg\\:pl-64 { 
+            padding-left: 0 !important; 
+          }
+          body { 
+            background: white !important; 
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .donation-report-print { 
+            padding: 0 !important; 
+            margin: 0 !important; 
+            width: 100% !important;
+          }
+          .donation-report-print .rounded-xl { 
+            border: none !important; 
+            border-radius: 0 !important; 
+            box-shadow: none !important;
+          }
+          .donation-report-print table { 
+            width: 100% !important; 
+            table-layout: fixed !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border: 1px solid #d7c9ba !important;
+          }
+          .donation-report-print thead { display: table-header-group !important; }
+          .donation-report-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+          .donation-report-print th, .donation-report-print td { 
+            border-right: 1px solid #d7c9ba !important; 
+            border-bottom: 1px solid #d7c9ba !important; 
+            padding: 6px 4px !important;
+            font-size: 10px !important;
+          }
+          .donation-report-print th { border-top: 1px solid #d7c9ba !important; }
+          .donation-report-print tr td:last-child, .donation-report-print tr th:last-child { border-right: none !important; }
+          .donation-report-print tfoot td {
+            border: 1px solid #cab7a4 !important;
+          }
+          .donation-report-print .report-table-wrap {
+            border: 1px solid #d7c9ba !important;
+          }
+          .donation-report-print .grand-total-row td {
+            border-top: 2px solid #bfa892 !important;
+            border-bottom: 1px solid #bfa892 !important;
+          }
+          .donation-report-print th {
+            background-color: #f8efe5 !important;
+            font-weight: bold !important;
+          }
+          .donation-report-print .print-financial-year {
+            display: none !important;
+          }
+          }
+          `}</style>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <h2 className="page-title">Donation Report</h2>
         <div className="flex items-center gap-2">
