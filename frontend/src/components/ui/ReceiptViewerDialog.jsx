@@ -93,8 +93,8 @@ export function ReceiptViewerDialog({
         </div>
 
         {/* Professional Footer - Theme Footer Cream */}
-        <DialogFooter className="!p-6 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
-          <Button onClick={() => onOpenChange(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+        <DialogFooter className="!px-6 !py-4 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+          <Button onClick={() => onOpenChange(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-md">
             Close
           </Button>
         </DialogFooter>

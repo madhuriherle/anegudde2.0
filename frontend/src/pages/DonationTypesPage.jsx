@@ -220,18 +220,22 @@ const DonationTypesPage = () => {
                 </div>              </form>
             </CardContent>
           </Card>
-          <div className="rounded-xl border border-[#E7D8CC] bg-[#FFF9F2] px-4 py-3 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex items-center justify-center rounded-full bg-[#F3E8D4] border border-[#D9C8AF] px-2 py-0.5 text-[11px] font-bold text-[#6B3B24] tracking-wide">
-                Format Guide
-              </span>
+          <div className="bg-white border border-orange-100 rounded-lg px-4 py-3 shadow-sm">
+            <h3 className="text-xs font-bold tracking-wide text-[#8B4513] uppercase mb-2">
+              Donation Code Hint
+            </h3>
+
+            <div className="space-y-1.5 text-xs leading-relaxed text-gray-800">
+              <p>
+                Use <code className="font-semibold text-gray-900">{'{FY}'}</code> for financial year.
+              </p>
+              <p>
+                Pattern: <code className="font-semibold text-gray-900">{'{FY}'}-CODE</code>
+              </p>
+              <p>
+                Example: <code className="font-semibold text-gray-900">{'{FY}'}-ANN {'->'} 2026-27-ANN00001</code>
+              </p>
             </div>
-            <p className="text-[13px] text-[#5C4A3B] leading-relaxed">
-              Use <span className="font-bold text-primary">{'{FY}'}</span> for Financial Year (e.g. 2026-27).
-            </p>
-            <p className="text-[13px] text-[#5C4A3B] leading-relaxed mt-1">
-              Example: <span className="font-bold text-secondary">{'{FY}-ANN'}</span> {'->'} <span className="font-semibold text-[#2F1F14]">2026-27-ANN00001</span>
-            </p>
           </div>
         </div>}
 

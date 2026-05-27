@@ -30,3 +30,11 @@ class AuthUserOut(BaseModel):
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class ProfileUpdateRequest(BaseModel):
+    username: str
+    full_name: str
+    email: str | None = None
+    phone: str | None = None
+    password: str | None = None

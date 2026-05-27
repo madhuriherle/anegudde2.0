@@ -260,8 +260,8 @@ const UnitsPage = () => {
             <DetailItem label="Unit Name" value={viewingUnit?.unit_name} />
             <DetailItem label="Unit Code" value={viewingUnit?.unit_code} />
           </div>
-          <DialogFooter className="!p-6 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
-            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+          <DialogFooter className="!px-6 !py-4 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-md">
               Close
             </Button>
           </DialogFooter>

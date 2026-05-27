@@ -569,7 +569,7 @@ const UsageEntriesPage = () => {
                         : "bg-white text-text-main border-border-temple/40 hover:bg-bg-temple/40"
                     )}
                   >
-                    Raw Usage
+                    Raw Item Usage
                   </button>
                   <button
                     type="button"
@@ -581,7 +581,7 @@ const UsageEntriesPage = () => {
                         : "bg-white text-text-main border-border-temple/40 hover:bg-bg-temple/40"
                     )}
                   >
-                    Wastage
+                    Item Wastage
                   </button>
                   <button
                     type="button"
@@ -593,19 +593,13 @@ const UsageEntriesPage = () => {
                         : "bg-white text-text-main border-border-temple/40 hover:bg-bg-temple/40"
                     )}
                   >
-                    Adjustments
+                    Stock Adjustments
                   </button>
                 </div>
 
                 <div className="rounded-xl border border-border-temple/30 overflow-hidden shadow-sm bg-white">
                   {viewTab === 'raw' && (
                     <table className="w-full text-base text-left border-collapse">
-                      <thead className="bg-[#FAF7F2] border-b border-border-temple/30">
-                        <tr>
-                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider">Item Name</th>
-                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider text-right">Qty</th>
-                        </tr>
-                      </thead>
                       <tbody className="divide-y divide-border-temple/10">
                         {(viewingConsumption?.items || []).filter((item) => Number(item.quantity_used || 0) > 0).length === 0 ?
                           <tr>
@@ -635,13 +629,6 @@ const UsageEntriesPage = () => {
 
                   {viewTab === 'wastage' && (
                     <table className="w-full text-base text-left border-collapse">
-                      <thead className="bg-[#FAF7F2] border-b border-border-temple/30">
-                        <tr>
-                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider">Dish Name</th>
-                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider text-right">Qty</th>
-                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider text-right">Approx</th>
-                        </tr>
-                      </thead>
                       <tbody className="divide-y divide-border-temple/10">
                         {viewingWastages.filter((w) => Number(w.quantity || 0) > 0).length === 0 ?
                           <tr>
@@ -697,8 +684,8 @@ const UsageEntriesPage = () => {
               </div>
             </div>
           </div>
-          <DialogFooter className="!p-6 !m-0 border-t border-border-temple/40 !flex !flex-row !items-center !justify-end shrink-0 bg-[#F3E8D4]">
-            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+          <DialogFooter className="!px-6 !py-4 !m-0 border-t border-border-temple/40 !flex !flex-row !items-center !justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-md">
               Close
             </Button>
           </DialogFooter>
@@ -1118,7 +1105,7 @@ const UsageEntriesPage = () => {
 
             </div>
 
-            <DialogFooter className="gap-3 !m-0 bg-[#F3E8D4] !p-6 shrink-0 border-t border-border-temple/40">
+            <DialogFooter className="gap-3 !m-0 bg-[#F3E8D4] !px-6 !py-4 shrink-0 border-t border-border-temple/40">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">Cancel</Button>
               <Button type="submit" disabled={saveMutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg border-none">
                 {saveMutation.isPending ? 'Saving...' : 'Save'}

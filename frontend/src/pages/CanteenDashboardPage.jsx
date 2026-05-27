@@ -148,7 +148,7 @@ const DashboardPage = () => {
             <Button
               onClick={() => navigate('/items/rawitem')}
               variant="outline"
-              className="text-[12px] bg-white text-primary font-normal tracking-wider border border-primary/20 hover:bg-primary hover:text-white hover:border-primary px-3 h-8 rounded shadow-sm transition-all active:scale-95 leading-none">
+              className="text-[12px] bg-white text-primary font-normal tracking-wider border border-primary/60 hover:bg-primary hover:text-white hover:border-primary px-3 h-8 rounded shadow-md transition-all active:scale-95 leading-none">
               Inventory
             </Button>
           </CardHeader>
@@ -299,7 +299,7 @@ const DashboardPage = () => {
               variant="outline"
               size="sm"
               onClick={() => navigate('/wastages')}
-              className="text-[12px] bg-white text-primary font-normal tracking-wider border border-primary/20 hover:bg-primary hover:text-white hover:border-primary px-3 h-8 rounded shadow-sm transition-all active:scale-95 leading-none">
+              className="text-[12px] bg-white text-primary font-normal tracking-wider border border-primary/60 hover:bg-primary hover:text-white hover:border-primary px-3 h-8 rounded shadow-md transition-all active:scale-95 leading-none">
               Details
             </Button>
           </CardHeader>

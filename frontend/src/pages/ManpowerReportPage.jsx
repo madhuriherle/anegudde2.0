@@ -14,8 +14,9 @@ const ManpowerReportPage = () => {
   const { showError } = useNotification();
 
   const currentYear = new Date().getFullYear();
+  const currentMonth = String(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedMonth, setSelectedMonth] = useState('ALL');
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   const { fromDate, toDate } = useMemo(() => {
     if (selectedMonth === 'ALL') {
@@ -133,16 +134,47 @@ const ManpowerReportPage = () => {
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 10mm; }
+          html, body, #root, main {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
           header, aside, footer { display: none !important; }
           main { padding: 0 !important; }
           .lg\\:pl-64 { padding-left: 0 !important; }
-          .manpower-report-print { padding-top: 5mm !important; }
+          .manpower-report-print { padding-top: 5mm !important; background: #ffffff !important; background-color: #ffffff !important; }
+          .manpower-report-print,
+          .manpower-report-print div,
+          .manpower-report-print table,
+          .manpower-report-print thead,
+          .manpower-report-print tbody,
+          .manpower-report-print tfoot,
+          .manpower-report-print tr,
+          .manpower-report-print th,
+          .manpower-report-print td {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
           .manpower-report-print table { border-collapse: collapse; width: 100%; border: 1px solid #d7c9ba !important; }
           .manpower-report-print thead { display: table-header-group !important; }
           .manpower-report-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
           .manpower-report-print th, .manpower-report-print td { border: 1px solid #d7c9ba !important; padding: 4px 6px !important; }
-          .manpower-report-print th { border-top: 1px solid #d7c9ba !important; background-color: #f3f4f6 !important; }
+          .manpower-report-print th { border-top: 1px solid #d7c9ba !important; background-color: #ffffff !important; }
           .manpower-report-print tfoot td { border: 1px solid #cab7a4 !important; }
+          .manpower-report-print .manpower-report-card,
+          .manpower-report-print .report-table-wrap {
+            border: none !important;
+            box-shadow: none !important;
+          }
+          .manpower-report-print .manpower-print-header {
+            border-bottom: none !important;
+          }
+          .manpower-report-print .shadow-sm,
+          .manpower-report-print .shadow,
+          .manpower-report-print .shadow-lg,
+          .manpower-report-print .shadow-xl,
+          .manpower-report-print .shadow-2xl {
+            box-shadow: none !important;
+          }
         }
       `}</style>
 
@@ -164,7 +196,7 @@ const ManpowerReportPage = () => {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="h-10 w-full rounded-md border border-border-temple/50 bg-white px-3 text-sm text-text-main outline-none focus:border-primary transition-all">
+                className="h-10 w-full rounded-md border border-border-temple/50 bg-white px-3 text-sm text-text-main outline-none focus:border-border-temple/50 transition-all">
                 
                 {years.map((year) =>
                 <option key={year} value={year}>{year}</option>
@@ -176,7 +208,7 @@ const ManpowerReportPage = () => {
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="h-10 w-full rounded-md border border-border-temple/50 bg-white px-3 text-sm text-text-main outline-none focus:border-primary transition-all">
+                className="h-10 w-full rounded-md border border-border-temple/50 bg-white px-3 text-sm text-text-main outline-none focus:border-border-temple/50 transition-all">
                 
                 {months.map((m) =>
                 <option key={m.value} value={m.value}>{m.label}</option>
@@ -187,8 +219,8 @@ const ManpowerReportPage = () => {
         </CardContent>
       </Card>
 
-      <div className="bg-white border border-border-temple rounded-lg overflow-hidden shadow-sm">
-        <div className="p-6 text-center border-b border-border-temple/40 print:pb-2">
+      <div className="manpower-report-card bg-white border border-border-temple rounded-lg overflow-hidden shadow-sm">
+        <div className="manpower-print-header p-6 text-center border-b border-border-temple/40 print:pb-2">
           <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ</h1>
           <p className="text-sm font-bold text-text-main mt-1 uppercase tracking-wider">
             {selectedMonth === 'ALL' ? 'YEARLY' : 'MONTHLY'} MANPOWER REPORT — {selectedMonth === 'ALL' ? `YEAR ${selectedYear}` : `${String(parseInt(selectedMonth) + 1).padStart(2, '0')}-${selectedYear}`}
@@ -212,25 +244,25 @@ const ManpowerReportPage = () => {
               <table className="w-full text-base text-left border-collapse">
                 <thead>
                   {/* Category Header */}
-                  <tr className="bg-[#FAF7F2] text-[#3E2723] font-bold uppercase text-xs tracking-wider border-b border-border-temple">
-                    <th rowSpan={2} className="px-4 py-3 border-r border-border-temple text-left bg-[#F6EEDF]">Timeline</th>
-                    <th colSpan={3} className="px-4 py-3 border-r border-border-temple text-left bg-[#FFF8F0]">Chef (Cooking)</th>
+                  <tr className="bg-white text-[#3E2723] font-bold uppercase text-xs tracking-wider border-b border-border-temple">
+                    <th rowSpan={2} className="px-4 py-3 border-r border-border-temple text-left bg-white">Timeline</th>
+                    <th colSpan={3} className="px-4 py-3 border-r border-border-temple text-left bg-white">Chef (Cooking)</th>
                     <th colSpan={3} className="px-4 py-3 border-r border-border-temple text-left bg-white">Serving Persons</th>
-                    <th colSpan={3} className="px-4 py-3 text-left bg-[#FFF8F0]">Cleaners</th>
+                    <th colSpan={3} className="px-4 py-3 text-left bg-white">Cleaners</th>
                   </tr>
                   {/* Sub Header */}
                   <tr className="bg-white text-text-light font-bold uppercase text-[11px] tracking-wider border-b border-border-temple">
-                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-[#FAF7F2]/40">Regular</th>
-                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-[#FAF7F2]/40">Extra</th>
-                    <th className="px-2 py-2 border-r border-border-temple text-left text-primary font-black bg-[#FAF7F2]">Total</th>
+                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-white">Regular</th>
+                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-white">Extra</th>
+                    <th className="px-2 py-2 border-r border-border-temple text-left !text-text-light font-black bg-white">Total</th>
                     
                     <th className="px-2 py-2 border-r border-border-temple/40 text-left">Reg</th>
                     <th className="px-2 py-2 border-r border-border-temple/40 text-left">Addl</th>
-                    <th className="px-2 py-2 border-r border-border-temple text-left text-primary font-black bg-gray-50/50">Total</th>
+                    <th className="px-2 py-2 border-r border-border-temple text-left !text-text-light font-black bg-white">Total</th>
                     
-                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-[#FAF7F2]/40">Regular</th>
-                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-[#FAF7F2]/40">Extra</th>
-                    <th className="px-2 py-2 text-left text-primary font-black bg-[#FAF7F2]">Total</th>
+                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-white">Regular</th>
+                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-white">Extra</th>
+                    <th className="px-2 py-2 text-left !text-text-light font-black bg-white">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-temple/40">
@@ -241,33 +273,33 @@ const ManpowerReportPage = () => {
                       </td>
                       <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.regular_cooking}</td>
                       <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.additional_cooking}</td>
-                      <td className="px-2 py-3 border-r border-border-temple text-left font-bold text-secondary bg-[#FAF7F2]/30">{row.total_cooking}</td>
+                      <td className="px-2 py-3 border-r border-border-temple text-left font-bold text-text-main">{row.total_cooking}</td>
                       
                       <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.regular_serving}</td>
                       <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.additional_serving}</td>
-                      <td className="px-2 py-3 border-r border-border-temple text-left font-bold text-secondary bg-gray-50/10">{row.total_serving}</td>
+                      <td className="px-2 py-3 border-r border-border-temple text-left font-bold text-text-main">{row.total_serving}</td>
                       
                       <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.regular_cleaning}</td>
                       <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.additional_cleaning}</td>
-                      <td className="px-2 py-3 text-left font-bold text-secondary bg-[#FAF7F2]/30">{row.total_cleaning}</td>
+                      <td className="px-2 py-3 text-left font-bold text-text-main">{row.total_cleaning}</td>
                     </tr>
                 )}
                 </tbody>
                 {grandTotals &&
-                <tbody className="bg-[#EAD9C9] text-black font-black text-[15px] border-t-2 border-border-temple/60">
+                <tbody className="bg-[#FAF3E7] text-black font-black text-[15px] border-t-2 border-border-temple/60">
                     <tr className="grand-total-row text-black">
                       <td className="px-4 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] font-black">GRAND TOTAL</td>
                       <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.regular_cooking}</td>
                       <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.additional_cooking}</td>
-                      <td className="px-2 py-5 border-r border-black/10 text-left font-black text-secondary">{grandTotals.total_cooking}</td>
+                      <td className="px-2 py-5 border-r border-black/10 text-left font-black text-black">{grandTotals.total_cooking}</td>
                       
                       <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.regular_serving}</td>
                       <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.additional_serving}</td>
-                      <td className="px-2 py-5 border-r border-black/10 text-left font-black text-secondary">{grandTotals.total_serving}</td>
+                      <td className="px-2 py-5 border-r border-black/10 text-left font-black text-black">{grandTotals.total_serving}</td>
                       
                       <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.regular_cleaning}</td>
                       <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.additional_cleaning}</td>
-                      <td className="px-2 py-5 text-left font-black text-secondary">{grandTotals.total_cleaning}</td>
+                      <td className="px-2 py-5 text-left font-black text-black">{grandTotals.total_cleaning}</td>
                     </tr>
                   </tbody>
               }

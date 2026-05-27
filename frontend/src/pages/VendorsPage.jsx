@@ -341,8 +341,8 @@ const VendorsPage = () => {
               filter(Boolean).join(', ')} />
             
           </div>
-          <DialogFooter className="!p-6 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
-            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+          <DialogFooter className="!px-6 !py-4 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-md">
               Close
             </Button>
           </DialogFooter>
@@ -415,8 +415,8 @@ const VendorsPage = () => {
               </div>
             </div>
             <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 m-0 bg-[#F3E8D4]">
-              <Button type="button" variant="ghost" onClick={() => {setOpen(false);setEditingVendor(null);}}>Cancel</Button>
-              <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Saving...' : 'Save'}
+              <Button type="button" variant="ghost" onClick={() => {setOpen(false);setEditingVendor(null);}} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">Cancel</Button>
+              <Button type="submit" disabled={mutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg border-none">{mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>

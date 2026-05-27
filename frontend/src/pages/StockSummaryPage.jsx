@@ -105,11 +105,28 @@ export const StockSummaryPage = () => {
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 10mm; }
+          html, body, #root, main {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
           header, aside, footer { display: none !important; }
           main { padding: 0 !important; }
           .lg\\:pl-64 { padding-left: 0 !important; }
-          .stock-summary-print { padding-top: 8mm !important; }
+          .stock-summary-print { padding-top: 8mm !important; background: #ffffff !important; background-color: #ffffff !important; }
           .stock-summary-print, .stock-summary-print * { overflow: visible !important; }
+          .stock-summary-print,
+          .stock-summary-print div,
+          .stock-summary-print section,
+          .stock-summary-print table,
+          .stock-summary-print thead,
+          .stock-summary-print tbody,
+          .stock-summary-print tfoot,
+          .stock-summary-print tr,
+          .stock-summary-print th,
+          .stock-summary-print td {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
           .stock-summary-print table { table-layout: fixed; width: 100%; border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid #d7c9ba !important; }
           .stock-summary-print thead { display: table-header-group !important; }
           .stock-summary-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -121,7 +138,21 @@ export const StockSummaryPage = () => {
           .stock-summary-print th { border-top: 1px solid #d7c9ba !important; }
           .stock-summary-print tr td:last-child, .stock-summary-print tr th:last-child { border-right: none !important; }
           .stock-summary-print tfoot td { border: 1px solid #cab7a4 !important; }
-          .stock-summary-print .report-table-wrap { border: 1px solid #d7c9ba !important; }
+          .stock-summary-print .stock-summary-report-card,
+          .stock-summary-print .report-table-wrap {
+            border: none !important;
+            box-shadow: none !important;
+          }
+          .stock-summary-print .stock-summary-print-header {
+            border-bottom: none !important;
+          }
+          .stock-summary-print .shadow-sm,
+          .stock-summary-print .shadow,
+          .stock-summary-print .shadow-lg,
+          .stock-summary-print .shadow-xl,
+          .stock-summary-print .shadow-2xl {
+            box-shadow: none !important;
+          }
           .stock-summary-print .grand-total-row td { border-top: 2px solid #bfa892 !important; border-bottom: 1px solid #bfa892 !important; }
         }
       `}</style>
@@ -182,8 +213,8 @@ export const StockSummaryPage = () => {
         </CardContent>
       </Card>
 
-      <div className="bg-white border border-border-temple rounded-lg overflow-hidden shadow-sm print:border-none print:shadow-none">
-        <div className="p-6 text-center border-b border-border-temple/40 print:pb-2">
+      <div className="stock-summary-report-card bg-white border border-border-temple rounded-lg overflow-hidden shadow-sm print:border-none print:shadow-none">
+        <div className="stock-summary-print-header p-6 text-center border-b border-border-temple/40 print:pb-2">
           <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ (ಅನ್ನದಾನ)</h1>
           <p className="text-sm font-bold text-text-main mt-1">
             STOCK SUMMARY REPORT FOR DATE :{' '}
@@ -238,7 +269,7 @@ export const StockSummaryPage = () => {
                   ))}
                 </tbody>
                 {grandTotals && (
-                <tbody className="bg-[#D9C8AF] border-t-2 border-border-temple/60 text-black">
+                <tbody className="bg-[#FAF3E7] border-t-2 border-border-temple/60 text-black">
                   <tr className="grand-total-row font-extrabold text-[16px]">
                     <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] !font-extrabold">GRAND TOTAL</td>
                     <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words !font-extrabold">{grandTotals.opening.toFixed(3)}</td>
@@ -315,7 +346,7 @@ export const StockSummaryPage = () => {
               {grandTotals && (
                 <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white mt-8">
                   <table className="w-full table-fixed text-sm border-collapse">
-                    <tbody className="bg-[#D9C8AF] border-t-2 border-border-temple/60 text-black">
+                    <tbody className="bg-[#FAF3E7] border-t-2 border-border-temple/60 text-black">
                       <tr className="grand-total-row font-black text-[15px]">
                         <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] font-black">GRAND TOTAL</td>
                         <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words font-black">{grandTotals.opening.toFixed(3)}</td>

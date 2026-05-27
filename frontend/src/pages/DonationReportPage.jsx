@@ -80,6 +80,10 @@ const DonationReportPage = () => {
           .lg\\:pl-64 { 
             padding-left: 0 !important; 
           }
+          html, body, #root, main {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
           body { 
             background: white !important; 
             -webkit-print-color-adjust: exact !important;
@@ -89,6 +93,21 @@ const DonationReportPage = () => {
             padding: 0 !important; 
             margin: 0 !important; 
             width: 100% !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
+          .donation-report-print,
+          .donation-report-print div,
+          .donation-report-print section,
+          .donation-report-print table,
+          .donation-report-print thead,
+          .donation-report-print tbody,
+          .donation-report-print tfoot,
+          .donation-report-print tr,
+          .donation-report-print th,
+          .donation-report-print td {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
           }
           .donation-report-print .rounded-xl { 
             border: none !important; 
@@ -116,15 +135,19 @@ const DonationReportPage = () => {
             border: 1px solid #cab7a4 !important;
           }
           .donation-report-print .report-table-wrap {
-            border: 1px solid #d7c9ba !important;
+            border: none !important;
+            box-shadow: none !important;
           }
           .donation-report-print .grand-total-row td {
             border-top: 2px solid #bfa892 !important;
             border-bottom: 1px solid #bfa892 !important;
           }
           .donation-report-print th {
-            background-color: #f8efe5 !important;
+            background-color: #ffffff !important;
             font-weight: bold !important;
+          }
+          .donation-report-print .donation-print-header {
+            border-bottom: none !important;
           }
           .donation-report-print .print-financial-year {
             display: none !important;
@@ -190,7 +213,7 @@ const DonationReportPage = () => {
       </Card>
 
           <div className="overflow-hidden rounded-xl border border-border-temple bg-white shadow-sm print:border-none print:shadow-none">
-          <div className="border-b border-border-temple bg-white px-5 pb-7 pt-5">
+          <div className="donation-print-header border-b border-border-temple bg-white px-5 pb-7 pt-5">
           <div className="relative text-center">
             <div className="absolute right-0 top-0 hidden print:block bg-[#F8E6D1] border border-[#B08968] px-3 py-1.5 rounded-md print-financial-year">
                <span className="text-[11px] font-bold text-[#5C2E1F] whitespace-nowrap">

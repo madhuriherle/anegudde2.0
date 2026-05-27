@@ -305,7 +305,7 @@ const UsersPage = () => {
                   }} />
               </div>
             </div>
-            <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 m-0 bg-[#F3E8D4]">
+            <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 bg-[#F3E8D4]">
               <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
                 Cancel
               </Button>

@@ -1,10 +1,10 @@
 from datetime import date
 import os
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, PermissionChecker
-from app.db.models import DonationEntry, User
+from app.db.models import User
 from app.services.receipt_sequence_service import preview_next_donation_receipt
 from app.services import donation_service
 
@@ -14,7 +14,8 @@ router = APIRouter()
 def get_preview_receipt_number(
     donation_date: date,
     donation_type_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("donations.read"))
 ):
     return {"receipt_number": preview_next_donation_receipt(db, donation_date, donation_type_id)}
 

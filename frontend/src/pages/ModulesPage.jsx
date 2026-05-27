@@ -35,29 +35,25 @@ const ModulesPage = () => {
           value: canteenStats?.daily_tokens ?? 0,
           color: 'from-amber-500 to-amber-600',
           icon: Hash,
-          bg: 'bg-amber-50/50',
-          borderColor: 'border-amber-100'
+          bg: 'bg-amber-50/50'
         },
         {
           label: 'Weekly Tokens',
           value: canteenStats?.weekly_tokens ?? 0,
           color: 'from-orange-500 to-orange-600',
           icon: Calendar,
-          bg: 'bg-orange-50/50',
-          borderColor: 'border-orange-100'
+          bg: 'bg-orange-50/50'
         },
         {
           label: 'Monthly Tokens',
           value: canteenStats?.monthly_tokens ?? 0,
           color: 'from-orange-700 to-orange-800',
           icon: TrendingUp,
-          bg: 'bg-orange-50/50',
-          borderColor: 'border-orange-200'
+          bg: 'bg-orange-50/50'
         }].
         map((stat, i) =>
         <div key={i} className={cn(
-          "relative group overflow-hidden bg-white p-6 rounded-3xl border border-border-temple/30 shadow-sm transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.12)] hover:-translate-y-2 hover:scale-[1.01]",
-          stat.borderColor
+          "relative group overflow-hidden bg-white p-6 rounded-3xl border border-border-temple/30 shadow-sm transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-border-temple/50 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.12)] hover:-translate-y-2 hover:scale-[1.01]"
         )}>
             <div className="relative flex items-center gap-6">              <div className={cn("p-4 rounded-2xl bg-gradient-to-br shadow-lg shadow-black/5 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3", stat.color)}>
                 <stat.icon className="w-8 h-8 text-white" />
@@ -121,7 +117,7 @@ const ModulesPage = () => {
 
         <div className="lg:col-span-12">
           <Card className="border-border-temple/40 shadow-2xl bg-white rounded-3xl overflow-hidden">
-            <CardHeader className="bg-[#FAF7F2]/80 backdrop-blur-sm border-b border-border-temple/20 py-6 px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <CardHeader className="bg-white border-b border-border-temple/20 py-6 px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-2xl">
                   <UtensilsCrossed className="w-6 h-6 text-primary" />

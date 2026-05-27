@@ -461,7 +461,7 @@ const SettingsPage = ({ section = null }) => {
   return (
     <div className={cn(
       "mx-auto max-w-[1600px] px-4 pb-24 -m-4 sm:-m-6 lg:-m-8 p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-64px)]",
-      activeSection === 'temple' ? "bg-[#F6F7F8]" : "bg-[#F8F4EE]"
+      activeSection === 'temple' ? "bg-[#F8F4EE]" : "bg-[#F8F4EE]"
     )}>
       {/* Header */}
       <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -956,15 +956,15 @@ const SettingsPage = ({ section = null }) => {
 
       {activeSection === 'cleanup' && (
         <div className="max-w-6xl space-y-6">
-          <div className="flex items-start gap-4 rounded-2xl border border-[#FCA5A5] bg-[#FEF2F2] p-5">
+          <div className="flex items-start gap-4 rounded-2xl border border-border-temple/60 bg-white p-5 shadow-sm">
             <div className="rounded-2xl bg-white p-3 text-[#B91C1C] shadow-sm">
               <AlertTriangle className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="!text-[19px] font-black text-[#7F1D1D]">
+              <h3 className="!text-[19px] font-black text-secondary">
                 Clear only operational records
               </h3>
-              <p className="mt-1 text-[15px] font-medium leading-relaxed text-[#7F1D1D]/80">
+              <p className="mt-1 text-[15px] font-medium leading-relaxed text-text-normal">
                 Select operational data to clear. Master setup data stays protected.
               </p>
             </div>
@@ -1007,15 +1007,15 @@ const SettingsPage = ({ section = null }) => {
             })}
           </div>
 
-          <div className="flex items-center gap-3 rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] p-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-border-temple/60 bg-white p-4 shadow-sm">
             <div className="rounded-xl bg-white p-2 text-[#15803D] shadow-sm">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="!text-[17px] font-black text-[#14532D]">
+              <h3 className="!text-[17px] font-black text-secondary">
                 Will not be deleted
               </h3>
-              <p className="mt-0.5 text-[13px] font-semibold text-[#166534]/80">
+              <p className="mt-0.5 text-[13px] font-semibold text-text-normal">
                 Master setup data stays protected.
               </p>
             </div>

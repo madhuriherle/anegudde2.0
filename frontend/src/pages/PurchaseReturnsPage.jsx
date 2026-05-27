@@ -479,7 +479,7 @@ const PurchaseReturnsPage = () => {
             </div>
           </div>
 
-          <DialogFooter className="gap-3 !m-0 bg-[#F3E8D4] !p-6 border-t border-border-temple/40 shrink-0">
+          <DialogFooter className="gap-3 !m-0 bg-[#F3E8D4] !px-6 !py-4 border-t border-border-temple/40 shrink-0">
             <Button
               type="button"
               variant="ghost"
@@ -590,8 +590,8 @@ const PurchaseReturnsPage = () => {
             )}
           </div>
 
-          <DialogFooter className="shrink-0 bg-[#F3E8D4] border-t border-border-temple/40 !p-6 !m-0 flex justify-end">
-            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-normal border-none shadow-lg">
+          <DialogFooter className="shrink-0 bg-[#F3E8D4] border-t border-border-temple/40 !px-6 !py-4 !m-0 flex justify-end">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white font-normal border-none shadow-md">
               Close
             </Button>
           </DialogFooter>

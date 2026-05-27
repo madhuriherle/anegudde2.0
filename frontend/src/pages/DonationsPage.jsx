@@ -564,8 +564,8 @@ const DonationsPage = () => {
               </div>
             }
           </div>
-          <DialogFooter className="!p-6 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
-            <Button onClick={() => setDevoteeDetailsOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+          <DialogFooter className="!px-6 !py-4 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setDevoteeDetailsOpen(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-md">
               Close
             </Button>
           </DialogFooter>
@@ -620,8 +620,8 @@ const DonationsPage = () => {
               </div>
             }
           </div>
-          <DialogFooter className="!p-6 !mx-0 !mb-0 border-t border-border-temple/40 !flex !flex-row !items-center !justify-end shrink-0 bg-[#F3E8D4]">
-            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+          <DialogFooter className="!px-6 !py-4 !mx-0 !mb-0 border-t border-border-temple/40 !flex !flex-row !items-center !justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-md">
               Close
             </Button>
           </DialogFooter>
@@ -882,7 +882,7 @@ const DonationsPage = () => {
                     variant="outline"
                     onClick={() => append({ search_id: '', item_id: 0, quantity: 0 })}
                     className="h-10 text-base font-bold border-primary text-primary hover:bg-primary hover:text-white transition-colors">
-                    <Plus className="h-4 w-4 mr-1" /> Add Another Item
+                    <Plus className="h-4 w-4 mr-1" /> Add Item
                   </Button>
                   
                   {errors.items?.message && <p className="text-sm text-error font-black uppercase tracking-widest">{errors.items.message}</p>}
@@ -891,7 +891,7 @@ const DonationsPage = () => {
             </div>
 
             {/* Standard Footer Bar */}
-            <DialogFooter className="gap-3 !m-0 bg-[#F3E8D4] shrink-0 !p-6">
+            <DialogFooter className="gap-3 !m-0 bg-[#F3E8D4] shrink-0 !px-6 !py-4">
               <Button
                 type="button"
                 variant="ghost"

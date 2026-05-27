@@ -409,15 +409,15 @@ const ItemsPage = () => {
 
           <div className="flex-1 p-8 bg-white space-y-6 overflow-y-auto custom-scrollbar">
             {latestPriceRow && (
-              <div className="flex items-center justify-between p-4 px-6 rounded-xl border border-[#F1E3D3] bg-[#FFFCF8] shadow-sm">
-                <span className="text-lg text-primary uppercase tracking-tight">Latest Price ({formatDate(latestPriceRow.purchase_date)})</span>
-                <span className="text-3xl text-primary">{formatCurrency(latestPriceRow.price)}</span>
+              <div className="flex items-center justify-between p-4 px-6 rounded-xl border border-[#F1E3D3] bg-white shadow-sm">
+                <span className="text-base font-bold text-text-main uppercase tracking-tight">Latest Price ({formatDate(latestPriceRow.purchase_date)})</span>
+                <span className="text-2xl font-bold text-text-main">{formatCurrency(latestPriceRow.price)}</span>
               </div>
             )}
 
             <div className="overflow-hidden rounded-xl border border-border-temple/40 shadow-sm">
               <table className="w-full table-auto text-left text-base border-collapse">
-                <thead className="bg-[#FAF7F2] border-b border-border-temple/40">
+                <thead className="bg-white border-b border-border-temple/40">
                   <tr>
                     <th className="px-6 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">Date</th>
                     <th className="px-6 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">Vendor</th>
@@ -452,8 +452,8 @@ const ItemsPage = () => {
             </div>
           </div>
 
-          <DialogFooter className="!p-6 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
-            <Button onClick={() => setPriceHistoryOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white border-none shadow-lg">
+          <DialogFooter className="!px-6 !py-4 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setPriceHistoryOpen(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white border-none shadow-md">
               Close
             </Button>
           </DialogFooter>
@@ -498,7 +498,7 @@ const ItemsPage = () => {
                 value={formatQuantityWithUnit(viewingItem?.current_stock || 0, viewingItem?.unit)}
                 valueClassName={cn(
                   "font-bold",
-                  Number(viewingItem?.current_stock) <= Number(viewingItem?.min_stock_level) ? 'text-error' : 'text-primary'
+                  Number(viewingItem?.current_stock) <= Number(viewingItem?.min_stock_level) ? 'text-error' : 'text-text-main'
                 )} />
               
               <DetailItem label="Current Rate" value={formatCurrency(viewingItem?.default_price || 0)} />
@@ -506,8 +506,8 @@ const ItemsPage = () => {
             </div>
           </div>
 
-          <DialogFooter className="!p-6 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
-            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+          <DialogFooter className="!px-6 !py-4 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-md">
               Close
             </Button>
           </DialogFooter>
@@ -598,7 +598,7 @@ const ItemsPage = () => {
                 </div>
               </div>
             </div>
-            <DialogFooter className="gap-3 !m-0 !p-6 border-t border-border-temple/40 bg-[#F3E8D4]">
+            <DialogFooter className="gap-3 !px-6 !py-4 border-t border-border-temple/40 bg-[#F3E8D4]">
               <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">Cancel</Button>
               <Button type="submit" disabled={mutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg border-none">
                 {mutation.isPending ? 'Saving...' : 'Save'}

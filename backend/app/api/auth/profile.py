@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.core.security import hash_password
 from app.db.models import User, FinancialYear
-from app.schemas.auth import AuthUserOut
+from app.schemas.auth import AuthUserOut, ProfileUpdateRequest
 
 router = APIRouter()
 
@@ -28,3 +31,38 @@ def me(
         if rp.status == 1
     ]
     return user_out
+
+
+@router.put("/update_profile", response_model=AuthUserOut)
+def update_profile(
+    payload: ProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    username = payload.username.strip()
+    full_name = payload.full_name.strip()
+    email = payload.email.strip() if payload.email else None
+    phone = payload.phone.strip() if payload.phone else None
+
+    if not username:
+        raise HTTPException(status_code=400, detail="Username is required")
+    if not full_name:
+        raise HTTPException(status_code=400, detail="Full name is required")
+
+    duplicate = db.query(User).filter(User.username == username, User.id != current_user.id).first()
+    if duplicate:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    current_user.username = username
+    current_user.full_name = full_name
+    current_user.email = email
+    current_user.phone = phone
+
+    if payload.password and payload.password.strip():
+        current_user.password = hash_password(payload.password.strip())
+
+    current_user.updated_at = datetime.now(timezone.utc)
+    current_user.updated_by = current_user.id
+    db.commit()
+    db.refresh(current_user)
+    return me(current_user=current_user, db=db)

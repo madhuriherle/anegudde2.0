@@ -191,12 +191,29 @@ const CanteenSummaryPage = () => {
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 10mm; }
+          html, body, #root, main {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
           header, aside, footer { display: none !important; }
           main { padding: 0 !important; }
           .lg\\:pl-64 { padding-left: 0 !important; }
-          .canteen-summary-print { padding-top: 8mm !important; }
+          .canteen-summary-print { padding-top: 8mm !important; background: #ffffff !important; background-color: #ffffff !important; }
           .canteen-summary-print, .canteen-summary-print * { overflow: visible !important; }
           .canteen-summary-print { font-size: 11px; }
+          .canteen-summary-print,
+          .canteen-summary-print div,
+          .canteen-summary-print section,
+          .canteen-summary-print table,
+          .canteen-summary-print thead,
+          .canteen-summary-print tbody,
+          .canteen-summary-print tfoot,
+          .canteen-summary-print tr,
+          .canteen-summary-print th,
+          .canteen-summary-print td {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
           .canteen-summary-print table { table-layout: fixed; width: 100%; border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid #d7c9ba !important; }
           .canteen-summary-print thead { display: table-header-group !important; }
           .canteen-summary-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -208,11 +225,25 @@ const CanteenSummaryPage = () => {
           .canteen-summary-print th { border-top: 1px solid #d7c9ba !important; }
           .canteen-summary-print tr td:last-child, .canteen-summary-print tr th:last-child { border-right: none !important; }
           .canteen-summary-print tfoot td { border: 1px solid #cab7a4 !important; }
-          .canteen-summary-print .report-table-wrap { border: 1px solid #d7c9ba !important; }
+          .canteen-summary-print .canteen-summary-report-card,
+          .canteen-summary-print .report-table-wrap {
+            border: none !important;
+            box-shadow: none !important;
+          }
+          .canteen-summary-print .canteen-summary-print-header {
+            border-bottom: none !important;
+          }
+          .canteen-summary-print .shadow-sm,
+          .canteen-summary-print .shadow,
+          .canteen-summary-print .shadow-lg,
+          .canteen-summary-print .shadow-xl,
+          .canteen-summary-print .shadow-2xl {
+            box-shadow: none !important;
+          }
           .canteen-summary-print .grand-total-row td { border-top: 2px solid #bfa892 !important; border-bottom: 1px solid #bfa892 !important; }
           .canteen-summary-print .footer-table { border-collapse: collapse; width: 100%; margin-top: 4mm; }
           .canteen-summary-print .footer-table th, .canteen-summary-print .footer-table td { border: 1px solid #e2e8f0 !important; }
-          .canteen-summary-print .footer-table th { background-color: #f8fafc !important; }
+          .canteen-summary-print .footer-table th { background-color: #ffffff !important; }
           .canteen-summary-print .footer-table { page-break-inside: avoid; break-inside: avoid; }
           .canteen-summary-print .footer-section-title { font-size: 9px !important; letter-spacing: 0.02em; }
           .canteen-summary-print .footer-section-cell { padding: 7px 8px !important; vertical-align: top; }
@@ -280,8 +311,8 @@ const CanteenSummaryPage = () => {
         </CardContent>
       </Card>
 
-      <div className="bg-white border border-border-temple rounded-lg overflow-hidden shadow-sm">
-        <div className="p-6 text-center border-b border-border-temple/40 print:pb-2">
+      <div className="canteen-summary-report-card bg-white border border-border-temple rounded-lg overflow-hidden shadow-sm">
+        <div className="canteen-summary-print-header p-6 text-center border-b border-border-temple/40 print:pb-2">
           <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ (ಅನ್ನದಾನ)</h1>
           <p className="text-sm font-bold text-text-main mt-1">
             CANTEEN SUMMARY REPORT FOR DATE : <span className="font-extrabold">{formatDate(selectedDate)}</span>
@@ -336,7 +367,7 @@ const CanteenSummaryPage = () => {
                   ))}
                 </tbody>
                 {grandTotals && (
-                  <tbody className="bg-[#EAD9C9] text-black font-black text-[15px] border-t-2 border-border-temple/60">
+                  <tbody className="bg-[#FAF3E7] text-black font-black text-[15px] border-t-2 border-border-temple/60">
                     <tr className="grand-total-row text-black">
                       <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] font-black">GRAND TOTAL</td>
                       <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap font-black">{grandTotals.opening.toFixed(3)}</td>
@@ -413,7 +444,7 @@ const CanteenSummaryPage = () => {
               {grandTotals && (
                 <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white mt-8">
                   <table className="w-full table-fixed text-sm border-collapse">
-                    <tbody className="bg-[#D9C8AF] border-t-2 border-border-temple/60 text-black">
+                    <tbody className="bg-[#FAF3E7] border-t-2 border-border-temple/60 text-black">
                       <tr className="grand-total-row font-black text-[15px]">
                         <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em]">GRAND TOTAL</td>
                         <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap">{grandTotals.opening.toFixed(3)}</td>
@@ -475,7 +506,7 @@ const CanteenSummaryPage = () => {
                   <table className="w-full table-auto text-sm border-collapse">
                     <thead className="bg-[#FAF7F2] border-b border-border-temple">
                       <tr className="text-text-main font-normal uppercase">
-                        <th colSpan={3} className="px-3 py-2 text-left text-red-700">Wastage</th>
+                        <th colSpan={3} className="px-3 py-2 text-left text-primary">Wastage</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border-temple/40">
@@ -489,7 +520,7 @@ const CanteenSummaryPage = () => {
                         </tr>
                   )}
                     </tbody>
-                    <tbody className="bg-gray-50 font-normal border-t border-border-temple">
+                    <tbody className="bg-white font-normal border-t border-border-temple">
                       <tr>
                         <td colSpan={2} className="px-3 py-2 border-r border-border-temple text-left">Total Wastage</td>
                         <td className="px-3 py-2 text-left text-base">{formatCurrency(wastageTotal || 0)}</td>

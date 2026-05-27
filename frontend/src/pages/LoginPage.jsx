@@ -18,8 +18,6 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required')
 });
 
-
-
 const LoginPage = () => {
   const { login } = useAuth();
   const { showSuccess, showError } = useNotification();
@@ -71,7 +69,7 @@ const LoginPage = () => {
 
       <div className="flex-1 flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
-          <Card className="border border-[#E7C58A] shadow-2xl bg-[#FFFDF9]/85 backdrop-blur-md">
+          <Card className="border border-[#E7C58A] shadow-2xl bg-white">
             <CardHeader className="space-y-2 pb-6">
               <CardTitle className="text-2xl font-bold text-center text-[#4A2E1F] font-serif">
                 Login to your account
@@ -79,7 +77,8 @@ const LoginPage = () => {
 
               <p className="text-sm text-[#7A5C3E] text-center">
                 Welcome to Anegudde Inventory Management System (AIMS)
-              </p>            </CardHeader>
+              </p>
+            </CardHeader>
 
             <CardContent>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -165,8 +164,8 @@ const LoginPage = () => {
       <div className="relative z-10">
         <Footer />
       </div>
-    </div>);
-
+    </div>
+  );
 };
 
 export default LoginPage;

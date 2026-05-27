@@ -228,7 +228,7 @@ const MainLayout = () => {
       </aside>
 
       <div className="lg:pl-64 flex min-h-dvh flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 bg-bg-cream border-b border-border-temple sm:px-6 shadow-sm">
+        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 bg-white border-b border-border-temple sm:px-6 shadow-sm">
           <div className="flex items-center gap-4">
             <button
               className="p-2 text-secondary hover:bg-secondary/5 rounded-md transition-colors lg:hidden"
