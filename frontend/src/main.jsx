@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import './index.css';
+import './report-print.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

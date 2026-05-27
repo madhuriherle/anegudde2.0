@@ -19,7 +19,7 @@ import { DetailItem } from '../components/ui/DetailItem';
 import { ReceiptViewerDialog } from '../components/ui/ReceiptViewerDialog';
 import { formatDate } from '../utils/date';
 import { formatQuantityWithUnit } from '../utils/quantity';
-import { Plus, Trash2, Search, X, ReceiptText } from 'lucide-react';
+import { Plus, Trash, Trash2, Search, X, ReceiptText } from 'lucide-react';
 
 import { usePermission } from '../hooks/usePermission';
 
@@ -620,8 +620,8 @@ const DonationsPage = () => {
               </div>
             }
           </div>
-          <DialogFooter className="!p-6 !mx-0 !mb-0 border-t border-border-temple/40 !flex !flex-row !items-center !justify-end shrink-0 bg-[#F3E8D4]">
-            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+          <DialogFooter className="!py-3 !px-6 !mx-0 !mb-0 border-t border-border-temple/40 !flex !flex-row !items-center !justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white font-semibold border-none shadow-sm">
               Close
             </Button>
           </DialogFooter>
@@ -792,7 +792,7 @@ const DonationsPage = () => {
                 </div>
 
                 <div className="rounded-xl border border-border-temple/40 bg-white shadow-sm overflow-hidden">
-                  <div className="grid grid-cols-[120px_1fr_150px_80px] gap-4 items-center bg-bg-temple/60 px-6 py-4 border-b border-border-temple/40">
+                  <div className="grid grid-cols-[140px_1fr_140px_80px] gap-4 items-center bg-bg-temple/60 px-6 py-4 border-b border-border-temple/40">
                     <div className="text-sm font-bold uppercase tracking-wider text-text-main">Item Code</div>
                     <div className="text-sm font-bold uppercase tracking-wider text-text-main">Item Name *</div>
                     <div className="text-sm font-bold uppercase tracking-wider text-text-main text-center">Quantity *</div>
@@ -800,10 +800,10 @@ const DonationsPage = () => {
                   </div>
                   <div className="divide-y divide-border-temple/20">
                     {fields.map((field, index) =>
-                      <div key={field.id} className="grid grid-cols-[120px_1fr_150px_80px] gap-4 items-start px-6 py-5 hover:bg-bg-temple/10 transition-colors">
+                      <div key={field.id} className="grid grid-cols-[140px_1fr_140px_80px] gap-4 items-start px-6 py-5 hover:bg-bg-temple/10 transition-colors">
                         <Input
                           type="text"
-                          className="h-11 text-base text-center text-text-main"
+                          className="h-11 text-base text-center text-text-main font-normal"
                           {...register(`items.${index}.search_id`)}
                           placeholder="Code"
                           onChange={(e) => {
@@ -855,7 +855,7 @@ const DonationsPage = () => {
                                 setValue(`items.${index}.quantity`, '');
                               }
                             }}
-                            className="h-11 text-lg font-normal text-center text-text-main"
+                            className="h-11 text-base font-normal text-center text-text-main"
                             placeholder="0.000"
                           />
                           {errors.items?.[index]?.quantity && <p className="text-[10px] text-error font-bold text-center">{errors.items[index]?.quantity?.message}</p>}
@@ -866,9 +866,8 @@ const DonationsPage = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => remove(index)}
-                            className="h-11 w-11 p-0 text-error hover:bg-error/5 rounded-full"
-                            disabled={fields.length === 1}>
-                            <Trash2 className="w-5 h-5" />
+                            className="h-10 w-10 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors">
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
@@ -882,7 +881,7 @@ const DonationsPage = () => {
                     variant="outline"
                     onClick={() => append({ search_id: '', item_id: 0, quantity: 0 })}
                     className="h-10 text-base font-bold border-primary text-primary hover:bg-primary hover:text-white transition-colors">
-                    <Plus className="h-4 w-4 mr-1" /> Add Another Item
+                    <Plus className="h-4 w-4 mr-1" /> Add Item
                   </Button>
                   
                   {errors.items?.message && <p className="text-sm text-error font-black uppercase tracking-widest">{errors.items.message}</p>}

@@ -67,8 +67,8 @@ const DialogFooter = ({
 }) =>
 <div
   className={cn(
-    "shrink-0 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 border-t border-[#E2D2B8] bg-[#F3E8D4] px-6 pt-3 pb-4 -mx-6 -mb-6",
-    className
+    className,
+    "shrink-0 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 border-t border-[#E2D2B8] bg-[#F3E8D4] -mx-6 -mb-6 !px-6 !py-3 [&>button]:!h-10 [&>button]:!px-6 [&>button]:!rounded-lg [&>button]:!text-base [&>button]:!font-semibold"
   )}
   {...props} />;
 

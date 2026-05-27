@@ -409,21 +409,16 @@ const ItemsPage = () => {
 
           <div className="flex-1 p-8 bg-white space-y-6 overflow-y-auto custom-scrollbar">
             {latestPriceRow && (
-              <div className="flex items-center justify-between p-4 px-6 rounded-xl border border-[#F1E3D3] bg-[#FFFCF8] shadow-sm">
-                <span className="text-lg text-primary uppercase tracking-tight">Latest Price ({formatDate(latestPriceRow.purchase_date)})</span>
-                <span className="text-3xl text-primary">{formatCurrency(latestPriceRow.price)}</span>
+              <div className="flex flex-col items-end pb-2">
+                <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">Latest Price ({formatDate(latestPriceRow.purchase_date)})</span>
+                <span className="text-2xl font-black text-primary">
+                  {formatCurrency(latestPriceRow.price)}
+                </span>
               </div>
             )}
 
-            <div className="overflow-hidden rounded-xl border border-border-temple/40 shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-border-temple/40 shadow-sm bg-white">
               <table className="w-full table-auto text-left text-base border-collapse">
-                <thead className="bg-[#FAF7F2] border-b border-border-temple/40">
-                  <tr>
-                    <th className="px-6 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">Date</th>
-                    <th className="px-6 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">Vendor</th>
-                    <th className="px-6 py-3 text-[11px] text-secondary uppercase tracking-[0.2em] text-right">Rate</th>
-                  </tr>
-                </thead>
                 <tbody className="divide-y divide-border-temple/10">
                   {priceHistoryLoading ?
                   <tr>
@@ -436,14 +431,16 @@ const ItemsPage = () => {
                     </tr> :
                   priceHistoryRows.length === 0 ?
                   <tr>
-                      <td colSpan={3} className="px-6 py-12 text-center text-text-light italic">No price history records found.</td>
+                      <td colSpan={3} className="px-6 py-12 text-center text-text-main/60 text-sm italic">No price history records found.</td>
                     </tr> :
 
                   priceHistoryRows.map((row, idx) =>
-                  <tr key={`${row.purchase_date}-${idx}`} className="hover:bg-bg-temple/10 transition-colors">
-                        <td className="px-6 py-4 text-text-main whitespace-nowrap">{formatDate(row.purchase_date)}</td>
+                  <tr key={`${row.purchase_date}-${idx}`} className="hover:bg-bg-temple/5 transition-colors">
+                        <td className="px-6 py-4 text-text-main whitespace-nowrap">
+                          <span className="text-base font-medium">{formatDate(row.purchase_date)}</span>
+                        </td>
                         <td className="px-6 py-4 text-text-main whitespace-normal break-words">{row.vendor_name || '-'}</td>
-                        <td className="px-6 py-4 text-right text-text-main whitespace-nowrap">{formatCurrency(row.price)}</td>
+                        <td className="px-6 py-4 text-right text-text-main font-semibold whitespace-nowrap">{formatCurrency(row.price)}</td>
                       </tr>
                   )
                   }
@@ -498,7 +495,7 @@ const ItemsPage = () => {
                 value={formatQuantityWithUnit(viewingItem?.current_stock || 0, viewingItem?.unit)}
                 valueClassName={cn(
                   "font-bold",
-                  Number(viewingItem?.current_stock) <= Number(viewingItem?.min_stock_level) ? 'text-error' : 'text-primary'
+                  Number(viewingItem?.current_stock) <= Number(viewingItem?.min_stock_level) ? 'text-error' : 'text-text-main'
                 )} />
               
               <DetailItem label="Current Rate" value={formatCurrency(viewingItem?.default_price || 0)} />
@@ -521,31 +518,33 @@ const ItemsPage = () => {
         }
       }}>
         <DialogContent
-          className="max-w-xl overflow-hidden max-h-[90vh] border-border-temple"
+          className="max-w-2xl !p-0 overflow-hidden border-border-temple shadow-2xl"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}>
           
-          <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit Item' : 'Add New Item'}</DialogTitle>
+          <DialogHeader className="shrink-0 bg-[#F3E8D4] border-b border-border-temple/40 !p-6 !m-0">
+            <DialogTitle className="text-text-main font-temple text-xl font-normal">
+              {editingItem ? 'Edit Item' : 'Add New Item'}
+            </DialogTitle>
             <DialogDescription className="sr-only">Item details form</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="bg-white flex flex-col" autoComplete="off">
-            <div className="space-y-4 px-6 pt-4 pb-4 overflow-y-auto max-h-[60vh]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                <div>
-                  <Label className="text-text-main">Item Name *</Label>
-                  <Input {...register('item_name')} className="text-text-main" />
-                  {errors.item_name && <p className="text-xs text-red-500">{errors.item_name.message}</p>}
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <Label className="text-text-main font-normal">Item Name *</Label>
+                  <Input {...register('item_name')} placeholder="Enter item name" className="h-11 text-base text-text-main" />
+                  {errors.item_name && <p className="text-xs text-red-500 font-bold uppercase">{errors.item_name.message}</p>}
                 </div>
 
-                <div>
-                  <Label className="text-text-main">Item Code</Label>
-                  <Input {...register('serial_number')} className="text-text-main" />
-                  {errors.serial_number && <p className="text-xs text-red-500">{errors.serial_number.message}</p>}
+                <div className="space-y-1.5">
+                  <Label className="text-text-main font-normal">Item Code</Label>
+                  <Input {...register('serial_number')} placeholder="Enter item code" className="h-11 text-base text-text-main" />
+                  {errors.serial_number && <p className="text-xs text-red-500 font-bold uppercase">{errors.serial_number.message}</p>}
                 </div>
 
-                <div>
-                  <Label className="text-text-main">Category *</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-text-main font-normal">Category *</Label>
                   <Controller
                     name="category_id"
                     control={control}
@@ -554,7 +553,7 @@ const ItemsPage = () => {
                       {...field}
                       value={field.value ?? ''}
                       onChange={(e) => field.onChange(e.target.value)}
-                      className="text-text-main">
+                      className="h-11 text-base text-text-main">
                       
                         <option value="">Select Category</option>
                         {categories?.map((c) =>
@@ -563,16 +562,16 @@ const ItemsPage = () => {
                       </Select>
                     } />
                   
-                  {errors.category_id && <p className="text-xs text-red-500">{errors.category_id.message}</p>}
+                  {errors.category_id && <p className="text-xs text-red-500 font-bold uppercase">{errors.category_id.message}</p>}
                 </div>
 
-                <div>
-                  <Label className="text-text-main">Unit *</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-text-main font-normal">Unit *</Label>
                   <Controller
                     name="unit_id"
                     control={control}
                     render={({ field }) =>
-                    <Select {...field} className="text-text-main">
+                    <Select {...field} className="h-11 text-base text-text-main">
                         <option value="">Select Unit</option>
                         {unitOptions.map((u) =>
                       <option key={u.id} value={u.id}>{u.unit_name} ({u.unit_code})</option>
@@ -580,26 +579,28 @@ const ItemsPage = () => {
                       </Select>
                     } />
                   
-                  {errors.unit_id && <p className="text-xs text-red-500">{errors.unit_id.message}</p>}
+                  {errors.unit_id && <p className="text-xs text-red-500 font-bold uppercase">{errors.unit_id.message}</p>}
                 </div>
 
-                <div>
-                  <Label className="text-text-main">Minimum Stock Alert</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-text-main font-normal">Minimum Stock Alert</Label>
                   <Input
                     {...register('min_stock_level')}
-                    className="text-text-main"
+                    className="h-11 text-base text-text-main"
                     onFocus={(e) => {
                       if (e.target.value === '0') {
                         setValue('min_stock_level', '');
                       }
                     }} />
                   
-                  {errors.min_stock_level && <p className="text-xs text-red-500">{errors.min_stock_level.message}</p>}
+                  {errors.min_stock_level && <p className="text-xs text-red-500 font-bold uppercase">{errors.min_stock_level.message}</p>}
                 </div>
               </div>
             </div>
-            <DialogFooter className="gap-3 !m-0 !p-6 border-t border-border-temple/40 bg-[#F3E8D4]">
-              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">Cancel</Button>
+            <DialogFooter className="gap-3 !p-6 !m-0 border-t border-border-temple/40 bg-[#F3E8D4] shrink-0">
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
+                Cancel
+              </Button>
               <Button type="submit" disabled={mutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg border-none">
                 {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>

@@ -244,75 +244,76 @@ const UsersPage = () => {
         loading={isLoading} />
       
 
-      {/* Add/Edit Dialog */}
       <Dialog open={open} onOpenChange={(val) => {
         if (!val && !mutation.isPending) {
           handleClose();
         }
       }}>
         <DialogContent
-          className="max-w-2xl border-border-temple"
+          className="max-w-2xl border-border-temple !p-0 overflow-hidden shadow-2xl"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}>
           
-          <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <DialogTitle className="text-text-main">
+          <DialogHeader className="shrink-0 bg-[#F3E8D4] border-b border-border-temple/40 !p-6 !m-0">
+            <DialogTitle className="text-text-main font-temple text-xl font-normal">
               {editingUser ? 'Edit User' : 'New User'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4 pb-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-text-main">Username *</Label>
-                <Input {...register('username')} className="text-text-main" disabled={!!editingUser} />
-                {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-text-main">{editingUser ? "Password" : "Password *"}</Label>
-                <Input {...register('password')} type="password" className="text-text-main" />
-                {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
-              </div>
-              <div className="space-y-1.5 md:col-span-2">
-                <Label className="text-text-main">Full Name *</Label>
-                <Input {...register('full_name')} className="text-text-main" />
-                {errors.full_name && <p className="text-xs text-red-500">{errors.full_name.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-text-main">Email Address</Label>
-                <Input {...register('email')} type="email" className="text-text-main" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-text-main">Phone Number</Label>
-                <Input {...register('phone')} className="text-text-main" />
-              </div>
-              <div className="md:col-span-2">
-                <Label className="text-text-main">Role *</Label>
-                <Controller
-                  name="role_id"
-                  control={control}
-                  render={({ field }) => {
-                    const myRank = user?.role_rank_level ?? 99;
-                    const availableRoles = roles?.filter(r => r.rank_level > myRank) || [];
-                    
-                    return (
-                      <Select value={field.value?.toString()} onChange={(e) => field.onChange(Number(e.target.value))}>
-                        <option value="" disabled hidden>Select a role</option>
-                        {availableRoles.map((r) =>
-                          <option key={r.id} value={r.id}>{r.role_name}</option>
-                        )}
-                      </Select>
-                    );
-                  }} />
+          <form onSubmit={handleSubmit(onSubmit)} className="bg-white flex flex-col">
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <Label className="text-text-main font-normal">Username *</Label>
+                  <Input {...register('username')} className="h-11 text-base text-text-main" disabled={!!editingUser} />
+                  {errors.username && <p className="text-xs text-red-500 font-bold uppercase">{errors.username.message}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-text-main font-normal">{editingUser ? "Password" : "Password *"}</Label>
+                  <Input {...register('password')} type="password" placeholder={editingUser ? "Leave blank to keep current" : ""} className="h-11 text-base text-text-main" />
+                  {errors.password && <p className="text-xs text-red-500 font-bold uppercase">{errors.password.message}</p>}
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label className="text-text-main font-normal">Full Name *</Label>
+                  <Input {...register('full_name')} className="h-11 text-base text-text-main" />
+                  {errors.full_name && <p className="text-xs text-red-500 font-bold uppercase">{errors.full_name.message}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-text-main font-normal">Email Address</Label>
+                  <Input {...register('email')} type="email" className="h-11 text-base text-text-main" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-text-main font-normal">Phone Number</Label>
+                  <Input {...register('phone')} className="h-11 text-base text-text-main" />
+                </div>
+                <div className="md:col-span-2">
+                  <Label className="text-text-main font-normal">Role *</Label>
+                  <Controller
+                    name="role_id"
+                    control={control}
+                    render={({ field }) => {
+                      const myRank = user?.role_rank_level ?? 99;
+                      const availableRoles = roles?.filter(r => r.rank_level > myRank) || [];
+                      
+                      return (
+                        <Select {...field} value={field.value?.toString()} onChange={(e) => field.onChange(Number(e.target.value))} className="h-11 text-base text-text-main">
+                          <option value="" disabled hidden>Select a role</option>
+                          {availableRoles.map((r) =>
+                            <option key={r.id} value={r.id}>{r.role_name}</option>
+                          )}
+                        </Select>
+                      );
+                    }} />
+                </div>
               </div>
             </div>
-            <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 m-0 bg-[#F3E8D4]">
+            <DialogFooter className="gap-3 !p-6 !m-0 border-t border-border-temple/40 bg-[#F3E8D4] shrink-0">
               <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-28 h-10 bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+                className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
                 {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>

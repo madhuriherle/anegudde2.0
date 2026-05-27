@@ -101,26 +101,7 @@ export const StockSummaryPage = () => {
   };
 
   return (
-    <div className="space-y-6 print:space-y-2 stock-summary-print">
-      <style>{`
-        @media print {
-          @page { size: A4 landscape; margin: 10mm; }
-          header, aside, footer { display: none !important; }
-          main { padding: 0 !important; }
-          .lg\\:pl-64 { padding-left: 0 !important; }
-          .stock-summary-print { padding-top: 8mm !important; }
-          .stock-summary-print, .stock-summary-print * { overflow: visible !important; }
-          .stock-summary-print table { table-layout: fixed; width: 100%; border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid #d7c9ba !important; }
-          .stock-summary-print thead { display: table-header-group !important; }
-          .stock-summary-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
-          .stock-summary-print th, .stock-summary-print td { padding: 4px 6px !important; border-right: 1px solid #d7c9ba !important; border-bottom: 1px solid #d7c9ba !important; }
-          .stock-summary-print th { border-top: 1px solid #d7c9ba !important; }
-          .stock-summary-print tr td:last-child, .stock-summary-print tr th:last-child { border-right: none !important; }
-          .stock-summary-print tfoot td { border: 1px solid #cab7a4 !important; }
-          .stock-summary-print .report-table-wrap { border: 1px solid #d7c9ba !important; }
-          .stock-summary-print .grand-total-row td { border-top: 2px solid #bfa892 !important; border-bottom: 1px solid #bfa892 !important; }
-        }
-      `}</style>
+    <div className="space-y-6 print:space-y-2 stock-summary-print report-print-container">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h2 className="page-title">Stock Summary Report</h2>
@@ -202,9 +183,9 @@ export const StockSummaryPage = () => {
           !groupByCategory ? (
             /* FLAT LIST - Single Table */
             <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white">
-              <table className="w-full table-fixed text-sm border-collapse">
+              <table className="w-full table-fixed border-collapse">
                 <thead className="bg-[#FFF4E6] border-b border-border-temple">
-                  <tr className="text-text-main font-bold uppercase">
+                  <tr className="text-text-main uppercase">
                     <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
                     <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Rate</th>
                     <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Opening Stock</th>
@@ -259,9 +240,9 @@ export const StockSummaryPage = () => {
                     {toEnglishCategory(categoryName)}
                   </h2>
                   <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white">
-                    <table className="w-full table-fixed text-sm border-collapse">
+                    <table className="w-full table-fixed border-collapse">
                       <thead className="bg-[#FFF4E6] border-b border-border-temple">
-                        <tr className="text-text-main font-bold uppercase">
+                        <tr className="text-text-main uppercase">
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Rate</th>
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Opening Stock</th>
@@ -290,7 +271,7 @@ export const StockSummaryPage = () => {
                           </tr>
                         ))}
                       </tbody>
-                      <tbody className="bg-[#FAF7F2] font-black text-[13px] border-t-2 border-border-temple/20">
+                      <tbody className="bg-[#FAF7F2] border-t-2 border-border-temple/20">
                         <tr className="text-primary">
                           <td colSpan={2} className="px-3 py-3 border-r border-border-temple/10 uppercase tracking-tighter">TOTAL</td>
                           <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.opening_balance || 0), 0).toFixed(3)}</td>
@@ -300,7 +281,7 @@ export const StockSummaryPage = () => {
                           <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.purchase_return_qty || 0), 0).toFixed(3)}</td>
                           <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.stock_adjustment_qty || 0), 0).toFixed(3)}</td>
                           <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.closing_stock || 0), 0).toFixed(3)}</td>
-                          <td className="px-3 py-3 text-secondary whitespace-nowrap font-black">{formatCurrency(rows.reduce((a, b) => a + Number(b.closing_value || 0), 0))}</td>
+                          <td className="px-3 py-3 text-secondary whitespace-nowrap">{formatCurrency(rows.reduce((a, b) => a + Number(b.closing_value || 0), 0))}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -311,7 +292,7 @@ export const StockSummaryPage = () => {
               {grandTotals && (
                 <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white mt-8">
                   <table className="w-full table-fixed text-sm border-collapse">
-                    <tbody className="bg-[#D9C8AF] border-t-2 border-border-temple/60 text-black">
+                    <tbody className="bg-[#FAF3E7] border-t-2 border-border-temple/60 text-black">
                       <tr className="grand-total-row font-black text-[15px]">
                         <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] font-black">GRAND TOTAL</td>
                         <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words font-black">{grandTotals.opening.toFixed(3)}</td>

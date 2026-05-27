@@ -833,7 +833,7 @@ const PurchasesPage = () => {
                       <div className="sm:col-span-1 space-y-1.5">
                         {index === 0 && <Label className="text-base font-bold text-text-main w-full">Total</Label>}
                         <div className="h-9 flex items-center">
-                          <span className="font-bold text-primary text-sm whitespace-nowrap">
+                          <span className="font-bold text-secondary text-sm whitespace-nowrap">
                             {formatCurrency((Number(watchedItems?.[index]?.quantity) || 0) * (Number(watchedItems?.[index]?.price) || 0))}
                           </span>
                         </div>
@@ -854,8 +854,8 @@ const PurchasesPage = () => {
 
                   <div className="flex items-center gap-6">
                     <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-bold text-text-main/50 uppercase tracking-widest">Grand Total</span>
-                      <span className="text-3xl font-black text-primary">
+                      <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">Grand Total</span>
+                      <span className="text-2xl font-black text-primary">
                         {formatCurrency(totalAmount)}
                       </span>
                     </div>

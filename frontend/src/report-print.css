@@ -1,0 +1,207 @@
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  /* Hide app chrome */
+  header, 
+  aside, 
+  footer, 
+  nav, 
+  .print\:hidden, 
+  .no-print,
+  button {
+    display: none !important;
+  }
+
+  /* Reset layout */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .lg\:pl-64 {
+    padding-left: 0 !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .report-print-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    background: white !important;
+    overflow: visible !important;
+  }
+
+  /* Universal font shrink for report content */
+  .report-print-container * {
+    font-size: 8.5px;
+    line-height: 1.1;
+    color: black !important;
+  }
+
+  .report-print-container h1 { 
+    font-size: 13px !important; 
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .report-print-container p { 
+    font-size: 8.5px !important; 
+    margin: 1px 0 !important; 
+  }
+
+  /* Table Styles */
+  .report-print-container table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 1px solid #d7c9ba !important;
+    table-layout: fixed !important;
+    margin-bottom: 2mm !important;
+    page-break-inside: auto !important;
+  }
+
+  .report-print-container thead {
+    display: table-header-group !important;
+  }
+
+  /* MAX SPECIFICITY TO BEAT index.css !important */
+  html body .report-print-container table thead tr th,
+  html body .report-print-container table thead th,
+  html body .report-print-container thead tr th,
+  html body .report-print-container thead th,
+  .report-print-container th {
+    border: 1px solid #d7c9ba !important;
+    padding: 1px 2px !important;
+    font-size: 7px !important;
+    font-weight: 800 !important;
+    background-color: #f8efe5 !important;
+    text-transform: uppercase !important;
+    line-height: 1.0 !important;
+    text-align: left !important;
+    height: auto !important;
+  }
+
+  html body .report-print-container table tbody tr td,
+  html body .report-print-container td,
+  .report-print-container td {
+    border: 1px solid #d7c9ba !important;
+    padding: 1.5px 3px !important;
+    font-size: 8.5px !important;
+    word-wrap: break-word !important;
+    line-height: 1.1 !important;
+  }
+
+  .report-print-container tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .report-print-container h2 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+    margin-top: 2mm !important;
+    margin-bottom: 1mm !important;
+    display: block !important;
+    font-weight: 900 !important;
+    font-size: 9px !important;
+    color: #000 !important;
+    text-transform: uppercase;
+  }
+
+  .report-print-container section {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    margin-bottom: 4mm !important;
+  }
+
+  .report-print-container .report-table-wrap,
+  .report-print-container .rounded-xl,
+  .report-print-container .Card,
+  .report-print-container .bg-white {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+  }
+
+  /* Grand Totals and Row Totals */
+  .report-print-container .grand-total-row td,
+  .report-print-container .bg-\[\#D9C8AF\] td,
+  .report-print-container .bg-\[\#FAF7F2\] td,
+  .report-print-container .bg-\[\#FAF3E7\] td {
+    font-weight: 900 !important;
+    font-size: 8.5px !important;
+    background-color: #eee !important;
+    padding: 3px 3px !important;
+  }
+
+  .report-print-container .whitespace-nowrap {
+    white-space: nowrap !important;
+  }
+
+  /* Fix for Manpower th groupings */
+  .manpower-report-print th[colspan] {
+    text-align: center !important;
+    background-color: #eee !important;
+    font-size: 7px !important;
+  }
+
+  .canteen-summary-print .footer-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    margin-top: 1mm !important;
+    break-inside: avoid !important;
+  }
+
+  /* Canteen summary has many columns; use max specificity to beat utility classes */
+  html body .report-print-container.canteen-summary-print table.canteen-main-table td,
+  html body .report-print-container.canteen-summary-print table.canteen-main-table th {
+    font: 400 7px/1.1 Inter, Arial, sans-serif !important;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+    letter-spacing: 0 !important;
+  }
+
+  html body .report-print-container.canteen-summary-print table.canteen-main-table thead tr th,
+  html body .report-print-container.canteen-summary-print table.canteen-main-table thead th,
+  html body .canteen-summary-print table.canteen-main-table thead tr th,
+  html body .canteen-summary-print table.canteen-main-table thead th {
+    padding: 1.5px 3px !important;
+    text-transform: uppercase !important;
+    font-weight: 400 !important;
+  }
+
+  /* Shrink canteen report heading block in print */
+  .report-print-container.canteen-summary-print h1 {
+    font-size: 11px !important;
+    line-height: 1.05 !important;
+    margin: 0 !important;
+  }
+
+  .report-print-container.canteen-summary-print p {
+    font-size: 7.5px !important;
+    line-height: 1 !important;
+    margin: 0.5px 0 !important;
+  }
+
+  /* Prevent tall wrapped header cells in canteen print */
+  .report-print-container.canteen-summary-print table {
+    table-layout: auto !important;
+  }
+
+  .report-print-container.canteen-summary-print table.canteen-main-table thead th {
+    white-space: nowrap !important;
+    word-break: normal !important;
+  }
+}
