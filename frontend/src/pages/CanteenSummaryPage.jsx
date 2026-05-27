@@ -200,6 +200,10 @@ const CanteenSummaryPage = () => {
           .canteen-summary-print table { table-layout: fixed; width: 100%; border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid #d7c9ba !important; }
           .canteen-summary-print thead { display: table-header-group !important; }
           .canteen-summary-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+          .canteen-summary-print .category-print-section { break-inside: avoid-page !important; page-break-inside: avoid !important; }
+          .canteen-summary-print .category-print-title { break-after: avoid !important; page-break-after: avoid !important; }
+          .canteen-summary-print .category-print-table thead { display: table-header-group !important; }
+          .canteen-summary-print .category-print-table tbody tr:first-child { break-inside: avoid !important; page-break-inside: avoid !important; }
           .canteen-summary-print th, .canteen-summary-print td { padding: 4px 6px !important; border-right: 1px solid #d7c9ba !important; border-bottom: 1px solid #d7c9ba !important; }
           .canteen-summary-print th { border-top: 1px solid #d7c9ba !important; }
           .canteen-summary-print tr td:last-child, .canteen-summary-print tr th:last-child { border-right: none !important; }
@@ -352,12 +356,12 @@ const CanteenSummaryPage = () => {
             /* GROUPED LIST - Multiple Tables */
             <div className="space-y-10">
               {groupedRows.map(([categoryName, rows]) => (
-                <section key={categoryName} className="space-y-3">
-                  <h2 className="text-sm font-black uppercase tracking-widest text-primary px-1">
+                <section key={categoryName} className="space-y-3 category-print-section">
+                  <h2 className="text-sm font-black uppercase tracking-widest text-primary px-1 category-print-title">
                     {toEnglishCategory(categoryName)}
                   </h2>
                   <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white">
-                    <table className="w-full table-fixed text-sm border-collapse">
+                    <table className="w-full table-fixed text-sm border-collapse category-print-table">
                       <thead className="bg-[#FFF4E6] border-b border-border-temple">
                         <tr className="text-text-main font-normal uppercase">
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
