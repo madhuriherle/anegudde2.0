@@ -25,13 +25,15 @@ from app.db.models import (
     TokenDetail,
     TokenGeneration,
     User,
-    VendorPayment,
     WastageEntry,
     WastageItem,
 )
 from app.schemas.system_settings import (
+    DataCleanupSettingsOut,
     ReceiptSettingsUpdate,
+    ReceiptSettingsOut,
     SystemSettingsOut,
+    TempleIdentitySettingsOut,
     SystemSettingsUpdate,
     TempleIdentitySettingsUpdate,
 )
@@ -61,7 +63,6 @@ OPERATIONAL_CLEANUP_GROUPS = {
         PurchaseBill,
         PurchaseItem,
         PurchaseEntry,
-        VendorPayment,
         StockLedger,
         DailyStockSummary,
         MonthlyStockSummary,
@@ -76,8 +77,37 @@ OPERATIONAL_CLEANUP_GROUPS = {
     ],
 }
 
+def _has_privilege(current_user: User, privilege_name: str) -> bool:
+    if not current_user or not current_user.role:
+        return False
+    if current_user.role.is_all_access:
+        return True
+    return any(
+        rp.status == 1 and rp.privilege and rp.privilege.privilege_name == privilege_name
+        for rp in current_user.role.privileges
+    )
+
+
+def _ensure_any_settings_read_access(current_user: User) -> None:
+    allowed = [
+        "settings.management.read",
+        "settings.temple_identity.read",
+        "settings.receipt_settings.read",
+        "settings.data_cleanup.read",
+    ]
+    if not any(_has_privilege(current_user, p) for p in allowed):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions. Required one of settings.*.read",
+        )
+
+
 @router.get("/get_current_settings", response_model=SystemSettingsOut)
-def get_settings(db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("settings.read"))):
+def get_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_any_settings_read_access(current_user)
     settings = db.query(SystemSettings).options(joinedload(SystemSettings.current_year)).first()
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
@@ -96,14 +126,50 @@ def _settings_response(settings: SystemSettings) -> SystemSettingsOut:
     return res
 
 
+def _temple_identity_settings_response(settings: SystemSettings) -> TempleIdentitySettingsOut:
+    return TempleIdentitySettingsOut.model_validate(settings)
+
+
+def _receipt_settings_response(settings: SystemSettings) -> ReceiptSettingsOut:
+    return ReceiptSettingsOut.model_validate(settings)
+
+
+def _data_cleanup_settings_response(settings: SystemSettings) -> DataCleanupSettingsOut:
+    return DataCleanupSettingsOut.model_validate(settings)
+
+
 @router.get("/current", response_model=SystemSettingsOut)
-def get_settings_current_alias(db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("settings.read"))):
+def get_settings_current_alias(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return get_settings(db, current_user)
 
 
 @router.get("/get", response_model=SystemSettingsOut)
-def get_settings_legacy(db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("settings.read"))):
+def get_settings_legacy(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return get_settings(db, current_user)
+
+
+@router.get("/temple-identity", response_model=TempleIdentitySettingsOut)
+def get_temple_identity_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("settings.temple_identity.read")),
+):
+    return _temple_identity_settings_response(_get_settings_or_404(db))
+
+
+@router.get("/receipt-settings", response_model=ReceiptSettingsOut)
+def get_receipt_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("settings.receipt_settings.read")),
+):
+    return _receipt_settings_response(_get_settings_or_404(db))
+
+
+@router.get("/data-cleanup", response_model=DataCleanupSettingsOut)
+def get_data_cleanup_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("settings.data_cleanup.read")),
+):
+    return _data_cleanup_settings_response(_get_settings_or_404(db))
 
 
 def _get_settings_or_404(db: Session) -> SystemSettings:
@@ -124,7 +190,7 @@ def _ensure_all_access(current_user: User) -> None:
 def update_settings(
     settings_in: SystemSettingsUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.write"))
+    current_user: User = Depends(PermissionChecker("settings.management.write"))
 ):
     # Authorization check - Only All-Access roles (Temple Trustee)
     _ensure_all_access(current_user)
@@ -145,7 +211,7 @@ def update_settings(
 def update_temple_identity_settings(
     settings_in: TempleIdentitySettingsUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.write"))
+    current_user: User = Depends(PermissionChecker("settings.temple_identity.write"))
 ):
     _ensure_all_access(current_user)
 
@@ -163,7 +229,7 @@ def update_temple_identity_settings(
 def update_temple_identity_settings_alias(
     settings_in: TempleIdentitySettingsUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.write"))
+    current_user: User = Depends(PermissionChecker("settings.temple_identity.write"))
 ):
     return update_temple_identity_settings(settings_in, db, current_user)
 
@@ -172,12 +238,14 @@ def update_temple_identity_settings_alias(
 def update_receipt_settings(
     settings_in: ReceiptSettingsUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.write"))
+    current_user: User = Depends(PermissionChecker("settings.receipt_settings.write"))
 ):
     _ensure_all_access(current_user)
 
     settings = _get_settings_or_404(db)
-    settings.receipt_padding = settings_in.receipt_padding
+    for field, value in settings_in.model_dump().items():
+        setattr(settings, field, value)
+
     settings.updated_by = current_user.id
     db.commit()
     db.refresh(settings)
@@ -188,7 +256,7 @@ def update_receipt_settings(
 def update_receipt_settings_alias(
     settings_in: ReceiptSettingsUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.write"))
+    current_user: User = Depends(PermissionChecker("settings.receipt_settings.write"))
 ):
     return update_receipt_settings(settings_in, db, current_user)
 
@@ -197,7 +265,7 @@ def update_receipt_settings_alias(
 def cleanup_operational_data(
     cleanup_in: OperationalCleanupRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.write")),
+    current_user: User = Depends(PermissionChecker("settings.data_cleanup.write")),
 ):
     if not current_user.role.is_all_access:
         raise HTTPException(status_code=403, detail="Permission denied")
@@ -257,7 +325,7 @@ def cleanup_operational_data(
 def cleanup_operational_data_alias(
     cleanup_in: OperationalCleanupRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.write")),
+    current_user: User = Depends(PermissionChecker("settings.data_cleanup.write")),
 ):
     return cleanup_operational_data(cleanup_in, db, current_user)
 
@@ -265,7 +333,7 @@ def cleanup_operational_data_alias(
 def upload_logo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.write"))
+    current_user: User = Depends(PermissionChecker("settings.management.write"))
 ):
     if not current_user.role.is_all_access:
         raise HTTPException(status_code=403, detail="Permission denied")
@@ -291,6 +359,6 @@ def upload_logo(
 def upload_logo_legacy(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.write"))
+    current_user: User = Depends(PermissionChecker("settings.management.write"))
 ):
     return upload_logo(file, db, current_user)

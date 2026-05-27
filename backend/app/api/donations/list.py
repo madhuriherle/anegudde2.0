@@ -14,6 +14,7 @@ def list_donations(
     _: User = Depends(PermissionChecker("donations.read")),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    q: str = Query(None)
+    q: str = Query(None),
+    donation_type_id: int = Query(None)
 ):
-    return donation_service.list_donations(db, page, page_size, q)
+    return donation_service.list_donations(db, page, page_size, q, donation_type_id)

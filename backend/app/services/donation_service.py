@@ -8,8 +8,9 @@ from app.schemas.donation import DonationEntryCreate
 from app.services import devotee_service
 from app.schemas.devotee import DevoteeCreate
 from app.services.receipt_sequence_service import next_donation_receipt
+from app.utils.donation_receipt import generate_and_save_donation_receipt
 
-def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = None):
+def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = None, donation_type_id: int | None = None):
     # ... (existing smart search logic remains same)
     import re
     from_date, to_date = None, None
@@ -28,6 +29,9 @@ def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = Non
         joinedload(DonationEntry.user),
         joinedload(DonationEntry.devotee)
     ).filter(DonationEntry.status == 1)
+
+    if donation_type_id:
+        query = query.filter(DonationEntry.donation_type == donation_type_id)
 
     if from_date:
         query = query.filter(DonationEntry.donation_date >= from_date)
@@ -154,6 +158,19 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
 
     db.commit()
     db.refresh(entry)
+
+    # Generate and save receipt PDF automatically
+    try:
+        pdf_url = generate_and_save_donation_receipt(entry.id, db)
+        if pdf_url:
+            entry.receipt_pdf_url = pdf_url
+            db.commit()
+            db.refresh(entry)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger("uvicorn.error")
+        logger.error(f"Failed to generate receipt on save: {str(e)}")
+
     return entry
 
 def get_donation(donation_id: int, db: Session) -> DonationEntry:
@@ -263,6 +280,19 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
 
     db.commit()
     db.refresh(entry)
+
+    # Generate and save receipt PDF automatically
+    try:
+        pdf_url = generate_and_save_donation_receipt(entry.id, db)
+        if pdf_url:
+            entry.receipt_pdf_url = pdf_url
+            db.commit()
+            db.refresh(entry)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger("uvicorn.error")
+        logger.error(f"Failed to generate receipt on save: {str(e)}")
+
     return entry
 
 def delete_donation(donation_id: int, db: Session, current_user: User) -> None:

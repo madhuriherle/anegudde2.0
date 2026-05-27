@@ -17,7 +17,7 @@ const ModulesPage = () => {
     <div className="max-w-7xl mx-auto space-y-10 py-8 px-4 sm:px-6 lg:px-8">
       {/* Header Section */}
       <div className="relative text-center pb-8 border-b border-border-temple/20">
-        <h1 className="text-3xl font-black text-[#3E2723] font-temple uppercase tracking-wider mb-2">
+        <h1 className="text-2xl font-black text-[#3E2723] font-temple uppercase tracking-wider mb-2">
           Anegudde Inventory Management System
         </h1>
         <div className="flex items-center justify-center gap-4">
@@ -49,23 +49,17 @@ const ModulesPage = () => {
         {
           label: 'Monthly Tokens',
           value: canteenStats?.monthly_tokens ?? 0,
-          color: 'from-rose-500 to-rose-600',
+          color: 'from-orange-700 to-orange-800',
           icon: TrendingUp,
-          bg: 'bg-rose-50/50',
-          borderColor: 'border-rose-100'
+          bg: 'bg-orange-50/50',
+          borderColor: 'border-orange-200'
         }].
         map((stat, i) =>
         <div key={i} className={cn(
-          "relative group overflow-hidden bg-white p-6 rounded-3xl border shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1",
+          "relative group overflow-hidden bg-white p-6 rounded-3xl border border-border-temple/30 shadow-sm transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.12)] hover:-translate-y-2 hover:scale-[1.01]",
           stat.borderColor
         )}>
-            {/* Subtle background decoration */}
-            <div className={cn("absolute -right-6 -bottom-6 opacity-[0.03] transition-transform duration-700 group-hover:scale-150 group-hover:rotate-12", stat.color)}>
-              <stat.icon size={160} />
-            </div>
-
-            <div className="relative flex items-center gap-6">
-              <div className={cn("p-4 rounded-2xl bg-gradient-to-br shadow-lg shadow-black/10 transition-transform group-hover:scale-110", stat.color)}>
+            <div className="relative flex items-center gap-6">              <div className={cn("p-4 rounded-2xl bg-gradient-to-br shadow-lg shadow-black/5 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3", stat.color)}>
                 <stat.icon className="w-8 h-8 text-white" />
               </div>
               <div className="space-y-1">
@@ -78,8 +72,8 @@ const ModulesPage = () => {
               </div>
             </div>
             
-            {/* Hover indicator line */}
-            <div className={cn("absolute bottom-0 left-0 h-1 w-0 bg-gradient-to-r transition-all duration-500 group-hover:w-full", stat.color)}></div>
+            {/* Subtle Inner Glow */}
+            <div className={cn("absolute inset-0 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500 bg-gradient-to-br pointer-events-none", stat.color)}></div>
           </div>
         )}
       </div>
@@ -96,7 +90,7 @@ const ModulesPage = () => {
                   <Heart className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-black text-secondary font-temple uppercase tracking-wide">Kind Donations Today</CardTitle>
+                  <CardTitle className="text-xl font-bold text-secondary font-temple tracking-wide">Kind Donations Today</CardTitle>
                 </div>
               </div>
             </CardHeader>
@@ -133,15 +127,15 @@ const ModulesPage = () => {
                   <UtensilsCrossed className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-black text-secondary font-temple uppercase tracking-wide">Wastage Analysis</CardTitle>
+                  <CardTitle className="text-xl font-bold text-secondary font-temple tracking-wide">Wastage Analysis</CardTitle>
                 </div>
               </div>
               
               <div className="flex items-center gap-4 bg-white/60 p-3 pr-5 rounded-2xl border border-border-temple/10">
-                <div className="h-10 w-1 bg-red-500 rounded-full"></div>
+                <div className="h-10 w-1 bg-orange-600 rounded-full"></div>
                 <div>
                   <span className="text-[10px] font-black text-text-light uppercase tracking-widest block mb-1">Total Daily Loss</span>
-                  <div className="text-2xl font-black text-red-600 font-temple leading-none">
+                  <div className="text-2xl font-black text-orange-700 font-temple leading-none">
                     {isLoading ? '...' : formatCurrency(canteenStats?.wastage_today ?? 0)}
                   </div>
                 </div>
@@ -201,7 +195,6 @@ const ModulesPage = () => {
                           <div className="flex flex-col items-center gap-4 opacity-40">
                             <UtensilsCrossed size={64} className="text-text-light" />
                             <p className="text-xs font-black text-text-light uppercase tracking-[0.4em]">Zero Wastage Recorded Today</p>
-                            <div className="px-4 py-1 bg-green-100 text-green-700 text-[10px] font-black uppercase rounded-full">Optimal Efficiency</div>
                           </div>
                         </td>
                       </tr>

@@ -32,7 +32,7 @@ const DialogContent = React.forwardRef(
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-0 border border-gray-200 bg-white p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg overflow-hidden",
+        "fixed left-[50%] top-[50%] z-50 flex max-h-[92vh] w-full max-w-lg flex-col translate-x-[-50%] translate-y-[-50%] gap-0 border border-gray-200 bg-white p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg overflow-hidden",
         className
       )}
       {...props}>
@@ -53,7 +53,7 @@ const DialogHeader = ({
 }) =>
 <div
   className={cn(
-    "flex flex-col space-y-1.5 text-center sm:text-left bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-2",
+    "shrink-0 flex flex-col space-y-1.5 text-center sm:text-left bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-2",
     className
   )}
   {...props} />;
@@ -67,7 +67,7 @@ const DialogFooter = ({
 }) =>
 <div
   className={cn(
-    "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 border-t border-[#E2D2B8] bg-[#F3E8D4] px-6 pt-3 pb-4 -mx-6 -mb-6",
+    "shrink-0 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 border-t border-[#E2D2B8] bg-[#F3E8D4] px-6 pt-3 pb-4 -mx-6 -mb-6",
     className
   )}
   {...props} />;
@@ -83,7 +83,7 @@ const DialogTitle = React.forwardRef(
     <div
       ref={ref}
       className={cn(
-        "text-2xl font-bold font-temple leading-[1.25] tracking-normal text-[#2F1F14]",
+        "text-xl font-bold font-temple leading-[1.25] tracking-normal text-[#2F1F14]",
         className
       )}
       {...props} />

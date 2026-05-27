@@ -11,10 +11,15 @@ import {
   Building2,
   CalendarDays,
   ChevronRight,
+  Clock,
   DatabaseBackup,
   DatabaseZap,
   FileText,
+  Globe,
+  ImagePlus,
+  Mail,
   MapPin,
+  Phone,
   Printer,
   ReceiptText,
   ShieldCheck,
@@ -30,6 +35,7 @@ import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
 import { Label } from '../components/ui/Label';
 import { Switch } from '../components/ui/Switch';
+import { convertTo24H, convertToAMPM } from '../utils/date';
 
 const settingsSchema = z
   .object({
@@ -61,12 +67,14 @@ const settingsSchema = z
       .transform((value) => value ?? '')
       .optional()
       .or(z.literal('')),
+    temple_logo: z.string().nullish().transform((value) => value ?? ''),
     footer_note: z.string().nullish().transform((value) => value ?? ''),
     receipt_padding: z.coerce
       .number()
       .min(0, 'Must be 0 or more')
       .max(10, 'Max 10 digits allowed'),
     // Toggles
+    show_temple_logo: z.boolean().optional().default(true),
     show_temple_name: z.boolean().optional().default(true),
     show_temple_name_kn: z.boolean().optional().default(true),
     show_temple_address: z.boolean().optional().default(true),
@@ -83,14 +91,14 @@ const settingsSchema = z
   });
 
 const fieldClass =
-  'h-12 rounded-xl border-[#E7D8CC] bg-white px-4 !text-[17px] text-[#2B2B2B] focus:ring-2 focus:ring-[#C97B63]/15 transition-all';
+  'h-11 rounded-lg border-border-temple/60 bg-white px-4 text-base text-text-main focus:border-primary focus:ring-1 focus:ring-primary transition-all w-full';
 
 const labelClass =
-  'block !text-[16px] font-semibold text-[#2B2B2B] mb-2';
+  'block text-base font-semibold text-text-main mb-2';
 
 const VisibilityToggle = ({ label, name, control }) => (
   <div className="flex items-center justify-between gap-3">
-    <span className="text-[15px] font-semibold text-[#2B2B2B]">{label}</span>
+    <span className="text-base font-semibold text-text-main">{label}</span>
     <Controller
       name={name}
       control={control}
@@ -141,11 +149,17 @@ const textSettingFields = [
   'opening_time',
   'closing_time',
   'google_maps_link',
+  'temple_logo',
   'footer_note',
 ];
 
 const templeIdentityFields = [
   ...textSettingFields,
+];
+
+const receiptSettingsFields = [
+  'receipt_padding',
+  'show_temple_logo',
   'show_temple_name',
   'show_temple_name_kn',
   'show_temple_address',
@@ -163,7 +177,12 @@ const normalizeSettings = (settingsData) => {
   return {
     ...settingsData,
     ...Object.fromEntries(
-      textSettingFields.map((field) => [field, settingsData[field] ?? ''])
+      textSettingFields.map((field) => [
+        field,
+        (field === 'opening_time' || field === 'closing_time')
+          ? convertTo24H(settingsData[field] ?? '')
+          : settingsData[field] ?? ''
+      ])
     ),
   };
 };
@@ -174,11 +193,21 @@ const SettingsPage = ({ section = null }) => {
   const { showConfirm, showError, showSuccess } = useNotification();
   const [cleanupSelections, setCleanupSelections] = useState([]);
   const [cleanupPhrase, setCleanupPhrase] = useState('');
+  const [logoChanged, setLogoChanged] = useState(false);
+  const [pendingLogoFile, setPendingLogoFile] = useState(null);
+  const [pendingLogoPreview, setPendingLogoPreview] = useState('');
   const activeSection = section;
+  const settingsReadEndpoint = activeSection === 'temple'
+    ? '/settings/temple-identity'
+    : activeSection === 'receipt'
+      ? '/settings/get_current_settings'
+      : activeSection === 'cleanup'
+        ? '/settings/data-cleanup'
+        : '/settings/get_current_settings';
 
   const { data: settings, isLoading: settingsLoading } = useQuery({
-    queryKey: ['system-settings'],
-    queryFn: async () => (await api.get('/settings/get_current_settings')).data,
+    queryKey: ['system-settings', activeSection || 'root'],
+    queryFn: async () => (await api.get(settingsReadEndpoint)).data,
   });
 
   const {
@@ -186,6 +215,7 @@ const SettingsPage = ({ section = null }) => {
     handleSubmit,
     reset,
     watch,
+    setValue,
     control,
     formState: { errors, isDirty },
   } = useForm({
@@ -199,6 +229,16 @@ const SettingsPage = ({ section = null }) => {
     }
   }, [settings, reset]);
 
+  useEffect(() => {
+    if (!pendingLogoFile) {
+      setPendingLogoPreview('');
+      return;
+    }
+    const nextPreview = URL.createObjectURL(pendingLogoFile);
+    setPendingLogoPreview(nextPreview);
+    return () => URL.revokeObjectURL(nextPreview);
+  }, [pendingLogoFile]);
+
   const updateAllMutation = useMutation({
     mutationFn: async (settingsData) => {
       if (section === 'temple') {
@@ -209,14 +249,16 @@ const SettingsPage = ({ section = null }) => {
       }
 
       if (section === 'receipt') {
-        return (await api.put('/settings/update_receipt_settings', {
-          receipt_padding: settingsData.receipt_padding,
-        })).data;
+        const payload = Object.fromEntries(
+          receiptSettingsFields.map((field) => [field, settingsData[field]])
+        );
+        return (await api.put('/settings/update_receipt_settings', payload)).data;
       }
 
       return (await api.put('/settings/update', settingsData)).data;
     },
     onSuccess: (savedSettings) => {
+      setLogoChanged(false);
       reset(normalizeSettings(savedSettings));
       queryClient.invalidateQueries({
         queryKey: ['system-settings'],
@@ -225,6 +267,16 @@ const SettingsPage = ({ section = null }) => {
     },
     onError: (err) =>
       showError(err.response?.data?.detail || 'Update failed'),
+  });
+
+  const logoUploadMutation = useMutation({
+    mutationFn: async (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return (await api.post('/settings/upload_temple_logo', formData)).data;
+    },
+    onError: (err) =>
+      showError(err.response?.data?.detail || 'Logo upload failed'),
   });
 
   const cleanupMutation = useMutation({
@@ -247,14 +299,30 @@ const SettingsPage = ({ section = null }) => {
   const onSubmit = async (data) => {
     const confirmed = await showConfirm(
       'Update Settings',
-      'Save these system settings? Header visibility changes will apply to receipts and reports.',
+      'Save these temple identity settings? Changes will apply to receipts and reports.',
       'Save Changes'
     );
 
     if (!confirmed) return;
 
     try {
-      await updateAllMutation.mutateAsync(data);
+      let payload = {
+        ...data,
+        opening_time: convertToAMPM(data.opening_time),
+        closing_time: convertToAMPM(data.closing_time),
+      };
+      if (pendingLogoFile) {
+        const uploadResult = await logoUploadMutation.mutateAsync(pendingLogoFile);
+        payload = {
+          ...payload,
+          temple_logo: uploadResult?.logo_url || payload.temple_logo,
+        };
+      }
+      await updateAllMutation.mutateAsync(payload);
+      if (pendingLogoFile) {
+        setPendingLogoFile(null);
+        setLogoChanged(false);
+      }
     } catch (err) {
       showError(err.response?.data?.detail || 'Update failed');
     }
@@ -266,6 +334,8 @@ const SettingsPage = ({ section = null }) => {
   };
 
   const handleDiscard = () => {
+    setLogoChanged(false);
+    setPendingLogoFile(null);
     reset(normalizeSettings(settings));
   };
 
@@ -304,25 +374,25 @@ const SettingsPage = ({ section = null }) => {
 
   if (settingsLoading) {
     return (
-      <div className="flex h-64 items-center justify-center !text-[18px] text-[#6B6B6B]">
-        Loading...
+      <div className="flex h-64 items-center justify-center text-lg text-text-light font-medium">
+        Loading settings...
       </div>
     );
   }
 
   const watchedValues = watch();
 
-  const logoPreview = '/temple-logo-permanent.png';
-
   const templeName = watchedValues.temple_name || '';
   const templeNameKn = watchedValues.temple_name_kn || '';
+  const templeLogo = watchedValues.temple_logo || settings?.temple_logo || '';
+  const logoPreview = pendingLogoPreview || templeLogo || '/temple-logo-permanent.png';
   const templeAddress = watchedValues.temple_address || '';
   const templeContact = watchedValues.temple_contact || '';
   const alternateContact = watchedValues.alternate_contact || '';
   const templeEmail = watchedValues.temple_email || '';
   const templeWebsite = watchedValues.temple_website || '';
-  const openingTime = watchedValues.opening_time || '';
-  const closingTime = watchedValues.closing_time || '';
+  const openingTime = convertToAMPM(watchedValues.opening_time) || '';
+  const closingTime = convertToAMPM(watchedValues.closing_time) || '';
   const googleMapsLink = watchedValues.google_maps_link || '';
   const footerNote = watchedValues.footer_note || '';
   const showTempleName = watchedValues.show_temple_name ?? true;
@@ -334,12 +404,19 @@ const SettingsPage = ({ section = null }) => {
   const showTempleWebsite = watchedValues.show_temple_website ?? true;
   const showTempleTimings = watchedValues.show_temple_timings ?? true;
   const showGoogleMapsLink = watchedValues.show_google_maps_link ?? true;
+  const receiptPaddingPreview = Math.min(
+    watchedValues.receipt_padding !== undefined && watchedValues.receipt_padding !== ''
+      ? Number(watchedValues.receipt_padding)
+      : 4,
+    10
+  );
+  const sampleReceiptNumber = String(1).padStart(receiptPaddingPreview, '0');
 
   const settingsCards = [
     {
       id: 'temple',
       title: 'Temple Identity',
-      description: 'Manage name, address, contact info, and logo.',
+      description: 'Manage name, address, and contact info for receipts and reports.',
       icon: Building2,
       action: 'Configure',
       path: '/settings/temple',
@@ -371,9 +448,21 @@ const SettingsPage = ({ section = null }) => {
         : activeSection === 'cleanup'
           ? 'Data Cleanup'
         : 'System Settings';
+  const financialYearName = settings?.financial_year_name || 'Not set';
+  const templeFieldClass =
+    'h-11 rounded-lg border-border-temple/60 bg-white px-4 text-base text-text-main focus:border-primary focus:ring-1 focus:ring-primary transition-all w-full shadow-none';
+  const templeLabelClass =
+    'block text-base font-semibold text-text-main mb-1.5';
+  const sectionCardClass =
+    'rounded-xl border border-border-temple/60 bg-white p-6 shadow-sm';
+  const sectionTitleClass =
+    'text-lg font-bold text-secondary font-temple';
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 pb-24 -m-4 sm:-m-6 lg:-m-8 p-4 sm:p-6 lg:p-8 bg-[#F8F4EE] min-h-[calc(100vh-64px)]">
+    <div className={cn(
+      "mx-auto max-w-[1600px] px-4 pb-24 -m-4 sm:-m-6 lg:-m-8 p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-64px)]",
+      activeSection === 'temple' ? "bg-[#F6F7F8]" : "bg-[#F8F4EE]"
+    )}>
       {/* Header */}
       <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className={activeSection ? 'flex items-center gap-3' : ''}>
@@ -415,38 +504,22 @@ const SettingsPage = ({ section = null }) => {
                   card.disabled && "opacity-60 cursor-not-allowed hover:translate-y-0 hover:shadow-sm"
                 )}
               >
-                {/* Decorative Background Icon */}
-                <div className={cn(
-                  "absolute -right-8 -bottom-8 opacity-[0.03] transition-transform duration-700 group-hover:scale-125 group-hover:rotate-12",
-                  card.danger ? "text-[#B91C1C]" : "text-[#C97B63]"
-                )}>
-                  <Icon size={200} />
-                </div>
-
                 <div className="relative space-y-6">
                   <div className="flex items-center justify-between">
                     <div className={cn(
-                      "p-5 rounded-2xl transition-transform group-hover:scale-110 duration-500 shadow-sm",
-                      card.danger ? "bg-[#FEE2E2] text-[#B91C1C]" : "bg-[#C97B63]/10 text-[#C97B63]"
+                      "p-5 rounded-2xl transition-transform group-hover:scale-110 duration-500 shadow-sm bg-[#C97B63]/10 text-[#C97B63]"
                     )}>
                       <Icon size={32} />
                     </div>
                     
                     {!card.disabled && (
                       <div className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF7F2] border border-[#E7D8CC]/50 transition-colors",
-                        card.danger ? "group-hover:bg-[#FEE2E2] group-hover:border-[#B91C1C]/30" : "group-hover:bg-[#C97B63]/10 group-hover:border-[#C97B63]/30"
+                        "flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF7F2] border border-[#E7D8CC]/50 transition-colors group-hover:bg-[#C97B63]/10 group-hover:border-[#C97B63]/30"
                       )}>
-                        <span className={cn(
-                          "text-[11px] font-black uppercase tracking-widest",
-                          card.danger ? "text-[#B91C1C]" : "text-[#C97B63]"
-                        )}>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-[#472B20]">
                           {card.action}
                         </span>
-                        <ChevronRight size={14} className={cn(
-                          "transition-transform group-hover:translate-x-1",
-                          card.danger ? "text-[#B91C1C]" : "text-[#C97B63]"
-                        )} />
+                        <ChevronRight size={14} className="text-[#C97B63] transition-transform group-hover:translate-x-1" />
                       </div>
                     )}
                   </div>
@@ -460,12 +533,6 @@ const SettingsPage = ({ section = null }) => {
                     </p>
                   </div>
                 </div>
-
-                {/* Bottom Border Accent */}
-                <div className={cn(
-                  "absolute bottom-0 left-0 h-1.5 w-0 transition-all duration-700 group-hover:w-full opacity-60",
-                  card.danger ? "bg-[#B91C1C]" : "bg-[#C97B63]"
-                )}></div>
               </div>
             );
           })}
@@ -475,84 +542,118 @@ const SettingsPage = ({ section = null }) => {
       {activeSection === 'temple' && (
       <form
         onSubmit={handleSubmit(onSubmit, onInvalid)}
-        className="grid grid-cols-1 xl:grid-cols-[0.85fr_1.15fr] gap-8 items-start"
+        className="max-w-6xl mx-auto"
       >
-        {/* LEFT SIDE */}
-        <Card className="rounded-2xl border border-[#E7D8CC] bg-white shadow-md overflow-hidden">
-          <CardContent className="p-7 lg:p-8 space-y-6">
-            {/* English Name */}
-            <div className="space-y-2">
-              <Label className={labelClass}>Temple Name (English)</Label>
-
-              <Input
-                {...register('temple_name')}
-                className={fieldClass}
-                placeholder="e.g. Anegudde Sri Vinayaka Temple"
-              />
-
-              {errors.temple_name && (
-                <p className="text-error font-semibold !text-[15px] flex items-center gap-1 mt-1">
-                  <XCircle className="h-4 w-4" />
-                  {errors.temple_name.message}
-                </p>
-              )}
+        <div className="grid grid-cols-1 gap-6 pb-8 lg:grid-cols-2">
+          {/* Section 1: Names */}
+          <div className={sectionCardClass}>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Building2 size={20} />
+              </div>
+              <h3 className={sectionTitleClass}>Temple Details</h3>
             </div>
-
-            {/* Kannada Name */}
-            <div className="space-y-2">
-              <Label className={labelClass}>Temple Name (Kannada)</Label>
-
-              <Input
-                {...register('temple_name_kn')}
-                className={fieldClass}
-                placeholder="e.g. ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ"
-              />
-            </div>
-
-            {/* Address */}
-            <div className="space-y-2">
-              <Label className={labelClass}>Temple Address</Label>
-
-              <Input
-                {...register('temple_address')}
-                className={fieldClass}
-                placeholder="Temple full address"
-              />
-            </div>
-
-            {/* Phone numbers */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
-                <Label className={labelClass}>Contact Number</Label>
+                <Label className={templeLabelClass}>Temple Name</Label>
+                <Input
+                  {...register('temple_name')}
+                  className={templeFieldClass}
+                  placeholder="e.g. Anegudde Sri Vinayaka Temple"
+                />
+                {errors.temple_name && (
+                  <p className="text-error font-semibold !text-[15px] flex items-center gap-1 mt-1">
+                    <XCircle className="h-4 w-4" />
+                    {errors.temple_name.message}
+                  </p>
+                )}
+              </div>
 
+              <div className="space-y-2">
+                <Label className={templeLabelClass}>Kannada Name</Label>
+                <Input
+                  {...register('temple_name_kn')}
+                  className={templeFieldClass}
+                  placeholder="e.g. ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className={templeLabelClass}>Temple Logo</Label>
+                <div className="rounded-xl border border-dashed border-border-temple/60 bg-bg-temple/30 p-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-border-temple/60 bg-white shadow-sm overflow-hidden p-2">
+                        <img
+                          src={logoPreview}
+                          alt="Temple Logo"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                    </div>
+
+                    <label className="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-white shadow-sm hover:bg-secondary transition-all active:scale-95">
+                      <ImagePlus className="h-4 w-4" />
+                      Choose Logo
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="sr-only"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            setPendingLogoFile(file);
+                            setLogoChanged(true);
+                          }
+                          event.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Contact */}
+          <div className={sectionCardClass}>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Phone size={20} />
+              </div>
+              <h3 className={sectionTitleClass}>Contact</h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label className={templeLabelClass}>Contact Number</Label>
                 <Input
                   {...register('temple_contact')}
-                  className={fieldClass}
+                  className={templeFieldClass}
                   placeholder="08254-261257"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className={labelClass}>Alternate Contact</Label>
-
+                <Label className={templeLabelClass}>Alternate Contact</Label>
                 <Input
                   {...register('alternate_contact')}
-                  className={fieldClass}
+                  className={templeFieldClass}
                   placeholder="Additional phone number"
                 />
               </div>
-            </div>
 
-            {/* Email + Website */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label className={labelClass}>Email Address</Label>
-
-                <Input
-                  {...register('temple_email')}
-                  className={fieldClass}
-                  placeholder="contact@temple.com"
-                />
+                <Label className={templeLabelClass}>Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#C97B63]/60" />
+                  <Input
+                    {...register('temple_email')}
+                    className={cn(templeFieldClass, "pl-10")}
+                    placeholder="contact@temple.com"
+                  />
+                </div>
                 {errors.temple_email && (
                   <p className="text-error font-semibold !text-[14px] mt-1">
                     {errors.temple_email.message}
@@ -561,13 +662,15 @@ const SettingsPage = ({ section = null }) => {
               </div>
 
               <div className="space-y-2">
-                <Label className={labelClass}>Temple Website</Label>
-
-                <Input
-                  {...register('temple_website')}
-                  className={fieldClass}
-                  placeholder="https://www.temple.com"
-                />
+                <Label className={templeLabelClass}>Website</Label>
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#C97B63]/60" />
+                  <Input
+                    {...register('temple_website')}
+                    className={cn(templeFieldClass, "pl-10")}
+                    placeholder="https://www.temple.com"
+                  />
+                </div>
                 {errors.temple_website && (
                   <p className="text-error font-semibold !text-[14px] mt-1">
                     {errors.temple_website.message}
@@ -575,199 +678,92 @@ const SettingsPage = ({ section = null }) => {
                 )}
               </div>
             </div>
-
-            {/* Opening + Closing Times */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label className={labelClass}>Opening Time</Label>
-
-                <Input
-                  {...register('opening_time')}
-                  className={fieldClass}
-                  placeholder="e.g. 5:30 AM"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className={labelClass}>
-                  Closing Time
-                </Label>
-
-                <Input
-                  {...register('closing_time')}
-                  className={fieldClass}
-                  placeholder="e.g. 9:00 PM"
-                />
-              </div>
-            </div>
-
-            {/* Google Maps Link */}
-            <div className="space-y-2">
-              <Label className={labelClass}>Google Maps Link</Label>
-
-              <Input
-                {...register('google_maps_link')}
-                className={fieldClass}
-                placeholder="https://maps.google.com/..."
-              />
-              {errors.google_maps_link && (
-                <p className="text-error font-semibold !text-[14px] mt-1">
-                  {errors.google_maps_link.message}
-                </p>
-              )}
-            </div>
-
-            {/* Buttons */}
-            <div className="sticky bottom-0 -mx-7 flex justify-end gap-4 border-t border-[#E7D8CC] bg-white/95 px-7 py-4 backdrop-blur lg:-mx-8 lg:px-8">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleDiscard}
-                className="h-14 px-8 font-bold !text-[17px] text-[#2B2B2B] hover:bg-[#F8F4EE] border border-[#E7D8CC]"
-              >
-                Discard
-              </Button>
-
-              <Button
-                type="submit"
-                disabled={
-                  !isDirty || updateAllMutation.isPending
-                }
-                className="h-14 px-10 font-bold text-white !text-[18px] !bg-[#C97B63] hover:!bg-[#B8654B] border-none shadow-lg rounded-xl min-w-[180px]"
-              >
-                {updateAllMutation.isPending
-                  ? 'Saving...'
-                  : 'Save Changes'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* RIGHT SIDE */}
-        <div className="sticky top-8 space-y-5">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-text-normal font-bold">Live Preview</h3>
           </div>
 
-          <Card className="rounded-2xl border border-[#E7D8CC] bg-white shadow-lg overflow-hidden">
-            <CardContent className="p-0">
-              {/* Header Preview */}
-              <div className="bg-[#FFFDFB] px-8 py-8">
-                <div className="mx-auto max-w-[520px] rounded-xl border border-[#E7D8CC] bg-white px-8 py-7 text-center shadow-sm">
-                  <img
-                    src={logoPreview}
-                    alt="Temple Logo"
-                    className="mx-auto mb-4 h-[70px] object-contain"
-                  />
+          {/* Section 3: Location */}
+          <div className={sectionCardClass}>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-[#C97B63]/10 text-[#C97B63]">
+                <MapPin className="h-4 w-4" />
+              </div>
+              <h3 className={sectionTitleClass}>Location</h3>
+            </div>
 
-                  {/* Kannada */}
-                  {showTempleNameKn && templeNameKn && (
-                    <h4 className="text-[22px] font-black text-[#5A2D1F] leading-tight">
-                      {templeNameKn}
-                    </h4>
-                  )}
-
-                  {/* English */}
-                  {showTempleName && (
-                    <h3 className="mt-2 text-[20px] font-black uppercase text-[#2B2B2B] leading-tight">
-                      {templeName || 'YOUR TEMPLE NAME'}
-                    </h3>
-                  )}
-
-                  {showTempleAddress && templeAddress && (
-                    <p className="mt-4 text-[14px] leading-relaxed text-[#4B4B4B]">
-                      {templeAddress}
-                    </p>
-                  )}
-
-                  {((showTempleContact && templeContact) || (showAlternateContact && alternateContact)) && (
-                    <p className="mt-2 text-[14px] font-semibold text-[#2B2B2B]">
-                      Contact : {[showTempleContact && templeContact, showAlternateContact && alternateContact].filter(Boolean).join(' / ')}
-                    </p>
-                  )}
-
-                  {showGoogleMapsLink && googleMapsLink && (
-                    <a
-                      href={googleMapsLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 flex items-center justify-center gap-1.5 text-[13px] font-bold text-[#C97B63] hover:underline"
-                    >
-                      <MapPin className="h-3.5 w-3.5" />
-                      View on Google Maps
-                    </a>
-                  )}
-                </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className={templeLabelClass}>Address</Label>
+                <Input
+                  {...register('temple_address')}
+                  className={templeFieldClass}
+                  placeholder="Temple full address"
+                />
               </div>
 
-              {/* Bottom Footer - Single Line */}
-              <div className="border-t border-[#E7D8CC] bg-white px-6 py-5">
-                <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-center">
-                  {showTempleTimings && (openingTime || closingTime) && (
-                    <div className="flex flex-col items-center">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B6B6B]">
-                        Timings
-                      </p>
-                      <p className="mt-0.5 text-[14px] font-semibold text-[#2B2B2B]">
-                        {openingTime} - {closingTime}
-                      </p>
-                    </div>
-                  )}
-
-                  {showTempleEmail && templeEmail && (
-                    <div className="flex flex-col items-center border-l border-[#E7D8CC] pl-8">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B6B6B]">
-                        Email
-                      </p>
-                      <p className="mt-0.5 text-[14px] font-semibold text-[#2B2B2B]">
-                        {templeEmail}
-                      </p>
-                    </div>
-                  )}
-
-                  {showTempleWebsite && templeWebsite && (
-                    <div className="flex flex-col items-center border-l border-[#E7D8CC] pl-8">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B6B6B]">
-                        Website
-                      </p>
-                      <p className="mt-0.5 text-[14px] font-semibold text-[#C97B63]">
-                        {templeWebsite.replace(/^https?:\/\//, '')}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {footerNote && (
-                  <p className="mt-6 text-center text-[14px] italic font-medium text-[#5A2D1F]/60">
-                    "{footerNote}"
+              <div className="space-y-2">
+                <Label className={templeLabelClass}>Google Maps</Label>
+                <Input
+                  {...register('google_maps_link')}
+                  className={templeFieldClass}
+                  placeholder="https://maps.google.com/..."
+                />
+                {errors.google_maps_link && (
+                  <p className="text-error font-semibold !text-[14px] mt-1">
+                    {errors.google_maps_link.message}
                   </p>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className="rounded-2xl border border-[#E7D8CC] bg-white shadow-md">
-            <CardContent className="space-y-4 p-5">
-              <div>
-                <h3 className="!text-[18px] font-bold text-[#5A2D1F]">Visible on Header</h3>
-                <p className="mt-1 text-[#6B6B6B] !text-[14px]">
-                  Save changes after switching fields on or off.
-                </p>
+          {/* Section 4: Hours */}
+          <div className={sectionCardClass}>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-[#C97B63]/10 text-[#C97B63]">
+                <Clock className="h-4 w-4" />
+              </div>
+              <h3 className={sectionTitleClass}>Timings</h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="space-y-2">
+                <Label className={templeLabelClass}>Opening Time</Label>
+                <Input
+                  type="time"
+                  {...register('opening_time')}
+                  className={templeFieldClass}
+                />
               </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-                <VisibilityToggle label="English name" name="show_temple_name" control={control} />
-                <VisibilityToggle label="Kannada name" name="show_temple_name_kn" control={control} />
-                <VisibilityToggle label="Address" name="show_temple_address" control={control} />
-                <VisibilityToggle label="Contact number" name="show_temple_contact" control={control} />
-                <VisibilityToggle label="Alternate contact" name="show_alternate_contact" control={control} />
-                <VisibilityToggle label="Email" name="show_temple_email" control={control} />
-                <VisibilityToggle label="Website" name="show_temple_website" control={control} />
-                <VisibilityToggle label="Timings" name="show_temple_timings" control={control} />
-                <VisibilityToggle label="Google Maps" name="show_google_maps_link" control={control} />
+              <div className="space-y-2">
+                <Label className={templeLabelClass}>Closing Time</Label>
+                <Input
+                  type="time"
+                  {...register('closing_time')}
+                  className={templeFieldClass}
+                />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+        </div>
+
+        <div className="mt-6 flex flex-col justify-end gap-3 sm:flex-row">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleDiscard}
+            className="h-11 rounded-lg border border-[#D9E0E6] px-6 font-medium text-[#17212B] hover:bg-[#F6F7F8]"
+          >
+            Discard Changes
+          </Button>
+
+          <Button
+            type="submit"
+            disabled={(!isDirty && !logoChanged) || updateAllMutation.isPending}
+            className="h-11 min-w-[180px] rounded-lg border-none bg-primary px-8 font-semibold text-white shadow-sm hover:bg-primary/90"
+          >
+            {updateAllMutation.isPending ? 'Saving...' : 'Save Settings'}
+          </Button>
         </div>
       </form>
       )}
@@ -775,8 +771,9 @@ const SettingsPage = ({ section = null }) => {
       {activeSection === 'receipt' && (
         <form
           onSubmit={handleSubmit(onSubmit, onInvalid)}
-          className="max-w-2xl"
+          className="grid grid-cols-1 xl:grid-cols-[0.75fr_1.25fr] gap-8 items-start"
         >
+          <div className="space-y-5">
           <Card className="rounded-3xl border border-[#E7D8CC] bg-white shadow-lg overflow-hidden">
             <CardContent className="p-8 lg:p-10 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
@@ -804,26 +801,18 @@ const SettingsPage = ({ section = null }) => {
                   <Label className={labelClass}>
                     Format Preview
                   </Label>
-                  <div className="rounded-xl border border-dashed border-[#E7D8CC] bg-[#F8F4EE] flex items-center justify-center h-12 overflow-hidden px-4">
-                    <p className="text-[20px] font-black text-[#2B2B2B] truncate w-full text-center tracking-widest">
-                      {String(1).padStart(
-                        Math.min(
-                          watchedValues.receipt_padding !== undefined && watchedValues.receipt_padding !== ''
-                            ? Number(watchedValues.receipt_padding)
-                            : 4,
-                          10
-                        ),
-                        '0'
-                      )}
+                  <div className="rounded-lg border border-dashed border-[#E7D8CC] bg-[#F8F4EE] flex items-center justify-center h-11 overflow-hidden px-4">
+                    <p className="text-base font-bold text-[#2B2B2B] truncate w-full text-center tracking-widest">
+                      {sampleReceiptNumber}
                     </p>
                   </div>
                 </div>
-              </div>              <div className="flex justify-end gap-4 pt-8 border-t border-[#F8F4EE]">
+              </div>              <div className="flex justify-end gap-3 pt-8 border-t border-[#F8F4EE]">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={handleDiscard}
-                  className="h-14 px-8 font-bold !text-[17px] text-[#2B2B2B] hover:bg-[#F8F4EE] border border-[#E7D8CC]"
+                  className="h-11 flex-1 font-bold text-[15px] text-[#2B2B2B] hover:bg-[#F8F4EE] border border-[#E7D8CC] rounded-lg"
                 >
                   Discard
                 </Button>
@@ -833,7 +822,7 @@ const SettingsPage = ({ section = null }) => {
                   disabled={
                     !isDirty || updateAllMutation.isPending
                   }
-                  className="h-14 px-10 font-bold text-white !text-[18px] !bg-[#C97B63] hover:!bg-[#B8654B] border-none shadow-lg rounded-xl min-w-[180px]"
+                  className="h-11 flex-1 font-bold text-white text-[15px] bg-primary hover:bg-primary/90 border-none shadow-sm rounded-lg"
                 >
                   {updateAllMutation.isPending
                     ? 'Saving...'
@@ -842,6 +831,126 @@ const SettingsPage = ({ section = null }) => {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="rounded-2xl border border-border-temple/60 bg-white shadow-sm">
+            <CardContent className="space-y-4 p-6">
+              <div>
+                <h3 className="text-lg font-bold text-secondary font-temple">Visible on Receipt Header</h3>
+                <p className="mt-1 text-text-light text-sm">
+                  Select which details appear on printed receipts and reports.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 pt-2">
+                <VisibilityToggle label="Temple Logo" name="show_temple_logo" control={control} />
+                <VisibilityToggle label="English Name" name="show_temple_name" control={control} />
+                <VisibilityToggle label="Kannada Name" name="show_temple_name_kn" control={control} />
+                <VisibilityToggle label="Address" name="show_temple_address" control={control} />
+                <VisibilityToggle label="Contact Number" name="show_temple_contact" control={control} />
+                <VisibilityToggle label="Alternate Contact" name="show_alternate_contact" control={control} />
+                <VisibilityToggle label="Email Address" name="show_temple_email" control={control} />
+                <VisibilityToggle label="Website" name="show_temple_website" control={control} />
+                <VisibilityToggle label="Timings" name="show_temple_timings" control={control} />
+                <VisibilityToggle label="Google Maps" name="show_google_maps_link" control={control} />
+              </div>
+            </CardContent>
+          </Card>
+          </div>
+
+          <div className="space-y-5">
+            <Card className="rounded-2xl border border-[#E7D8CC] bg-white shadow-lg overflow-hidden">
+              <CardContent className="p-0">
+                <div className="bg-[#FFFDFB] px-8 py-8">
+                  <div className="mx-auto max-w-[520px] rounded-xl border border-[#E7D8CC] bg-white px-8 py-7 text-center shadow-sm">
+                    {watchedValues.show_temple_logo && (
+                      <img
+                        src={logoPreview}
+                        alt="Temple Logo"
+                        className="mx-auto mb-4 h-[70px] object-contain"
+                      />
+                    )}
+
+                    {showTempleNameKn && templeNameKn && (
+                      <h4 className="text-[22px] font-black text-[#5A2D1F] leading-tight">
+                        {templeNameKn}
+                      </h4>
+                    )}
+
+                    {showTempleName && (
+                      <h3 className="mt-2 text-[20px] font-black uppercase text-[#2B2B2B] leading-tight">
+                        {templeName || 'YOUR TEMPLE NAME'}
+                      </h3>
+                    )}
+
+                    {showTempleAddress && templeAddress && (
+                      <p className="mt-4 text-[14px] leading-relaxed text-[#4B4B4B]">
+                        {templeAddress}
+                      </p>
+                    )}
+
+                    {((showTempleContact && templeContact) || (showAlternateContact && alternateContact)) && (
+                      <p className="mt-2 text-[14px] font-semibold text-[#2B2B2B]">
+                        Contact : {[showTempleContact && templeContact, showAlternateContact && alternateContact].filter(Boolean).join(' / ')}
+                      </p>
+                    )}
+
+                    {[
+                      showTempleTimings && (openingTime || closingTime)
+                        ? `Timings: ${[openingTime, closingTime].filter(Boolean).join(' - ')}`
+                        : null,
+                      showTempleEmail && templeEmail ? `Email: ${templeEmail}` : null,
+                      showTempleWebsite && templeWebsite
+                        ? `Website: ${templeWebsite.replace(/^https?:\/\//, '')}`
+                        : null
+                    ].filter(Boolean).length > 0 && (
+                      <p className="mt-2 text-[13px] leading-6 text-[#2B2B2B]">
+                        {[
+                          showTempleTimings && (openingTime || closingTime)
+                            ? `Timings: ${[openingTime, closingTime].filter(Boolean).join(' - ')}`
+                            : null,
+                          showTempleEmail && templeEmail ? `Email: ${templeEmail}` : null,
+                          showTempleWebsite && templeWebsite
+                            ? `Website: ${templeWebsite.replace(/^https?:\/\//, '')}`
+                            : null
+                        ].filter(Boolean).join('  |  ')}
+                      </p>
+                    )}
+
+                    {showGoogleMapsLink && googleMapsLink && (
+                      <a
+                        href={googleMapsLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 flex items-center justify-center gap-1.5 text-[13px] font-bold text-[#C97B63] hover:underline"
+                      >
+                        <MapPin className="h-3.5 w-3.5" />
+                        View on Google Maps
+                      </a>
+                    )}
+
+                    <div className="mt-6 flex items-center justify-between rounded-lg border border-[#E7D8CC] bg-[#F8F4EE] px-4 py-3 text-left">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-[#8B6F5A]">
+                          Sample Receipt No
+                        </p>
+                        <p className="mt-1 font-mono text-[22px] font-black tracking-[0.18em] text-[#2B2B2B]">
+                          {sampleReceiptNumber}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-[#E7D8CC] bg-white px-8 py-4">
+                  {footerNote && (
+                    <p className="mt-3 text-center text-[13px] italic font-medium text-[#5A2D1F]/60">
+                      "{footerNote}"
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </form>
       )}
 

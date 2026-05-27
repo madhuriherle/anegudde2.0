@@ -8,7 +8,7 @@ router = APIRouter()
 
 
 @router.delete("/delete_user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("users.delete"))):
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("users.management.delete"))):
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
     
@@ -16,6 +16,13 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User 
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
         
+    # Hierarchical Check: my rank must be strictly better than target rank
+    my_rank = current_user.role.rank_level if current_user.role else 99
+    target_rank = target_user.role.rank_level if target_user.role else 99
+    
+    if target_rank <= my_rank:
+        raise HTTPException(status_code=403, detail="Unauthorized to delete superior or equal rank users")
+
     # --- SAFETY BLOCK: Last Admin Protection ---
     from app.db.models import Role
     admin_role = db.query(Role).filter(Role.role_name == "Admin").first()

@@ -83,6 +83,47 @@ const swalStyles = `
 const NotificationContext = createContext(undefined);
 
 export const NotificationProvider = ({ children }) => {
+  const captureFormState = (formEl) => {
+    if (!formEl) return null;
+    const fields = Array.from(formEl.querySelectorAll('input, select, textarea'));
+    return fields.map((el) => {
+      const key = el.name || el.id;
+      if (!key) return null;
+      const type = (el.type || '').toLowerCase();
+      if (type === 'checkbox' || type === 'radio') {
+        return { key, type, checked: !!el.checked };
+      }
+      if (el.tagName === 'SELECT' && el.multiple) {
+        return { key, type: 'select-multiple', values: Array.from(el.selectedOptions).map((o) => o.value) };
+      }
+      return { key, type: 'value', value: el.value };
+    }).filter(Boolean);
+  };
+
+  const restoreFormState = (formEl, snapshot) => {
+    if (!formEl || !Array.isArray(snapshot)) return;
+    snapshot.forEach((item) => {
+      const selector = item.key.includes("'")
+        ? `[id="${item.key}"]`
+        : `[name='${item.key}'], #${item.key}`;
+      const el = formEl.querySelector(selector);
+      if (!el) return;
+
+      if (item.type === 'checkbox' || item.type === 'radio') {
+        el.checked = !!item.checked;
+      } else if (item.type === 'select-multiple' && Array.isArray(item.values)) {
+        Array.from(el.options || []).forEach((opt) => {
+          opt.selected = item.values.includes(opt.value);
+        });
+      } else {
+        el.value = item.value ?? '';
+      }
+
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  };
+
   const showNotification = useCallback((msg, sev = 'info') => {
     const Toast = MySwal.mixin({
       toast: true,
@@ -138,6 +179,10 @@ export const NotificationProvider = ({ children }) => {
   confirmText = 'Yes, Continue',
   cancelText = 'No, Cancel') =>
   {
+    const activeEl = document.activeElement;
+    const hostForm = activeEl instanceof HTMLElement ? activeEl.closest('form') : null;
+    const snapshot = captureFormState(hostForm);
+
     const result = await MySwal.fire({
       title: title,
       html: message.replace(/\n/g, '<br />'),
@@ -162,6 +207,9 @@ export const NotificationProvider = ({ children }) => {
         confirmButton: 'swal2-confirm-temple'
       }
     });
+    if (!result.isConfirmed) {
+      restoreFormState(hostForm, snapshot);
+    }
     return result.isConfirmed;
   }, []);
 

@@ -70,22 +70,22 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="space-y-6 pb-10 max-w-[1600px] mx-auto">
+    <div className="space-y-4 pb-4 max-w-[1600px] mx-auto">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-2">
         <div>
-          <h1 className="text-2xl font-bold text-text-main tracking-tight font-temple text-left">Canteen Dashboard</h1>
+          <h1 className="text-2xl font-normal text-text-main tracking-tight font-temple text-left">Canteen Dashboard</h1>
         </div>
       </div>
 
       {/* 3x2 Grid Layout */}
-      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3 text-left">
+      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3 text-left">
         
         {/* 1. Total Tokens (Token Issuance Activity) */}
-        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white text-left min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between gap-4">
+        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white text-left min-h-[360px]">
+          <CardHeader className="bg-white border-b border-gray-100 px-5 py-3 h-[74px] flex flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 min-w-0">
-              <CardTitle className="text-lg font-extrabold text-[#D05E2D] uppercase tracking-wide text-left truncate">Total Tokens</CardTitle>
+              <CardTitle className="text-lg font-normal text-[#D05E2D] tracking-wide text-left truncate font-temple">Total Tokens</CardTitle>
               {refreshCount >= 3 &&
               <button
                 onClick={handleManualRefresh}
@@ -100,7 +100,7 @@ const DashboardPage = () => {
                 <div
                 className="text-amber-700 tracking-tight leading-none"
                 style={{
-                  fontSize: '28px',
+                  fontSize: '24px',
                   fontWeight: '800',
                   display: 'block'
                 }}>
@@ -110,10 +110,10 @@ const DashboardPage = () => {
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
-             <div className="h-[340px] overflow-y-auto">
+             <div className="h-[286px] overflow-y-auto">
               {today?.token_details?.length > 0 ?
               <div>
-                  <div className="grid grid-cols-3 px-6 py-2 border-b border-gray-100 bg-gray-50/70 text-sm tracking-wide text-text-main/80 font-bold items-center">
+                  <div className="grid grid-cols-3 px-6 py-2 border-b border-gray-100 bg-gray-50/70 text-sm tracking-wide text-text-main/80 font-normal items-center">
                     <div className="text-left">Receipt No</div>
                     <div className="text-center">Time</div>
                     <div className="text-right pr-1">Token</div>
@@ -121,11 +121,11 @@ const DashboardPage = () => {
                   <div className="divide-y divide-gray-50">
                     {today.token_details.slice(0, 5).map((row, idx) =>
                   <div key={idx} className="grid grid-cols-3 items-center px-6 py-3 hover:bg-[#FAF7F2] transition-colors group cursor-default">
-                        <div className="text-left text-base text-text-main font-bold truncate pr-2">{row.receipt_no}</div>
-                        <div className="text-center text-sm text-text-main/70 font-bold">
+                        <div className="text-left text-base text-text-main font-normal truncate pr-2">{row.receipt_no}</div>
+                        <div className="text-center text-sm text-text-main/70 font-normal">
                           {new Date(row.issued_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                        <div className="text-right text-base font-black text-amber-900 group-hover:text-amber-950 transition-colors pr-1">
+                        <div className="text-right text-base font-normal text-amber-900 group-hover:text-amber-950 transition-colors pr-1">
                           {Number(row.token_count || 0).toLocaleString()}
                         </div>
                       </div>
@@ -133,7 +133,7 @@ const DashboardPage = () => {
                   </div>
                 </div> :
 
-              <div className="flex items-center justify-center h-full text-text-main/60 text-base font-bold tracking-wide">
+              <div className="flex items-center justify-center h-full text-text-main/60 text-base font-normal tracking-wide">
                   No tokens today
                 </div>
               }
@@ -142,27 +142,26 @@ const DashboardPage = () => {
         </Card>
 
         {/* 2. Low Stock (Critical Low Stock Section) */}
-        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between text-left">
-            <CardTitle className="text-lg font-extrabold text-[#D05E2D] uppercase tracking-wide">Low Stock</CardTitle>
+        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col bg-white min-h-[360px]">
+          <CardHeader className="bg-white border-b border-gray-100 px-5 py-3 h-[74px] flex flex-row items-center justify-between text-left">
+            <CardTitle className="text-lg font-normal text-[#D05E2D] tracking-wide font-temple">Low Stock</CardTitle>
             <Button
-              onClick={() => navigate('/items')}
+              onClick={() => navigate('/items/rawitem')}
               variant="outline"
-              className="text-sm bg-white text-primary font-black uppercase tracking-wide border-2 border-primary/20 hover:bg-primary hover:text-white hover:border-primary px-4 h-9 rounded-xl shadow-sm transition-all active:scale-95">
-              
+              className="text-[12px] bg-white text-primary font-normal tracking-wider border border-primary/20 hover:bg-primary hover:text-white hover:border-primary px-3 h-8 rounded shadow-sm transition-all active:scale-95 leading-none">
               Inventory
             </Button>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
-            <div className="h-[340px] overflow-y-auto divide-y divide-gray-50">
+            <div className="h-[286px] overflow-y-auto divide-y divide-gray-50">
               {lowStock && lowStock.length > 0 ?
               lowStock.map((item, idx) => {
                 const percent = Math.min(100, Number(item.current_stock) / Number(item.min_stock_level || 1) * 100);
                 return (
-                  <div key={idx} className="px-8 py-4 hover:bg-[#FAF7F2] transition-colors group cursor-pointer text-left" onClick={() => navigate('/items')}>
+                  <div key={idx} className="px-8 py-4 hover:bg-[#FAF7F2] transition-colors group cursor-pointer text-left" onClick={() => navigate('/items/rawitem')}>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-base font-bold text-text-main group-hover:text-red-900 transition-colors">{item.item_name}</span>
-                        <span className="text-sm font-black text-red-700 tracking-wide">
+                        <span className="text-base font-normal text-text-main group-hover:text-red-900 transition-colors">{item.item_name}</span>
+                        <span className="text-sm font-normal text-red-700 tracking-wide">
                           {Number(item.current_stock).toFixed(2)} left
                         </span>
                       </div>
@@ -176,7 +175,7 @@ const DashboardPage = () => {
 
               }) :
 
-              <div className="flex items-center justify-center h-full text-text-main/60 text-base font-bold tracking-wide">
+              <div className="flex items-center justify-center h-full text-text-main/60 text-base font-normal tracking-wide">
                   No low stock today
                 </div>
               }
@@ -185,33 +184,33 @@ const DashboardPage = () => {
         </Card>
 
         {/* 3. Usage Items List */}
-        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-extrabold text-[#D05E2D] uppercase tracking-wide">Usage Items</CardTitle>
+        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[360px]">
+          <CardHeader className="bg-white border-b border-gray-100 px-5 py-3 h-[74px] flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-normal text-[#D05E2D] tracking-wide font-temple">Usage Items</CardTitle>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
-            <div className="h-[340px] overflow-y-auto">
+            <div className="h-[286px] overflow-y-auto">
               <div className="divide-y divide-gray-50 h-full">
                 {today?.consumption_details?.length > 0 ?
                 today.consumption_details.map((item, idx) =>
                 <div key={idx} className="flex items-center justify-between gap-4 px-6 py-3 hover:bg-[#FAF7F2] transition-colors group cursor-default text-left">
                       <div className="flex-1 min-w-0">
-                        <div className="text-base font-bold text-text-main group-hover:text-primary transition-colors truncate leading-tight" title={item.item_name}>
+                        <div className="text-base font-normal text-text-main group-hover:text-primary transition-colors truncate leading-tight" title={item.item_name}>
                           {item.item_name}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                        <div className="text-sm font-black text-text-main/80 whitespace-nowrap">
+                        <div className="text-sm font-normal text-text-main/80 whitespace-nowrap">
                           {Number(item.quantity).toLocaleString()} {item.unit_name}
                         </div>
-                        <div className="text-base font-black text-[#8B1E1E]">
+                        <div className="text-base font-normal text-[#8B1E1E]">
                           {formatCurrency(item.amount)}
                         </div>
                       </div>
                     </div>
                 ) :
 
-                <div className="flex items-center justify-center h-full text-text-main/60 text-base font-bold tracking-wide">
+                <div className="flex items-center justify-center h-full text-text-main/60 text-base font-normal tracking-wide">
                     No usage today
                   </div>
                 }
@@ -221,33 +220,33 @@ const DashboardPage = () => {
         </Card>
 
         {/* 4. Purchase Items List */}
-        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-extrabold text-[#D05E2D] uppercase tracking-wide">Purchase Items</CardTitle>
+        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[360px]">
+          <CardHeader className="bg-white border-b border-gray-100 px-5 py-3 h-[74px] flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-normal text-[#D05E2D] tracking-wide font-temple">Purchase Items</CardTitle>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
-            <div className="h-[340px] overflow-y-auto">
+            <div className="h-[286px] overflow-y-auto">
               <div className="divide-y divide-gray-50 h-full">
                 {today?.purchase_details?.length > 0 ?
                 today.purchase_details.map((item, idx) =>
                 <div key={idx} className="flex items-center justify-between gap-4 px-6 py-3 hover:bg-[#FAF7F2] transition-colors group cursor-default text-left">
                       <div className="flex-1 min-w-0">
-                        <div className="text-base font-bold text-text-main group-hover:text-[#8B1E1E] transition-colors truncate leading-tight" title={item.item_name}>
+                        <div className="text-base font-normal text-text-main group-hover:text-[#8B1E1E] transition-colors truncate leading-tight" title={item.item_name}>
                           {item.item_name}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                        <div className="text-sm font-black text-text-main/80 whitespace-nowrap">
+                        <div className="text-sm font-normal text-text-main/80 whitespace-nowrap">
                           {Number(item.quantity).toLocaleString()} {item.unit_name}
                         </div>
-                        <div className="text-base font-black text-[#8B1E1E]">
+                        <div className="text-base font-normal text-[#8B1E1E]">
                           {formatCurrency(item.amount)}
                         </div>
                       </div>
                     </div>
                 ) :
 
-                <div className="flex items-center justify-center h-full text-text-main/60 text-base font-bold tracking-wide">
+                <div className="flex items-center justify-center h-full text-text-main/60 text-base font-normal tracking-wide">
                     No purchases today
                   </div>
                 }
@@ -257,33 +256,33 @@ const DashboardPage = () => {
         </Card>
 
         {/* 5. Wastage Items List */}
-        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-extrabold text-[#D05E2D] uppercase tracking-wide">Wastage Items</CardTitle>
+        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white min-h-[360px]">
+          <CardHeader className="bg-white border-b border-gray-100 px-5 py-3 h-[74px] flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-normal text-[#D05E2D] tracking-wide font-temple">Wastage Items</CardTitle>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
-            <div className="h-[340px] overflow-y-auto">
+            <div className="h-[286px] overflow-y-auto">
               <div className="divide-y divide-gray-50 h-full">
                 {today?.wastage_details?.length > 0 ?
                 today.wastage_details.map((item, idx) =>
                 <div key={idx} className="flex items-center justify-between gap-4 px-6 py-3 hover:bg-[#FAF7F2] transition-colors group cursor-default text-left">
                       <div className="flex-1 min-w-0">
-                        <div className="text-base font-bold text-text-main group-hover:text-[#4A3728] transition-colors truncate leading-tight" title={item.menu_item_name}>
+                        <div className="text-base font-normal text-text-main group-hover:text-[#4A3728] transition-colors truncate leading-tight" title={item.menu_item_name}>
                           {item.menu_item_name}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                        <div className="text-sm font-black text-text-main/80 whitespace-nowrap">
+                        <div className="text-sm font-normal text-text-main/80 whitespace-nowrap">
                           {Number(item.quantity).toLocaleString()} {item.unit_name}
                         </div>
-                        <div className="text-base font-black text-[#8B1E1E]">
+                        <div className="text-base font-normal text-[#8B1E1E]">
                           {formatCurrency(item.amount)}
                         </div>
                       </div>
                     </div>
                 ) :
 
-                <div className="flex items-center justify-center h-full text-text-main/60 text-base font-bold tracking-wide">
+                <div className="flex items-center justify-center h-full text-text-main/60 text-base font-normal tracking-wide">
                     No wastage today
                   </div>
                 }
@@ -293,19 +292,18 @@ const DashboardPage = () => {
         </Card>
 
         {/* 6. Top 5 Menu Wastage (Weekly) */}
-        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 bg-white overflow-hidden min-h-[400px]">
-          <CardHeader className="bg-white border-b border-gray-100 px-6 py-4 h-[84px] flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-extrabold text-[#D05E2D] uppercase tracking-wide">Top 5 Menu Wastage (Weekly)</CardTitle>
+        <Card className="border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 bg-white overflow-hidden min-h-[360px]">
+          <CardHeader className="bg-white border-b border-gray-100 px-5 py-3 h-[74px] flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-normal text-[#D05E2D] tracking-wide font-temple">Top 5 Menu Wastage (Weekly)</CardTitle>
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/wastages')}
-              className="text-sm bg-white text-primary font-black uppercase tracking-wide border-2 border-primary/20 hover:bg-primary hover:text-white hover:border-primary px-4 h-9 rounded-xl shadow-sm transition-all active:scale-95">
-              
+              className="text-[12px] bg-white text-primary font-normal tracking-wider border border-primary/20 hover:bg-primary hover:text-white hover:border-primary px-3 h-8 rounded shadow-sm transition-all active:scale-95 leading-none">
               Details
             </Button>
           </CardHeader>
-          <CardContent className="p-0 h-[340px] overflow-y-auto">
+          <CardContent className="p-0 h-[286px] overflow-y-auto">
             {weeklyTopWastage.length > 0 ?
             <div>
                 <div className="divide-y divide-gray-50">
@@ -313,15 +311,15 @@ const DashboardPage = () => {
                 <div key={`${row.menu_item_name}-${idx}`} className="px-6 py-3 hover:bg-[#FAF7F2] transition-colors">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <div className="text-base text-text-main font-bold truncate leading-tight" title={row.menu_item_name}>
+                          <div className="text-base text-text-main font-normal truncate leading-tight" title={row.menu_item_name}>
                             {row.menu_item_name}
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                          <div className="text-sm text-text-main/70 font-bold whitespace-nowrap">
+                          <div className="text-sm text-text-main/70 font-normal whitespace-nowrap">
                             {row.quantity.toFixed(3)} {row.unit_name}
                           </div>
-                          <div className="text-base font-bold text-[#8B1E1E]">
+                          <div className="text-base font-normal text-[#8B1E1E]">
                             {formatCurrency(row.amount)}
                           </div>
                         </div>
@@ -334,7 +332,7 @@ const DashboardPage = () => {
                 </div>
               </div> :
 
-            <div className="py-20 text-center text-text-main/60 text-base font-bold tracking-wide">
+            <div className="py-20 text-center text-text-main/60 text-base font-normal tracking-wide">
                 No weekly wastage data
               </div>
             }
@@ -346,3 +344,4 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
+

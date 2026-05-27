@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.db.models import (
     Item, Vendor, ItemCategory, MenuItem, Unit, 
-    PurchaseEntry, PurchaseItem, VendorPayment, 
+    PurchaseEntry, PurchaseItem, 
     ConsumptionItem, WastageItem, StockLedger
 )
 
@@ -19,12 +19,6 @@ def check_entity_usage(entity_type: str, entity_id: int, db: Session) -> dict:
         if purchase_count > 0:
             has_usage = True
             details.append(f"Linked to {purchase_count} purchase records")
-        
-        # Check payments
-        payment_count = db.query(VendorPayment).filter(VendorPayment.vendor_id == entity_id, VendorPayment.status == 1).count()
-        if payment_count > 0:
-            has_usage = True
-            details.append(f"Linked to {payment_count} payment records")
 
     elif entity_type == "item":
         # Check stock ledger

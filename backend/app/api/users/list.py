@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user, get_db, PermissionChecker
-from app.db.models import User
+from app.db.models import User, Role
 from app.schemas.user import UserOut
 from app.schemas.base import PaginatedResponse
 import math
@@ -13,16 +13,26 @@ router = APIRouter()
 @router.get("/list_users", response_model=PaginatedResponse[UserOut])
 def list_users(
     db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("users.read")), 
+    current_user: User = Depends(PermissionChecker("users.management.read")), 
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=1000),
     q: str | None = Query(None),
     status: int | None = Query(1),
     search_field: str | None = Query(None),
 ):
-    query = db.query(User)
+    # Only allowed if current_user has users.read permission
+
+    # 1. Base Query joined with Role (Already has access via User.role)
+    query = db.query(User).options(joinedload(User.role)).join(User.role)
+
+    # 2. Hierarchical Filter: Only show users with a LOWER rank (higher numeric level)
+    # A user can never see or modify someone of equal or higher rank.
+    my_rank = current_user.role.rank_level if current_user.role else 99
+    query = query.filter(Role.rank_level > my_rank)
+
     if status is not None:
         query = query.filter(User.status == status)
+
     if q:
         like = f"%{q}%"
         if search_field == "username":

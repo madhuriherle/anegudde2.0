@@ -9,12 +9,18 @@ router = APIRouter()
 
 
 @router.get("/list_roles", response_model=list[RoleOut])
-def list_roles(db: Session = Depends(get_db), _: User = Depends(PermissionChecker("users.read"))):
-    return db.query(Role).all()
+def list_roles(db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("users.privileges.read"))):
+    # 1. Permission check
+    # Let's assume anyone with users.privileges.read can list roles, but they only see lower ranks
+    
+    my_rank = current_user.role.rank_level if current_user.role else 99
+    
+    # Show only roles with rank strictly greater than mine (weaker roles)
+    return db.query(Role).filter(Role.rank_level > my_rank).all()
 
 
 @router.get("/list_privileges", response_model=list[PrivilegeOut])
-def list_privileges(db: Session = Depends(get_db), _: User = Depends(PermissionChecker("users.read"))):
+def list_privileges(db: Session = Depends(get_db), _: User = Depends(PermissionChecker("users.privileges.read"))):
     return db.query(Privilege).filter(Privilege.status == 1).all()
 
 
@@ -22,7 +28,7 @@ def list_privileges(db: Session = Depends(get_db), _: User = Depends(PermissionC
 def get_role_privileges(
     role_id: int, 
     db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("users.read"))
+    _: User = Depends(PermissionChecker("users.privileges.read"))
 ):
     privs = db.query(RolePrivilege).filter(RolePrivilege.role_id == role_id, RolePrivilege.status == 1).all()
     return [p.privilege_id for p in privs]
@@ -33,18 +39,22 @@ def update_role_privileges(
     role_id: int,
     payload: RolePrivilegeUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("users.write"))
+    current_user: User = Depends(PermissionChecker("users.privileges.write"))
 ):
-    # Only Super Admin or Temple Trustee can update privileges
+    # Only all-access roles can update privileges
     if not current_user.role.is_all_access:
         raise HTTPException(status_code=403, detail="Not authorized to update privileges")
 
     role = db.query(Role).filter(Role.id == role_id).first()
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
-    
-    if role.is_all_access:
-         raise HTTPException(status_code=400, detail="Cannot modify all-access role privileges")
+
+    my_rank = current_user.role.rank_level if current_user.role else 99
+    target_rank = role.rank_level if role else 99
+
+    # Can only modify weaker roles (higher rank number), never same or stronger role
+    if target_rank <= my_rank:
+        raise HTTPException(status_code=403, detail="Cannot modify privileges of same or higher role")
 
     # Remove existing privileges
     db.query(RolePrivilege).filter(RolePrivilege.role_id == role_id).delete()

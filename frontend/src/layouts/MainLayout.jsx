@@ -1,21 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import * as Icons from 'lucide-react';
 import {
-  Home,
-  UtensilsCrossed,
-  Briefcase,
-  Users,
-  BarChart3,
-  Settings,
-  Package,
-  ShoppingCart,
-  LogOut,
-  Menu as MenuIcon,
-  User,
-  Heart,
   ChevronDown,
   ChevronRight,
-  ArrowLeft } from
+  Menu as MenuIcon,
+  User,
+  LogOut,
+  ArrowLeft,
+  Home } from
 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Avatar from '@radix-ui/react-avatar';
@@ -24,8 +17,14 @@ import { usePermission } from '../hooks/usePermission';
 import { cn } from '../utils/cn';
 import { getDefaultPath, hasCanteenAccess, hasMainAccess } from '../utils/navigation';
 import Footer from '../components/Footer';
+import api from '../api/axios';
 
 const templeLogoSrc = '/temple-logo-permanent.png';
+
+const DynamicIcon = ({ name, ...props }) => {
+  const IconComponent = Icons[name] || Icons.HelpCircle;
+  return <IconComponent {...props} />;
+};
 
 const MainLayout = () => {
   const { user, logout } = useAuth();
@@ -35,8 +34,21 @@ const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeModule, setActiveModule] = useState('main');
   const [expandedMenus, setExpandedMenus] = useState({});
+  const [menuData, setMenuData] = useState([]);
   const canAccessMain = hasMainAccess(user);
   const canAccessCanteen = hasCanteenAccess(user);
+
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        const response = await api.get('/modules/menu');
+        setMenuData(response.data);
+      } catch (error) {
+        console.error('Failed to fetch menu:', error);
+      }
+    };
+    fetchMenu();
+  }, []);
 
   useEffect(() => {
     const path = location.pathname;
@@ -48,8 +60,8 @@ const MainLayout = () => {
     '/donations',
     '/items',
       '/vendors',
-      '/settings/categories',
-      '/settings/menu-items',
+      '/items/categories',
+      '/items/menu-items',
       '/reports'];
 
     if (
@@ -82,141 +94,50 @@ const MainLayout = () => {
     navigate('/login');
   };
 
-  const mainMenuItems = [
-  { text: 'Home', icon: Home, path: '/', action: () => setActiveModule('main'), hidden: !canAccessMain },
-  { 
-    text: 'Canteen', 
-    icon: UtensilsCrossed, 
-    path: '/canteen', 
-    action: () => setActiveModule('canteen'),
-    hidden: !canAccessCanteen
-  },
-  { 
-    text: 'Office', 
-    icon: Briefcase, 
-    path: '/office',
-    hidden: !hasPermission('donations.read') && !hasPermission('vendors.read')
-  },
-  { 
-    text: 'Users', 
-    icon: Users, 
-    children: [
-      { text: 'User Management', path: '/users', hidden: !hasPermission('users.read') },
-      { text: 'User Privileges', path: '/users/privileges', hidden: !hasPermission('users.write') },
-      // { text: 'User Activity', path: '/users/activity', hidden: !hasPermission('activity_logs.read') }
-    ].filter(i => !i.hidden),
-    hidden: !hasPermission('users.read') && !hasPermission('users.write')
-  },
-  { 
-    text: 'Reports', 
-    icon: BarChart3, 
-    path: undefined,
-    hidden: !hasPermission('reports.read')
-  },
-  {
-    text: 'Master Settings',
-    icon: Settings,
-    children: [
-      { text: 'System Settings', path: '/settings', hidden: !hasPermission('settings.read') },
-      { text: 'Donation Type', path: '/settings/donation-types', hidden: !hasPermission('donation_types.read') }
-    ].filter(i => !i.hidden),
-    hidden: !hasPermission('settings.read') && !hasPermission('donation_types.read')
-  }
-].filter(i => !i.hidden);
+  const mainRoot = menuData.find(m => m.name === 'Main Menu');
+  const canteenRoot = menuData.find(m => m.name === 'Canteen Module');
 
+  const currentMenuItems = activeModule === 'canteen' || !canAccessMain ?
+    (canteenRoot?.submodules || []) :
+    (mainRoot?.submodules || []);
 
-  const canteenMenuItems = [
-  { text: 'Home', icon: Home, path: '/', action: () => setActiveModule('main'), hidden: !canAccessMain },
-  { 
-    text: 'Dashboard', 
-    icon: UtensilsCrossed, 
-    path: '/canteen',
-    hidden: !hasPermission('dashboard.read')
-  },
-  {
-    text: 'Purchase',
-    icon: ShoppingCart,
-    children: [
-      { text: 'Purchase Entry', path: '/purchases', hidden: !hasPermission('purchases.read') },
-      { text: 'Purchase Returns', path: '/purchases/returns', hidden: !hasPermission('purchase_returns.read') }
-    ].filter(i => !i.hidden),
-    hidden: !hasPermission('purchases.read') && !hasPermission('purchase_returns.read')
-  },
-  {
-    text: 'Daily Usage Entry',
-    icon: Package,
-    path: '/daily-usage',
-    hidden: !hasPermission('consumptions.read')
-  },
-  {
-    text: 'Donations',
-    icon: Heart,
-    path: '/donations',
-    hidden: !hasPermission('donations.read')
-  },
-  { 
-    text: 'Vendors', 
-    icon: Users, 
-    path: '/vendors',
-    hidden: !hasPermission('vendors.read')
-  },
-  {
-    text: 'Items',
-    icon: Package,
-    children: [
-      { text: 'Category', path: '/settings/categories', hidden: !hasPermission('item_categories.read') },
-      { text: 'Raw Item', path: '/items', hidden: !hasPermission('items.read') },
-      { text: 'Menu Item', path: '/settings/menu-items', hidden: !hasPermission('menu_items.read') }
-    ].filter(i => !i.hidden),
-    hidden: !hasPermission('item_categories.read') && !hasPermission('items.read') && !hasPermission('menu_items.read')
-  },
-  {
-    text: 'Reports',
-    icon: BarChart3,
-    children: [
-      { text: 'Stock Summary', path: '/reports/stock-summary', hidden: !hasPermission('reports.read') },
-      { text: 'Canteen Summary', path: '/reports/canteen-summary', hidden: !hasPermission('reports.read') },
-      { text: 'Manpower Report', path: '/reports/manpower', hidden: !hasPermission('reports.read') },
-      { text: 'Donation Report', path: '/reports/donations', hidden: !hasPermission('reports.read') },
-      { text: 'Token Issued Report', path: '/reports/tokens', hidden: !hasPermission('reports.read') }
-    ].filter(i => !i.hidden),
-    hidden: !hasPermission('reports.read')
-  },
-  { text: 'Back', icon: ArrowLeft, path: '/', action: () => setActiveModule('main'), hidden: !canAccessMain }
-].filter(i => !i.hidden);
-
+  const normalized = (value) => (value || '').toLowerCase().trim();
+  const duplicateSystemSettingNames = new Set(['temple identity', 'receipt settings', 'data cleanup']);
+  const hasSystemSettingsParent = currentMenuItems.some((item) => normalized(item.name) === 'system settings');
+  const visibleMenuItems = hasSystemSettingsParent ?
+    currentMenuItems.filter((item) => !duplicateSystemSettingNames.has(normalized(item.name))) :
+    currentMenuItems;
 
   const renderMenuItem = (item, depth = 0) => {
-    const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = expandedMenus[item.text];
-    const isActive = item.path && location.pathname === item.path;
-    const shouldHideSubmenusInMain = false;
-    const canExpandChildren = hasChildren && !shouldHideSubmenusInMain;
+    const hasChildren = item.submodules && item.submodules.length > 0;
+    const isExpanded = expandedMenus[item.id];
+    const isActive = item.route && location.pathname === item.route;
+    const canExpandChildren = hasChildren;
 
     const content =
     <div
       className={cn(
         "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-        item.path || item.action || canExpandChildren ? "cursor-pointer" : "cursor-default",
+        item.route || canExpandChildren ? "cursor-pointer" : "cursor-default",
         isActive ?
         "bg-sidebar-active text-white shadow-sm" :
         "text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white",
         depth > 0 && "ml-4 py-1.5"
       )}
       onClick={() => {
-        if (canExpandChildren) {
-          toggleExpand(item.text);
-        } else {
-          if (item.action) item.action();
-          if (item.path) {
-            navigate(item.path);
-            setIsSidebarOpen(false);
-          }
+        if (item.route) {
+          if (item.route === '/canteen') setActiveModule('canteen');
+          if (item.route === '/' && activeModule === 'canteen') setActiveModule('main');
+          navigate(item.route);
+          setIsSidebarOpen(false);
+          if (canExpandChildren) toggleExpand(item.id);
+        } else if (canExpandChildren) {
+          toggleExpand(item.id);
         }
       }}>
       
-        {item.icon && <item.icon className={cn("w-5 h-5", isActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />}
-        <span className="flex-1">{item.text}</span>
+        {item.icon && <DynamicIcon name={item.icon} className={cn("w-5 h-5", isActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />}
+        <span className="flex-1">{item.name}</span>
         {canExpandChildren && (
       isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)
       }
@@ -224,11 +145,11 @@ const MainLayout = () => {
 
 
     return (
-      <div key={item.text} className="space-y-1">
+      <div key={item.id} className="space-y-1">
         {content}
         {canExpandChildren && isExpanded &&
         <div className="space-y-1 mt-1">
-            {item.children.map((child) => renderMenuItem(child, depth + 1))}
+            {item.submodules.map((child) => renderMenuItem(child, depth + 1))}
           </div>
         }
       </div>);
@@ -255,7 +176,33 @@ const MainLayout = () => {
             {activeModule === 'canteen' ? 'Canteen Module' : 'Main Menu'}
           </span>
         </div>
-        {(activeModule === 'canteen' || !canAccessMain ? canteenMenuItems : mainMenuItems).map((item) => renderMenuItem(item))}
+        {activeModule === 'canteen' && canAccessMain && (
+          <div
+            className="group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white"
+            onClick={() => {
+              setActiveModule('main');
+              navigate('/');
+              setIsSidebarOpen(false);
+            }}
+          >
+            <Home className="w-5 h-5 text-[#D7CCC8] group-hover:text-white" />
+            <span className="flex-1">Home</span>
+          </div>
+        )}
+        {visibleMenuItems.map((item) => renderMenuItem(item))}
+        {activeModule === 'canteen' && canAccessMain && (
+          <div
+            className="group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white"
+            onClick={() => {
+              setActiveModule('main');
+              navigate('/');
+              setIsSidebarOpen(false);
+            }}
+          >
+            <ArrowLeft className="w-5 h-5 text-[#D7CCC8] group-hover:text-white" />
+            <span className="flex-1">Back</span>
+          </div>
+        )}
       </nav>
     </div>;
 

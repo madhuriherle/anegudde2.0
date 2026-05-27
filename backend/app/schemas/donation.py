@@ -54,6 +54,7 @@ class DonationEntryOut(BaseModel):
     state: str | None = None
     pincode: str | None = None
     remarks: str | None = None
+    receipt_pdf_url: str | None = None
     user_id: int
     status: int
     created_at: datetime

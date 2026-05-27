@@ -32,6 +32,7 @@ from app.api.wastages import router as wastages_router
 from app.api.tokens import router as tokens_router
 from app.api.donations import router as donations_router
 from app.api.donation_types import router as donation_types_router
+from app.api.modules import router as modules_router
 from app.api.settings import router as settings_router
 from app.api.audit import router as audit_router
 from app.api.debug import router as system_router
@@ -152,7 +153,6 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(auth_router)
 app.include_router(vendors_router)
-app.include_router(menu_items_router)
 app.include_router(items_router)
 app.include_router(units_router)
 app.include_router(item_types_router)
@@ -167,6 +167,8 @@ app.include_router(dashboard_router)
 app.include_router(tokens_router)
 app.include_router(donations_router)
 app.include_router(donation_types_router)
+app.include_router(menu_items_router)
+app.include_router(modules_router)
 app.include_router(settings_router)
 app.include_router(audit_router)
 app.include_router(system_router)

@@ -36,7 +36,11 @@ def login_user(payload: LoginRequest, db: Session) -> Token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
 
     session_id = str(uuid.uuid4())
-    token = create_access_token(subject=user.username, session_id=session_id)
+    token = create_access_token(
+        subject=user.username, 
+        session_id=session_id,
+        security_stamp=user.security_stamp
+    )
 
     db.add(
         LoginHistory(

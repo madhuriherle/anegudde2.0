@@ -9,16 +9,16 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    port: 5175,
-    host: 'localhost',
+    port: 2508,
+    host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:2407',
+        target: 'http://127.0.0.1:2509',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/uploads': {
-        target: 'http://127.0.0.1:2407',
+        target: 'http://127.0.0.1:2509',
         changeOrigin: true,
       },
     },

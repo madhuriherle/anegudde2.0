@@ -8,6 +8,27 @@ import {
 } from '@tanstack/react-table';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from 'lucide-react';
 import { Button } from './Button';
+import { toDisplayCase } from '../../utils/text';
+
+const formatCellContent = (content) => {
+  if (typeof content === 'string') {
+    return toDisplayCase(content);
+  }
+
+  if (Array.isArray(content)) {
+    return content.map(formatCellContent);
+  }
+
+  if (React.isValidElement(content)) {
+    return React.cloneElement(
+      content,
+      content.props,
+      formatCellContent(content.props.children)
+    );
+  }
+
+  return content;
+};
 
 export function DataTable({
   columns,
@@ -53,62 +74,62 @@ export function DataTable({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border border-gray-200 overflow-hidden bg-white relative">
+      <div className="rounded-md border border-gray-200 bg-white relative shadow-sm">
         {loading &&
         <div className="absolute inset-0 z-10 bg-white/50 flex items-center justify-center backdrop-blur-[1px]">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         }
-        <table className="w-full text-[16px] text-left">
-          <thead className="bg-primary text-white text-[14px] font-bold uppercase tracking-wider">
-            {table.getHeaderGroups().map((headerGroup) =>
-            <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                return (
-                  <th
-                    key={header.id}
-                    className="px-3 py-2.5 border-b border-primary/20"
-                    style={{ width: header.column.columnDef.size !== 150 ? header.column.columnDef.size : undefined }}>
-                    
-                      {header.isPlaceholder ?
-                    null :
-                    flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                    </th>);
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse table-auto text-left text-[16px]">
+            <thead className="bg-primary text-white text-[15px] font-bold uppercase tracking-wider">
+              {table.getHeaderGroups().map((headerGroup) =>
+              <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                  return (
+                    <th
+                      key={header.id}
+                      className={`px-4 py-3 border-b border-primary/20 whitespace-normal align-middle ${header.column.columnDef.className || ''}`}>
+                      
+                        {header.isPlaceholder ?
+                      null :
+                      flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                      </th>);
 
-              })}
-              </tr>
-            )}
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {rows.length ?
-            rows.map((row) =>
-            <tr
-              key={row.id}
-              className="hover:bg-gray-50/80 transition-colors">
-              
-                  {row.getVisibleCells().map((cell) =>
-              <td
-                key={cell.id}
-                className="px-3 py-2.5 text-[16px] text-text-main"
-                style={{ width: cell.column.columnDef.size !== 150 ? cell.column.columnDef.size : undefined }}>
-                
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-              )}
+                })}
                 </tr>
-            ) :
+              )}
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rows.length ?
+              rows.map((row) =>
+              <tr
+                key={row.id}
+                className="hover:bg-gray-50/80 transition-colors">
+                
+                    {row.getVisibleCells().map((cell) =>
+                <td
+                  key={cell.id}
+                  className={`px-4 py-3 text-text-main whitespace-normal align-middle ${cell.column.columnDef.className || ''}`}>
+                  
+                        {formatCellContent(flexRender(cell.column.columnDef.cell, cell.getContext()))}
+                      </td>
+                )}
+                  </tr>
+              ) :
 
-            <tr>
-                <td colSpan={columns.length} className="h-24 text-center text-gray-500">
-                  {loading ? 'Loading data...' : 'No results found.'}
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+              <tr>
+                  <td colSpan={columns.length} className="h-24 text-center text-gray-500">
+                    {loading ? 'Loading data...' : 'No results found.'}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination Controls */}

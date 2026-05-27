@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy import func
@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import User, ConsumptionEntry
 from app.schemas.report import ManpowerReportRow, ManpowerReportResponse
-from app.utils.report_pdf import render_report_pdf, table_html
 from .common import period_expr
 
 router = APIRouter()
@@ -18,7 +17,7 @@ def manpower_summary_report(
     to_date: date,
     group_by: str = "month",
     db: Session = Depends(get_db),
-    _: User = Depends(PermissionChecker("reports.read"))
+    _: User = Depends(PermissionChecker("reports.manpower.read"))
 ):
     try:
         # Dialect-agnostic period expression
@@ -59,19 +58,48 @@ def manpower_summary_report(
         )
         
         report_rows = []
-        for r in rows:
-            report_rows.append(ManpowerReportRow(
-                period=str(r.period),
-                regular_cooking=int(r.regular_cooking or 0),
-                additional_cooking=int(r.additional_cooking or 0),
-                total_cooking=int(r.total_cooking or 0),
-                regular_serving=int(r.regular_serving or 0),
-                additional_serving=int(r.additional_serving or 0),
-                total_serving=int(r.total_serving or 0),
-                regular_cleaning=int(r.regular_cleaning or 0),
-                additional_cleaning=int(r.additional_cleaning or 0),
-                total_cleaning=int(r.total_cleaning or 0),
-            ))
+        
+        # Helper to convert period string to a comparable key
+        def get_key(r_period):
+            return str(r_period)
+
+        rows_map = {get_key(r.period): r for r in rows}
+        
+        if group_by == "day":
+            # Generate all dates between from_date and to_date
+            curr = from_date
+            while curr <= to_date:
+                period_str = curr.strftime("%Y-%m-%d")
+                r = rows_map.get(period_str)
+                
+                report_rows.append(ManpowerReportRow(
+                    period=period_str,
+                    regular_cooking=int(r.regular_cooking or 0) if r else 0,
+                    additional_cooking=int(r.additional_cooking or 0) if r else 0,
+                    total_cooking=int(r.total_cooking or 0) if r else 0,
+                    regular_serving=int(r.regular_serving or 0) if r else 0,
+                    additional_serving=int(r.additional_serving or 0) if r else 0,
+                    total_serving=int(r.total_serving or 0) if r else 0,
+                    regular_cleaning=int(r.regular_cleaning or 0) if r else 0,
+                    additional_cleaning=int(r.additional_cleaning or 0) if r else 0,
+                    total_cleaning=int(r.total_cleaning or 0) if r else 0,
+                ))
+                curr += timedelta(days=1)
+        else:
+            # For month/year, just return what we have (or we could also fill months, but user asked for dates)
+            for r in rows:
+                report_rows.append(ManpowerReportRow(
+                    period=str(r.period),
+                    regular_cooking=int(r.regular_cooking or 0),
+                    additional_cooking=int(r.additional_cooking or 0),
+                    total_cooking=int(r.total_cooking or 0),
+                    regular_serving=int(r.regular_serving or 0),
+                    additional_serving=int(r.additional_serving or 0),
+                    total_serving=int(r.total_serving or 0),
+                    regular_cleaning=int(r.regular_cleaning or 0),
+                    additional_cleaning=int(r.additional_cleaning or 0),
+                    total_cleaning=int(r.total_cleaning or 0),
+                ))
         
         return ManpowerReportResponse(
             from_date=from_date,
@@ -82,67 +110,3 @@ def manpower_summary_report(
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("/get_manpower_summary_pdf")
-def manpower_summary_report_pdf(
-    from_date: date,
-    to_date: date,
-    group_by: str = "month",
-    db: Session = Depends(get_db),
-    _: User = Depends(PermissionChecker("reports.read"))
-):
-    report = manpower_summary_report(
-        from_date=from_date,
-        to_date=to_date,
-        group_by=group_by,
-        db=db,
-        _=_,
-    )
-    body_rows = [
-        [
-            row.period,
-            row.regular_cooking,
-            row.additional_cooking,
-            row.total_cooking,
-            row.regular_serving,
-            row.additional_serving,
-            row.total_serving,
-            row.regular_cleaning,
-            row.additional_cleaning,
-            row.total_cleaning,
-        ]
-        for row in report.rows
-    ]
-    if report.rows:
-        totals = [
-            "Grand Total",
-            sum(row.regular_cooking for row in report.rows),
-            sum(row.additional_cooking for row in report.rows),
-            sum(row.total_cooking for row in report.rows),
-            sum(row.regular_serving for row in report.rows),
-            sum(row.additional_serving for row in report.rows),
-            sum(row.total_serving for row in report.rows),
-            sum(row.regular_cleaning for row in report.rows),
-            sum(row.additional_cleaning for row in report.rows),
-            sum(row.total_cleaning for row in report.rows),
-        ]
-        body_rows.append(totals)
-
-    body_html = table_html(
-        ["Period", "Cook Reg", "Cook Addl", "Cook Total", "Serve Reg", "Serve Addl", "Serve Total", "Clean Reg", "Clean Addl", "Clean Total"],
-        body_rows,
-        ["left", "right", "right", "right", "right", "right", "right", "right", "right", "right"],
-    )
-    pdf_bytes = render_report_pdf(
-        db=db,
-        title="Monthly Manpower Report",
-        subtitle=f"From {from_date.strftime('%d-%m-%Y')} To {to_date.strftime('%d-%m-%Y')}",
-        body_html=body_html,
-        orientation="landscape",
-    )
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=manpower_report.pdf"},
-    )

@@ -19,6 +19,7 @@ class SystemSettingsBase(BaseModel):
     receipt_padding: int
     
     # Display Toggles
+    show_temple_logo: bool = True
     show_temple_name: bool = True
     show_temple_name_kn: bool = True
     show_temple_address: bool = True
@@ -49,7 +50,9 @@ class TempleIdentitySettingsUpdate(BaseModel):
     opening_time: Optional[str] = None
     closing_time: Optional[str] = None
     google_maps_link: Optional[str] = None
+    temple_logo: Optional[str] = None
     footer_note: Optional[str] = None
+    show_temple_logo: bool = True
     show_temple_name: bool = True
     show_temple_name_kn: bool = True
     show_temple_address: bool = True
@@ -68,6 +71,68 @@ class TempleIdentitySettingsUpdate(BaseModel):
 
 class ReceiptSettingsUpdate(BaseModel):
     receipt_padding: int
+    show_temple_name: bool = True
+    show_temple_name_kn: bool = True
+    show_temple_address: bool = True
+    show_temple_contact: bool = True
+    show_alternate_contact: bool = True
+    show_temple_email: bool = True
+    show_temple_website: bool = True
+    show_temple_timings: bool = True
+    show_google_maps_link: bool = True
+
+class TempleIdentitySettingsOut(BaseModel):
+    temple_name: Optional[str] = None
+    temple_name_kn: Optional[str] = None
+    temple_address: Optional[str] = None
+    temple_contact: Optional[str] = None
+    alternate_contact: Optional[str] = None
+    temple_email: Optional[str] = None
+    temple_website: Optional[str] = None
+    opening_time: Optional[str] = None
+    closing_time: Optional[str] = None
+    google_maps_link: Optional[str] = None
+    temple_logo: Optional[str] = None
+    footer_note: Optional[str] = None
+    show_temple_logo: bool = True
+    show_temple_name: bool = True
+    show_temple_name_kn: bool = True
+    show_temple_address: bool = True
+    show_temple_contact: bool = True
+    show_alternate_contact: bool = True
+    show_temple_email: bool = True
+    show_temple_website: bool = True
+    show_temple_timings: bool = True
+    show_google_maps_link: bool = True
+    updated_at: datetime
+    updated_by: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReceiptSettingsOut(BaseModel):
+    receipt_padding: int
+    show_temple_name: bool = True
+    show_temple_name_kn: bool = True
+    show_temple_address: bool = True
+    show_temple_contact: bool = True
+    show_alternate_contact: bool = True
+    show_temple_email: bool = True
+    show_temple_website: bool = True
+    show_temple_timings: bool = True
+    show_google_maps_link: bool = True
+    updated_at: datetime
+    updated_by: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DataCleanupSettingsOut(BaseModel):
+    updated_at: datetime
+    updated_by: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class SystemSettingsOut(SystemSettingsBase):
     id: int

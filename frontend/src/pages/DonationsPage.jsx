@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -9,16 +9,17 @@ import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Textarea } from '../components/ui/Textarea';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/Dialog';
 import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
 import { DetailItem } from '../components/ui/DetailItem';
+import { ReceiptViewerDialog } from '../components/ui/ReceiptViewerDialog';
 import { formatDate } from '../utils/date';
 import { formatQuantityWithUnit } from '../utils/quantity';
-import { cn } from '../utils/cn';
-import { Plus, Trash2, Search } from 'lucide-react';
+import { Plus, Trash2, Search, X, ReceiptText } from 'lucide-react';
 
 import { usePermission } from '../hooks/usePermission';
 
@@ -26,7 +27,10 @@ const formSchema = z.object({
   donation_type: z.coerce.number().min(1, 'Donation type is required'),
   donation_date: z.string().min(1, 'Date is required'),
   devotee_name: z.string().min(1, 'Devotee name is required'),
-  phone_number: z.string().min(1, 'Phone number is required'),
+  phone_number: z
+    .string()
+    .min(1, 'Phone number is required')
+    .regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -97,24 +101,24 @@ const DonationsPage = () => {
   const canDelete = hasPermission('donations.delete');
 
   const [open, setOpen] = useState(false);
+  const [confirmingSave, setConfirmingSave] = useState(false);
   const [editingDonation, setEditingDonation] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingDonation, setViewingDonation] = useState(null);
+  const donationDetailsBodyRef = useRef(null);
+  const [devoteeDetailsOpen, setDevoteeDetailsOpen] = useState(false);
+  const [selectedDevoteeDonation, setSelectedDevoteeDonation] = useState(null);
   const [matchedDevotee, setMatchedDevotee] = useState(null);
   const [devoteeMatchOpen, setDevoteeMatchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [donationPrefixInput, setDonationPrefixInput] = useState('');
-
-  const { data: donationsData, isLoading: donationsLoading } = useQuery({
-    queryKey: ['donations', searchTerm, page, pageSize],
-    queryFn: async () => {
-      const params = { page, page_size: pageSize };
-      if (searchTerm) params.q = searchTerm;
-      return (await api.get('/donations/list_donations', { params })).data;
-    }
-  });
+  
+  // Receipt Viewer State
+  const [receiptViewerOpen, setReceiptViewerOpen] = useState(false);
+  const [viewingReceiptId, setViewingReceiptId] = useState(null);
+  const [viewingReceiptNumber, setViewingReceiptNumber] = useState('');
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-list'],
@@ -133,6 +137,20 @@ const DonationsPage = () => {
   const activeItems = useMemo(() => (items || []).filter((i) => i.status === 1), [items]);
   const donationTypes = useMemo(() => donationTypesData?.items || [], [donationTypesData]);
   const activeDonationTypes = useMemo(() => donationTypes.filter((type) => Number(type.status) === 1), [donationTypes]);
+  const annadanaDonationType = useMemo(
+    () => donationTypes.find((type) => String(type.type_name || '').trim().toLowerCase() === 'annadana donation'),
+    [donationTypes]
+  );
+  const { data: donationsData, isLoading: donationsLoading } = useQuery({
+    queryKey: ['donations', searchTerm, page, pageSize, annadanaDonationType?.id],
+    queryFn: async () => {
+      const params = { page, page_size: pageSize };
+      if (searchTerm) params.q = searchTerm;
+      if (annadanaDonationType?.id) params.donation_type_id = annadanaDonationType.id;
+      return (await api.get('/donations/list_donations', { params })).data;
+    },
+    enabled: donationTypes.length > 0
+  });
   const donationTypeNameById = useMemo(() => {
     const map = new Map();
     donationTypes.forEach((type) => map.set(Number(type.id), type.type_name));
@@ -166,8 +184,8 @@ const DonationsPage = () => {
   const itemCodeByItemIdMap = useMemo(() => {
     const map = new Map();
     items.forEach((i) => {
-      const serial = (i.serial_numbers || []).
-      find((s) => Number(s?.status ?? 1) === 1)?.serial_number;
+      const serial = (i.serial_numbers || [])
+        .find((s) => Number(s?.status ?? 1) === 1)?.serial_number;
       if (serial) map.set(i.id, serial);
     });
     return map;
@@ -175,6 +193,8 @@ const DonationsPage = () => {
 
   const { register, handleSubmit, reset, control, setValue, watch, formState: { errors } } = useForm({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       donation_date: toDateInputValue(new Date()),
       donation_type: 0,
@@ -186,7 +206,7 @@ const DonationsPage = () => {
       state: 'Karnataka',
       pincode: '',
       remarks: '',
-      items: [{ item_id: 0, quantity: 0 }]
+      items: [{ search_id: '', item_id: 0, quantity: 0 }]
     }
   });
 
@@ -195,8 +215,32 @@ const DonationsPage = () => {
     name: 'items'
   });
 
-  const watchedItemsList = watch('items');
   const watchedDonationType = watch('donation_type');
+
+  const resetDonationForm = () => {
+    reset({
+      donation_date: toDateInputValue(new Date()),
+      donation_type: 0,
+      devotee_name: '',
+      phone_number: '',
+      email: '',
+      address: '',
+      city: '',
+      state: 'Karnataka',
+      pincode: '',
+      remarks: '',
+      items: [{ search_id: '', item_id: 0, quantity: 0 }]
+    });
+  };
+
+  useEffect(() => {
+    if (!viewDialogOpen) return;
+    requestAnimationFrame(() => {
+      if (donationDetailsBodyRef.current) {
+        donationDetailsBodyRef.current.scrollTop = 0;
+      }
+    });
+  }, [viewDialogOpen, viewingDonation?.id]);
 
   useEffect(() => {
     const prefix = donationTypePrefixById.get(Number(watchedDonationType));
@@ -206,20 +250,6 @@ const DonationsPage = () => {
       setDonationPrefixInput('');
     }
   }, [donationTypePrefixById, watchedDonationType]);
-
-  // Initialize search_ids when items load or change
-  useEffect(() => {
-    if (activeItems.length > 0 && watchedItemsList) {
-      watchedItemsList.forEach((item, index) => {
-        if (item.item_id && !item.search_id) {
-          const code = itemCodeByItemIdMap.get(item.item_id);
-          if (code) {
-            setValue(`items.${index}.search_id`, code);
-          }
-        }
-      });
-    }
-  }, [activeItems, watchedItemsList, itemCodeByItemIdMap, setValue]);
 
   // Suggest existing devotee details based on phone number.
   const watchedPhone = watch('phone_number');
@@ -276,23 +306,18 @@ const DonationsPage = () => {
     closeDevoteeMatch();
   };
 
-  const handleViewReceipt = async (donationId) => {
-    try {
-      const response = await api.get(`/donations/get_receipt_pdf/${donationId}`, {
-        responseType: 'blob'
-      });
-      const file = new Blob([response.data], { type: 'application/pdf' });
-      const fileURL = URL.createObjectURL(file);
-      window.open(fileURL, '_blank');
-    } catch (err) {
-      showError('Failed to load receipt');
-    }
+  const handleOpenReceipt = (donation) => {
+    setViewingReceiptId(donation.id);
+    setViewingReceiptNumber(donation.receipt_display_number || donation.id);
+    setReceiptViewerOpen(true);
   };
 
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
-      // Remove search_id before sending to backend
-      const cleanedItems = payload.items.map(({ item_id, quantity }) => ({ item_id, quantity }));
+      const cleanedItems = payload.items.map(({ item_id, quantity }) => ({
+        item_id,
+        quantity
+      }));
       if (editingDonation) {
         return await api.put(`/donations/update_donation/${editingDonation.id}`, {
           ...payload,
@@ -312,10 +337,7 @@ const DonationsPage = () => {
       showSuccess(editingDonation ? 'Donation record updated' : 'Donation record saved');
       
       const savedDonation = response.data;
-      if (!editingDonation && savedDonation?.id) {
-        handleViewReceipt(savedDonation.id);
-      }
-
+      
       setOpen(false);
       setEditingDonation(null);
       reset();
@@ -391,12 +413,18 @@ const DonationsPage = () => {
 
   const onSubmit = async (data) => {
     const action = 'Save';
+    setConfirmingSave(true);
     const confirmed = await showConfirm(
       `${action} Donation`,
       `Are you sure you want to ${action.toLowerCase()} this donation record?`
     );
+    setConfirmingSave(false);
     if (confirmed) {
       saveMutation.mutate(data);
+    } else {
+      // Ensure popup-cancel keeps user on the same prefilled form.
+      setOpen(true);
+      reset(data);
     }
   };
 
@@ -404,7 +432,7 @@ const DonationsPage = () => {
   {
     accessorKey: 'receipt_display_number',
     header: 'Receipt No',
-    cell: (info) => <span className="text-text-main font-black">{info.getValue() || '-'}</span>
+    cell: (info) => <span className="text-text-main font-normal">{info.getValue() || '-'}</span>
   },
   {
     accessorKey: 'donation_date',
@@ -412,49 +440,32 @@ const DonationsPage = () => {
     cell: (i) => formatDate(i.getValue())
   },
   {
-    accessorKey: 'donation_type',
-    header: 'Type',
-    cell: (info) => {
-      const val = info.getValue();
-      return (
-        <span className={cn(
-          "px-2.5 py-1 rounded-full text-sm font-bold uppercase",
-          val === 2 ? "bg-emerald-100 text-emerald-700" :
-          val === 3 ? "bg-amber-100 text-amber-700" :
-          val === 4 ? "bg-purple-100 text-purple-700" :
-          "bg-blue-100 text-blue-700"
-        )}>
-            {donationTypeNameById.get(Number(val)) || 'General Donation'}
-          </span>);
-
-    }
-  },
-  {
     accessorKey: 'devotee_name',
-    header: 'Devotee Name'
+    header: 'Devotee Name',
+    cell: (info) =>
+    <button
+      type="button"
+      onClick={() => {
+        setSelectedDevoteeDonation(info.row.original);
+        setDevoteeDetailsOpen(true);
+      }}
+      className="font-normal text-text-main hover:text-primary hover:underline">
+      {info.getValue() || '-'}
+    </button>
   },
   {
     accessorKey: 'phone_number',
-    header: 'Phone Number'
-  },
-  {
-    accessorKey: 'address',
-    header: 'Address',
+    header: 'Mobile Number',
     cell: (info) =>
-    <span className="block max-w-[420px] truncate text-text-normal" title={[
-    info.row.original.address,
-    info.row.original.city,
-    info.row.original.state,
-    info.row.original.pincode].
-    filter(Boolean).join(', ') || '-'}>
-          {[
-      info.row.original.address,
-      info.row.original.city,
-      info.row.original.state,
-      info.row.original.pincode].
-      filter(Boolean).join(', ') || '-'}
-        </span>
-
+    <button
+      type="button"
+      onClick={() => {
+        setSelectedDevoteeDonation(info.row.original);
+        setDevoteeDetailsOpen(true);
+      }}
+      className="font-normal text-text-main hover:text-primary hover:underline">
+      {info.getValue() || '-'}
+    </button>
   },
   {
     id: 'actions',
@@ -462,7 +473,7 @@ const DonationsPage = () => {
     cell: (info) =>
     <div className="flex items-center justify-center gap-2">
           <button
-            onClick={() => handleViewReceipt(info.row.original.id)}
+            onClick={() => handleOpenReceipt(info.row.original)}
             className="action-btn-receipt"
           >
             Receipt
@@ -481,7 +492,7 @@ const DonationsPage = () => {
         </div>
 
   }],
-  [deleteMutation, donationTypeNameById, showConfirm, canWrite, canDelete]);
+  [deleteMutation, showConfirm, canWrite, canDelete]);
 
   return (
     <div className="space-y-6">
@@ -489,19 +500,7 @@ const DonationsPage = () => {
         <h2 className="page-title">Donations</h2>
         {canWrite && <Button onClick={() => {
           setEditingDonation(null);
-          reset({
-            donation_date: toDateInputValue(new Date()),
-            donation_type: 0,
-            devotee_name: '',
-            phone_number: '',
-            email: '',
-            address: '',
-            city: '',
-            state: 'Karnataka',
-            pincode: '',
-            remarks: '',
-            items: [{ item_id: 0, quantity: 0 }]
-          });
+          resetDonationForm();
           setOpen(true);
         }} className="flex items-center gap-2">
           Record New Donation
@@ -541,23 +540,53 @@ const DonationsPage = () => {
         
       </div>
 
+      <Dialog open={devoteeDetailsOpen} onOpenChange={setDevoteeDetailsOpen}>
+        <DialogContent className="max-w-xl !flex !flex-col !p-0 border-border-temple shadow-2xl bg-white overflow-hidden">
+          <DialogHeader className="!m-0 border-b border-border-temple/40 !px-8 !py-6 shrink-0 bg-[#F3E8D4]">
+            <DialogTitle className="text-xl text-text-main font-temple">Devotee Details</DialogTitle>
+            <DialogDescription className="sr-only">Phone number and address details for the selected devotee.</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 px-8 py-8 custom-scrollbar">
+            {selectedDevoteeDonation &&
+              <div className="space-y-4">
+                <DetailItem label="Devotee Name" value={selectedDevoteeDonation.devotee_name} valueClassName="font-bold" />
+                <DetailItem label="Phone Number" value={selectedDevoteeDonation.phone_number} />
+                <DetailItem
+                  label="Address"
+                  value={[
+                    selectedDevoteeDonation.address,
+                    selectedDevoteeDonation.city,
+                    selectedDevoteeDonation.state,
+                    selectedDevoteeDonation.pincode
+                  ].filter(Boolean).join(', ')}
+                />
+                <DetailItem label="Email" value={selectedDevoteeDonation.email} />
+              </div>
+            }
+          </div>
+          <DialogFooter className="!p-6 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setDevoteeDetailsOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="w-[98vw] max-w-[1600px] !flex !flex-col !p-0 !max-h-[96vh] border-border-temple">
-          <DialogHeader className="!m-0 !mt-0 !mb-0 border-b border-border-temple/40 !px-8 !py-6">
-            <DialogTitle className="text-2xl text-text-main font-temple">Donation Details</DialogTitle>
+        <DialogContent className="w-[98vw] max-w-6xl max-h-[94vh] !flex !flex-col overflow-hidden border-border-temple shadow-2xl !p-0 bg-white">
+          <DialogHeader className="!m-0 border-b border-border-temple/40 !px-8 !py-6 shrink-0 bg-[#F3E8D4]">
+            <DialogTitle className="text-xl text-text-main font-temple">Donation Details</DialogTitle>
             <DialogDescription className="sr-only">Detailed breakdown of the selected donation.</DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar bg-white">
+          <div ref={donationDetailsBodyRef} className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar bg-white">
             {viewingDonation &&
-              <div className="flex flex-col lg:flex-row gap-12 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 {/* Left Column: Devotee Details */}
-                <div className="flex-1 space-y-6 w-full">
-                  <div className="flex items-center justify-between border-b border-border-temple/40 pb-2">
-                    <h4 className="text-lg font-bold text-primary uppercase tracking-widest">Devotee Details</h4>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-                    <DetailItem className="md:col-span-2" label="Receipt No" value={viewingDonation.receipt_display_number} />
-                    <DetailItem className="md:col-span-2" label="Devotee Name" value={viewingDonation.devotee_name} />
+                <div className="temple-form-section">
+                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">Devotee Information</h4>
+                  <div className="grid grid-cols-1 gap-y-0.5">
+                    <DetailItem label="Receipt No" value={viewingDonation.receipt_display_number} />
+                    <DetailItem label="Devotee Name" value={viewingDonation.devotee_name} />
                     <DetailItem label="Date" value={formatDate(viewingDonation.donation_date)} />
                     <DetailItem label="Donation Type" value={donationTypeNameById.get(Number(viewingDonation.donation_type)) || 'General Donation'} />
                     <DetailItem label="Phone" value={viewingDonation.phone_number} />
@@ -566,28 +595,20 @@ const DonationsPage = () => {
                     <DetailItem label="City" value={viewingDonation.city} />
                     <DetailItem label="State" value={viewingDonation.state} />
                     <DetailItem label="Pincode" value={viewingDonation.pincode} />
-                    <DetailItem className="md:col-span-2" label="Remarks" value={viewingDonation.remarks} />
+                    <DetailItem label="Remarks" value={viewingDonation.remarks} />
                   </div>
                 </div>
 
                 {/* Right Column: Donated Items */}
-                <div className="flex-1 space-y-6 w-full">
-                  <div className="flex items-center justify-between border-b border-border-temple/40 pb-2">
-                    <h4 className="text-lg font-bold text-primary uppercase tracking-widest">Donated Items</h4>
-                  </div>
-                  <div className="rounded-xl border border-border-temple overflow-hidden shadow-sm">
-                    <table className="w-full text-lg text-left">
-                      <thead className="bg-[#F6EEDF] border-b border-border-temple">
-                        <tr>
-                          <th className="px-6 py-4 font-bold text-text-main">Item Name</th>
-                          <th className="px-6 py-4 font-bold text-text-main text-right">Quantity</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border-temple/30">
+                <div className="temple-form-section">
+                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">Donated Items</h4>
+                  <div className="overflow-hidden">
+                    <table className="w-full text-sm text-left border-collapse">
+                      <tbody className="divide-y divide-border-temple/10">
                         {(viewingDonation.items || []).map((it) =>
-                          <tr key={it.id} className="bg-white hover:bg-bg-temple/20 transition-colors">
-                            <td className="px-6 py-4 text-text-main font-medium">{it.item?.item_name}</td>
-                            <td className="px-6 py-4 text-text-main text-right font-black">
+                          <tr key={it.id} className="hover:bg-bg-temple/10 transition-colors">
+                            <td className="px-0 py-4 text-text-main font-medium">{it.item?.item_name}</td>
+                            <td className="px-0 py-4 text-text-main text-right font-medium">
                               {formatQuantityWithUnit(it.quantity, it.item?.unit)}
                             </td>
                           </tr>
@@ -599,77 +620,124 @@ const DonationsPage = () => {
               </div>
             }
           </div>
-          <DialogFooter className="!m-0 !mt-0 !space-x-0 !p-6 border-t border-border-temple/40">
-            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-12 h-12 border-none shadow-md font-black uppercase tracking-widest rounded-xl text-lg">Close</Button>
+          <DialogFooter className="!p-6 !mx-0 !mb-0 border-t border-border-temple/40 !flex !flex-row !items-center !justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[98vw] max-w-[1600px] max-h-[96vh] overflow-y-auto border-border-temple">
-          <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <DialogTitle className="text-2xl text-text-main font-temple">
+      <Dialog
+        open={open}
+        onOpenChange={(val) => {
+          if (!val) {
+            if (confirmingSave) {
+              // Ignore close events while confirm popup is active.
+              return;
+            }
+            setOpen(false);
+            setEditingDonation(null);
+            resetDonationForm();
+            return;
+          }
+          setOpen(true);
+        }}
+      >
+        <DialogContent className="w-[98vw] max-w-4xl max-h-[96vh] p-0 overflow-hidden border-border-temple shadow-2xl flex flex-col">
+          <DialogHeader className="m-0">
+            <DialogTitle className="text-xl text-text-main font-temple">
               {editingDonation ? 'Edit Donation Entry' : 'Record New Donation'}
             </DialogTitle>
             <DialogDescription className="sr-only">Form to record devotee details and donated items.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-6">
-            <div className="flex flex-col lg:flex-row gap-12 items-start">
-              {/* Left Column: Devotee Details */}
-              <div className="flex-1 space-y-6 w-full">
-                <div className="flex items-center justify-between border-b border-border-temple/40 pb-2">
-                  <h4 className="text-lg font-bold text-primary uppercase tracking-widest">Devotee Details</h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                  <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-text-main font-bold">Donation Date *</Label>
-                      <Input type="date" {...register('donation_date')} className="h-11 text-base text-text-main" />
-                      {errors.donation_date && <p className="text-xs text-error font-medium">{errors.donation_date.message}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-text-main font-bold">Donation Type *</Label>
-                      <Select {...register('donation_type')} onChange={handleDonationTypeChange} className="h-11 text-base text-text-main">
-                        <option value={0}>Select Donation Type</option>
-                        {activeDonationTypes.map((type) =>
-                          <option key={type.id} value={type.id}>{type.type_name}</option>
-                        )}
-                      </Select>
-                      {errors.donation_type && <p className="text-xs text-error font-medium">{errors.donation_type.message}</p>}
-                    </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col overflow-hidden flex-1">
+            {/* Scrollable Form Body */}
+            <div className="bg-white space-y-10 px-8 py-8 overflow-y-auto custom-scrollbar flex-1">
+              {/* Devotee Details Fields */}
+              <div className="space-y-5">
+                {/* Row 1: Date & Type */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <Label className="text-text-main font-bold">Donation Date *</Label>
+                    <Input type="date" {...register('donation_date')} className="h-11 text-base text-text-main" />
+                    {errors.donation_date && <p className="text-xs text-error font-medium">{errors.donation_date.message}</p>}
                   </div>
                   <div className="space-y-1.5">
+                    <Label className="text-text-main font-bold">Donation Type *</Label>
+                    <Select {...register('donation_type')} onChange={handleDonationTypeChange} className="h-11 text-base text-text-main">
+                      <option value={0}>Select Donation Type</option>
+                      {activeDonationTypes.map((type) =>
+                        <option key={type.id} value={type.id}>{type.type_name}</option>
+                      )}
+                    </Select>
+                    {errors.donation_type && <p className="text-xs text-error font-medium">{errors.donation_type.message}</p>}
+                  </div>
+                </div>
+
+                {/* Row 2: Mobile & Name */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Mobile Number *</Label>
-                    <Input {...register('phone_number')} className="h-11 text-base text-text-main" />
+                    <Input
+                      {...register('phone_number')}
+                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="h-11 text-base text-text-main"
+                    />
                     {errors.phone_number && <p className="text-xs text-error font-medium">{errors.phone_number.message}</p>}
                   </div>
-                  {devoteeMatchOpen && matchedDevotee &&
-                  <div className="md:col-span-2 rounded-lg border border-border-temple bg-[#FFF8F0] p-4 shadow-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                      <DetailItem className="grid-cols-[110px_16px_1fr]" label="Name" value={matchedDevotee.devotee_name} />
-                      <DetailItem className="grid-cols-[110px_16px_1fr]" label="Phone" value={matchedDevotee.phone_number} />
-                      <DetailItem className="grid-cols-[110px_16px_1fr]" label="Email" value={matchedDevotee.email} />
-                      <DetailItem className="grid-cols-[110px_16px_1fr]" label="Address" value={matchedDevotee.address} />
-                      <DetailItem className="grid-cols-[110px_16px_1fr]" label="City" value={matchedDevotee.city} />
-                      <DetailItem className="grid-cols-[110px_16px_1fr]" label="State" value={matchedDevotee.state} />
-                      <DetailItem className="grid-cols-[110px_16px_1fr]" label="Pincode" value={matchedDevotee.pincode} />
-                    </div>
-                    <div className="mt-4 flex flex-wrap justify-end gap-3">
-                      <Button type="button" onClick={useMatchedDevotee} className="h-10 px-6 bg-primary hover:bg-secondary text-white font-bold">
-                        Fill Details
-                      </Button>
-                      <Button type="button" variant="ghost" onClick={enterNewDevotee} className="h-10 px-5 bg-white border border-border-temple text-text-main hover:bg-bg-temple font-bold">
-                        Clear & Enter New
-                      </Button>
-                    </div>
-                  </div>
-                  }
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Devotee Name *</Label>
                     <Input {...register('devotee_name')} className="h-11 text-base text-text-main" />
                     {errors.devotee_name && <p className="text-xs text-error font-medium">{errors.devotee_name.message}</p>}
                   </div>
+                </div>
+
+                {devoteeMatchOpen && matchedDevotee &&
+                  <div className="rounded-xl border border-[#E7D8CC] bg-[#FFFDFB] p-4 shadow-sm animate-in fade-in slide-in-from-top-1">
+                    <div className="flex justify-between items-start mb-3">
+                      <p className="text-sm font-bold text-primary">Existing Devotee Found</p>
+                      <X className="h-4 w-4 cursor-pointer text-text-light hover:text-text-main" onClick={closeDevoteeMatch} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                      {[
+                        ['Name', matchedDevotee.devotee_name],
+                        ['Phone', matchedDevotee.phone_number],
+                        ['Email', matchedDevotee.email],
+                        ['City', matchedDevotee.city],
+                        ['State', matchedDevotee.state],
+                        ['Pincode', matchedDevotee.pincode]
+                      ].map(([label, value]) =>
+                        <div key={label} className="rounded-lg border border-[#F0E4D8] bg-white px-3 py-2">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-text-light">{label}</p>
+                          <p className="mt-0.5 font-semibold text-text-main break-words">{value || '-'}</p>
+                        </div>
+                      )}
+                      <div className="md:col-span-3 rounded-lg border border-[#F0E4D8] bg-white px-3 py-2">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-text-light">Address</p>
+                        <p className="mt-0.5 font-semibold text-text-main break-words">{matchedDevotee.address || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button type="button" size="sm" onClick={useMatchedDevotee} className="bg-primary text-white font-bold h-8">Use Details</Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={enterNewDevotee}
+                        className="h-8 border border-[#D9C8AF] bg-white px-4 text-text-main hover:bg-bg-temple font-bold"
+                      >
+                        Clear & Enter New
+                      </Button>
+                    </div>
+                  </div>
+                }
+
+                {/* Row 3: Email & Address */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Email</Label>
                     <Input {...register('email')} className="h-11 text-base text-text-main" />
@@ -679,6 +747,10 @@ const DonationsPage = () => {
                     <Label className="text-text-main font-bold">Address</Label>
                     <Input {...register('address')} className="h-11 text-base text-text-main" />
                   </div>
+                </div>
+
+                {/* Row 4: City & State */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">City</Label>
                     <Input {...register('city')} className="h-11 text-base text-text-main" />
@@ -691,31 +763,49 @@ const DonationsPage = () => {
                       )}
                     </Select>
                   </div>
+                </div>
+
+                {/* Row 5: Pincode & Remarks */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Pincode</Label>
                     <Input {...register('pincode')} className="h-11 text-base text-text-main" />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Remarks</Label>
-                    <Input {...register('remarks')} className="h-11 text-base text-text-main" />
+                    <Textarea 
+                      {...register('remarks')} 
+                      className="min-h-[80px] text-base text-text-main resize-none" 
+                      placeholder="Add any additional notes here..."
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Donated Items */}
-              <div className="flex-1 space-y-6 w-full">
-                <div className="flex items-center justify-between border-b border-border-temple/40 pb-2">
-                  <h4 className="text-lg font-bold text-primary uppercase tracking-widest">Donated Items</h4>
+              {/* Donated Items Section */}
+              <div className="space-y-6 pt-4">
+                <div className="flex items-center gap-3 border-b border-border-temple/40 pb-3">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                    <ReceiptText size={20} />
+                  </div>
+                  <h4 className="text-lg font-bold text-secondary font-temple">Donated Items</h4>
                 </div>
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
-                  {fields.map((field, index) =>
-                    <div key={field.id} className="grid grid-cols-12 gap-4 items-end bg-white p-4 rounded-xl border border-border-temple/40 shadow-sm relative hover:border-primary/30 transition-colors">
-                      <div className="col-span-2 space-y-1.5">
-                        <Label className="text-base font-bold text-text-main">Code</Label>
+
+                <div className="rounded-xl border border-border-temple/40 bg-white shadow-sm overflow-hidden">
+                  <div className="grid grid-cols-[120px_1fr_150px_80px] gap-4 items-center bg-bg-temple/60 px-6 py-4 border-b border-border-temple/40">
+                    <div className="text-sm font-bold uppercase tracking-wider text-text-main">Item Code</div>
+                    <div className="text-sm font-bold uppercase tracking-wider text-text-main">Item Name *</div>
+                    <div className="text-sm font-bold uppercase tracking-wider text-text-main text-center">Quantity *</div>
+                    <div className="text-sm font-bold uppercase tracking-wider text-text-main text-center">Action</div>
+                  </div>
+                  <div className="divide-y divide-border-temple/20">
+                    {fields.map((field, index) =>
+                      <div key={field.id} className="grid grid-cols-[120px_1fr_150px_80px] gap-4 items-start px-6 py-5 hover:bg-bg-temple/10 transition-colors">
                         <Input
                           type="text"
-                          className="h-11 text-base text-center font-bold text-text-main border-primary/30 px-1"
+                          className="h-11 text-base text-center text-text-main"
                           {...register(`items.${index}.search_id`)}
+                          placeholder="Code"
                           onChange={(e) => {
                             const val = String(e.target.value || '').trim().toLowerCase();
                             setValue(`items.${index}.search_id`, e.target.value);
@@ -731,97 +821,103 @@ const DonationsPage = () => {
                               setValue(`items.${index}.item_id`, 0);
                             }
                           }} />
-                      </div>
-                      <div className="col-span-6 space-y-1.5">
-                        <Label className="text-base font-bold text-text-main">Item Name</Label>
-                        <Controller
-                          name={`items.${index}.item_id`}
-                          control={control}
-                          render={({ field: selectField }) =>
-                            <Select
-                              {...selectField}
-                              className="h-11 text-base"
-                              onChange={(e) => {
-                                const itemId = Number(e.target.value);
-                                selectField.onChange(e);
-                                const code = itemCodeByItemIdMap.get(itemId);
-                                if (code) {
-                                  setValue(`items.${index}.search_id`, code);
-                                }
-                              }}>
-                              <option value={0} disabled>Select Item</option>
-                              {activeItems.map((i) =>
-                                <option key={i.id} value={i.id}>{i.item_name}</option>
-                              )}
-                            </Select>
-                          } />
-                      </div>
-                      <div className="col-span-3 space-y-1.5">
-                        <Label className="text-base font-bold text-text-main">Quantity</Label>
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          {...register(`items.${index}.quantity`, {
-                            onChange: (e) => {
-                              const val = e.target.value;
-                              if (val !== '' && !/^\d*\.?\d*$/.test(val)) {
-                                e.target.value = val.slice(0, -1);
-                              }
-                            }
-                          })}
-                          onFocus={(e) => {
-                            if (e.target.value === '0') {
-                              setValue(`items.${index}.quantity`, '');
-                            }
-                          }}
-                          className="h-11 text-lg font-black text-primary" />
-                      </div>
-                      <div className="col-span-1 flex justify-end">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => remove(index)}
-                          className="h-11 w-11 p-0 text-error hover:bg-error/10 rounded-full"
-                          disabled={fields.length === 1}>
-                          <Trash2 className="w-5 h-5" />
-                        </Button>
-                      </div>
-                      {errors.items?.[index] &&
-                        <div className="col-span-12">
-                          <p className="text-[11px] text-error font-black uppercase tracking-wider">
-                            {errors.items[index]?.item_id?.message || errors.items[index]?.quantity?.message}
-                          </p>
+                        <div className="space-y-1.5">
+                          <Controller
+                            name={`items.${index}.item_id`}
+                            control={control}
+                            render={({ field: selectField }) =>
+                              <Select
+                                {...selectField}
+                                className="h-11 text-base"
+                                onChange={(e) => {
+                                  const itemId = Number(e.target.value);
+                                  selectField.onChange(e);
+                                  const code = itemCodeByItemIdMap.get(itemId);
+                                  if (code) {
+                                    setValue(`items.${index}.search_id`, code);
+                                  }
+                                }}>
+                                <option value={0} disabled>Select Item</option>
+                                {activeItems.map((i) =>
+                                  <option key={i.id} value={i.id}>{i.item_name}</option>
+                                )}
+                              </Select>
+                            } />
+                          {errors.items?.[index]?.item_id && <p className="text-[10px] text-error font-bold">Required</p>}
                         </div>
-                      }
-                    </div>
-                  )}
+                        <div className="space-y-1.5">
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            {...register(`items.${index}.quantity`)}
+                            onFocus={(e) => {
+                              if (e.target.value === '0') {
+                                setValue(`items.${index}.quantity`, '');
+                              }
+                            }}
+                            className="h-11 text-lg font-normal text-center text-text-main"
+                            placeholder="0.000"
+                          />
+                          {errors.items?.[index]?.quantity && <p className="text-[10px] text-error font-bold text-center">{errors.items[index]?.quantity?.message}</p>}
+                        </div>
+                        <div className="flex justify-center">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => remove(index)}
+                            className="h-11 w-11 p-0 text-error hover:bg-error/5 rounded-full"
+                            disabled={fields.length === 1}>
+                            <Trash2 className="w-5 h-5" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="pt-2">
+                <div className="pt-2 flex justify-between items-center">
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => append({ item_id: 0, quantity: 0 })}
-                    className="h-10 text-base font-bold border-primary text-primary hover:bg-primary hover:text-white">
-                    <Plus className="h-3 w-3 mr-1" /> Add Item
+                    onClick={() => append({ search_id: '', item_id: 0, quantity: 0 })}
+                    className="h-10 text-base font-bold border-primary text-primary hover:bg-primary hover:text-white transition-colors">
+                    <Plus className="h-4 w-4 mr-1" /> Add Another Item
                   </Button>
+                  
+                  {errors.items?.message && <p className="text-sm text-error font-black uppercase tracking-widest">{errors.items.message}</p>}
                 </div>
-                {errors.items?.message && <p className="text-sm text-error font-black mt-2 uppercase tracking-widest">{errors.items.message}</p>}
               </div>
             </div>
 
-            <DialogFooter className="gap-4 mt-8 border-t border-border-temple/40 pt-8">
-              <Button type="button" variant="ghost" onClick={() => { setOpen(false); setEditingDonation(null); }} className="w-36 h-12 bg-white border-2 border-border-temple text-text-main hover:bg-bg-temple font-black uppercase tracking-widest rounded-xl">
+            {/* Standard Footer Bar */}
+            <DialogFooter className="gap-3 !m-0 bg-[#F3E8D4] shrink-0 !p-6">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setOpen(false);
+                  setEditingDonation(null);
+                  resetDonationForm();
+                }}
+                className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={saveMutation.isPending} className="w-48 h-12 bg-primary hover:bg-secondary text-white font-black uppercase tracking-widest shadow-xl border-none rounded-xl text-lg">
+              <Button type="submit" disabled={saveMutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg border-none">
                 {saveMutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      <ReceiptViewerDialog
+        open={receiptViewerOpen}
+        onOpenChange={setReceiptViewerOpen}
+        donationId={viewingReceiptId}
+        receiptNumber={viewingReceiptNumber}
+      />
 
     </div>);
 

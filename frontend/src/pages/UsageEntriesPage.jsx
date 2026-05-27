@@ -34,8 +34,7 @@ const formSchema = z.object({
   raw_items: z.record(
     z.string(),
     z.object({
-      quantity_used: z.coerce.number().min(0).default(0),
-      qty_returned: z.coerce.number().min(0).default(0)
+      quantity_used: z.coerce.number().min(0).default(0)
     })
   ).default({}),
   wastage_items: z.record(
@@ -48,12 +47,13 @@ const formSchema = z.object({
   raw_wastage_items: z.array(z.object({
     serial_id: z.string().optional().default(''),
     item_id: z.coerce.number().min(1, 'Item is required'),
-    quantity: z.coerce.number().min(0.001, 'Quantity is required')
+    operation: z.enum(['add', 'deduct']).default('add'),
+    quantity: z.coerce.number().positive('Qty must be greater than 0')
   })).default([])
 }).superRefine((data, ctx) => {
-  const hasRaw = Object.values(data.raw_items || {}).some((v) => Number(v.quantity_used || 0) > 0 || Number(v.qty_returned || 0) > 0);
+  const hasRaw = Object.values(data.raw_items || {}).some((v) => Number(v.quantity_used || 0) > 0);
   const hasWastage = Object.values(data.wastage_items || {}).some((v) => Number(v?.quantity || 0) > 0);
-  const hasRawWastage = (data.raw_wastage_items || []).some((v) => Number(v?.quantity || 0) > 0);
+  const hasRawWastage = (data.raw_wastage_items || []).some((v) => Number(v?.quantity || 0) !== 0);
   const hasManpower =
   Number(data.regular_cooking_persons || 0) > 0 ||
   Number(data.additional_cooking_persons || 0) > 0 ||
@@ -65,11 +65,6 @@ const formSchema = z.object({
   if (!hasRaw && !hasWastage && !hasRawWastage && !hasManpower && !hasTimesCooked) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter at least one value before saving', path: ['raw_items'] });
   }
-  Object.entries(data.raw_items || {}).forEach(([id, row]) => {
-    if (Number(row.qty_returned || 0) > Number(row.quantity_used || 0)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Returned qty cannot be more than used qty`, path: ['raw_items', id, 'qty_returned'] });
-    }
-  });
 });
 
 
@@ -81,9 +76,12 @@ const UsageEntriesPage = () => {
   const { hasPermission } = usePermission();
   const canWrite = hasPermission('consumptions.write');
   const canDelete = hasPermission('consumptions.delete');
+  const canReadUsage = hasPermission('consumptions.read');
+  const canWriteUsage = hasPermission('consumptions.write');
 
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewTab, setViewTab] = useState('raw');
   const [viewingConsumption, setViewingConsumption] = useState(null);
   const [viewingWastages, setViewingWastages] = useState([]);
   const [viewingAdjustments, setViewingAdjustments] = useState([]);
@@ -91,7 +89,7 @@ const UsageEntriesPage = () => {
   const [editingWastageEntryId, setEditingWastageEntryId] = useState(null);
   const [customDate, setCustomDate] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(50);
 
   const { data: consumptionsData, isLoading: consumptionsLoading } = useQuery({
     queryKey: ['consumptions', customDate, page, pageSize],
@@ -124,8 +122,6 @@ const UsageEntriesPage = () => {
   const activeItems = useMemo(() => (items || []).filter((i) => i.status === 1), [items]);
   const activeMenuItems = useMemo(() => menuItems.filter((m) => m.status === 1), [menuItems]);
 
-  const displayKannadaName = (name) => String(name || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
-
   const serialToItemIdMap = useMemo(() => {
     const map = new Map();
     activeItems.forEach((i) => {
@@ -138,7 +134,7 @@ const UsageEntriesPage = () => {
   }, [activeItems]);
 
   const buildRawDefaults = () =>
-  Object.fromEntries(activeItems.map((it) => [String(it.id), { quantity_used: 0, qty_returned: 0 }]));
+  Object.fromEntries(activeItems.map((it) => [String(it.id), { quantity_used: 0 }]));
   const buildWastageDefaults = () =>
   Object.fromEntries(activeMenuItems.map((it) => [String(it.id), { quantity: 0, approx_amount: 0 }]));
 
@@ -171,10 +167,9 @@ const UsageEntriesPage = () => {
       const rawRows = Object.entries(data.raw_items || {}).
       map(([id, row]) => ({
         item_id: Number(id),
-        quantity_used: Number(row.quantity_used || 0),
-        qty_returned: Number(row.qty_returned || 0)
+        quantity_used: Number(row.quantity_used || 0)
       })).
-      filter((r) => r.quantity_used > 0 || r.qty_returned > 0);
+      filter((r) => r.quantity_used > 0);
 
       const wastageRows = Object.entries(data.wastage_items || {}).
       map(([id, row]) => ({
@@ -185,17 +180,13 @@ const UsageEntriesPage = () => {
       filter((r) => r.quantity > 0);
 
       const rawWastageRows = (data.raw_wastage_items || []).
-      filter((r) => r.quantity > 0 && r.item_id > 0).
+      filter((r) => Number(r.quantity || 0) > 0 && r.item_id > 0).
       map((r) => ({
         item_id: Number(r.item_id),
-        quantity: Number(r.quantity),
+        operation: r.operation === 'deduct' ? 'deduct' : 'add',
+        quantity: Math.abs(Number(r.quantity)),
         approx_amount: 0
       }));
-
-      const allWastageItems = [
-      ...wastageRows,
-      ...rawWastageRows];
-
 
       let saveRes;
       const commonPayload = {
@@ -224,7 +215,7 @@ const UsageEntriesPage = () => {
       const adjustmentPayload = rawWastageRows.map((r) => ({
         item_id: r.item_id,
         adjustment_date: data.usage_date,
-        adjusted_qty: r.quantity, // Backend expects positive, will negate it
+        adjusted_qty: r.operation === 'deduct' ? -Math.abs(Number(r.quantity)) : Math.abs(Number(r.quantity)),
         reason: `Linked to Usage Entry #${consumptionId}`
       }));
 
@@ -316,16 +307,20 @@ const UsageEntriesPage = () => {
 
   const handleEdit = async (consumption) => {
     try {
-      const [consumptionRes, wastageRes, adjustmentsRes] = await Promise.all([
-      api.get(`/daily-usage/get_consumption/${consumption.id}`),
-      api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
-      api.get('/stock-adjustments/list_adjustments', { params: { consumption_entry_id: consumption.id } })]
-      );
+      const [consumptionRes, wastageRes, adjustmentsRes] = await Promise.allSettled([
+        api.get(`/daily-usage/get_consumption/${consumption.id}`),
+        api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
+        api.get('/stock-adjustments/list_adjustments', { params: { consumption_entry_id: consumption.id } })
+      ]);
 
-      const full = consumptionRes.data;
-      const wastageRows = Array.isArray(wastageRes.data) ?
-      wastageRes.data :
-      wastageRes.data?.items || [];
+      if (consumptionRes.status !== 'fulfilled') {
+        throw new Error('Failed to fetch consumption');
+      }
+
+      const full = consumptionRes.value.data;
+      const wastageRows = wastageRes.status === 'fulfilled'
+        ? (Array.isArray(wastageRes.value.data) ? wastageRes.value.data : wastageRes.value.data?.items || [])
+        : [];
 
       const matchedWastages = wastageRows.filter((w) => w.consumption_entry_id === full.id);
       const primaryWastage = matchedWastages.length > 0 ? matchedWastages[0] : null;
@@ -333,8 +328,7 @@ const UsageEntriesPage = () => {
       const rawDefaults = buildRawDefaults();
       (full.items || []).forEach((it) => {
         rawDefaults[String(it.item_id)] = {
-          quantity_used: Number(it.quantity_used || 0),
-          qty_returned: Number(it.qty_returned || 0)
+          quantity_used: Number(it.quantity_used || 0)
         };
       });
 
@@ -352,8 +346,10 @@ const UsageEntriesPage = () => {
       });
 
       // Load Stock Adjustments (Raw Items)
-      const rawWastageToLoad = (adjustmentsRes.data || []).map((adj) => ({
+      const adjustmentRows = adjustmentsRes.status === 'fulfilled' ? (adjustmentsRes.value.data || []) : [];
+      const rawWastageToLoad = adjustmentRows.map((adj) => ({
         item_id: adj.item_id,
+        operation: Number(adj.adjusted_qty || 0) < 0 ? 'deduct' : 'add',
         quantity: Math.abs(Number(adj.adjusted_qty || 0)),
         serial_id: items?.find((ri) => ri.id === adj.item_id)?.serial_numbers?.[0]?.serial_number || ''
       }));
@@ -381,15 +377,20 @@ const UsageEntriesPage = () => {
 
   const handleView = async (consumption) => {
     try {
-      const [consumptionRes, wastageRes, adjustmentsRes] = await Promise.all([
-      api.get(`/daily-usage/get_consumption/${consumption.id}`),
-      api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
-      api.get('/stock-adjustments/list_adjustments', { params: { consumption_entry_id: consumption.id } })]
-      );
-      const fullConsumption = consumptionRes.data;
-      const wastageRows = Array.isArray(wastageRes.data) ?
-      wastageRes.data :
-      wastageRes.data?.items || [];
+      const [consumptionRes, wastageRes, adjustmentsRes] = await Promise.allSettled([
+        api.get(`/daily-usage/get_consumption/${consumption.id}`),
+        api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
+        api.get('/stock-adjustments/list_adjustments', { params: { consumption_entry_id: consumption.id } })
+      ]);
+
+      if (consumptionRes.status !== 'fulfilled') {
+        throw new Error('Failed to fetch consumption');
+      }
+
+      const fullConsumption = consumptionRes.value.data;
+      const wastageRows = wastageRes.status === 'fulfilled'
+        ? (Array.isArray(wastageRes.value.data) ? wastageRes.value.data : wastageRes.value.data?.items || [])
+        : [];
 
       const menuWastages = wastageRows.
       filter((w) => w.consumption_entry_id === fullConsumption.id).
@@ -402,18 +403,20 @@ const UsageEntriesPage = () => {
         approx_amount: it.approx_amount
       })));
 
-      const rawAdjustments = (adjustmentsRes.data || []).map((adj) => ({
+      const adjustmentRows = adjustmentsRes.status === 'fulfilled' ? (adjustmentsRes.value.data || []) : [];
+      const rawAdjustments = adjustmentRows.map((adj) => ({
         entryId: adj.id,
         menu_item_name: items?.find((i) => i.id === adj.item_id)?.item_name || `Item #${adj.item_id}`,
         unit_name: items?.find((i) => i.id === adj.item_id)?.unit?.unit_name || '',
         unit_code: items?.find((i) => i.id === adj.item_id)?.unit?.unit_code || '',
-        quantity: Math.abs(adj.adjusted_qty),
+        quantity: Number(adj.adjusted_qty || 0),
         approx_amount: null
       }));
 
       setViewingConsumption(fullConsumption);
       setViewingWastages(menuWastages);
       setViewingAdjustments(rawAdjustments);
+      setViewTab('raw');
       setViewDialogOpen(true);
     } catch {
       showError('Failed to fetch record details');
@@ -421,6 +424,19 @@ const UsageEntriesPage = () => {
   };
 
   const onSubmit = async (data) => {
+    const invalidDeduction = (data.raw_wastage_items || []).find((row) => {
+      if (row.operation !== 'deduct') return false;
+      const item = activeItems.find((i) => i.id === Number(row.item_id));
+      const available = Number(item?.current_stock || 0);
+      return Number(row.quantity || 0) > available;
+    });
+
+    if (invalidDeduction) {
+      const item = activeItems.find((i) => i.id === Number(invalidDeduction.item_id));
+      showError(`Deduct qty exceeds available stock for ${item?.item_name || 'selected item'}`);
+      return;
+    }
+
     const confirmed = await showConfirm('Confirm Save', 'Save this combined consumption + wastage entry?');
     if (confirmed) saveMutation.mutate({ ...data, isEditMode: Boolean(editingConsumption) });
   };
@@ -515,171 +531,181 @@ const UsageEntriesPage = () => {
       
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="w-[1840px] max-w-[96vw] max-h-[94vh] overflow-hidden border-border-temple p-0">
-          <DialogHeader className="border-b border-border-temple/40 px-6 py-4 m-0">
-            <DialogTitle className="text-text-main">Usage Summary</DialogTitle>
+        <DialogContent className="w-[1840px] max-w-[96vw] max-h-[94vh] !flex !flex-col overflow-hidden border-border-temple !p-0 shadow-2xl">
+          <DialogHeader className="border-b border-border-temple/40 px-6 py-4 m-0 shrink-0 bg-[#F3E8D4]">
+            <DialogTitle className="text-text-main font-temple">Usage Summary</DialogTitle>
             <DialogDescription className="sr-only">Usage details</DialogDescription>
           </DialogHeader>
-          <div className="max-h-[calc(94vh-150px)] overflow-y-auto px-6 py-4">
-          <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-12 gap-6 items-start">
-            <div className="temple-form-section min-w-0 2xl:col-span-3">
-              <div className="pb-3">
-                <span className="text-lg font-bold text-primary uppercase tracking-wider">Daily Service Details</span>
+          <div className="flex-1 overflow-y-auto px-6 py-8 custom-scrollbar bg-white">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+              <div className="temple-form-section min-w-0">
+                <div className="pb-3 border-b border-border-temple/20 mb-4">
+                  <span className="text-lg font-bold text-primary">Daily Service Details</span>
+                </div>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-4 text-base text-text-main">
+                  <div className="font-semibold">Usage Date</div><div className="text-right whitespace-nowrap">{formatDate(viewingConsumption?.usage_date)}</div>
+                  <div className="font-semibold">Regular Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cooking_persons || 0)}</div>
+                  <div className="font-semibold">Additional Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
+                  <div className="font-semibold">Total Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cooking_persons || 0) + Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
+                  <div className="font-semibold">Regular Serving Persons</div><div className="text-right">{Number(viewingConsumption?.regular_serving_persons || 0)}</div>
+                  <div className="font-semibold">Additional Serving Persons</div><div className="text-right">{Number(viewingConsumption?.additional_serving_persons || 0)}</div>
+                  <div className="font-semibold">Total Serving Persons</div><div className="text-right">{Number(viewingConsumption?.regular_serving_persons || 0) + Number(viewingConsumption?.additional_serving_persons || 0)}</div>
+                  <div className="font-semibold">Regular Cleaning Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cleaning_persons || 0)}</div>
+                  <div className="font-semibold">Additional Cleaning Persons</div><div className="text-right">{Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
+                  <div className="font-semibold">Total Cleaning Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cleaning_persons || 0) + Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
+                  <div className="font-semibold">No. of times cooked</div><div className="text-right">{viewingConsumption?.times_cooked ?? 0}</div>
+                </div>
               </div>
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-4 text-base text-text-main">
-                <div className="font-semibold">Usage Date</div><div className="text-right whitespace-nowrap">{formatDate(viewingConsumption?.usage_date)}</div>
-                <div className="font-semibold">Regular Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cooking_persons || 0)}</div>
-                <div className="font-semibold">Additional Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
-                <div className="font-semibold">Total Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cooking_persons || 0) + Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
-                <div className="font-semibold">Regular Serving Persons</div><div className="text-right">{Number(viewingConsumption?.regular_serving_persons || 0)}</div>
-                <div className="font-semibold">Additional Serving Persons</div><div className="text-right">{Number(viewingConsumption?.additional_serving_persons || 0)}</div>
-                <div className="font-semibold">Total Serving Persons</div><div className="text-right">{Number(viewingConsumption?.regular_serving_persons || 0) + Number(viewingConsumption?.additional_serving_persons || 0)}</div>
-                <div className="font-semibold">Regular Cleaning Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cleaning_persons || 0)}</div>
-                <div className="font-semibold">Additional Cleaning Persons</div><div className="text-right">{Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
-                <div className="font-semibold">Total Cleaning Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cleaning_persons || 0) + Number(viewingConsumption?.additional_cleaning_persons || 0)}</div>
-                <div className="font-semibold">No. of times cooked</div><div className="text-right">{viewingConsumption?.times_cooked ?? 0}</div>
-              </div>
-            </div>
 
-            <div className="contents">
-            <div className="temple-form-section min-w-0 2xl:col-span-3">
-              <div className="pb-2">
-                <span className="text-lg font-bold text-primary uppercase tracking-wider">Raw Usage Items</span>
-              </div>
-              <div className="rounded-md border border-border-temple overflow-hidden mt-1">
-                <table className="w-full text-base text-left">
-                  <thead className="bg-bg-temple text-text-main uppercase text-base font-bold tracking-wider">
-                    <tr>
-                      <th className="px-4 py-3 border-b border-border-temple">Item</th>
-                      <th className="px-4 py-3 border-b border-border-temple text-right">Used</th>
-                      <th className="px-4 py-3 border-b border-border-temple text-right">Returned</th>
-                    </tr>
-                  </thead>
-                  </table>
-                <div>
-                <table className="w-full text-base text-left">
-                  <tbody className="divide-y divide-border-temple/40">
-                    {(viewingConsumption?.items || []).filter((item) => Number(item.quantity_used || 0) > 0 || Number(item.qty_returned || 0) > 0).length === 0 ?
+              <div className="min-w-0">
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setViewTab('raw')}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm font-bold border transition-colors",
+                      viewTab === 'raw'
+                        ? "bg-primary text-white border-primary"
+                        : "bg-white text-text-main border-border-temple/40 hover:bg-bg-temple/40"
+                    )}
+                  >
+                    Raw Usage
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewTab('wastage')}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm font-bold border transition-colors",
+                      viewTab === 'wastage'
+                        ? "bg-primary text-white border-primary"
+                        : "bg-white text-text-main border-border-temple/40 hover:bg-bg-temple/40"
+                    )}
+                  >
+                    Wastage
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewTab('adjustments')}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm font-bold border transition-colors",
+                      viewTab === 'adjustments'
+                        ? "bg-primary text-white border-primary"
+                        : "bg-white text-text-main border-border-temple/40 hover:bg-bg-temple/40"
+                    )}
+                  >
+                    Adjustments
+                  </button>
+                </div>
+
+                <div className="rounded-xl border border-border-temple/30 overflow-hidden shadow-sm bg-white">
+                  {viewTab === 'raw' && (
+                    <table className="w-full text-base text-left border-collapse">
+                      <thead className="bg-[#FAF7F2] border-b border-border-temple/30">
+                        <tr>
+                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider">Item Name</th>
+                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider text-right">Qty</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-temple/10">
+                        {(viewingConsumption?.items || []).filter((item) => Number(item.quantity_used || 0) > 0).length === 0 ?
                           <tr>
-                        <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center text-sm">No raw items</td>
-                      </tr> :
-
+                            <td colSpan={2} className="px-4 py-3 text-text-main/60 text-center text-sm italic">No raw items recorded</td>
+                          </tr> :
                           (viewingConsumption?.items || []).
-                          filter((item) => Number(item.quantity_used || 0) > 0 || Number(item.qty_returned || 0) > 0).
-                          map((item) =>
-                          <tr key={item.id} className="hover:bg-bg-temple/30">
-                          <td className="px-3 py-2 text-text-main">
-                            <span className="text-base font-normal">
-                              {displayKannadaName(item.item?.item_name || items?.find((it) => it.id === item.item_id)?.item_name || `Unknown Item (${item.item_id})`)}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-right text-text-main whitespace-nowrap">
-                            {formatQuantityWithUnit(
-                                item.quantity_used || 0,
-                                item.item?.unit || items?.find((it) => it.id === item.item_id)?.unit
-                              )}
-                          </td>
-                          <td className="px-3 py-2 text-right text-text-main whitespace-nowrap">
-                            {formatQuantityWithUnit(
-                                item.qty_returned || 0,
-                                item.item?.unit || items?.find((it) => it.id === item.item_id)?.unit
-                              )}
-                          </td>
-                        </tr>
-                          )
-                          }
-                  </tbody>
-                </table>
-                </div>
-              </div>
-            </div>
+                            filter((item) => Number(item.quantity_used || 0) > 0).
+                            map((item) =>
+                              <tr key={item.id} className="hover:bg-bg-temple/5 transition-colors">
+                                <td className="px-4 py-3 text-text-main">
+                                  <span className="text-base font-medium">
+                                    {item.item?.item_name || items?.find((it) => it.id === item.item_id)?.item_name || `Unknown Item (${item.item_id})`}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right text-text-main font-semibold">
+                                  {formatQuantityWithUnit(
+                                    item.quantity_used || 0,
+                                    item.item?.unit || items?.find((it) => it.id === item.item_id)?.unit
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                        }
+                      </tbody>
+                    </table>
+                  )}
 
-            <div className="temple-form-section min-w-0 2xl:col-span-3">
-              <div className="pb-2">
-                <span className="text-lg font-bold text-primary uppercase tracking-wider">Wastage Entries</span>
-              </div>
-              <div className="rounded-md border border-border-temple overflow-hidden mt-1">
-                <table className="w-full text-base text-left">
-                  <thead className="bg-bg-temple text-text-main uppercase text-base font-bold tracking-wider">
-                    <tr>
-                      <th className="px-4 py-3 border-b border-border-temple">Menu Item</th>
-                      <th className="px-4 py-3 border-b border-border-temple text-right">Qty</th>
-                      <th className="px-4 py-3 border-b border-border-temple text-right whitespace-nowrap">Approx Amt</th>
-                    </tr>
-                  </thead>
-                  </table>
-                <div>
-                <table className="w-full text-base text-left">
-                  <tbody className="divide-y divide-border-temple/40">
-                    {viewingWastages.filter((w) => Number(w.quantity || 0) > 0).length === 0 ?
+                  {viewTab === 'wastage' && (
+                    <table className="w-full text-base text-left border-collapse">
+                      <thead className="bg-[#FAF7F2] border-b border-border-temple/30">
+                        <tr>
+                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider">Dish Name</th>
+                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider text-right">Qty</th>
+                          <th className="px-4 py-2 font-bold text-text-light uppercase text-xs tracking-wider text-right">Approx</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-temple/10">
+                        {viewingWastages.filter((w) => Number(w.quantity || 0) > 0).length === 0 ?
                           <tr>
-                        <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center text-sm">No linked wastage rows</td>
-                      </tr> :
-
+                            <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center text-sm italic">No wastage recorded</td>
+                          </tr> :
                           viewingWastages.
-                          filter((w) => Number(w.quantity || 0) > 0).
-                          map((w, idx) =>
-                          <tr key={`${w.entryId}-${idx}`} className="hover:bg-bg-temple/30">
-                          <td className="px-3 py-2 text-text-main">
-                            <span className="text-base font-normal">
-                              {displayKannadaName(w.menu_item_name)}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-right text-text-main whitespace-nowrap">
-                            {formatQuantityWithUnit(w.quantity || 0, { unit_name: w.unit_name, unit_code: w.unit_code })}
-                          </td>
-                          <td className="px-3 py-2 text-right text-text-main whitespace-nowrap">
-                            {w.approx_amount != null ? formatCurrency(Number(w.approx_amount || 0)) : '-'}
-                          </td>
-                        </tr>
-                          )
-                          }
-                  </tbody>
-                </table>
+                            filter((w) => Number(w.quantity || 0) > 0).
+                            map((w, idx) =>
+                              <tr key={`${w.entryId}-${idx}`} className="hover:bg-bg-temple/5 transition-colors">
+                                <td className="px-4 py-3 text-text-main">
+                                  <span className="text-base font-medium">
+                                    {w.menu_item_name}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right text-text-main font-semibold">
+                                  {formatQuantityWithUnit(w.quantity || 0, { unit_name: w.unit_name, unit_code: w.unit_code })}
+                                </td>
+                                <td className="px-4 py-3 text-right text-text-main">
+                                  {w.approx_amount != null ? formatCurrency(Number(w.approx_amount || 0)) : '-'}
+                                </td>
+                              </tr>
+                            )
+                        }
+                      </tbody>
+                    </table>
+                  )}
+
+                  {viewTab === 'adjustments' && (
+                    <table className="w-full text-base text-left border-collapse">
+                      <tbody className="divide-y divide-border-temple/10">
+                        {viewingAdjustments.filter((a) => Number(a.quantity || 0) !== 0).length === 0 ? (
+                          <tr>
+                            <td className="px-4 py-3 text-text-main/60 text-center text-sm italic">No stock adjustments</td>
+                          </tr>
+                        ) : (
+                          viewingAdjustments
+                            .filter((a) => Number(a.quantity || 0) !== 0)
+                            .map((a, idx) =>
+                              <tr key={`${a.entryId}-${idx}`} className="hover:bg-bg-temple/5 transition-colors">
+                                <td className="px-4 py-3 text-text-main">
+                                  <span className="text-base font-medium">{a.menu_item_name}</span>
+                                </td>
+                                <td className="px-4 py-3 text-right text-text-main font-semibold">
+                                  {Number(a.quantity || 0) > 0 ? '+' : '-'} {formatQuantityWithUnit(Math.abs(Number(a.quantity || 0)), { unit_name: a.unit_name, unit_code: a.unit_code })}
+                                </td>
+                              </tr>
+                            )
+                        )}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             </div>
-
-            <div className="temple-form-section min-w-0 2xl:col-span-3">
-            <div className="pb-2">
-              <span className="text-lg font-bold text-primary uppercase tracking-wider">Stock Adjustments</span>
-            </div>
-            <div className="rounded-md border border-border-temple overflow-hidden mt-1 text-base">
-              <div className="grid grid-cols-[1fr_auto] bg-bg-temple text-text-main uppercase text-base font-bold tracking-wider border-b border-border-temple">
-                <div className="px-4 py-3">Item</div>
-                <div className="px-4 py-3 text-right whitespace-nowrap">Adjustment Qty</div>
-              </div>
-              <div>
-              {viewingAdjustments.filter((a) => Number(a.quantity || 0) > 0).length === 0 ?
-                      <div className="px-4 py-3 text-text-main/60 text-center text-sm">No stock adjustments</div> :
-
-                      viewingAdjustments.
-                      filter((a) => Number(a.quantity || 0) > 0).
-                      map((a, idx) =>
-                      <div
-                        key={`${a.entryId}-${idx}`}
-                        className="flex items-center justify-between gap-4 px-3 py-2 border-b border-border-temple/40 last:border-b-0 hover:bg-bg-temple/30">
-                        
-                      <span className="text-base font-normal text-text-main">{displayKannadaName(a.menu_item_name)}</span>
-                      <span className="text-base font-semibold text-text-main whitespace-nowrap">
-                        {formatQuantityWithUnit(a.quantity || 0, { unit_name: a.unit_name, unit_code: a.unit_code })}
-                      </span>
-                    </div>
-                      )
-                      }
-              </div>
-            </div>
-            </div>
-            </div>
           </div>
-          </div>
-          <DialogFooter className="m-0">
-            <Button onClick={() => setViewDialogOpen(false)} className="text-text-main">Close</Button>
+          <DialogFooter className="!p-6 !m-0 border-t border-border-temple/40 !flex !flex-row !items-center !justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open} onOpenChange={(val) => {
+            <Dialog open={open} onOpenChange={(val) => {
         // Only allow closing if NOT loading
         if (!val && !saveMutation.isPending) {
           setOpen(false);
@@ -691,304 +717,354 @@ const UsageEntriesPage = () => {
           onEscapeKeyDown={(e) => e.preventDefault()}>
           
           <DialogHeader className="m-0">
-            <DialogTitle className="text-2xl font-bold font-temple">{editingConsumption ? 'Edit Usage Entry' : 'Add Usage Entry'}</DialogTitle>
+            <DialogTitle className="text-xl font-bold font-temple">{editingConsumption ? 'Edit Usage Entry' : 'Add Usage Entry'}</DialogTitle>
             <DialogDescription className="sr-only">Create consumption and wastage entry</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="bg-white px-6 pt-4 max-h-[calc(96vh-150px)] overflow-y-auto space-y-4">
-              <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-10 gap-4 items-start min-h-[56vh]">
-              <div className="temple-form-section min-w-0 2xl:col-span-3">
-                <h4 className="temple-section-header mt-0 text-lg uppercase tracking-wider">Daily Service Details</h4>
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="grid grid-cols-[1fr_220px] items-center gap-3">
-                  <Label className="temple-label leading-tight">Date *</Label>
-                  <Input type="date" {...register('usage_date')} readOnly className="h-10 text-base bg-gray-100 cursor-not-allowed" />
-                </div>
-                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
-                  <Label className="temple-label leading-tight">No. of times cooked</Label>
-                  <Input
-                        type="text"
-                        {...register('times_cooked')}
-                        className="h-10 text-base"
-                        onFocus={(e) => {
-                          if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                            setValue('times_cooked', '');
-                          }
-                        }} />
-                      
-                </div>
-                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
-                  <Label className="temple-label leading-tight">Regular Cooking Persons</Label>
-                  <Input
-                        type="text"
-                        {...register('regular_cooking_persons')}
-                        className="h-10 text-base"
-                        onFocus={(e) => {
-                          if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                            setValue('regular_cooking_persons', '');
-                          }
-                        }} />
-                      
-                </div>
-                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
-                  <Label className="temple-label leading-tight">Additional Cooking Persons</Label>
-                  <Input
-                        type="text"
-                        {...register('additional_cooking_persons')}
-                        className="h-10 text-base"
-                        onFocus={(e) => {
-                          if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                            setValue('additional_cooking_persons', '');
-                          }
-                        }} />
-                      
-                </div>
-                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
-                  <Label className="temple-label leading-tight">Regular Serving Persons</Label>
-                  <Input
-                        type="text"
-                        {...register('regular_serving_persons')}
-                        className="h-10 text-base"
-                        onFocus={(e) => {
-                          if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                            setValue('regular_serving_persons', '');
-                          }
-                        }} />
-                      
-                </div>
-                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
-                  <Label className="temple-label leading-tight">Additional Serving Persons</Label>
-                  <Input
-                        type="text"
-                        {...register('additional_serving_persons')}
-                        className="h-10 text-base"
-                        onFocus={(e) => {
-                          if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                            setValue('additional_serving_persons', '');
-                          }
-                        }} />
-                      
-                </div>
-                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
-                  <Label className="temple-label leading-tight">Regular Cleaning Persons</Label>
-                  <Input
-                        type="text"
-                        {...register('regular_cleaning_persons')}
-                        className="h-10 text-base"
-                        onFocus={(e) => {
-                          if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                            setValue('regular_cleaning_persons', '');
-                          }
-                        }} />
-                      
-                </div>
-                <div className="grid grid-cols-[1fr_220px] items-center gap-3">
-                  <Label className="temple-label leading-tight">Additional Cleaning Persons</Label>
-                  <Input
-                        type="text"
-                        {...register('additional_cleaning_persons')}
-                        className="h-10 text-base"
-                        onFocus={(e) => {
-                          if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                            setValue('additional_cleaning_persons', '');
-                          }
-                        }} />
-                      
-                </div>
-                </div>
-              </div>
-
-              <div className="temple-form-section min-w-0 2xl:col-span-3">
-                <h4 className="temple-section-header mt-0 text-lg uppercase tracking-wider">Item usage</h4>
-                <div className="grid grid-cols-12 gap-2 mb-1 px-1 border-b border-border-temple/10 pb-1">
-                  <div className="col-span-6"></div>
-                  <div className="col-span-3 text-base font-bold text-text-main uppercase">Used</div>
-                  <div className="col-span-3 text-base font-bold text-text-main uppercase">Returned</div>
-                </div>
-                <div className="pr-2 space-y-2">
-                  {(items || []).filter((i) => i.status === 1).map((item) => {
-                      const itemError = errors.raw_items?.[item.id];
-                      return (
-                        <div key={item.id} className="grid grid-cols-12 gap-2 items-center min-h-[32px]">
-                        <div className="col-span-6 text-base font-medium text-text-main leading-6">
-                          {item.item_name}{item.unit?.unit_code ? ` (${item.unit.unit_code})` : ''}
-                        </div>
-                        <div className="col-span-3">
-                          <Input
-                              type="text"
-                              className={cn("h-10 text-base", itemError?.quantity_used && "border-red-500")}
-                              {...register(`raw_items.${item.id}.quantity_used`)}
-                              onFocus={(e) => {
-                                if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                                  setValue(`raw_items.${item.id}.quantity_used`, '');
-                                }
-                              }} />
-                            
-                        </div>
-                        <div className="col-span-3">
-                          <Input
-                              type="text"
-                              className={cn("h-10 text-base", itemError?.qty_returned && "border-red-500 bg-red-50")}
-                              {...register(`raw_items.${item.id}.qty_returned`)}
-                              onFocus={(e) => {
-                                if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                                  setValue(`raw_items.${item.id}.qty_returned`, '');
-                                }
-                              }} />
-                            
-                          {itemError?.qty_returned &&
-                            <p className="text-sm text-red-500 font-black leading-tight mt-0.5 uppercase">Exceeds Used</p>
+              <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-12 gap-4 items-start min-h-[56vh]">
+              {canReadUsage && (
+                <div className="temple-form-section min-w-0 2xl:col-span-4">
+                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">Daily Service Details</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-[1fr_140px] items-center gap-3">
+                    <Label className="temple-label leading-tight">Date *</Label>
+                    <Input type="date" {...register('usage_date')} readOnly className="h-10 text-base bg-gray-100 cursor-not-allowed" />
+                  </div>
+                  <div className="grid grid-cols-[1fr_140px] items-center gap-3">
+                    <Label className="temple-label leading-tight">No. of times cooked</Label>
+                    <Input
+                          type="text"
+                          {...register('times_cooked')}
+                          disabled={!canWriteUsage}
+                          className="h-10 text-base"
+                          onFocus={(e) => {
+                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                              setValue('times_cooked', '');
                             }
-                        </div>
-                      </div>);
-
-                    })}
+                          }} />
+                        
+                  </div>
+                  <div className="grid grid-cols-[1fr_140px] items-center gap-3">
+                    <Label className="temple-label leading-tight">Regular Cooking Persons</Label>
+                    <Input
+                          type="text"
+                          {...register('regular_cooking_persons')}
+                          disabled={!canWriteUsage}
+                          className="h-10 text-base"
+                          onFocus={(e) => {
+                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                              setValue('regular_cooking_persons', '');
+                            }
+                          }} />
+                        
+                  </div>
+                  <div className="grid grid-cols-[1fr_140px] items-center gap-3">
+                    <Label className="temple-label leading-tight">Additional Cooking Persons</Label>
+                    <Input
+                          type="text"
+                          {...register('additional_cooking_persons')}
+                          disabled={!canWriteUsage}
+                          className="h-10 text-base"
+                          onFocus={(e) => {
+                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                              setValue('additional_cooking_persons', '');
+                            }
+                          }} />
+                        
+                  </div>
+                  <div className="grid grid-cols-[1fr_140px] items-center gap-3">
+                    <Label className="temple-label leading-tight">Regular Serving Persons</Label>
+                    <Input
+                          type="text"
+                          {...register('regular_serving_persons')}
+                          disabled={!canWriteUsage}
+                          className="h-10 text-base"
+                          onFocus={(e) => {
+                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                              setValue('regular_serving_persons', '');
+                            }
+                          }} />
+                        
+                  </div>
+                  <div className="grid grid-cols-[1fr_140px] items-center gap-3">
+                    <Label className="temple-label leading-tight">Additional Serving Persons</Label>
+                    <Input
+                          type="text"
+                          {...register('additional_serving_persons')}
+                          disabled={!canWriteUsage}
+                          className="h-10 text-base"
+                          onFocus={(e) => {
+                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                              setValue('additional_serving_persons', '');
+                            }
+                          }} />
+                        
+                  </div>
+                  <div className="grid grid-cols-[1fr_140px] items-center gap-3">
+                    <Label className="temple-label leading-tight">Regular Cleaning Persons</Label>
+                    <Input
+                          type="text"
+                          {...register('regular_cleaning_persons')}
+                          disabled={!canWriteUsage}
+                          className="h-10 text-base"
+                          onFocus={(e) => {
+                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                              setValue('regular_cleaning_persons', '');
+                            }
+                          }} />
+                        
+                  </div>
+                  <div className="grid grid-cols-[1fr_140px] items-center gap-3">
+                    <Label className="temple-label leading-tight">Additional Cleaning Persons</Label>
+                    <Input
+                          type="text"
+                          {...register('additional_cleaning_persons')}
+                          disabled={!canWriteUsage}
+                          className="h-10 text-base"
+                          onFocus={(e) => {
+                            if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                              setValue('additional_cleaning_persons', '');
+                            }
+                          }} />
+                        
+                  </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {canReadUsage && (
+                <div className="temple-form-section min-w-0 2xl:col-span-4">
+                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">Item Usage</h4>
+                  <div className="grid grid-cols-[1fr_100px] gap-3 mb-1 px-1 border-b border-border-temple/10 pb-1">
+                    <div></div>
+                    <div className="text-base font-bold text-text-main text-center">Used</div>
+                  </div>
+                  <div className="pr-2 space-y-2">
+                    {(items || []).filter((i) => i.status === 1).map((item) => {
+                        const itemError = errors.raw_items?.[item.id];
+                        return (
+                          <div key={item.id} className="grid grid-cols-[1fr_100px] gap-3 items-center min-h-[32px]">
+                          <div className="text-base font-medium text-text-main leading-6 pr-2">
+                            {item.item_name}{item.unit?.unit_code ? ` (${item.unit.unit_code})` : ''}
+                          </div>
+                          <div>
+                            <Input
+                                type="text"
+                                disabled={!canWriteUsage}
+                                className={cn("h-10 text-base text-center px-1", itemError?.quantity_used && "border-red-500")}
+                                {...register(`raw_items.${item.id}.quantity_used`)}
+                                onFocus={(e) => {
+                                  if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                                    setValue(`raw_items.${item.id}.quantity_used`, '');
+                                  }
+                                }} />
+                              
+                          </div>
+                        </div>);
+
+                      })}
+                  </div>
+                </div>
+              )}
 
               <div className="temple-form-section min-w-0 xl:col-span-2 2xl:col-span-4">
-                <h4 className="temple-section-header mt-0 text-lg uppercase tracking-wider">Menu Item Wastage</h4>
-                <div className="grid grid-cols-12 gap-2 mb-1 px-1 border-b border-border-temple/10 pb-1">
-                  <div className="col-span-6"></div>
-                  <div className="col-span-3 text-base font-bold text-text-main uppercase">Qty</div>
-                  <div className="col-span-3 text-base font-bold text-text-main uppercase">Approx Amt</div>
-                </div>
-                <div className="pr-2 space-y-3">
-                  {/* Menu Items Wastage */}
-                  <div className="space-y-2">
-                    {(menuItems || []).filter((m) => m.status === 1).map((menu) =>
-                      <div key={menu.id} className="grid grid-cols-12 gap-2 items-center min-h-[32px]">
-                        <div className="col-span-6 text-base font-medium text-text-main leading-6">
-                          {menu.dish_name}{menu.unit?.unit_code ? ` (${menu.unit.unit_code})` : ''}
-                        </div>
-                        <div className="col-span-3">
-                          <Input
-                            type="text"
-                            className="h-10 text-base"
-                            {...register(`wastage_items.${menu.id}.quantity`)}
-                            onFocus={(e) => {
-                              if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                                setValue(`wastage_items.${menu.id}.quantity`, '');
-                              }
-                            }} />
-                          
-                        </div>
-                        <div className="col-span-3">
-                          <Input
-                            type="text"
-                            className="h-10 text-base"
-                            {...register(`wastage_items.${menu.id}.approx_amount`)}
-                            onFocus={(e) => {
-                              if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
-                                setValue(`wastage_items.${menu.id}.approx_amount`, '');
-                              }
-                            }} />
-                          
-                        </div>
-                      </div>
-                      )}
-                  </div>
-
-                  {/* Raw Items Wastage */}
-                  <div className="space-y-2 mt-6 pt-2">
-                    <h5 className="text-lg font-bold uppercase tracking-wider text-primary">Stock Adjustment</h5>
-                    {rawWastageFields.length > 0 &&
-                      <div className="grid grid-cols-12 gap-2 items-center px-2">
-                        <div className="col-span-4">
-                          <Label className="text-sm block">Item Code</Label>
-                        </div>
-                        <div className="col-span-4">
-                          <Label className="text-sm block">Item Name</Label>
-                        </div>
-                        <div className="col-span-3">
-                          <Label className="text-sm block">Adjustment Qty</Label>
-                        </div>
-                        <div className="col-span-1" />
-                      </div>
-                      }
-                    {rawWastageFields.map((field, index) =>
-                      <div key={field.id} className="grid grid-cols-12 gap-2 items-center bg-bg-temple/20 p-2 rounded border border-border-temple/20 min-h-[42px]">
-                        <div className="col-span-4">
-                          <Input
-                            type="text"
-                            className="h-10 text-base bg-white"
-
-                            {...register(`raw_wastage_items.${index}.serial_id`)}
-                            onChange={(e) => {
-                              const serialRaw = e.target.value || '';
-                              const normalized = serialRaw.trim().toLowerCase();
-                              const matchedItemId = serialToItemIdMap.get(normalized) || 0;
-
-                              setValue(`raw_wastage_items.${index}.serial_id`, serialRaw);
-
-                              if (normalized && matchedItemId > 0) {
-                                // Match found: Update selection
-                                setValue(`raw_wastage_items.${index}.item_id`, matchedItemId, { shouldValidate: true });
-                              } else if (!normalized || !matchedItemId) {
-                                // No match or empty: CLEAR selection
-                                setValue(`raw_wastage_items.${index}.item_id`, 0, { shouldValidate: true });
-                              }
-                            }} />
-                          
-                        </div>
-                        <div className="col-span-4">
-                          <Controller
-                            name={`raw_wastage_items.${index}.item_id`}
-                            control={control}
-                            render={({ field: selectField }) =>
-                            <Select
-                              {...selectField}
-                              className="h-10 text-base bg-white">
+                {canReadUsage && (
+                  <div className="mb-8">
+                    <h4 className="temple-section-header mt-0 text-lg tracking-wider">Menu Item Wastage</h4>
+                    <div className="grid grid-cols-[1fr_80px_110px] gap-3 mb-1 px-1 border-b border-border-temple/10 pb-1">
+                      <div></div>
+                      <div className="text-base font-bold text-text-main text-center">Qty</div>
+                      <div className="text-base font-bold text-text-main text-center whitespace-nowrap">Approx.Amt</div>
+                    </div>
+                    <div className="pr-2 space-y-3">
+                      <div className="space-y-2">
+                        {(menuItems || []).filter((m) => m.status === 1).map((menu) =>
+                          <div key={menu.id} className="grid grid-cols-[1fr_80px_110px] gap-3 items-center min-h-[32px]">
+                            <div className="text-base font-medium text-text-main leading-6 pr-2">
+                              {menu.dish_name}{menu.unit?.unit_code ? ` (${menu.unit.unit_code})` : ''}
+                            </div>
+                            <div>
+                              <Input
+                                type="text"
+                                disabled={!canWriteUsage}
+                                className="h-10 text-base text-center px-1"
+                                {...register(`wastage_items.${menu.id}.quantity`)}
+                                onFocus={(e) => {
+                                  if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                                    setValue(`wastage_items.${menu.id}.quantity`, '');
+                                  }
+                                }} />
                               
-                                <option value={0} disabled hidden>Select Item</option>
-                                {activeItems.map((i) =>
-                              <option key={i.id} value={i.id}>{i.item_name}</option>
-                              )}
-                              </Select>
-                            } />
-                          
+                            </div>
+                            <div>
+                              <Input
+                                type="text"
+                                disabled={!canWriteUsage}
+                                className="h-10 text-base text-center px-1"
+                                {...register(`wastage_items.${menu.id}.approx_amount`)}
+                                onFocus={(e) => {
+                                  if (!editingConsumption && (e.target.value === '0' || e.target.value === 0)) {
+                                    setValue(`wastage_items.${menu.id}.approx_amount`, '');
+                                  }
+                                }} />
+                              
+                            </div>
+                          </div>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {canReadUsage && (
+                  <div className="space-y-2 border-t border-border-temple/10 pt-4">
+                    <h5 className="text-lg font-bold tracking-wider text-primary">Stock Adjustment</h5>
+                    <div className="space-y-2">
+                      {rawWastageFields.length > 0 && (
+                        <div className="grid grid-cols-12 gap-2 items-center px-2">
+                          <div className="col-span-2">
+                            <Label className="text-base font-bold text-text-main block">Item Code</Label>
+                          </div>
+                          <div className="col-span-6">
+                            <Label className="text-base font-bold text-text-main block">Item Name</Label>
+                          </div>
+                          <div className="col-span-3">
+                            <Label className="text-base font-bold text-text-main block whitespace-nowrap">Adj.Qty</Label>
+                          </div>
+                          <div className="col-span-1" />
                         </div>
-                        <div className="col-span-3">
-                          <Input
-                            type="text"
-                            className="h-10 w-full text-base bg-white"
-                            {...register(`raw_wastage_items.${index}.quantity`)}
-                            onFocus={(e) => {
-                              if (e.target.value === '0') {
-                                setValue(`raw_wastage_items.${index}.quantity`, '');
+                      )}
+
+                      {rawWastageFields.map((field, index) =>
+                        <div key={field.id} className="bg-bg-temple/20 p-2 rounded border border-border-temple/20 space-y-2">
+                          <div className="grid grid-cols-12 gap-2 items-center min-h-[42px]">
+                          <div className="col-span-2">
+                            <Input
+                              type="text"
+                              disabled={!canWriteUsage}
+                              className="h-10 text-base bg-white"
+                              {...register(`raw_wastage_items.${index}.serial_id`)}
+                              onChange={(e) => {
+                                const serialRaw = e.target.value || '';
+                                const normalized = serialRaw.trim().toLowerCase();
+                                const matchedItemId = serialToItemIdMap.get(normalized) || 0;
+
+                                setValue(`raw_wastage_items.${index}.serial_id`, serialRaw);
+
+                                if (normalized && matchedItemId > 0) {
+                                  setValue(`raw_wastage_items.${index}.item_id`, matchedItemId, { shouldValidate: true });
+                                } else if (!normalized || !matchedItemId) {
+                                  setValue(`raw_wastage_items.${index}.item_id`, 0, { shouldValidate: true });
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-6">
+                            <Controller
+                              name={`raw_wastage_items.${index}.item_id`}
+                              control={control}
+                              render={({ field: selectField }) =>
+                                <Select
+                                  {...selectField}
+                                  disabled={!canWriteUsage}
+                                  className="h-10 text-base bg-white">
+                                  <option value={0} disabled hidden>Select Item</option>
+                                  {activeItems.map((i) =>
+                                    <option key={i.id} value={i.id}>{i.item_name}</option>
+                                  )}
+                                </Select>
                               }
-                            }} />
-                          
+                            />
+                          </div>
+                          <div className="col-span-3">
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              disabled={!canWriteUsage}
+                              className="h-10 w-full text-base bg-white"
+                              {...register(`raw_wastage_items.${index}.quantity`)}
+                              onChange={(e) => {
+                                const cleaned = (e.target.value || '').replace(/[^\d.]/g, '');
+                                const normalized = cleaned.replace(/(\..*)\./g, '$1');
+                                setValue(`raw_wastage_items.${index}.quantity`, normalized, { shouldValidate: true });
+                              }}
+                              onFocus={(e) => {
+                                if (e.target.value === '0' || e.target.value === '0.0' || e.target.value === '0.00' || e.target.value === '0.000') {
+                                  setValue(`raw_wastage_items.${index}.quantity`, '');
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-1 flex justify-end">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={!canWriteUsage}
+                              onClick={() => removeRawWastage(index)}
+                              className="h-10 w-10 p-0 text-error hover:bg-error/10">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          </div>
+                          <div className="px-1">
+                            <Controller
+                              name={`raw_wastage_items.${index}.operation`}
+                              control={control}
+                              render={({ field: opField }) => (
+                                <div className="inline-flex rounded-full border border-border-temple/40 overflow-hidden">
+                                  <button
+                                    type="button"
+                                    disabled={!canWriteUsage}
+                                    onClick={() => opField.onChange('add')}
+                                    className={cn(
+                                      "px-3 py-1.5 text-xs font-bold transition-colors",
+                                      opField.value === 'add'
+                                        ? "bg-[#2F6B4F] text-white"
+                                        : "bg-white text-[#2F6B4F] hover:bg-[#EAF6EF]"
+                                    )}
+                                  >
+                                    {opField.value === 'add' ? '✔ Add' : '+ Add'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={!canWriteUsage}
+                                    onClick={() => opField.onChange('deduct')}
+                                    className={cn(
+                                      "px-3 py-1.5 text-xs font-bold transition-colors border-l border-border-temple/40",
+                                      opField.value === 'deduct'
+                                        ? "bg-[#C24A2C] text-white"
+                                        : "bg-white text-[#C24A2C] hover:bg-[#FDF1EA]"
+                                    )}
+                                  >
+                                    {opField.value === 'deduct' ? '✔ Deduct' : '− Deduct'}
+                                  </button>
+                                </div>
+                              )}
+                            />
+                          </div>
                         </div>
-                        <div className="col-span-1 flex justify-end">
-                          <Button
+                      )}
+                    </div>
+
+                    {canWriteUsage && (
+                      <div className="pt-2">
+                        <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeRawWastage(index)}
-                            className="h-10 w-10 p-0 text-error hover:bg-error/10">
+                            onClick={() => appendRawWastage({ serial_id: '', item_id: 0, operation: 'add', quantity: 0 })}
+                            className="h-10 px-3 text-sm bg-primary-main/20 text-primary-main hover:bg-primary-main/30 border border-primary-main/30 font-bold">
                             
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                          <Plus className="w-4 h-4 mr-1" />
+                          Raw Item
+                        </Button>
                       </div>
-                      )}
+                    )}
                   </div>
-
-                  <div className="pt-2">
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => appendRawWastage({ serial_id: '', item_id: 0, quantity: 0 })}
-                        className="h-10 px-3 text-sm bg-primary-main/20 text-primary-main hover:bg-primary-main/30 border border-primary-main/30 font-bold">
-                        
-                      <Plus className="w-4 h-4 mr-1" />
-                      Raw Item
-                    </Button>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -1020,7 +1096,7 @@ const UsageEntriesPage = () => {
                         menuItems?.find((m) => String(m.id) === id)?.dish_name;
 
                         // Extract the error message from the nested structure
-                        const actualErr = itemErr.qty_returned || itemErr.quantity_used || itemErr.quantity || itemErr.approx_amount || itemErr;
+                        const actualErr = itemErr.quantity_used || itemErr.quantity || itemErr.approx_amount || itemErr;
                         if (actualErr?.message) {
                           messages.push(
                             itemName ? <><strong className="uppercase">{itemName}</strong>: {actualErr.message}</> : actualErr.message
@@ -1042,9 +1118,9 @@ const UsageEntriesPage = () => {
 
             </div>
 
-            <DialogFooter className="gap-3 m-0 bg-[#F3E8D4]">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">Cancel</Button>
-              <Button type="submit" disabled={saveMutation.isPending} className="w-28 h-10 text-text-main">
+            <DialogFooter className="gap-3 !m-0 bg-[#F3E8D4] !p-6 shrink-0 border-t border-border-temple/40">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">Cancel</Button>
+              <Button type="submit" disabled={saveMutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg border-none">
                 {saveMutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>

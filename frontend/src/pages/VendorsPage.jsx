@@ -25,6 +25,7 @@ import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 import { usePermission } from '../hooks/usePermission';
+import { toDisplayCase } from '../utils/text';
 
 const vendorSchema = z.object({
   vendor_code: z.string().optional().or(z.literal('')).or(z.null()),
@@ -226,7 +227,7 @@ const VendorsPage = () => {
   {
     accessorKey: 'vendor_name',
     header: 'Vendor Name',
-    cell: (info) => <span className="text-text-main font-medium">{info.getValue()}</span>
+    cell: (info) => <span className="text-text-main font-medium">{toDisplayCase(info.getValue())}</span>
   },
   {
     accessorKey: 'contact_number',
@@ -326,22 +327,24 @@ const VendorsPage = () => {
             <DialogDescription className="sr-only">Vendor details</DialogDescription>
           </DialogHeader>
           <div className="space-y-1 mt-4 mb-6">
-            <DetailItem label="Vendor Name" value={viewingVendor?.vendor_name} />
-            <DetailItem label="Contact Person" value={viewingVendor?.contact_person} />
+            <DetailItem label="Vendor Name" value={toDisplayCase(viewingVendor?.vendor_name)} />
+            <DetailItem label="Contact Person" value={toDisplayCase(viewingVendor?.contact_person)} />
             <DetailItem label="Primary Contact" value={viewingVendor?.contact_number} />
             <DetailItem label="Opening Balance" value={formatCurrency(viewingVendor?.opening_balance)} />
             <DetailItem
               label="Address"
               value={[
-              viewingVendor?.address_line1,
-              viewingVendor?.city,
-              viewingVendor?.state,
+              toDisplayCase(viewingVendor?.address_line1),
+              toDisplayCase(viewingVendor?.city),
+              toDisplayCase(viewingVendor?.state),
               viewingVendor?.postal_code].
               filter(Boolean).join(', ')} />
             
           </div>
-          <DialogFooter>
-            <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+          <DialogFooter className="!p-6 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

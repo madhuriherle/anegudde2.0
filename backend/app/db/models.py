@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Integer, Numeric, SmallInteger, String, Text, text, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship, declared_attr
+from sqlalchemy.orm import relationship, declared_attr, backref
 from sqlalchemy.sql import func
 from app.db.base import Base
 
@@ -88,6 +88,7 @@ class Role(Base):
     __tablename__ = "roles"
     id = Column(Integer, primary_key=True)
     role_name = Column(String(50), unique=True, nullable=False)
+    rank_level = Column(Integer, nullable=False, default=99) # 1 = Top, higher = lower rank
     is_all_access = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -97,10 +98,29 @@ class Role(Base):
 
     privileges = relationship("RolePrivilege", back_populates="role", cascade="all, delete-orphan")
 
+class Module(Base):
+    __tablename__ = "modules"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    icon = Column(String(50), nullable=True)
+    parent_id = Column(Integer, ForeignKey("modules.id"), nullable=True)
+    route = Column(String(255), nullable=True)
+    display_order = Column(Integer, default=0)
+    status = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
+    # Self-referential relationship for submodules
+    submodules = relationship("Module", backref=backref("parent", remote_side=[id]))
+    privileges = relationship("Privilege", back_populates="module")
+
 class Privilege(Base):
     __tablename__ = "privileges"
     id = Column(Integer, primary_key=True)
     privilege_name = Column(String(100), unique=True, nullable=False)
+    module_id = Column(Integer, ForeignKey("modules.id"), nullable=True, index=True)
     description = Column(Text, nullable=True)
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -109,6 +129,7 @@ class Privilege(Base):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     roles = relationship("RolePrivilege", back_populates="privilege")
+    module = relationship("Module", back_populates="privileges")
 
 class User(Base):
     __tablename__ = "users"
@@ -119,6 +140,7 @@ class User(Base):
     full_name = Column(String(150), nullable=False)
     email = Column(String(150), nullable=True)
     phone = Column(String(20), nullable=True)
+    security_stamp = Column(String(100), nullable=True) # Used for session invalidation
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
@@ -424,22 +446,6 @@ class StockAdjustment(Base):
     consumption_entry = relationship("ConsumptionEntry", back_populates="stock_adjustments")
     item = relationship("Item")
 
-class VendorPayment(Base):
-    __tablename__ = "vendor_payments"
-    id = Column(Integer, primary_key=True)
-    payment_date = Column(Date, nullable=False, index=True)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
-    amount = Column(Numeric(15, 3), nullable=False)
-    payment_mode = Column(String(30), nullable=False)
-    reference_no = Column(String(100), nullable=True)
-    remarks = Column(Text, nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    status = Column(Integer, nullable=False, default=1, index=True)
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-
 class StockLedger(Base):
     __tablename__ = "stock_ledger"
     id = Column(Integer, primary_key=True)
@@ -497,6 +503,7 @@ class DonationEntry(Base):
     state = Column(String(100), nullable=True)
     pincode = Column(String(20), nullable=True)
     remarks = Column(Text, nullable=True)
+    receipt_pdf_url = Column(String(255), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())

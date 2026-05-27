@@ -35,6 +35,14 @@
   --font-serif: "Merriweather", serif;
   --font-sans: "Inter", sans-serif;
   --font-temple: "Merriweather", serif;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 15px;
+  --font-size-lg: 17px;
+  --font-size-xl: 19px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 26px;
 }
 
 
@@ -48,7 +56,7 @@
   }
 
   .temple-label {
-    @apply text-[15px] font-bold text-secondary mb-1.5 block;
+    @apply text-base font-bold text-secondary mb-1.5 block;
   }
 
   .temple-input {
@@ -56,7 +64,7 @@
   }
 
   .temple-section-header {
-    @apply text-xs font-bold text-primary uppercase tracking-[0.2em] mb-4 mt-6;
+    @apply text-xs font-bold text-primary mb-4 mt-6;
   }
 
   .page-title {
@@ -83,7 +91,7 @@
 @layer base {
   body {
     @apply bg-bg-temple text-text-main antialiased font-sans;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 400;
   }
 
@@ -95,26 +103,44 @@
     letter-spacing: normal;
   }
 
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+  }
+
   h2 {
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 600;
     line-height: 1.2;
   }
 
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
   p, input, select, textarea, button, td {
-    font-size: 17px !important;
-    font-weight: 400 !important;
+    font-size: 15px;
+    font-weight: 400;
     color: var(--color-text-main);
   }
 
+  button, 
+  [role="button"],
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer !important;
+  }
+
   label {
-    font-size: 18px !important;
-    font-weight: 600 !important;
+    font-size: 15px;
+    font-weight: 600;
     color: var(--color-text-main);
   }
 
   th {
-    font-size: 15px !important;
+    font-size: 14px !important;
   }
 }
 

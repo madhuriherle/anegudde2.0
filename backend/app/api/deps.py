@@ -32,6 +32,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             algorithms=[os.getenv("ALGORITHM", "HS256")],
         )
         username: str | None = payload.get("sub")
+        token_stamp: str | None = payload.get("ss")
         if username is None:
             raise credentials_exception
     except JWTError:
@@ -48,6 +49,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     
     if not user or user.status != 1:
         raise credentials_exception
+        
+    # Security Stamp Check for session invalidation
+    # If the user has a stamp in DB, it must match the one in token
+    if user.security_stamp and user.security_stamp != token_stamp:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session invalidated. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
     return user
 
 

@@ -6,7 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, PermissionChecker
-from app.db.models import ConsumptionEntry, ConsumptionItem, PurchaseEntry, PurchaseItem, User, VendorPayment, WastageEntry, WastageItem, TokenGeneration, TokenDetail, Item, MenuItem, Unit
+from app.db.models import ConsumptionEntry, ConsumptionItem, PurchaseEntry, PurchaseItem, User, WastageEntry, WastageItem, TokenGeneration, TokenDetail, Item, MenuItem, Unit
 from app.schemas.dashboard import DashboardToday, DailyItemDetail, DailyWastageDetail, DailyTokenDetail
 
 router = APIRouter()
@@ -54,12 +54,7 @@ def today_summary(
         or Decimal("0")
     )
     
-    vendor_payment_amount = (
-        db.query(func.coalesce(func.sum(VendorPayment.amount), 0))
-        .filter(VendorPayment.payment_date == today)
-        .scalar()
-        or Decimal("0")
-    )
+    vendor_payment_amount = Decimal("0")
 
     tokens_issued = (
         db.query(func.coalesce(func.sum(TokenGeneration.total_tokens), 0))
@@ -88,7 +83,7 @@ def today_summary(
         for r in purchase_details_raw
     ]
 
-    consumption_details_raw = (
+    consumption_details = (
         db.query(
             Item.item_name,
             Unit.unit_name,
@@ -104,7 +99,7 @@ def today_summary(
     )
     consumption_details = [
         DailyItemDetail(item_name=r.item_name, unit_name=r.unit_name, quantity=r.quantity, amount=r.amount)
-        for r in consumption_details_raw
+        for r in consumption_details
     ]
 
     wastage_details_raw = (

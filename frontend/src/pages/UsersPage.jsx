@@ -22,6 +22,7 @@ import {
 '../components/ui/Dialog';
 import { Select } from '../components/ui/Select';
 
+import { useAuth } from '../context/AuthContext';
 import { usePermission } from '../hooks/usePermission';
 
 const userSchema = z.object({
@@ -37,6 +38,7 @@ const userSchema = z.object({
 
 
 const UsersPage = () => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
   const { hasPermission } = usePermission();
@@ -160,8 +162,8 @@ const UsersPage = () => {
     accessorKey: 'role_id',
     header: 'Role',
     cell: (info) => {
-      const role = roles?.find((r) => r.id === info.getValue());
-      return role ? role.role_name : info.getValue();
+      const user = info.row.original;
+      return user.role ? user.role.role_name : info.getValue();
     }
   },
   {
@@ -288,26 +290,29 @@ const UsersPage = () => {
                 <Controller
                   name="role_id"
                   control={control}
-                  render={({ field }) =>
-                  <Select value={field.value?.toString()} onChange={(e) => field.onChange(Number(e.target.value))}>
-                      <option value="" disabled hidden>Select a role</option>
-                      {roles?.map((r) =>
-                    <option key={r.id} value={r.id}>{r.role_name}</option>
-                    )}
-                    </Select>
-                  } />
-                
+                  render={({ field }) => {
+                    const myRank = user?.role_rank_level ?? 99;
+                    const availableRoles = roles?.filter(r => r.rank_level > myRank) || [];
+                    
+                    return (
+                      <Select value={field.value?.toString()} onChange={(e) => field.onChange(Number(e.target.value))}>
+                        <option value="" disabled hidden>Select a role</option>
+                        {availableRoles.map((r) =>
+                          <option key={r.id} value={r.id}>{r.role_name}</option>
+                        )}
+                      </Select>
+                    );
+                  }} />
               </div>
             </div>
-            <DialogFooter className="gap-3">
-              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2]">
+            <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 m-0 bg-[#F3E8D4]">
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-28 h-10 text-text-main">
-                
+                className="w-28 h-10 bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
                 {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>

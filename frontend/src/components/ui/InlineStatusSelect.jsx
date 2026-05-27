@@ -12,7 +12,7 @@ export function InlineStatusSelect({ value, disabled = false, onChange }) {
   const isActive = Number(value) === 1;
 
   const basePill =
-  'inline-flex min-w-[100px] items-center justify-center rounded-full px-3 py-1 text-xs font-semibold transition-colors border outline-none focus:ring-2 focus:ring-primary/20';
+  'inline-flex min-w-[70px] items-center justify-center rounded-full px-2 py-0.5 !text-[10px] font-bold transition-colors border outline-none focus:ring-2 focus:ring-primary/20';
   const colorPill = isActive ?
   'border-green-200 bg-badge-active-bg text-badge-active-text' :
   'border-gray-200 bg-badge-disabled-bg text-badge-disabled-text';

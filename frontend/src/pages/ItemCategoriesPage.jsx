@@ -189,7 +189,7 @@ const ItemCategoriesPage = () => {
           <Card className="border-border-temple sticky top-6">
             <CardContent className="p-6">
               <div className="flex flex-col space-y-1.5 bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-6 select-none rounded-t-lg">
-                <h3 className="text-[18px] font-bold text-[#2F1F14] m-0">
+                <h3 className="text-[18px] font-bold text-[#2F1F14] m-0 font-temple">
                   {editingCategory ? 'Edit Category' : 'Add New Category'}
                 </h3>
               </div>
@@ -200,10 +200,10 @@ const ItemCategoriesPage = () => {
                   {errors.category_name && <p className="text-xs text-red-500">{errors.category_name.message}</p>}
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <Button type="button" onClick={handleSubmit(onSubmit)} disabled={mutation.isPending} className="flex-1 font-bold">Save</Button>
                   {editingCategory &&
                   <Button type="button" variant="ghost" onClick={handleCancel} className="flex-1 bg-white border border-[#D9C8AF]">Cancel</Button>
                   }
+                  <Button type="button" onClick={handleSubmit(onSubmit)} disabled={mutation.isPending} className="flex-1 font-bold">Save</Button>
                 </div>
               </form>
             </CardContent>

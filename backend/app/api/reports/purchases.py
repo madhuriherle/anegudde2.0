@@ -18,7 +18,7 @@ def purchases_report(
     to_date: date = Query(...), 
     group_by: str = Query("day"), 
     db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("reports.read"))
+    _: User = Depends(PermissionChecker("reports.purchases.read"))
 ):
     period = period_expr(group_by, PurchaseEntry.purchase_date)
     rows = (

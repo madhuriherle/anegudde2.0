@@ -43,7 +43,8 @@ const MenuItemsPage = () => {
 
   const { data: units } = useQuery({
     queryKey: ['units-list'],
-    queryFn: async () => (await api.get('/units/list_units', { params: { page_size: 1000 } })).data
+    queryFn: async () => (await api.get('/units/list_units', { params: { page_size: 1000 } })).data,
+    enabled: canWrite
   });
 
   const unitOptions = useMemo(() => {
@@ -140,6 +141,10 @@ const MenuItemsPage = () => {
       header: 'Unit',
       size: 150,
       cell: (info) => {
+        const rowUnit = info.row.original?.unit;
+        if (rowUnit?.unit_name) {
+          return <span className="text-text-main">{rowUnit.unit_code ? `${rowUnit.unit_name} (${rowUnit.unit_code})` : rowUnit.unit_name}</span>;
+        }
         const unit = unitOptions.find((u) => u.id === info.getValue());
         return <span className="text-text-main">{unit ? `${unit.unit_name} (${unit.unit_code})` : info.getValue()}</span>;
       }
@@ -218,7 +223,7 @@ const MenuItemsPage = () => {
             <Card className="border-border-temple sticky top-6">
               <CardContent className="p-6">
                 <div className="flex flex-col space-y-1.5 bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-6 select-none rounded-t-lg">
-                  <h3 className="text-[18px] font-bold leading-[1.25] text-[#2F1F14] m-0">
+                  <h3 className="text-[18px] font-bold leading-[1.25] text-[#2F1F14] m-0 font-temple">
                     {editingMenuItem ? 'Edit Menu Item' : 'Add New Menu Item'}
                   </h3>
                 </div>
@@ -251,21 +256,6 @@ const MenuItemsPage = () => {
                   </div>
 
                   <div className="flex gap-3 pt-2">
-                    <Button
-                      type="submit"
-                      disabled={mutation.isPending}
-                      className={editingMenuItem ? "flex-1 h-10 text-text-main font-bold" : "w-full h-10 text-text-main font-bold"}
-                    >
-                      {mutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>{editingMenuItem ? 'Save' : 'Save'}</>
-                      )}
-                    </Button>
-                    
                     {editingMenuItem && (
                       <Button
                         type="button"
@@ -276,6 +266,20 @@ const MenuItemsPage = () => {
                         Cancel
                       </Button>
                     )}
+                    <Button
+                      type="submit"
+                      disabled={mutation.isPending}
+                      className="flex-1 h-10 bg-primary hover:bg-primary/90 text-white font-bold"
+                    >
+                      {mutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>{editingMenuItem ? 'Save' : 'Save'}</>
+                      )}
+                    </Button>
                   </div>
                 </form>
               </CardContent>

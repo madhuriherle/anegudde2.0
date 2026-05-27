@@ -14,7 +14,7 @@ def hash_password(password: str) -> str:
     return password
 
 
-def create_access_token(subject: str, session_id: str | None = None, expires_minutes: int | None = None) -> str:
+def create_access_token(subject: str, session_id: str | None = None, security_stamp: str | None = None, expires_minutes: int | None = None) -> str:
     secret_key = os.getenv("SECRET_KEY", "change_me")
     algorithm = os.getenv("ALGORITHM", "HS256")
     default_expire = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
@@ -24,4 +24,6 @@ def create_access_token(subject: str, session_id: str | None = None, expires_min
     payload: dict[str, Any] = {"sub": subject, "exp": expire}
     if session_id:
         payload["sid"] = session_id
+    if security_stamp:
+        payload["ss"] = security_stamp
     return jwt.encode(payload, secret_key, algorithm=algorithm)

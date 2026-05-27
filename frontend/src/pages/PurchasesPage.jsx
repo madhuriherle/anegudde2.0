@@ -10,6 +10,7 @@ import { useNotification } from '../context/NotificationContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
+import { cn } from '../utils/cn';
 import { DataTable } from '../components/ui/DataTable';
 import {
   Dialog,
@@ -26,6 +27,7 @@ import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { formatQuantityWithUnit } from '../utils/quantity';
 import { usePermission } from '../hooks/usePermission';
+import { toDisplayCase } from '../utils/text';
 
 // Helper to validate and transform text input to number
 const numericString = z.string()
@@ -486,7 +488,7 @@ const PurchasesPage = () => {
       header: 'Vendor',
       cell: (info) => {
         const vendor = vendors?.find((v) => v.id === info.getValue());
-        return <span className="text-text-main">{vendor ? vendor.vendor_name : info.getValue()}</span>;
+        return <span className="text-text-main">{toDisplayCase(vendor ? vendor.vendor_name : info.getValue())}</span>;
       }
     },
     {
@@ -602,7 +604,7 @@ const PurchasesPage = () => {
               <div className="space-y-0">
                 <DetailItem label="Purchase Date" value={formatDate(viewingPurchase?.purchase_date)} />
                 <DetailItem label="Invoice No" value={viewingPurchase?.bill_no} />
-                <DetailItem label="Vendor" value={vendors?.find((v) => v.id === viewingPurchase?.vendor_id)?.vendor_name} />
+                <DetailItem label="Vendor" value={toDisplayCase(vendors?.find((v) => v.id === viewingPurchase?.vendor_id)?.vendor_name)} />
               </div>
 
               <div className="space-y-2">
@@ -620,7 +622,7 @@ const PurchasesPage = () => {
                     <tbody className="divide-y divide-border-temple/40">
                       {viewingPurchase?.items?.map((item, idx) => (
                         <tr key={idx} className="bg-white">
-                          <td className="px-4 py-2 text-text-main">{items?.find((i) => i.id === item.item_id)?.item_name}</td>
+                          <td className="px-4 py-2 text-text-main">{toDisplayCase(items?.find((i) => i.id === item.item_id)?.item_name)}</td>
                           <td className="px-4 py-2 text-text-main text-right">
                             {formatQuantityWithUnit(item.quantity, items?.find((i) => i.id === item.item_id)?.unit)}
                           </td>
@@ -686,8 +688,10 @@ const PurchasesPage = () => {
             )}
           </div>
 
-          <DialogFooter className="mt-8 border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10 border-none shadow-none">Close</Button>
+          <DialogFooter className="!p-6 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -699,7 +703,7 @@ const PurchasesPage = () => {
         }
       }}>
         <DialogContent
-          className="max-w-5xl max-h-[90vh] overflow-hidden border-border-temple p-0"
+          className="max-w-5xl max-h-[90vh] overflow-hidden border-border-temple p-0 flex flex-col"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
@@ -709,8 +713,8 @@ const PurchasesPage = () => {
             </DialogTitle>
             <DialogDescription className="sr-only">Form to record or update a purchase from a vendor.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col overflow-hidden">
-            <div className="bg-white space-y-6 px-6 pt-4 pb-4 overflow-y-auto">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="bg-white space-y-6 px-6 pt-4 pb-4 overflow-y-auto flex-1 min-h-0">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 justify-items-start">
                 <div className="space-y-1.5 w-full max-w-[320px]">
                   <Label className="text-text-main">Select Vendor *</Label>
@@ -721,7 +725,7 @@ const PurchasesPage = () => {
                       <Select {...field} className="w-full h-10">
                         <option value="">Choose Vendor</option>
                         {vendors?.filter((v) => v.status === 1 || v.id === editingPurchase?.vendor_id).map((v) => (
-                          <option key={v.id} value={v.id}>{v.vendor_name}</option>
+                          <option key={v.id} value={v.id}>{toDisplayCase(v.vendor_name)}</option>
                         ))}
                       </Select>
                     )}
@@ -756,7 +760,7 @@ const PurchasesPage = () => {
                         {index === 0 && <Label className="text-sm font-bold text-text-main">Code</Label>}
                         <Input
                           type="text"
-                          className="h-10 text-base text-center font-bold text-text-main border-primary/30 px-1"
+                          className="h-10 text-base text-center text-text-main border-primary/30 px-1"
                           {...register(`items.${index}.search_id`)}
                           onChange={(e) => {
                             const val = String(e.target.value || '').trim();
@@ -782,7 +786,7 @@ const PurchasesPage = () => {
                           render={({ field: itemField }) => (
                             <Select
                               {...itemField}
-                              className="w-full h-10 text-base text-text-main font-bold"
+                              className="w-full h-10 text-base text-text-main"
                               onChange={(val) => {
                                 itemField.onChange(val);
                                 const itemId = Number(val.target.value);
@@ -791,7 +795,7 @@ const PurchasesPage = () => {
                             >
                               <option value="" disabled hidden>Select Item</option>
                               {items?.filter((i) => i.status === 1 || Number(watchedItems?.[index]?.item_id) === Number(i.id)).map((i) => (
-                                <option key={i.id} value={i.id}>{i.item_name}</option>
+                                <option key={i.id} value={i.id}>{toDisplayCase(i.item_name)}</option>
                               ))}
                             </Select>
                           )}
@@ -803,7 +807,7 @@ const PurchasesPage = () => {
                         <Input
                           type="text"
                           {...register(`items.${index}.quantity`)}
-                          className="h-10 text-base font-bold text-text-main"
+                          className="h-10 text-base text-text-main"
                           onFocus={(e) => {
                             if (!editingPurchase && e.target.value === '0') {
                               setValue(`items.${index}.quantity`, '');
@@ -817,7 +821,7 @@ const PurchasesPage = () => {
                         <Input
                           type="text"
                           {...register(`items.${index}.price`)}
-                          className="h-10 text-base font-bold text-text-main"
+                          className="h-10 text-base text-text-main"
                           onFocus={(e) => {
                             if (!editingPurchase && e.target.value === '0') {
                               setValue(`items.${index}.price`, '');
@@ -829,7 +833,7 @@ const PurchasesPage = () => {
                       <div className="sm:col-span-1 space-y-1.5">
                         {index === 0 && <Label className="text-base font-bold text-text-main w-full">Total</Label>}
                         <div className="h-9 flex items-center">
-                          <span className="font-black text-primary text-sm whitespace-nowrap">
+                          <span className="font-bold text-primary text-sm whitespace-nowrap">
                             {formatCurrency((Number(watchedItems?.[index]?.quantity) || 0) * (Number(watchedItems?.[index]?.price) || 0))}
                           </span>
                         </div>
@@ -916,11 +920,11 @@ const PurchasesPage = () => {
               </div>
             </div>
 
-            <DialogFooter className="gap-3 m-0 bg-[#F3E8D4]">
+            <DialogFooter className="gap-3 m-0 bg-[#F3E8D4] sticky bottom-0 z-10 border-t border-border-temple/40">
               <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
                 Cancel
               </Button>
-              <Button type="submit" disabled={mutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest shadow-lg border-none">
+              <Button type="submit" disabled={mutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-black shadow-lg border-none">
                 {mutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>

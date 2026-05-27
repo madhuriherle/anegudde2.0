@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Search, Printer, Loader2 } from 'lucide-react';
+import { Search, Printer, Loader2 } from 'lucide-react';
 import api from '../api/axios';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
@@ -10,7 +10,6 @@ import { Button } from '../components/ui/Button';
 import { formatDate } from '../utils/date';
 import { formatQuantityWithUnit } from '../utils/quantity';
 import { useAuth } from '../context/AuthContext';
-import { cn } from '../utils/cn';
 
 const toDateInputValue = (date) => {
   const year = date.getFullYear();
@@ -25,7 +24,6 @@ const DonationReportPage = () => {
   const [toDate, setToDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItemId, setSelectedItemId] = useState('');
-  const [isExporting, setIsExporting] = useState(false);
 
   const { data: donations, isLoading } = useQuery({
     queryKey: ['detailed-donations-report', fromDate, toDate, searchTerm, selectedItemId],
@@ -49,46 +47,10 @@ const DonationReportPage = () => {
     queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data
   });
 
-  const { data: donationTypesData } = useQuery({
-    queryKey: ['donation-types'],
-    queryFn: async () => (await api.get('/donation-types/list_donation_types', { params: { status: null, page_size: 1000 } })).data
-  });
-
   const items = useMemo(() => itemsData?.items || [], [itemsData]);
-  const donationTypeNameById = useMemo(() => {
-    const map = new Map();
-    (donationTypesData?.items || []).forEach((type) => map.set(Number(type.id), type.type_name));
-    return map;
-  }, [donationTypesData]);
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleDownloadPDF = async () => {
-    if (!reportData || reportData.length === 0) return;
-    try {
-      setIsExporting(true);
-      const params = {};
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
-      if (searchTerm) params.q = searchTerm;
-      if (selectedItemId) params.item_id = selectedItemId;
-      const response = await api.get('/reports/get_detailed_donations_report_pdf', {
-        params,
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'donation_report.pdf');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } finally {
-      setIsExporting(false);
-    }
   };
 
   const activeFinancialYear = user?.active_financial_year?.name || (() => {
@@ -136,13 +98,29 @@ const DonationReportPage = () => {
           .donation-report-print table { 
             width: 100% !important; 
             table-layout: fixed !important;
-            border-collapse: collapse !important;
-            border: 1px solid #ead9c9 !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border: 1px solid #d7c9ba !important;
           }
+          .donation-report-print thead { display: table-header-group !important; }
+          .donation-report-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
           .donation-report-print th, .donation-report-print td { 
-            border: 1px solid #ead9c9 !important; 
+            border-right: 1px solid #d7c9ba !important; 
+            border-bottom: 1px solid #d7c9ba !important; 
             padding: 6px 4px !important;
             font-size: 10px !important;
+          }
+          .donation-report-print th { border-top: 1px solid #d7c9ba !important; }
+          .donation-report-print tr td:last-child, .donation-report-print tr th:last-child { border-right: none !important; }
+          .donation-report-print tfoot td {
+            border: 1px solid #cab7a4 !important;
+          }
+          .donation-report-print .report-table-wrap {
+            border: 1px solid #d7c9ba !important;
+          }
+          .donation-report-print .grand-total-row td {
+            border-top: 2px solid #bfa892 !important;
+            border-bottom: 1px solid #bfa892 !important;
           }
           .donation-report-print th {
             background-color: #f8efe5 !important;
@@ -157,15 +135,6 @@ const DonationReportPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <h2 className="page-title">Donation Report</h2>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={handleDownloadPDF}
-            disabled={isExporting || !reportData?.length}
-            className="text-text-main"
-          >
-            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
-            Download PDF
-          </Button>
           <Button variant="outline" onClick={handlePrint} className="text-text-main">
             <Printer className="w-4 h-4 mr-2" />
             Print
@@ -249,32 +218,22 @@ const DonationReportPage = () => {
           </div>
           </div>
 
-          <div className="overflow-x-auto pt-3 print:overflow-visible">
-          <table className="min-w-[700px] w-full table-fixed text-left text-sm print:min-w-full">
-            <colgroup>
-              <col className="w-[11%]" />
-              <col className="w-[13%]" />
-              <col className="w-[10%]" />
-              <col className="w-[15%]" />
-              <col className="w-[11%]" />
-              <col className="w-[28%]" />
-              <col className="w-[12%]" />
-            </colgroup>
+          <div className="report-table-wrap overflow-x-auto pt-3 print:overflow-visible">
+          <table className="w-full table-fixed text-left text-sm">
             <thead>
               <tr className="border-b border-[#ead9c9] bg-[#f8efe5] text-xs font-bold uppercase tracking-wider text-text-main print:bg-gray-100">
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Receipt No</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Devotee</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-3 py-3">Donated Item & Quantity</th>
-                <th className="px-4 py-3">Remarks</th>
+                <th className="w-[10%] px-4 py-3 whitespace-nowrap">Date</th>
+                <th className="w-[12%] px-4 py-3 whitespace-nowrap">Receipt No</th>
+                <th className="w-[10%] px-4 py-3 whitespace-normal break-words">Devotee</th>
+                <th className="w-[12%] px-4 py-3 whitespace-nowrap">Phone</th>
+                <th className="w-[30%] px-3 py-3 whitespace-normal break-words">Donated Item & Quantity</th>
+                <th className="w-[26%] px-4 py-3 whitespace-normal break-words">Remarks</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f0e5da]">
               {isLoading ?
               <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-sm font-medium text-text-light">
+                  <td colSpan={6} className="px-4 py-12 text-center text-sm font-medium text-text-light">
                     <div className="flex items-center justify-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Loading donation report...
@@ -287,38 +246,27 @@ const DonationReportPage = () => {
                     <td className="whitespace-nowrap px-4 py-4 text-sm font-normal print:px-2">
                       {formatDate(row.donation_date)}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-4 text-sm font-bold print:px-2">
+                    <td className="whitespace-nowrap px-4 py-4 text-sm font-normal print:px-2">
                       {row.receipt_display_number || '-'}
                     </td>
-                    <td className="px-4 py-4 text-sm font-bold uppercase print:px-2">
-                      <span className={cn(
-                        "inline-block rounded-full px-2.5 py-1 text-sm font-bold uppercase leading-tight",
-                        Number(row.donation_type) === 2 ? "bg-emerald-100 text-emerald-700" :
-                        Number(row.donation_type) === 3 ? "bg-amber-100 text-amber-700" :
-                        Number(row.donation_type) === 4 ? "bg-purple-100 text-purple-700" :
-                        "bg-blue-100 text-blue-700"
-                      )}>
-                        {donationTypeNameById.get(Number(row.donation_type)) || 'General Donation'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 print:px-2">
-                      <div className="font-normal truncate print:whitespace-normal print:overflow-visible">{row.devotee_name || '-'}</div>
+                    <td className="px-4 py-4 print:px-2 whitespace-normal break-words">
+                      <div className="font-normal">{row.devotee_name || '-'}</div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 font-normal print:px-2">
                       {row.phone_number || '-'}
                     </td>
-                    <td className="px-3 py-4 print:px-2">
+                    <td className="px-3 py-4 print:px-2 whitespace-normal break-words">
                       <div className="space-y-1.5">
                         {(row.items || []).map((it, idx) =>
                     <div key={idx} className="flex flex-col leading-tight">
                             <span className="text-sm font-normal text-text-main print:text-black">
-                              {it.item?.item_name || '-'} - <span className="font-bold text-red-700 print:text-red-700">{formatQuantityWithUnit(it.quantity, it.item?.unit)}</span>
+                              {it.item?.item_name || '-'} - <span className="font-normal text-text-main print:text-black">{formatQuantityWithUnit(it.quantity, it.item?.unit)}</span>
                             </span>
                           </div>
                     )}
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-sm font-normal print:px-2">
+                    <td className="px-4 py-4 text-sm font-normal print:px-2 whitespace-normal break-all">
                       <span className="block" title={row.remarks || '-'}>
                         {row.remarks || '-'}
                       </span>
@@ -327,7 +275,7 @@ const DonationReportPage = () => {
               ) :
 
               <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center font-bold text-text-main">
+                  <td colSpan={6} className="px-5 py-12 text-center font-bold text-text-main">
                     No donations found
                   </td>
                 </tr>

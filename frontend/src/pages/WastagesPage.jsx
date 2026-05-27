@@ -85,31 +85,16 @@ const WastagesPage = () => {
     }
   },
   {
-    id: 'qty_details',
-    header: 'Qty',
+    id: 'qty_amt_details',
+    header: 'Qty (Amt)',
     cell: (info) => {
       const items = info.row.original.items || [];
       return (
         <div className="space-y-1 py-1">
             {items.map((it, idx) =>
-          <div key={idx} className="text-base text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
-                {formatQuantityWithUnit(it.quantity, it.menu_item?.unit || it.item?.unit)}
-              </div>
-          )}
-          </div>);
-
-    }
-  },
-  {
-    id: 'approx_details',
-    header: 'Approx Amt',
-    cell: (info) => {
-      const items = info.row.original.items || [];
-      return (
-        <div className="space-y-1 py-1">
-            {items.map((it, idx) =>
-          <div key={idx} className="text-base text-text-main leading-relaxed min-h-[1.5rem] flex items-center">
-                {formatCurrency(Number(it.approx_amount || 0))}
+          <div key={idx} className="text-base text-text-main leading-relaxed min-h-[1.5rem] flex items-center gap-1.5 whitespace-nowrap">
+                <span>{formatQuantityWithUnit(it.quantity, it.menu_item?.unit || it.item?.unit)}</span>
+                <span>({formatCurrency(Number(it.approx_amount || 0))})</span>
               </div>
           )}
           </div>);
@@ -206,8 +191,8 @@ const WastagesPage = () => {
               </table>
             </div>
           </div>
-          <DialogFooter className="mt-6 border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10">
+          <DialogFooter className="!p-6 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
               Close
             </Button>
           </DialogFooter>

@@ -17,6 +17,7 @@ class AuthUserOut(BaseModel):
     username: str
     full_name: str
     role_id: int
+    role_rank_level: int | None = None
     is_all_access: bool = False
     privileges: list[str] = []
     email: str | None = None

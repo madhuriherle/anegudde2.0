@@ -63,13 +63,13 @@ const DevoteesPage = () => {
   {
     accessorKey: 'address',
     header: 'Address',
-    size: 260,
     cell: (info) =>
-    <span className="block max-w-[260px] truncate text-text-normal" title={info.getValue() || '-'}>
+    <span className="block max-w-[260px] break-words text-text-normal" title={info.getValue() || '-'}>
           {info.getValue() || '-'}
         </span>
 
   },
+
   {
     accessorKey: 'city',
     header: 'City',
@@ -269,11 +269,11 @@ const DevoteesPage = () => {
             </div> :
           null}
 
-          <div className="mt-5 flex justify-end">
-            <Button variant="outline" onClick={() => setDetailsOpen(false)}>
+          <DialogFooter className="!p-6 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setDetailsOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
               Close
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>);

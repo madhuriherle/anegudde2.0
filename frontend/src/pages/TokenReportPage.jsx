@@ -3,25 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   Eye,
-  FileText,
   Loader2 } from
 'lucide-react';
 import api from '../api/axios';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
-import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 import { formatDate } from '../utils/date';
-
-
-
-
-
-
-
-
-
 
 const toDateInputValue = (date) => {
   const year = date.getFullYear();
@@ -57,7 +46,6 @@ const TokenReportPage = () => {
   const [dateFilterMode, setDateFilterMode] = useState('weekly');
   const [customStartDate, setCustomStartDate] = useState(() => getPresetRange('weekly').startDate);
   const [customEndDate, setCustomEndDate] = useState(() => getPresetRange('weekly').endDate);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const activeDateRange = useMemo(() => {
     if (dateFilterMode === 'custom') {
@@ -88,27 +76,6 @@ const TokenReportPage = () => {
     navigate(`/reports/tokens/${date}`);
   };
 
-  const handleDownloadPDF = async () => {
-    if (!generations || generations.length === 0) return;
-    try {
-      setIsExportingPdf(true);
-      const response = await api.get('/reports/token-issued/pdf', {
-        params: { from_date: activeDateRange.startDate, to_date: activeDateRange.endDate },
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'token_issued_report.pdf');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
-
   const handleDateFilterModeChange = (mode) => {
     setDateFilterMode(mode);
     setPage(1);
@@ -127,10 +94,6 @@ const TokenReportPage = () => {
             Token Issued Report
           </h2>
         </div>
-        <Button variant="outline" onClick={handleDownloadPDF} disabled={isExportingPdf || generations.length === 0} className="text-text-main">
-          {isExportingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
-          Download PDF
-        </Button>
       </div>
 
       <Card className="border-border-temple shadow-sm">
@@ -188,8 +151,8 @@ const TokenReportPage = () => {
               <thead className="bg-primary text-white uppercase text-[11px] font-bold tracking-wider">
                 <tr>
                   <th className="px-6 py-4 border-b border-primary/20">Date</th>
-                  <th className="px-6 py-4 border-b border-primary/20 text-center">Total Tokens</th>
-                  <th className="px-6 py-4 border-b border-primary/20 text-right">Actions</th>
+                  <th className="px-6 py-4 border-b border-primary/20 text-left">Total Tokens</th>
+                  <th className="px-6 py-4 border-b border-primary/20 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
@@ -214,12 +177,12 @@ const TokenReportPage = () => {
                       <td className="px-6 py-4 font-medium text-text-main">
                         {formatDate(row.date)}
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-6 py-4 text-left">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
                           {row.total_tokens}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-left">
                         <Button
                       variant="outline"
                       size="sm"

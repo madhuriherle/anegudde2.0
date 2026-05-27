@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 class RoleOut(BaseModel):
     id: int
     role_name: str
+    rank_level: int
     is_all_access: bool
 
     model_config = ConfigDict(from_attributes=True)
@@ -49,6 +50,7 @@ class UserOut(UserBase):
     updated_at: datetime
     created_by: int | None = None
     updated_by: int | None = None
+    role: RoleOut | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

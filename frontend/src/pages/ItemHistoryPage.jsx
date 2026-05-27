@@ -83,7 +83,7 @@ const ItemHistoryPage = () => {
   {
     accessorKey: 'txn_date',
     header: 'Date',
-    cell: (info) => <span className="text-text-main">{formatDate(info.getValue())}</span>
+    cell: (info) => <span className="text-text-main whitespace-nowrap text-sm">{formatDate(info.getValue())}</span>
   },
   {
     accessorKey: 'txn_type',
@@ -96,8 +96,8 @@ const ItemHistoryPage = () => {
       };
       const Icon = type.icon;
       return (
-        <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-bold uppercase tracking-wider shadow-sm ${type.className}`}>
-            <Icon className="h-3.5 w-3.5" />
+        <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide shadow-sm whitespace-nowrap ${type.className}`}>
+            <Icon className="h-3 w-3" />
             {type.label}
           </span>);
 
@@ -105,11 +105,11 @@ const ItemHistoryPage = () => {
   },
   {
     accessorKey: 'qty_in',
-    header: () => <div className="text-right">Stocks Added (+)</div>,
+    header: () => <div className="text-right whitespace-nowrap">Added (+)</div>,
     cell: (info) => {
       const val = Number(info.getValue());
       return (
-        <div className={`text-right font-medium ${val > 0 ? 'text-green-600' : 'text-text-main/20'}`}>
+        <div className={`text-right font-medium text-sm ${val > 0 ? 'text-green-600' : 'text-text-main/20'}`}>
             {val > 0 ? formatQuantityWithUnit(val, item?.unit) : '-'}
           </div>);
 
@@ -117,14 +117,14 @@ const ItemHistoryPage = () => {
   },
   {
     accessorKey: 'qty_out',
-    header: () => <div className="text-right">Stocks Used (-)</div>,
+    header: () => <div className="text-right whitespace-nowrap">Used (-)</div>,
     cell: (info) => {
       const val = Number(info.getValue());
       if (info.row.original.txn_type === 7) {
-        return <div className="text-right text-text-main">0</div>;
+        return <div className="text-right text-text-main text-sm">0</div>;
       }
       return (
-        <div className={`text-right font-medium ${val > 0 ? 'text-red-600' : 'text-text-main/20'}`}>
+        <div className={`text-right font-medium text-sm ${val > 0 ? 'text-red-600' : 'text-text-main/20'}`}>
             {val > 0 ? formatQuantityWithUnit(val, item?.unit) : '-'}
           </div>);
 
@@ -132,10 +132,10 @@ const ItemHistoryPage = () => {
   },
   {
     accessorKey: 'balance',
-    header: () => <div className="text-right">Current Stock</div>,
+    header: () => <div className="text-right whitespace-nowrap">Stock</div>,
     cell: (info) => {
       return (
-        <div className="text-right text-primary-main">
+        <div className="text-right text-primary-main text-sm">
             {formatQuantityWithUnit(info.getValue(), item?.unit)}
           </div>);
 
@@ -143,37 +143,37 @@ const ItemHistoryPage = () => {
   },
   {
     accessorKey: 'unit_cost',
-    header: () => <div className="text-right">Rate</div>,
-    cell: (info) => <div className="text-right text-text-main">{formatCurrency(info.getValue())}</div>
+    header: () => <div className="text-right whitespace-nowrap">Rate</div>,
+    cell: (info) => <div className="text-right text-text-main text-sm">{formatCurrency(info.getValue())}</div>
   },
   {
     accessorKey: 'value_in',
-    header: () => <div className="text-right">Added Cost</div>,
+    header: () => <div className="text-right whitespace-nowrap">Add Cost</div>,
     cell: (info) => {
       const val = Number(info.getValue());
       if (info.row.original.txn_type === 7) {
-        return <div className="text-right text-text-main">{formatCurrency(0)}</div>;
+        return <div className="text-right text-text-main text-sm">{formatCurrency(0)}</div>;
       }
-      return <div className="text-right text-text-main">{val > 0 ? formatCurrency(val) : '-'}</div>;
+      return <div className="text-right text-text-main text-sm">{val > 0 ? formatCurrency(val) : '-'}</div>;
     }
   },
   {
     accessorKey: 'value_out',
-    header: () => <div className="text-right">Usage Cost</div>,
+    header: () => <div className="text-right whitespace-nowrap">Use Cost</div>,
     cell: (info) => {
       const val = Number(info.getValue());
       if (info.row.original.txn_type === 7) {
-        return <div className="text-right text-text-main">{formatCurrency(0)}</div>;
+        return <div className="text-right text-text-main text-sm">{formatCurrency(0)}</div>;
       }
-      return <div className="text-right text-text-main text-orange-600">{val > 0 ? formatCurrency(val) : '-'}</div>;
+      return <div className="text-right text-text-main text-orange-600 text-sm">{val > 0 ? formatCurrency(val) : '-'}</div>;
     }
   },
   {
     accessorKey: 'current_value',
-    header: () => <div className="text-right">Current Value</div>,
+    header: () => <div className="text-right whitespace-nowrap">Value</div>,
     cell: (info) => {
       const val = Number(info.getValue());
-      return <div className="text-right text-primary-main">{formatCurrency(val)}</div>;
+      return <div className="text-right text-primary-main text-sm font-semibold">{formatCurrency(val)}</div>;
     }
   }],
   [item]);
@@ -182,7 +182,7 @@ const ItemHistoryPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/items')} className="p-0 h-8 w-8 rounded-full">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/items/rawitem')} className="p-0 h-8 w-8 rounded-full">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -194,11 +194,12 @@ const ItemHistoryPage = () => {
       </div>
 
       <Card className="border-border-temple overflow-hidden bg-white shadow-sm">
-        <DataTable
-          columns={columns}
-          data={ledger?.items || []}
-          loading={isLoading} />
-        
+        <div className="overflow-x-auto text-sm">
+          <DataTable
+            columns={columns}
+            data={ledger?.items || []}
+            loading={isLoading} />
+        </div>
       </Card>
     </div>);
 

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -274,7 +275,7 @@ const ItemsPage = () => {
   {
     accessorKey: 'item_name',
     header: 'Item Name',
-    cell: (i) => <span className="text-text-main font-medium">{i.getValue()}</span>
+    cell: (i) => <span className="text-text-main font-normal">{i.getValue()}</span>
   },
   {
     id: 'category',
@@ -289,7 +290,10 @@ const ItemsPage = () => {
     accessorKey: 'current_stock',
     header: 'Current Stock',
     cell: (i) =>
-    <span className={`font-bold ${Number(i.getValue()) <= Number(i.row.original.min_stock_level) ? 'text-error' : 'text-primary'}`}>
+    <span className={cn(
+      "font-normal",
+      Number(i.getValue()) <= Number(i.row.original.min_stock_level) ? 'text-error' : 'text-text-main'
+    )}>
           {Number(i.getValue() || 0).toFixed(3)} {i.row.original.unit?.unit_code}
         </span>
 
@@ -301,7 +305,7 @@ const ItemsPage = () => {
     <button
       type="button"
       onClick={() => handlePriceHistory(i.row.original)}
-      className="px-3 py-1.5 rounded-lg bg-primary/5 text-primary font-bold text-sm border border-primary/20 hover:bg-primary hover:text-white transition-all active:scale-95 whitespace-nowrap shadow-sm">
+      className="px-2 py-1 rounded-md text-text-main font-normal text-sm hover:bg-gray-100 hover:text-primary transition-all active:scale-95 whitespace-nowrap">
       
           {formatCurrency(i.getValue())}
         </button>
@@ -332,7 +336,7 @@ const ItemsPage = () => {
           <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
           {canWrite && <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>}
           {canDelete && <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>}
-          <button onClick={() => navigate(`/items/${info.row.original.id}/history`)} className="action-btn-view bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200">History</button>
+          <button onClick={() => navigate(`/items/rawitem/${info.row.original.id}/history`)} className="action-btn-view bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200">History</button>
         </div>
 
   }],
@@ -393,57 +397,53 @@ const ItemsPage = () => {
       
 
       <Dialog open={priceHistoryOpen} onOpenChange={setPriceHistoryOpen}>
-        <DialogContent className="max-w-3xl border-border-temple">
-          <DialogHeader>
-            <DialogTitle>Price History: {priceHistoryItem?.item_name || ''}</DialogTitle>
-            <DialogDescription className="sr-only">Viewing item price history</DialogDescription>
+        <DialogContent className="max-w-3xl !flex !flex-col !p-0 border-border-temple shadow-2xl bg-white overflow-hidden">
+          <DialogHeader className="!m-0 border-b border-border-temple/40 !px-8 !py-6 shrink-0 bg-[#F3E8D4]">
+            <DialogTitle className="text-xl text-text-main font-temple">
+              Price History: {priceHistoryItem?.item_name || ''}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Viewing item price history.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            {latestPriceRow &&
-            <div className="rounded-lg border border-border-temple/50 bg-[#F8F3EC] px-4 py-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <div className="text-base font-bold uppercase tracking-[0.14em] text-secondary/70">Latest Price</div>
-                    <div className="mt-1 text-3xl font-black leading-none text-[#D05E2D]">{formatCurrency(latestPriceRow.price)}</div>
-                  </div>
-                  <div className="text-left sm:text-right">
-                    <div className="text-base font-semibold text-text-main/70">{formatDate(latestPriceRow.purchase_date)}</div>
-                    <div className="text-base font-bold text-text-main">{latestPriceRow.vendor_name || 'Unknown Vendor'}</div>
-                  </div>
-                </div>
+          <div className="flex-1 p-8 bg-white space-y-6 overflow-y-auto custom-scrollbar">
+            {latestPriceRow && (
+              <div className="flex items-center justify-between p-4 px-6 rounded-xl border border-[#F1E3D3] bg-[#FFFCF8] shadow-sm">
+                <span className="text-lg text-primary uppercase tracking-tight">Latest Price ({formatDate(latestPriceRow.purchase_date)})</span>
+                <span className="text-3xl text-primary">{formatCurrency(latestPriceRow.price)}</span>
               </div>
-            }
+            )}
 
-            <div className="max-h-[50vh] overflow-auto rounded-md border border-gray-200">
-              <table className="w-full table-fixed text-left text-base">
-                <colgroup>
-                  <col className="w-[28%]" />
-                  <col className="w-[44%]" />
-                  <col className="w-[28%]" />
-                </colgroup>
-                <thead className="bg-primary text-base font-bold uppercase tracking-wider text-white">
+            <div className="overflow-hidden rounded-xl border border-border-temple/40 shadow-sm">
+              <table className="w-full table-auto text-left text-base border-collapse">
+                <thead className="bg-[#FAF7F2] border-b border-border-temple/40">
                   <tr>
-                    <th className="px-3 py-2.5">Date</th>
-                    <th className="px-3 py-2.5">Vendor / Source</th>
-                    <th className="px-3 py-2.5 text-right">Unit Price</th>
+                    <th className="px-6 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">Date</th>
+                    <th className="px-6 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">Vendor</th>
+                    <th className="px-6 py-3 text-[11px] text-secondary uppercase tracking-[0.2em] text-right">Rate</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border-temple/10">
                   {priceHistoryLoading ?
                   <tr>
-                      <td colSpan={3} className="h-24 text-center text-gray-500">Loading...</td>
+                      <td colSpan={3} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          <span className="text-sm text-text-light uppercase tracking-widest">Loading history...</span>
+                        </div>
+                      </td>
                     </tr> :
                   priceHistoryRows.length === 0 ?
                   <tr>
-                      <td colSpan={3} className="h-24 text-center text-gray-500">No price history found.</td>
+                      <td colSpan={3} className="px-6 py-12 text-center text-text-light italic">No price history records found.</td>
                     </tr> :
 
-                  priceHistoryRows.slice(0, 5).map((row, idx) =>
-                  <tr key={`${row.purchase_date}-${idx}`} className="odd:bg-white even:bg-[#FCFAF7] hover:bg-gray-50/80">
-                        <td className="px-3 py-2.5 text-text-main">{formatDate(row.purchase_date)}</td>
-                        <td className="px-3 py-2.5 text-text-main">{row.vendor_name || '-'}</td>
-                        <td className="px-3 py-2.5 text-right text-text-main">{formatCurrency(row.price)}</td>
+                  priceHistoryRows.map((row, idx) =>
+                  <tr key={`${row.purchase_date}-${idx}`} className="hover:bg-bg-temple/10 transition-colors">
+                        <td className="px-6 py-4 text-text-main whitespace-nowrap">{formatDate(row.purchase_date)}</td>
+                        <td className="px-6 py-4 text-text-main whitespace-normal break-words">{row.vendor_name || '-'}</td>
+                        <td className="px-6 py-4 text-right text-text-main whitespace-nowrap">{formatCurrency(row.price)}</td>
                       </tr>
                   )
                   }
@@ -452,8 +452,10 @@ const ItemsPage = () => {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button onClick={() => setPriceHistoryOpen(false)} className="px-8 h-10 font-bold text-white bg-primary hover:bg-secondary rounded-lg">Close</Button>
+          <DialogFooter className="!p-6 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setPriceHistoryOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white border-none shadow-lg">
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -474,13 +476,13 @@ const ItemsPage = () => {
 
       {/* Item View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl border-border-temple">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl !flex !flex-col !p-0 border-border-temple shadow-2xl bg-white overflow-hidden">
+          <DialogHeader className="!m-0 border-b border-border-temple/40 !px-8 !py-6 shrink-0 bg-[#F3E8D4]">
             <DialogTitle>Item Details</DialogTitle>
             <DialogDescription className="sr-only">Viewing item properties</DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6 py-2 mb-6 mt-4">
+          <div className="flex-1 space-y-6 px-8 py-8 overflow-y-auto custom-scrollbar">
             <div className="space-y-1">
               <DetailItem label="Item ID" value={viewingItem?.id} />
               <DetailItem label="Item Name" value={viewingItem?.item_name} />
@@ -504,8 +506,10 @@ const ItemsPage = () => {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button onClick={() => setViewDialogOpen(false)} className="px-10 h-10 font-bold text-white bg-primary hover:bg-secondary rounded-lg">Close</Button>
+          <DialogFooter className="!p-6 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -594,9 +598,11 @@ const ItemsPage = () => {
                 </div>
               </div>
             </div>
-            <DialogFooter className="gap-3 p-6 border-t border-border-temple/40 bg-gray-50">
-              <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>
-              <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Saving...' : 'Save'}</Button>
+            <DialogFooter className="gap-3 !m-0 !p-6 border-t border-border-temple/40 bg-[#F3E8D4]">
+              <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">Cancel</Button>
+              <Button type="submit" disabled={mutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg border-none">
+                {mutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { Input } from '../components/ui/Input';
+import { Textarea } from '../components/ui/Textarea';
 import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/Dialog';
@@ -220,7 +221,12 @@ const PurchaseReturnsPage = () => {
   },
   {
     accessorKey: 'remarks',
-    header: 'Remarks'
+    header: 'Remarks',
+    cell: (info) => (
+      <div className="max-w-[520px] whitespace-normal break-all leading-relaxed">
+        {info.getValue() || '-'}
+      </div>
+    )
   },
   {
     id: 'actions',
@@ -265,7 +271,7 @@ const PurchaseReturnsPage = () => {
             resetForm();
             setIsAdding(true);
           }}
-          className="flex items-center gap-2">
+          className="flex items-center gap-2 text-text-main">
           
           Record Return
         </Button>}
@@ -302,25 +308,25 @@ const PurchaseReturnsPage = () => {
       {/* Add/Edit Dialog */}
       <Dialog open={isAdding} onOpenChange={setIsAdding}>
         <DialogContent
-          className="max-w-5xl max-h-[85vh] flex flex-col border-border-temple overflow-hidden"
+          className="max-w-7xl max-h-[85vh] flex flex-col border-border-temple overflow-hidden !p-0 bg-white"
           onInteractOutside={(e) => e.preventDefault()}>
           
-          <DialogHeader>
-            <DialogTitle className="text-text-main font-temple">
+          <DialogHeader className="shrink-0 bg-[#F3E8D4] border-b border-border-temple/40 !p-6 !m-0">
+            <DialogTitle className="text-text-main font-temple text-xl font-normal">
               {editingReturnId ? 'Edit Purchase Return' : 'New Purchase Return'}
             </DialogTitle>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto py-4 pr-1">
+          <div className="flex-1 overflow-y-auto p-6">
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               <Card className="xl:col-span-1 border-border-temple">
                 <CardContent className="p-6 space-y-5">
                   <div className="space-y-1.5">
-                    <Label className="text-text-main font-medium">Return Date *</Label>
+                    <Label className="text-text-main font-normal">Return Date *</Label>
                     <Input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className="h-10 text-text-main" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-text-main font-medium">Select Vendor *</Label>
+                    <Label className="text-text-main font-normal">Select Vendor *</Label>
                     <Select
                       value={selectedVendor}
                       className="h-10 text-text-main"
@@ -338,7 +344,7 @@ const PurchaseReturnsPage = () => {
                   </div>
                   {selectedVendor &&
                   <div className="space-y-1.5">
-                      <Label className="text-text-main font-medium">Select Bill / Invoice *</Label>
+                      <Label className="text-text-main font-normal">Select Bill / Invoice *</Label>
                       <Select
                       value={selectedBill}
                       className="h-10 text-text-main"
@@ -357,19 +363,24 @@ const PurchaseReturnsPage = () => {
                     </div>
                   }
                   <div className="space-y-1.5">
-                    <Label className="text-text-main font-medium">Remarks</Label>
-                    <Input value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Reason for return..." className="h-10 text-text-main" />
+                    <Label className="text-text-main font-normal">Remarks</Label>
+                    <Textarea 
+                      value={remarks} 
+                      onChange={(e) => setRemarks(e.target.value)} 
+                      placeholder="Reason for return..." 
+                      className="min-h-[120px] text-text-main resize-none" 
+                    />
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="xl:col-span-2 border-border-temple">
                 <CardContent className="p-6">
-                  <h3 className="text-base font-bold text-primary uppercase tracking-widest mb-6">Return Items</h3>
+                  <h3 className="text-base font-normal text-primary mb-6">Return Items</h3>
                   {selectedBill ?
                   <div className="space-y-6">
                       <div className="flex flex-wrap gap-2 p-3 bg-bg-temple/20 rounded-lg border border-border-temple/40">
-                        <p className="w-full text-base font-bold text-text-main/70 uppercase tracking-widest mb-1">Add Items from Bill:</p>
+                        <p className="w-full text-base font-normal text-text-main/70 mb-1">Add Items from Bill:</p>
                         {availableBillItems.map((bi) =>
                       <Button
                         key={bi.item_id}
@@ -390,11 +401,11 @@ const PurchaseReturnsPage = () => {
                         <table className="w-full text-base">
                           <thead className="bg-bg-temple border-b border-border-temple">
                             <tr>
-                              <th className="text-left px-4 py-3 font-bold text-text-main">Item</th>
-                              <th className="text-right px-4 py-3 font-bold text-text-main">Purchased Qty</th>
-                              <th className="text-right px-4 py-3 font-bold text-text-main w-32">Return Qty</th>
-                              <th className="text-right px-4 py-3 font-bold text-text-main">Price</th>
-                              <th className="text-right px-4 py-3 font-bold text-text-main">Total</th>
+                              <th className="text-left px-4 py-3 font-normal text-text-main">Item</th>
+                              <th className="text-right px-4 py-3 font-normal text-text-main">Purchased Qty</th>
+                              <th className="text-right px-4 py-3 font-normal text-text-main w-32">Return Qty</th>
+                              <th className="text-right px-4 py-3 font-normal text-text-main">Price</th>
+                              <th className="text-right px-4 py-3 font-normal text-text-main">Total</th>
                               <th className="w-12"></th>
                             </tr>
                           </thead>
@@ -403,15 +414,15 @@ const PurchaseReturnsPage = () => {
                             const isInvalid = (parseFloat(ri.return_qty) || 0) > ri.quantity;
                             return (
                               <tr key={ri.item_id} className={cn("bg-white hover:bg-bg-temple/5 transition-colors", isInvalid && "bg-red-50/50")}>
-                                  <td className="px-4 py-3 font-medium text-text-main">{ri.item_name}</td>
-                                  <td className="text-right px-4 py-3 text-text-main/70">{ri.quantity} {ri.unit_name}</td>
+                                  <td className="px-4 py-3 text-text-main font-normal">{ri.item_name}</td>
+                                  <td className="text-right px-4 py-3 text-text-main font-normal">{ri.quantity} {ri.unit_name}</td>
                                   <td className="px-4 py-3">
                                     <Input
                                     type="text"
                                     inputMode="decimal"
                                     className={cn(
-                                      "w-full text-right h-9 border-primary/30 focus:border-primary font-bold",
-                                      isInvalid && "border-red-500 focus:border-red-600 text-red-600"
+                                      "w-full text-right h-9 border-primary/30 focus:border-primary font-normal",
+                                      isInvalid && "border-red-500 focus:border-red-600 text-red-600 font-bold"
                                     )}
                                     value={ri.return_qty}
                                     onFocus={() => {
@@ -429,8 +440,8 @@ const PurchaseReturnsPage = () => {
                                       </p>
                                   }
                                   </td>
-                                  <td className="text-right px-4 py-3 text-text-main font-medium">₹{parseFloat(ri.price).toLocaleString()}</td>
-                                  <td className="text-right px-4 py-3 font-bold text-text-main">
+                                  <td className="text-right px-4 py-3 text-text-main font-normal">₹{parseFloat(ri.price).toLocaleString()}</td>
+                                  <td className="text-right px-4 py-3 text-text-main font-normal">
                                     ₹{((parseFloat(ri.return_qty) || 0) * ri.price).toLocaleString()}
                                   </td>
                                   <td className="px-2">
@@ -450,8 +461,8 @@ const PurchaseReturnsPage = () => {
 
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
                         <div className="flex flex-col">
-                          <span className="text-base font-bold text-text-main/70 uppercase tracking-widest">Total Return Amount</span>
-                          <span className="text-3xl font-black text-primary">
+                          <span className="text-base font-normal text-text-main/70">Total Return Amount</span>
+                          <span className="text-3xl font-normal text-primary">
                             ₹{normalizedReturnItems.reduce((acc, curr) => acc + (parseFloat(curr.return_qty) || 0) * curr.price, 0).toLocaleString()}
                           </span>
                         </div>
@@ -460,7 +471,7 @@ const PurchaseReturnsPage = () => {
 
                   <div className="flex flex-col items-center justify-center h-64 text-text-main/30 border-2 border-dashed border-border-temple/60 rounded-xl bg-bg-temple/5">
                       <FileText className="w-16 h-16 mb-3 opacity-20" />
-                      <p className="font-bold uppercase tracking-widest text-base">Please select a vendor and bill first</p>
+                      <p className="font-normal text-base">Please select a vendor and bill first</p>
                     </div>
                   }
                 </CardContent>
@@ -468,20 +479,18 @@ const PurchaseReturnsPage = () => {
             </div>
           </div>
 
-          <DialogFooter className="gap-3 mt-8">
+          <DialogFooter className="gap-3 !m-0 bg-[#F3E8D4] !p-6 border-t border-border-temple/40 shrink-0">
             <Button
               type="button"
               variant="ghost"
               onClick={() => setIsAdding(false)}
-              className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
-              
+              className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-normal">
               Cancel
             </Button>
             <Button
-              className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest shadow-lg border-none"
+              className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-normal shadow-lg border-none"
               onClick={handleSubmit}
               disabled={mutation.isPending || normalizedReturnItems.length === 0}>
-              
               {mutation.isPending ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
@@ -489,46 +498,47 @@ const PurchaseReturnsPage = () => {
       </Dialog>
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="w-[1600px] max-w-[92vw] max-h-[92vh] overflow-hidden border-border-temple bg-[#FDFBF7]">
-          <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <DialogTitle className="text-text-main font-temple text-2xl">Purchase Return Details</DialogTitle>
+        <DialogContent className="w-[1600px] max-w-[92vw] max-h-[92vh] !flex !flex-col overflow-hidden border-border-temple bg-[#FDFBF7] !p-0 shadow-2xl">
+          <DialogHeader className="shrink-0 bg-[#F3E8D4] border-b border-border-temple/40 !p-6 !m-0">
+            <DialogTitle className="text-text-main font-temple text-xl font-normal">Purchase Return Details</DialogTitle>
           </DialogHeader>
-          {viewingReturn &&
-          <div className="py-4 max-h-[calc(92vh-155px)] overflow-y-auto pr-2">
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          
+          <div className="flex-1 py-6 px-6 overflow-y-auto custom-scrollbar">
+            {viewingReturn && (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
                 
                 {/* Left Side: Original Purchase Details */}
                 <Card className="border border-[#D8C8B8] shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-0">
-                  <div className="bg-[#F6EEDF] px-6 py-3 border-b border-[#D8C8B8]">
-                    <h3 className="text-base font-black text-primary uppercase tracking-widest">Original Purchase</h3>
+                  <div className="bg-[#F6EEDF] px-6 py-3 border-b border-[#D8C8B8] h-14 flex items-center">
+                    <h3 className="text-base font-normal text-primary">Original Purchase</h3>
                   </div>
                   <CardContent className="p-0 flex-1 flex flex-col">
-                    <div className="flex flex-col gap-1 p-6 bg-white border-b border-gray-100 min-h-[200px]">
-                      <DetailItem className="text-base" label="Invoice No" value={viewingReturn.purchase_entry?.bill_no || 'N/A'} valueClassName="font-bold text-[#5D4037]" />
-                      <DetailItem className="text-base" label="Purchase Date" value={viewingReturn.purchase_entry ? formatDate(viewingReturn.purchase_entry.purchase_date) : 'N/A'} />
-                      <DetailItem className="text-base" label="Bill Amount" value={viewingReturn.purchase_entry ? `₹${parseFloat(viewingReturn.purchase_entry.total_amount).toLocaleString()}` : 'N/A'} valueClassName="font-bold text-[#5D4037]" />
-                      <DetailItem className="text-base" label="Vendor" value={viewingReturn.vendor?.vendor_name || 'N/A'} />
+                    <div className="flex flex-col gap-1 p-6 bg-white border-b border-gray-100 min-h-[240px]">
+                      <DetailItem className="text-base font-normal" labelClassName="font-normal" label="Invoice No" value={viewingReturn.purchase_entry?.bill_no || 'N/A'} valueClassName="font-normal text-text-main" />
+                      <DetailItem className="text-base font-normal" labelClassName="font-normal" label="Purchase Date" value={viewingReturn.purchase_entry ? formatDate(viewingReturn.purchase_entry.purchase_date) : 'N/A'} valueClassName="font-normal text-text-main" />
+                      <DetailItem className="text-base font-normal" labelClassName="font-normal" label="Bill Amount" value={viewingReturn.purchase_entry ? `₹${parseFloat(viewingReturn.purchase_entry.total_amount).toLocaleString()}` : 'N/A'} valueClassName="font-normal text-text-main" />
+                      <DetailItem className="text-base font-normal" labelClassName="font-normal" label="Vendor" value={viewingReturn.vendor?.vendor_name || 'N/A'} valueClassName="font-normal text-text-main" />
                     </div>
                     <div className="flex-1 overflow-auto bg-gray-50/30">
-                      <table className="min-w-[620px] w-full text-base text-left table-fixed">
+                      <table className="min-w-[620px] w-full text-base text-left table-auto border-collapse">
                         <thead className="bg-[#FAF7F2] border-b border-gray-200">
                           <tr>
-                            <th className="px-6 py-3 font-bold text-[#7A5C4D]">Item</th>
-                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-28">Qty</th>
-                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-32">Price</th>
-                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-36">Total</th>
+                            <th className="px-6 py-3 font-normal text-text-main">Item</th>
+                            <th className="px-6 py-3 font-normal text-text-main text-right whitespace-nowrap">Qty</th>
+                            <th className="px-6 py-3 font-normal text-text-main text-right whitespace-nowrap">Price</th>
+                            <th className="px-6 py-3 font-normal text-text-main text-right whitespace-nowrap">Total</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {(viewingReturn.items || []).map((it) =>
                         <tr key={it.id} className="bg-white">
-                              <td className="px-6 py-4 text-[#3E2723] font-medium truncate" title={it.item_name}>{it.item_name || 'N/A'}</td>
-                              <td className="px-6 py-4 text-[#5D4037] text-right">
+                              <td className="px-6 py-4 text-text-main whitespace-normal break-words font-normal" title={it.item_name}>{it.item_name || 'N/A'}</td>
+                              <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">
                                 {it.original_purchase_qty !== null ? `${parseFloat(it.original_purchase_qty).toFixed(3)} ${it.unit || ''}` : 'N/A'}
                               </td>
-                              <td className="px-6 py-4 text-[#5D4037] text-right">₹{it.original_purchase_price !== null ? parseFloat(it.original_purchase_price).toLocaleString() : parseFloat(it.price).toLocaleString()}</td>
+                              <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">₹{it.original_purchase_price !== null ? parseFloat(it.original_purchase_price).toLocaleString() : parseFloat(it.price).toLocaleString()}</td>
 
-                              <td className="px-6 py-4 text-[#3E2723] font-bold text-right">
+                              <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">
                                 ₹{it.original_purchase_qty !== null && it.original_purchase_price !== null ? (parseFloat(it.original_purchase_qty) * parseFloat(it.original_purchase_price)).toLocaleString() : 'N/A'}
                               </td>
                             </tr>
@@ -541,33 +551,33 @@ const PurchaseReturnsPage = () => {
 
                 {/* Right Side: Return Details */}
                 <Card className="border border-[#D8C8B8] shadow-sm bg-white overflow-hidden flex flex-col h-full min-w-0">
-                  <div className="bg-[#F6EEDF] px-6 py-3 border-b border-[#D8C8B8] flex justify-between items-center">
-                    <h3 className="text-base font-black text-primary uppercase tracking-widest">Return Entry</h3>
-                    <span className="text-sm font-bold bg-[#5D4037] text-white px-3 py-1 rounded-full tracking-wider">RETURNED</span>
+                  <div className="bg-[#F6EEDF] px-6 py-3 border-b border-[#D8C8B8] h-14 flex justify-between items-center">
+                    <h3 className="text-base font-normal text-primary">Return Entry</h3>
+                    <span className="text-sm font-normal bg-secondary text-white px-3 py-1 rounded-full">RETURNED</span>
                   </div>
                   <CardContent className="p-0 flex-1 flex flex-col">
-                    <div className="flex flex-col gap-1 p-6 bg-white border-b border-gray-100 min-h-[200px]">
-                      <DetailItem className="text-base" label="Return Date" value={formatDate(viewingReturn.return_date)} />
-                      <DetailItem className="text-base" label="Total Refund" value={`₹${parseFloat(viewingReturn.total_return_amount).toLocaleString()}`} valueClassName="font-bold text-[#5D4037]" />
-                      <DetailItem className="text-base" label="Remarks" value={viewingReturn.remarks || 'None'} />
+                    <div className="flex flex-col gap-1 p-6 bg-white border-b border-gray-100 h-[240px]">
+                      <DetailItem className="text-base font-normal" labelClassName="font-normal" label="Return Date" value={formatDate(viewingReturn.return_date)} valueClassName="font-normal text-text-main" />
+                      <DetailItem className="text-base font-normal" labelClassName="font-normal" label="Total Return Amount" value={`₹${parseFloat(viewingReturn.total_return_amount).toLocaleString()}`} valueClassName="font-normal text-text-main" />
+                      <DetailItem className="text-base font-normal" labelClassName="font-normal" label="Remarks" value={viewingReturn.remarks || 'None'} valueClassName="font-normal text-text-main" />
                     </div>
                     <div className="flex-1 overflow-auto bg-gray-50/30">
-                      <table className="min-w-[620px] w-full text-base text-left table-fixed">
+                      <table className="min-w-[620px] w-full text-base text-left table-auto border-collapse">
                         <thead className="bg-[#FAF7F2] border-b border-gray-200">
                           <tr>
-                            <th className="px-6 py-3 font-bold text-[#7A5C4D]">Item</th>
-                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-28">Qty</th>
-                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-32">Price</th>
-                            <th className="px-6 py-3 font-bold text-[#7A5C4D] text-right w-36">Total</th>
+                            <th className="px-6 py-3 font-normal text-text-main">Item</th>
+                            <th className="px-6 py-3 font-normal text-text-main text-right whitespace-nowrap">Qty</th>
+                            <th className="px-6 py-3 font-normal text-text-main text-right whitespace-nowrap">Price</th>
+                            <th className="px-6 py-3 font-normal text-text-main text-right whitespace-nowrap">Total</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {(viewingReturn.items || []).map((it) =>
                         <tr key={it.id} className="bg-white">
-                              <td className="px-6 py-4 text-[#3E2723] font-medium truncate" title={it.item_name}>{it.item_name || 'N/A'}</td>
-                              <td className="px-6 py-4 text-[#5D4037] text-right">{parseFloat(it.quantity).toFixed(3)} {it.unit || ''}</td>
-                              <td className="px-6 py-4 text-[#5D4037] text-right">₹{parseFloat(it.price).toLocaleString()}</td>
-                              <td className="px-6 py-4 text-[#3E2723] font-bold text-right">₹{parseFloat(it.line_total).toLocaleString()}</td>
+                              <td className="px-6 py-4 text-text-main whitespace-normal break-words font-normal" title={it.item_name}>{it.item_name || 'N/A'}</td>
+                              <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">{parseFloat(it.quantity).toFixed(3)} {it.unit || ''}</td>
+                              <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">₹{parseFloat(it.price).toLocaleString()}</td>
+                              <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">₹{parseFloat(it.line_total).toLocaleString()}</td>
                             </tr>
                         )}
                         </tbody>
@@ -577,10 +587,13 @@ const PurchaseReturnsPage = () => {
                 </Card>
 
               </div>
-            </div>
-          }
-          <DialogFooter className="border-t border-border-temple/40 pt-4">
-            <Button onClick={() => setViewDialogOpen(false)} className="bg-primary hover:bg-secondary text-white px-10 border-none shadow-none uppercase font-black tracking-widest h-12 rounded-xl">Close</Button>
+            )}
+          </div>
+
+          <DialogFooter className="shrink-0 bg-[#F3E8D4] border-t border-border-temple/40 !p-6 !m-0 flex justify-end">
+            <Button onClick={() => setViewDialogOpen(false)} className="px-8 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-normal border-none shadow-lg">
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

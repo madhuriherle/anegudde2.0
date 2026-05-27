@@ -1,9 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  FileText,
   Filter,
-  Loader2,
   Printer } from
 'lucide-react';
 import api from '../api/axios';
@@ -18,8 +16,8 @@ import { formatCurrency } from '../utils/currency';
 export const StockSummaryPage = () => {
   const { showError } = useNotification();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [groupByCategory, setGroupByCategory] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [isExporting, setIsExporting] = useState(false);
 
   const { data: reportData, isLoading } = useQuery({
     queryKey: ['detailed-stock-summary', selectedDate],
@@ -37,32 +35,6 @@ export const StockSummaryPage = () => {
       return;
     }
     window.print();
-  };
-
-  const handleDownloadPDF = async () => {
-    if (!reportData || !reportData.rows || reportData.rows.length === 0) {
-      showError('No data available to export');
-      return;
-    }
-    try {
-      setIsExporting(true);
-      const response = await api.get('/reports/get_detailed_stock_summary_pdf', {
-        params: { from_date: selectedDate, to_date: selectedDate },
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `stock_summary_${selectedDate}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      showError('Failed to generate PDF report');
-    } finally {
-      setIsExporting(false);
-    }
   };
 
   const grandTotals = useMemo(() => {
@@ -138,8 +110,15 @@ export const StockSummaryPage = () => {
           .lg\\:pl-64 { padding-left: 0 !important; }
           .stock-summary-print { padding-top: 8mm !important; }
           .stock-summary-print, .stock-summary-print * { overflow: visible !important; }
-          .stock-summary-print table { table-layout: fixed; width: 100%; }
-          .stock-summary-print th, .stock-summary-print td { padding: 4px 6px !important; }
+          .stock-summary-print table { table-layout: fixed; width: 100%; border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid #d7c9ba !important; }
+          .stock-summary-print thead { display: table-header-group !important; }
+          .stock-summary-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+          .stock-summary-print th, .stock-summary-print td { padding: 4px 6px !important; border-right: 1px solid #d7c9ba !important; border-bottom: 1px solid #d7c9ba !important; }
+          .stock-summary-print th { border-top: 1px solid #d7c9ba !important; }
+          .stock-summary-print tr td:last-child, .stock-summary-print tr th:last-child { border-right: none !important; }
+          .stock-summary-print tfoot td { border: 1px solid #cab7a4 !important; }
+          .stock-summary-print .report-table-wrap { border: 1px solid #d7c9ba !important; }
+          .stock-summary-print .grand-total-row td { border-top: 2px solid #bfa892 !important; border-bottom: 1px solid #bfa892 !important; }
         }
       `}</style>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
@@ -147,10 +126,6 @@ export const StockSummaryPage = () => {
           <h2 className="page-title">Stock Summary Report</h2>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleDownloadPDF} disabled={isExporting} className="text-text-main">
-            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
-            Download PDF
-          </Button>
           <Button variant="outline" onClick={handlePrint} className="text-text-main">
             <Printer className="w-4 h-4 mr-2" />
             Print
@@ -160,28 +135,45 @@ export const StockSummaryPage = () => {
 
       <Card className="border-border-temple print:hidden">
         <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-2">
-            <div className="space-y-1.5 w-full sm:w-[280px]">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-6">
+            <div className="space-y-1.5 w-full sm:w-[240px]">
               <Label className="text-text-main font-medium">Date</Label>
               <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="h-10 text-text-main" />
             </div>
-            <div className="space-y-1.5 w-full sm:w-[280px]">
-              <Label className="text-text-main font-medium">Category</Label>
-              <div className="relative">
-                <Filter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-main/60" />
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="h-10 w-full rounded-md border border-border-temple/50 bg-white pl-9 text-sm text-text-main outline-none focus:border-primary transition-all">
-                  
-                  {categoryOptions.map((category) =>
-                  <option key={category} value={category}>
-                      {category === 'ALL' ? 'All Categories' : category}
-                    </option>
-                  )}
-                </select>
-              </div>
+            
+            <div className="flex items-center gap-2 mb-2.5">
+              <input 
+                type="checkbox" 
+                id="groupByCategory" 
+                checked={groupByCategory} 
+                onChange={(e) => {
+                  setGroupByCategory(e.target.checked);
+                  if (!e.target.checked) setSelectedCategory('ALL');
+                }}
+                className="w-4 h-4 rounded border-border-temple/50 text-primary focus:ring-primary"
+              />
+              <Label htmlFor="groupByCategory" className="text-text-main font-medium cursor-pointer">With Category</Label>
             </div>
+
+            {groupByCategory && (
+              <div className="space-y-1.5 w-full sm:w-[280px] animate-in fade-in slide-in-from-left-2">
+                <Label className="text-text-main font-medium">Select Category</Label>
+                <div className="relative">
+                  <Filter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-main/60" />
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="h-10 w-full rounded-md border border-border-temple/50 bg-white pl-9 text-sm text-text-main outline-none focus:border-primary transition-all">
+                    
+                    {categoryOptions.map((category) =>
+                    <option key={category} value={category}>
+                        {category === 'ALL' ? 'All Categories' : category}
+                      </option>
+                    )}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -197,115 +189,146 @@ export const StockSummaryPage = () => {
           </p>
         </div>
 
-        <div className="space-y-8 p-4 print:p-0">
+        <div className="p-4 print:p-0">
           {isLoading ?
           <div className="py-10 text-center">
               <div className="flex items-center justify-center gap-2 text-text-main">
-                <Loader2 className="w-5 h-5 animate-spin" />
                 Loading report...
               </div>
             </div> :
           filteredRows.length === 0 ?
           <div className="py-10 text-center text-text-main/60">No data found</div> :
 
-          groupedRows.map(([categoryName, rows]) =>
-          <section key={categoryName} className="space-y-3 print:break-inside-avoid">
-                <h2 className="text-sm font-black uppercase tracking-wide text-primary">
-                  {toEnglishCategory(categoryName)}
-                </h2>
-                <div className="overflow-x-auto print:overflow-visible rounded-md border border-border-temple">
-                  <table className="w-full table-fixed text-sm border-collapse">
-                    <colgroup>
-                      <col className="w-[17%]" />
-                      <col className="w-[8%]" />
-                      <col className="w-[10%]" />
-                      <col className="w-[10%]" />
-                      <col className="w-[9%]" />
-                      <col className="w-[10%]" />
-                      <col className="w-[12%]" />
-                      <col className="w-[8%]" />
-                      <col className="w-[9%]" />
-                      <col className="w-[7%]" />
-                    </colgroup>
-                    <thead className="bg-gray-50 border-b border-border-temple">
-                      <tr className="text-text-main font-bold uppercase">
-                        <th className="px-2 py-2 border-r border-border-temple text-left">Item Name</th>
-                        <th className="px-2 py-2 border-r border-border-temple text-right">Rate</th>
-                        <th className="px-2 py-2 border-r border-border-temple text-right">Opening Stock</th>
-                        <th className="px-2 py-2 border-r border-border-temple text-right">Stock Added</th>
-                        <th className="px-2 py-2 border-r border-border-temple text-right">Stock Used</th>
-                        <th className="px-2 py-2 border-r border-border-temple text-right">Usage Value</th>
-                        <th className="px-2 py-2 border-r border-border-temple text-right">Returned to Vendor</th>
-                        <th className="px-2 py-2 border-r border-border-temple text-right">Stock Adjust</th>
-                        <th className="px-2 py-2 border-r border-border-temple text-right">Closing Stock</th>
-                        <th className="px-2 py-2 text-right">Closing Value</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-temple/40">
-                      {rows.map((row) =>
-                  <tr key={row.item_id} className="hover:bg-bg-temple/20 transition-colors">
-                          <td className="px-2 py-1.5 border-r border-border-temple font-medium truncate" title={row.item_name}>{row.item_name}</td>
-                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{formatCurrency(row.rate)}</td>
-                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.opening_balance).toFixed(3)} {row.unit}</td>
-                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.purchase_qty).toFixed(3)} {row.unit}</td>
-                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.issue_qty).toFixed(3)} {row.unit}</td>
-                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{formatCurrency(row.issue_value)}</td>
-                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
-                          <td className="px-2 py-1.5 border-r border-border-temple text-right">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
-                          <td className="px-2 py-1.5 border-r border-border-temple text-right font-bold">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
-                          <td className="px-2 py-1.5 text-right">{formatCurrency(row.closing_value)}</td>
-                        </tr>
-                  )}
-                    </tbody>
-                    <tfoot className="bg-gray-50/80 font-black border-t-2 border-border-temple text-text-main">
-                      <tr className="bg-[#FAF7F2]">
-                        <td colSpan={2} className="px-2 py-2 border-r border-border-temple text-left uppercase tracking-tighter">TOTAL</td>
-                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a, b) => a + Number(b.opening_balance || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
-                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a, b) => a + Number(b.purchase_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
-                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a, b) => a + Number(b.issue_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
-                        <td className="px-2 py-2 border-r border-border-temple text-right">{formatCurrency(rows.reduce((a, b) => a + Number(b.issue_value || 0), 0))}</td>
-                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a, b) => a + Number(b.purchase_return_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
-                        <td className="px-2 py-2 border-r border-border-temple text-right">{rows.reduce((a, b) => a + Number(b.stock_adjustment_qty || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
-                        <td className="px-2 py-2 border-r border-border-temple text-right font-black">{rows.reduce((a, b) => a + Number(b.closing_stock || 0), 0).toFixed(3)} {rows[0]?.unit}</td>
-                        <td className="px-2 py-2 text-right font-black text-amber-900">{formatCurrency(rows.reduce((a, b) => a + Number(b.closing_value || 0), 0))}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </section>
-          )
-          }
-
-          {grandTotals &&
-          <div className="overflow-x-auto print:overflow-visible rounded-md border border-border-temple">
+          !groupByCategory ? (
+            /* FLAT LIST - Single Table */
+            <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white">
               <table className="w-full table-fixed text-sm border-collapse">
-                <colgroup>
-                  <col className="w-[17%]" />
-                  <col className="w-[8%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[9%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[8%]" />
-                  <col className="w-[9%]" />
-                  <col className="w-[7%]" />
-                </colgroup>
-                <tfoot className="bg-amber-50 font-black text-[13px] border-t-2 border-amber-200">
-                  <tr className="text-amber-950">
-                    <td colSpan={2} className="px-2 py-3 border-r border-amber-200 text-left uppercase tracking-tight">GRAND TOTAL</td>
-                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.opening.toFixed(3)}</td>
-                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.purchase.toFixed(3)}</td>
-                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.issues.toFixed(3)}</td>
-                    <td className="px-2 py-3 border-r border-amber-200 text-right">{formatCurrency(grandTotals.issue_val)}</td>
-                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.returns.toFixed(3)}</td>
-                    <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.adjust.toFixed(3)}</td>
-                    <td className="px-2 py-3 border-r border-amber-200 text-right font-black">{grandTotals.closing.toFixed(3)}</td>
-                    <td className="px-2 py-3 text-right font-black">{formatCurrency(grandTotals.closing_val)}</td>
+                <thead className="bg-[#FFF4E6] border-b border-border-temple">
+                  <tr className="text-text-main font-bold uppercase">
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Rate</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Opening Stock</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Added</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Used</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Usage Value</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Purchase Ret.</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Adjust</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Closing Stock</th>
+                    <th className="px-3 py-2 text-left whitespace-normal break-words">Closing Value</th>
                   </tr>
-                </tfoot>
+                </thead>
+                <tbody className="divide-y divide-border-temple/10">
+                  {filteredRows.map((row) => (
+                    <tr key={row.item_id} className="hover:bg-bg-temple/10 transition-colors">
+                      <td className="px-3 py-2 border-r border-border-temple/10 font-medium text-text-main whitespace-normal break-words">{row.item_name}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main">{formatCurrency(row.rate)}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.opening_balance).toFixed(3)} {row.unit}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.purchase_qty).toFixed(3)} {row.unit}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.issue_qty).toFixed(3)} {row.unit}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-nowrap">{formatCurrency(row.issue_value)}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 font-bold text-text-main whitespace-normal break-words">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
+                      <td className="px-3 py-2 text-text-main whitespace-nowrap">{formatCurrency(row.closing_value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                {grandTotals && (
+                <tbody className="bg-[#D9C8AF] border-t-2 border-border-temple/60 text-black">
+                  <tr className="grand-total-row font-extrabold text-[16px]">
+                    <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] !font-extrabold">GRAND TOTAL</td>
+                    <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words !font-extrabold">{grandTotals.opening.toFixed(3)}</td>
+                    <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words !font-extrabold">{grandTotals.purchase.toFixed(3)}</td>
+                    <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words !font-extrabold">{grandTotals.issues.toFixed(3)}</td>
+                    <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap !font-extrabold">{formatCurrency(grandTotals.issue_val)}</td>
+                    <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words !font-extrabold">{grandTotals.returns.toFixed(3)}</td>
+                    <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words !font-extrabold">{grandTotals.adjust.toFixed(3)}</td>
+                    <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words !font-extrabold">{grandTotals.closing.toFixed(3)}</td>
+                    <td className="px-3 py-5 text-left whitespace-nowrap !font-extrabold">{formatCurrency(grandTotals.closing_val)}</td>
+                  </tr>
+                </tbody>
+                )}
               </table>
             </div>
+          ) : (
+            /* GROUPED LIST - Multiple Tables */
+            <div className="space-y-10">
+              {groupedRows.map(([categoryName, rows]) => (
+                <section key={categoryName} className="space-y-3">
+                  <h2 className="text-sm font-black uppercase tracking-widest text-primary px-1">
+                    {toEnglishCategory(categoryName)}
+                  </h2>
+                  <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white">
+                    <table className="w-full table-fixed text-sm border-collapse">
+                      <thead className="bg-[#FFF4E6] border-b border-border-temple">
+                        <tr className="text-text-main font-bold uppercase">
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Rate</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Opening Stock</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Added</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Used</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Usage Value</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Purchase Ret.</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Adjust</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Closing Stock</th>
+                          <th className="px-3 py-2 text-left whitespace-normal break-words">Closing Value</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-temple/10">
+                        {rows.map((row) => (
+                          <tr key={row.item_id} className="hover:bg-bg-temple/10 transition-colors">
+                            <td className="px-3 py-2 border-r border-border-temple/10 font-medium text-text-main whitespace-normal break-words">{row.item_name}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main">{formatCurrency(row.rate)}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.opening_balance).toFixed(3)} {row.unit}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.purchase_qty).toFixed(3)} {row.unit}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.issue_qty).toFixed(3)} {row.unit}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-nowrap">{formatCurrency(row.issue_value)}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 font-bold text-text-main whitespace-normal break-words">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
+                            <td className="px-3 py-2 text-text-main whitespace-nowrap">{formatCurrency(row.closing_value)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tbody className="bg-[#FAF7F2] font-black text-[13px] border-t-2 border-border-temple/20">
+                        <tr className="text-primary">
+                          <td colSpan={2} className="px-3 py-3 border-r border-border-temple/10 uppercase tracking-tighter">TOTAL</td>
+                          <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.opening_balance || 0), 0).toFixed(3)}</td>
+                          <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.purchase_qty || 0), 0).toFixed(3)}</td>
+                          <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.issue_qty || 0), 0).toFixed(3)}</td>
+                          <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-nowrap">{formatCurrency(rows.reduce((a, b) => a + Number(b.issue_value || 0), 0))}</td>
+                          <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.purchase_return_qty || 0), 0).toFixed(3)}</td>
+                          <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.stock_adjustment_qty || 0), 0).toFixed(3)}</td>
+                          <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.closing_stock || 0), 0).toFixed(3)}</td>
+                          <td className="px-3 py-3 text-secondary whitespace-nowrap font-black">{formatCurrency(rows.reduce((a, b) => a + Number(b.closing_value || 0), 0))}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              ))}
+
+              {grandTotals && (
+                <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white mt-8">
+                  <table className="w-full table-fixed text-sm border-collapse">
+                    <tbody className="bg-[#D9C8AF] border-t-2 border-border-temple/60 text-black">
+                      <tr className="grand-total-row font-black text-[15px]">
+                        <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] font-black">GRAND TOTAL</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words font-black">{grandTotals.opening.toFixed(3)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words font-black">{grandTotals.purchase.toFixed(3)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words font-black">{grandTotals.issues.toFixed(3)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-nowrap font-black">{formatCurrency(grandTotals.issue_val)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words font-black">{grandTotals.returns.toFixed(3)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words font-black">{grandTotals.adjust.toFixed(3)}</td>
+                        <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words font-black">{grandTotals.closing.toFixed(3)}</td>
+                        <td className="px-3 py-5 text-left whitespace-nowrap font-black text-secondary">{formatCurrency(grandTotals.closing_val)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
           }
         </div>
 
@@ -315,3 +338,4 @@ export const StockSummaryPage = () => {
 };
 
 export default StockSummaryPage;
+

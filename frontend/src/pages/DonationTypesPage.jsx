@@ -24,6 +24,7 @@ const donationTypeSchema = z.object({
 
 const normalizeReceiptPrefix = (value) => {
   const prefix = String(value || '').trim().toUpperCase();
+  // Don't add hyphen if it ends with special characters like } or -
   if (prefix && /[A-Z0-9]$/.test(prefix)) return `${prefix}-`;
   return prefix;
 };
@@ -118,7 +119,10 @@ const DonationTypesPage = () => {
   {
     accessorKey: 'receipt_prefix',
     header: 'Donation Code',
-    cell: (info) => <span className="font-mono font-black text-primary">{info.getValue()}</span>
+    cell: (info) => {
+      const val = info.getValue() || '';
+      return <span className="font-mono font-black text-primary">{val.endsWith('-') ? val.slice(0, -1) : val}</span>;
+    }
   },
   {
     accessorKey: 'status',
@@ -172,11 +176,11 @@ const DonationTypesPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {canWrite && <div className="lg:col-span-4">
+        {canWrite && <div className="lg:col-span-4 space-y-2">
           <Card className="border-border-temple sticky top-6">
             <CardContent className="p-6">
               <div className="flex flex-col space-y-1.5 bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-6 select-none rounded-t-lg">
-                <h3 className="text-[18px] font-bold text-[#2F1F14] m-0">
+                <h3 className="text-[18px] font-bold text-[#2F1F14] m-0 font-temple">
                   {editingType ? 'Edit Donation Type' : 'Add Donation Type'}
                 </h3>
               </div>
@@ -190,19 +194,45 @@ const DonationTypesPage = () => {
 
                 <div className="space-y-2">
                   <Label className="text-text-main font-medium">Donation Code</Label>
-                  <Input {...register('receipt_prefix')} className="border-border-temple/50 font-mono uppercase" />
+                  <Input {...register('receipt_prefix')} placeholder="e.g. {FY}-ANN" className="border-border-temple/50 font-mono uppercase" />
                   {errors.receipt_prefix && <p className="text-xs text-error">{errors.receipt_prefix.message}</p>}
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <Button type="button" onClick={handleSubmit(onSubmit)} disabled={mutation.isPending} className="flex-1 font-bold">Save</Button>
-                  {editingType &&
-                  <Button type="button" variant="ghost" onClick={handleCancel} className="flex-1 bg-white border border-[#D9C8AF]">Cancel</Button>
-                  }
-                </div>
-              </form>
+                  {editingType && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleCancel}
+                      className="h-11 flex-1 font-bold text-[15px] text-[#2B2B2B] hover:bg-[#F8F4EE] border border-[#E7D8CC] rounded-lg"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    onClick={handleSubmit(onSubmit)}
+                    disabled={mutation.isPending}
+                    className="h-11 flex-1 font-bold text-white text-[15px] bg-primary hover:bg-primary/90 border-none shadow-sm rounded-lg"
+                  >
+                    {mutation.isPending ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>              </form>
             </CardContent>
           </Card>
+          <div className="rounded-xl border border-[#E7D8CC] bg-[#FFF9F2] px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center justify-center rounded-full bg-[#F3E8D4] border border-[#D9C8AF] px-2 py-0.5 text-[11px] font-bold text-[#6B3B24] tracking-wide">
+                Format Guide
+              </span>
+            </div>
+            <p className="text-[13px] text-[#5C4A3B] leading-relaxed">
+              Use <span className="font-bold text-primary">{'{FY}'}</span> for Financial Year (e.g. 2026-27).
+            </p>
+            <p className="text-[13px] text-[#5C4A3B] leading-relaxed mt-1">
+              Example: <span className="font-bold text-secondary">{'{FY}-ANN'}</span> {'->'} <span className="font-semibold text-[#2F1F14]">2026-27-ANN00001</span>
+            </p>
+          </div>
         </div>}
 
         <div className={cn("lg:col-span-8", !canWrite && "lg:col-span-12")}>

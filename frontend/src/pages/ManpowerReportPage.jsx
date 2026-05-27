@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Loader2, Printer } from 'lucide-react';
+import { Loader2, Printer } from 'lucide-react';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
 import { Button } from '../components/ui/Button';
@@ -16,7 +16,6 @@ const ManpowerReportPage = () => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState('ALL');
-  const [isExporting, setIsExporting] = useState(false);
 
   const { fromDate, toDate } = useMemo(() => {
     if (selectedMonth === 'ALL') {
@@ -36,12 +35,14 @@ const ManpowerReportPage = () => {
     return { fromDate: firstStr, toDate: lastStr };
   }, [selectedYear, selectedMonth]);
 
+  const reportGroupBy = useMemo(() => selectedMonth === 'ALL' ? 'month' : 'day', [selectedMonth]);
+
   const { data: reportData, isLoading, error } = useQuery({
-    queryKey: ['manpower-summary', fromDate, toDate],
+    queryKey: ['manpower-summary', fromDate, toDate, reportGroupBy],
     queryFn: async () => {
       try {
         const res = await api.get('/reports/get_manpower_summary', {
-          params: { from_date: fromDate, to_date: toDate, group_by: 'month' }
+          params: { from_date: fromDate, to_date: toDate, group_by: reportGroupBy }
         });
         return res.data;
       } catch (err) {
@@ -77,32 +78,6 @@ const ManpowerReportPage = () => {
     window.print();
   };
 
-  const handleDownloadPDF = async () => {
-    if (!reportData || !reportData.rows || reportData.rows.length === 0) {
-      showError('No data available to export');
-      return;
-    }
-    try {
-      setIsExporting(true);
-      const response = await api.get('/reports/get_manpower_summary_pdf', {
-        params: { from_date: fromDate, to_date: toDate, group_by: 'month' },
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'manpower_report.pdf');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      showError('Failed to generate PDF report');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const grandTotals = useMemo(() => {
     if (!reportData || !reportData.rows) return null;
     return reportData.rows.reduce((acc, row) => ({
@@ -128,9 +103,29 @@ const ManpowerReportPage = () => {
     });
   }, [reportData]);
 
-  const formatMonth = (period) => {
-    const [year, month] = period.split('-');
-    return `${month}-${year}`;
+  const getOrdinalSuffix = (day) => {
+    if (day > 3 && day < 21) return 'th';
+    switch (day % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  };
+
+  const formatTimeline = (period) => {
+    const parts = period.split('-');
+    if (parts.length === 3) {
+      // YYYY-MM-DD to DD-MM-YYYY
+      const [year, month, day] = parts;
+      return `${day}-${month}-${year}`;
+    }
+    if (parts.length === 2) {
+      // YYYY-MM
+      const [year, month] = parts;
+      return `${months[parseInt(month)].label} ${year}`;
+    }
+    return period;
   };
 
   return (
@@ -142,19 +137,18 @@ const ManpowerReportPage = () => {
           main { padding: 0 !important; }
           .lg\\:pl-64 { padding-left: 0 !important; }
           .manpower-report-print { padding-top: 5mm !important; }
-          .manpower-report-print table { border-collapse: collapse; width: 100%; border: 1.5px solid black !important; }
-          .manpower-report-print th, .manpower-report-print td { border: 1px solid black !important; padding: 4px 6px !important; }
-          .manpower-report-print th { background-color: #f3f4f6 !important; }
+          .manpower-report-print table { border-collapse: collapse; width: 100%; border: 1px solid #d7c9ba !important; }
+          .manpower-report-print thead { display: table-header-group !important; }
+          .manpower-report-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+          .manpower-report-print th, .manpower-report-print td { border: 1px solid #d7c9ba !important; padding: 4px 6px !important; }
+          .manpower-report-print th { border-top: 1px solid #d7c9ba !important; background-color: #f3f4f6 !important; }
+          .manpower-report-print tfoot td { border: 1px solid #cab7a4 !important; }
         }
       `}</style>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
-        <h2 className="page-title">Monthly Manpower Report</h2>
+        <h2 className="page-title">{selectedMonth === 'ALL' ? 'Yearly' : 'Monthly'} Manpower Report</h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleDownloadPDF} disabled={isExporting} className="text-text-main">
-            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
-            Download PDF
-          </Button>
           <Button variant="outline" onClick={handlePrint} className="text-text-main">
             <Printer className="w-4 h-4 mr-2" />
             Print
@@ -197,7 +191,7 @@ const ManpowerReportPage = () => {
         <div className="p-6 text-center border-b border-border-temple/40 print:pb-2">
           <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ</h1>
           <p className="text-sm font-bold text-text-main mt-1 uppercase tracking-wider">
-            MONTHLY MANPOWER REPORT — {selectedMonth === 'ALL' ? `YEAR ${selectedYear}` : `${String(parseInt(selectedMonth) + 1).padStart(2, '0')}-${selectedYear}`}
+            {selectedMonth === 'ALL' ? 'YEARLY' : 'MONTHLY'} MANPOWER REPORT — {selectedMonth === 'ALL' ? `YEAR ${selectedYear}` : `${String(parseInt(selectedMonth) + 1).padStart(2, '0')}-${selectedYear}`}
           </p>
         </div>
 
@@ -214,68 +208,68 @@ const ManpowerReportPage = () => {
               No data found for this period
             </div> :
 
-          <div className="overflow-x-auto rounded-lg border border-border-temple">
+          <div className="report-table-wrap overflow-x-auto rounded-lg border border-border-temple">
               <table className="w-full text-base text-left border-collapse">
                 <thead>
                   {/* Category Header */}
                   <tr className="bg-[#FAF7F2] text-[#3E2723] font-bold uppercase text-xs tracking-wider border-b border-border-temple">
-                    <th rowSpan={2} className="px-4 py-3 border-r border-border-temple text-center w-[160px] bg-[#F6EEDF]">Timeline</th>
-                    <th colSpan={3} className="px-4 py-3 border-r border-border-temple text-center bg-[#FFF8F0]">Chef (Cooking)</th>
-                    <th colSpan={3} className="px-4 py-3 border-r border-border-temple text-center bg-white">Serving Persons</th>
-                    <th colSpan={3} className="px-4 py-3 text-center bg-[#FFF8F0]">Cleaners</th>
+                    <th rowSpan={2} className="px-4 py-3 border-r border-border-temple text-left bg-[#F6EEDF]">Timeline</th>
+                    <th colSpan={3} className="px-4 py-3 border-r border-border-temple text-left bg-[#FFF8F0]">Chef (Cooking)</th>
+                    <th colSpan={3} className="px-4 py-3 border-r border-border-temple text-left bg-white">Serving Persons</th>
+                    <th colSpan={3} className="px-4 py-3 text-left bg-[#FFF8F0]">Cleaners</th>
                   </tr>
                   {/* Sub Header */}
                   <tr className="bg-white text-text-light font-bold uppercase text-[11px] tracking-wider border-b border-border-temple">
-                    <th className="px-2 py-2 border-r border-border-temple/40 text-right bg-[#FAF7F2]/40">Reg</th>
-                    <th className="px-2 py-2 border-r border-border-temple/40 text-right bg-[#FAF7F2]/40">Addl</th>
-                    <th className="px-2 py-2 border-r border-border-temple text-right text-primary font-black bg-[#FAF7F2]">Total</th>
+                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-[#FAF7F2]/40">Regular</th>
+                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-[#FAF7F2]/40">Extra</th>
+                    <th className="px-2 py-2 border-r border-border-temple text-left text-primary font-black bg-[#FAF7F2]">Total</th>
                     
-                    <th className="px-2 py-2 border-r border-border-temple/40 text-right">Reg</th>
-                    <th className="px-2 py-2 border-r border-border-temple/40 text-right">Addl</th>
-                    <th className="px-2 py-2 border-r border-border-temple text-right text-primary font-black bg-gray-50/50">Total</th>
+                    <th className="px-2 py-2 border-r border-border-temple/40 text-left">Reg</th>
+                    <th className="px-2 py-2 border-r border-border-temple/40 text-left">Addl</th>
+                    <th className="px-2 py-2 border-r border-border-temple text-left text-primary font-black bg-gray-50/50">Total</th>
                     
-                    <th className="px-2 py-2 border-r border-border-temple/40 text-right bg-[#FAF7F2]/40">Reg</th>
-                    <th className="px-2 py-2 border-r border-border-temple/40 text-right bg-[#FAF7F2]/40">Addl</th>
-                    <th className="px-2 py-2 text-right text-primary font-black bg-[#FAF7F2]">Total</th>
+                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-[#FAF7F2]/40">Regular</th>
+                    <th className="px-2 py-2 border-r border-border-temple/40 text-left bg-[#FAF7F2]/40">Extra</th>
+                    <th className="px-2 py-2 text-left text-primary font-black bg-[#FAF7F2]">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-temple/40">
                   {reportData.rows.map((row, idx) =>
                 <tr key={row.period} className={cn("hover:bg-bg-temple/10 transition-colors", idx % 2 === 0 ? "bg-white" : "bg-gray-50/20")}>
-                      <td className="px-4 py-3 border-r border-border-temple/60 font-bold text-text-main">
-                        {formatMonth(row.period)}
+                      <td className="px-4 py-3 border-r border-border-temple/60 font-normal text-text-main">
+                        {formatTimeline(row.period)}
                       </td>
-                      <td className="px-2 py-3 border-r border-border-temple/30 text-right">{row.regular_cooking}</td>
-                      <td className="px-2 py-3 border-r border-border-temple/30 text-right">{row.additional_cooking}</td>
-                      <td className="px-2 py-3 border-r border-border-temple text-right font-bold text-secondary bg-[#FAF7F2]/30">{row.total_cooking}</td>
+                      <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.regular_cooking}</td>
+                      <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.additional_cooking}</td>
+                      <td className="px-2 py-3 border-r border-border-temple text-left font-bold text-secondary bg-[#FAF7F2]/30">{row.total_cooking}</td>
                       
-                      <td className="px-2 py-3 border-r border-border-temple/30 text-right">{row.regular_serving}</td>
-                      <td className="px-2 py-3 border-r border-border-temple/30 text-right">{row.additional_serving}</td>
-                      <td className="px-2 py-3 border-r border-border-temple text-right font-bold text-secondary bg-gray-50/10">{row.total_serving}</td>
+                      <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.regular_serving}</td>
+                      <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.additional_serving}</td>
+                      <td className="px-2 py-3 border-r border-border-temple text-left font-bold text-secondary bg-gray-50/10">{row.total_serving}</td>
                       
-                      <td className="px-2 py-3 border-r border-border-temple/30 text-right">{row.regular_cleaning}</td>
-                      <td className="px-2 py-3 border-r border-border-temple/30 text-right">{row.additional_cleaning}</td>
-                      <td className="px-2 py-3 text-right font-bold text-secondary bg-[#FAF7F2]/30">{row.total_cleaning}</td>
+                      <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.regular_cleaning}</td>
+                      <td className="px-2 py-3 border-r border-border-temple/30 text-left">{row.additional_cleaning}</td>
+                      <td className="px-2 py-3 text-left font-bold text-secondary bg-[#FAF7F2]/30">{row.total_cleaning}</td>
                     </tr>
                 )}
                 </tbody>
                 {grandTotals &&
-              <tfoot className="bg-amber-50 font-black text-xs border-t-2 border-amber-200">
-                    <tr className="text-amber-950">
-                      <td className="px-4 py-3 border-r border-amber-200 text-center uppercase tracking-tighter">Grand Aggregate</td>
-                      <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.regular_cooking}</td>
-                      <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.additional_cooking}</td>
-                      <td className="px-2 py-3 border-r border-amber-200 text-right text-base font-black text-primary">{grandTotals.total_cooking}</td>
+                <tbody className="bg-[#EAD9C9] text-black font-black text-[15px] border-t-2 border-border-temple/60">
+                    <tr className="grand-total-row text-black">
+                      <td className="px-4 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] font-black">GRAND TOTAL</td>
+                      <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.regular_cooking}</td>
+                      <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.additional_cooking}</td>
+                      <td className="px-2 py-5 border-r border-black/10 text-left font-black text-secondary">{grandTotals.total_cooking}</td>
                       
-                      <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.regular_serving}</td>
-                      <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.additional_serving}</td>
-                      <td className="px-2 py-3 border-r border-amber-200 text-right text-base font-black text-primary">{grandTotals.total_serving}</td>
+                      <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.regular_serving}</td>
+                      <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.additional_serving}</td>
+                      <td className="px-2 py-5 border-r border-black/10 text-left font-black text-secondary">{grandTotals.total_serving}</td>
                       
-                      <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.regular_cleaning}</td>
-                      <td className="px-2 py-3 border-r border-amber-200 text-right">{grandTotals.additional_cleaning}</td>
-                      <td className="px-2 py-3 text-right text-base font-black text-primary">{grandTotals.total_cleaning}</td>
+                      <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.regular_cleaning}</td>
+                      <td className="px-2 py-5 border-r border-black/10 text-left font-black">{grandTotals.additional_cleaning}</td>
+                      <td className="px-2 py-5 text-left font-black text-secondary">{grandTotals.total_cleaning}</td>
                     </tr>
-                  </tfoot>
+                  </tbody>
               }
               </table>
             </div>
@@ -287,3 +281,4 @@ const ManpowerReportPage = () => {
 };
 
 export default ManpowerReportPage;
+

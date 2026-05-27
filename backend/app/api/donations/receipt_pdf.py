@@ -87,61 +87,73 @@ def get_receipt_pdf(
             <style>
                 @page {{
                     size: A5 portrait;
-                    margin: 1cm;
-                }}
-                html, body {{
-                    height: 100%;
+                    margin: 8mm;
                 }}
                 body {{
                     font-family: "Nirmala UI", "Nirmala", "Segoe UI", Arial, sans-serif;
-                    font-size: 7.5pt;
-                    line-height: 1.28;
-                    color: #000;
+                    font-size: 8.5pt;
+                    line-height: 1.35;
+                    color: #2b1d17;
                     margin: 0;
                     padding: 0;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
                 }}
-                .receipt-page {{ min-height: 180mm; display: flex; flex-direction: column; }}
-                .header {{ text-align: center; margin-bottom: 14px; }}
-                .temple-name {{ font-size: 14pt; font-weight: bold; margin: 0; }}
-                .temple-info {{ font-size: 8.5pt; margin: 2px 0; }}
-                .receipt-title {{ text-align: center; font-size: 10pt; font-weight: bold; margin: 14px 0; text-decoration: underline; }}
-                .section-table {{ width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 7.5pt; table-layout: fixed; }}
-                .section-table td {{ padding: 2.5px 0; vertical-align: top; }}
-                .label {{ width: 85px; white-space: nowrap; }}
-                .separator {{ width: 12px; text-align: center; }}
-                .value {{ word-break: break-word; }}
-                .items-table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
-                .items-table td {{ padding: 3px 4px; border-bottom: none; font-size: 8pt; }}
-                .item-line {{ white-space: normal; }}
-                .signature-box {{ margin-top: auto; padding-top: 45px; text-align: right; }}
-                .signature-text {{ display: inline-block; width: 160px; border-top: 1pt solid #000; text-align: center; padding-top: 5px; }}
+                .receipt-container {{ min-height: 185mm; display: flex; flex-direction: column; padding: 5px; }}
+                .header-section {{ text-align: center; border-bottom: 2px solid #5A2D1F; padding-bottom: 8px; margin-bottom: 12px; }}
+                .temple-logo {{ height: 50px; margin-bottom: 4px; }}
+                .temple-kn {{ font-size: 16pt; font-weight: 800; color: #5A2D1F; margin: 0; }}
+                .temple-en {{ font-size: 11pt; font-weight: 800; text-transform: uppercase; margin: 1px 0; color: #5A2D1F; }}
+                .temple-info {{ font-size: 8pt; color: #4B4B4B; margin: 1px 0; }}
+                
+                .receipt-title-box {{ text-align: center; margin: 12px 0; }}
+                .receipt-title {{ display: inline-block; font-size: 11pt; font-weight: 900; color: #5A2D1F; border-bottom: 1.5pt solid #5A2D1F; padding-bottom: 2px; text-transform: uppercase; letter-spacing: 0.05em; }}
+                
+                .details-table {{ width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 8.5pt; }}
+                .details-table td {{ padding: 3.5px 0; vertical-align: top; }}
+                .label {{ font-weight: 800; color: #5A2D1F; width: 95px; }}
+                .separator {{ width: 15px; text-align: center; color: #5A2D1F; font-weight: 800; }}
+                .value {{ font-weight: 500; }}
+                
+                .items-section {{ margin-top: 10px; flex: 1; }}
+                .items-header {{ font-size: 8pt; font-weight: 900; color: #5A2D1F; text-transform: uppercase; margin-bottom: 5px; border-bottom: 1px solid #E7D8CC; padding-bottom: 3px; }}
+                .items-table {{ width: 100%; border-collapse: collapse; }}
+                .items-table td {{ padding: 5px 0; border-bottom: 0.5pt solid #FAF7F2; font-size: 9pt; font-weight: 600; }}
+                
+                .remarks-box {{ margin-top: 15px; font-size: 8.5pt; font-style: italic; color: #666; border-top: 1px dashed #E7D8CC; padding-top: 8px; }}
+                
+                .footer-section {{ margin-top: auto; padding-top: 40px; padding-bottom: 10px; display: flex; justify-content: flex-end; }}
+                .signature-area {{ text-align: center; width: 180px; }}
+                .signature-line {{ border-top: 1pt solid #5A2D1F; margin-bottom: 4px; }}
+                .signature-label {{ font-size: 8pt; font-weight: 800; color: #5A2D1F; text-transform: uppercase; }}
+                
+                .system-footer {{ margin-top: 15px; font-size: 7pt; color: #AAA; text-align: center; border-top: 0.5pt solid #FAF7F2; padding-top: 5px; }}
             </style>
         </head>
         <body>
-          <div class="receipt-page">
-            <div class="header">
-                {f'<img src="{logo_path}" style="height: 60px; margin-bottom: 5px;">' if logo_path else ''}
-                {f'<div class="temple-name">{escape(temple_name_kn)}</div>' if is_visible("show_temple_name_kn") and temple_name_kn else ''}
-                {f'<div class="temple-name">{escape(temple_name)}</div>' if is_visible("show_temple_name") and temple_name else ''}
+          <div class="receipt-container">
+            <div class="header-section">
+                {f'<img src="{logo_path}" class="temple-logo">' if is_visible("show_temple_logo") and logo_path else ''}
+                {f'<div class="temple-kn">{escape(temple_name_kn)}</div>' if is_visible("show_temple_name_kn") and temple_name_kn else ''}
+                {f'<div class="temple-en">{escape(temple_name)}</div>' if is_visible("show_temple_name") and temple_name else ''}
                 {f'<div class="temple-info">{temple_subtitle}</div>' if temple_subtitle else ''}
                 {f'<div class="temple-info">{escape(temple_address)}</div>' if is_visible("show_temple_address") and temple_address else ''}
                 {f'<div class="temple-info">Contact: {escape(" / ".join(contact_parts))}</div>' if contact_parts else ''}
-                {f'<div class="temple-info">Timings: {escape(timing_text)}</div>' if is_visible("show_temple_timings") and timing_text else ''}
                 {f'<div class="temple-info">Email: {escape(temple_email)}</div>' if is_visible("show_temple_email") and temple_email else ''}
-                {f'<div class="temple-info">Website: {escape(temple_website)}</div>' if is_visible("show_temple_website") and temple_website else ''}
-                {f'<div class="temple-info">Map: {escape(google_maps_link)}</div>' if is_visible("show_google_maps_link") and google_maps_link else ''}
             </div>
 
-            <div class="receipt-title">DONATION RECEIPT</div>
+            <div class="receipt-title-box">
+                <div class="receipt-title">Donation Receipt</div>
+            </div>
 
-            <table class="section-table">
+            <table class="details-table">
                 <tr>
                     <td class="label">Receipt No</td>
                     <td class="separator">:</td>
-                    <td class="value">{donation.receipt_display_number or donation.id}</td>
-                    <td class="label" style="text-align: right; width: 50px;">Date</td>
-                    <td class="separator" style="width: 15px;">:</td>
-                    <td class="value" style="text-align: right; width: 75px;">{donation.donation_date.strftime('%d-%m-%Y')}</td>
+                    <td class="value" style="font-weight: 900; font-size: 10pt;">{donation.receipt_display_number or donation.id}</td>
+                    <td class="label" style="text-align: right; width: 60px;">Date</td>
+                    <td class="separator">:</td>
+                    <td class="value" style="text-align: right; width: 85px;">{donation.donation_date.strftime('%d-%m-%Y')}</td>
                 </tr>
                 <tr>
                     <td class="label">Donation Type</td>
@@ -149,19 +161,14 @@ def get_receipt_pdf(
                     <td class="value" colspan="4">{donation.donation_type_master.type_name if donation.donation_type_master else "General Donation"}</td>
                 </tr>
                 <tr>
-                    <td class="label" style="padding-top: 8px;">Devotee Name</td>
-                    <td class="separator" style="padding-top: 8px;">:</td>
-                    <td class="value" colspan="4" style="padding-top: 8px;">{donation.devotee_name}</td>
+                    <td class="label">Devotee Name</td>
+                    <td class="separator">:</td>
+                    <td class="value" colspan="4" style="font-size: 10pt; font-weight: 800;">{donation.devotee_name}</td>
                 </tr>
                 <tr>
                     <td class="label">Phone</td>
                     <td class="separator">:</td>
                     <td class="value" colspan="4">{donation.phone_number}</td>
-                </tr>
-                <tr>
-                    <td class="label">Email</td>
-                    <td class="separator">:</td>
-                    <td class="value" colspan="4">{donation.email or '-'}</td>
                 </tr>
                 <tr>
                     <td class="label">Address</td>
@@ -175,17 +182,26 @@ def get_receipt_pdf(
                 </tr>
             </table>
 
-            <div style="margin-top: 10px; margin-bottom: 5px; font-size: 8pt;">ITEMS DONATED:</div>
-            <table class="items-table">
-                <tbody>
-                    {items_rows}
-                </tbody>
-            </table>
+            <div class="items-section">
+                <div class="items-header">Items Donated</div>
+                <table class="items-table">
+                    <tbody>
+                        {items_rows}
+                    </tbody>
+                </table>
+            </div>
 
-            {f'<div style="margin-top: 20px;">Remarks: {donation.remarks}</div>' if donation.remarks else ''}
+            {f'<div class="remarks-box"><b>Remarks:</b> {donation.remarks}</div>' if donation.remarks else ''}
 
-            <div class="signature-box">
-                <div class="signature-text">Authorized Signatory</div>
+            <div class="footer-section">
+                <div class="signature-area">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Authorized Signatory</div>
+                </div>
+            </div>
+            
+            <div class="system-footer">
+                Generated by AIMS on {datetime.now().strftime('%d-%m-%Y %I:%M %p')}
             </div>
           </div>
         </body>

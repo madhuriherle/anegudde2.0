@@ -27,7 +27,7 @@ def sync_for_consumption(
     for old in old_adjustments:
         item = db.query(Item).filter(Item.id == old.item_id).first()
         if item:
-            # Reverse the negative adjustment (add it back)
+            # Reverse prior effect regardless of sign
             item.current_stock = Decimal(item.current_stock or 0) - old.adjusted_qty
     
     # Delete old adjustments and their ledger entries
@@ -42,17 +42,19 @@ def sync_for_consumption(
         item = db.query(Item).filter(Item.id == adj.item_id).first()
         if not item:
             continue
-        
-        # We expect raw input from UI as positive 'wasted/adjusted' qty, 
-        # so we store it as NEGATIVE in stock_adjustments table to represent deduction.
-        actual_qty = -abs(adj.adjusted_qty)
-        
+
+        # Signed quantity from UI:
+        # +ve => add stock, -ve => remove stock
+        actual_qty = Decimal(adj.adjusted_qty or 0)
+        if actual_qty == 0:
+            continue
+
         # Check if adjustment results in negative stock
         current_stock = Decimal(item.current_stock or 0)
         if (current_stock + actual_qty) < 0:
             raise HTTPException(
                 status_code=422,
-                detail=f"Insufficient stock for item '{item.item_name}'. Current stock is {current_stock} but trying to deduct {abs(actual_qty)}."
+                detail=f"Insufficient stock for item '{item.item_name}'. Current stock is {current_stock} but trying to remove {abs(actual_qty)}."
             )
         
         new_adj = StockAdjustment(
@@ -79,11 +81,11 @@ def sync_for_consumption(
             txn_type=4, # Stock Adjustment
             ref_table="stock_adjustments",
             ref_id=new_adj.id,
-            qty_in=0,
-            qty_out=abs(actual_qty),
+            qty_in=actual_qty if actual_qty > 0 else 0,
+            qty_out=abs(actual_qty) if actual_qty < 0 else 0,
             unit_cost=unit_cost,
-            value_in=0,
-            value_out=abs(actual_qty) * unit_cost,
+            value_in=(actual_qty * unit_cost) if actual_qty > 0 else 0,
+            value_out=(abs(actual_qty) * unit_cost) if actual_qty < 0 else 0,
             balance=Decimal(item.current_stock),
             current_value=Decimal(item.current_stock) * unit_cost,
             created_at=now,
