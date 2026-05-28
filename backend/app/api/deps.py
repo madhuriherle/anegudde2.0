@@ -68,13 +68,13 @@ class PermissionChecker:
 
     def __call__(self, current_user: User = Depends(get_current_user)):
         # Check for all-access flag instead of hardcoded names
-        if current_user.role.is_all_access:
+        if current_user.role and current_user.role.is_all_access:
             return current_user
 
         user_privileges = [
             rp.privilege.privilege_name 
-            for rp in current_user.role.privileges 
-            if rp.status == 1
+            for rp in (current_user.role.privileges if current_user.role else [])
+            if rp.status == 1 and rp.privilege and rp.privilege.status == 1
         ]
 
         if self.required_privilege not in user_privileges:

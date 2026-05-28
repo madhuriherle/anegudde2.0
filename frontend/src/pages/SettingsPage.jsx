@@ -29,6 +29,7 @@ import {
 
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
+import { usePermission } from '../hooks/usePermission';
 import { cn } from '../utils/cn';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -96,7 +97,7 @@ const fieldClass =
 const labelClass =
   'block text-base font-semibold text-text-main mb-2';
 
-const VisibilityToggle = ({ label, name, control }) => (
+const VisibilityToggle = ({ label, name, control, disabled = false }) => (
   <div className="flex items-center justify-between gap-3">
     <span className="text-base font-semibold text-text-main">{label}</span>
     <Controller
@@ -106,6 +107,7 @@ const VisibilityToggle = ({ label, name, control }) => (
         <Switch
           checked={field.value}
           onCheckedChange={field.onChange}
+          disabled={disabled}
           className="scale-90"
         />
       )}
@@ -191,12 +193,21 @@ const SettingsPage = ({ section = null }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showConfirm, showError, showSuccess } = useNotification();
+  const { hasPermission } = usePermission();
   const [cleanupSelections, setCleanupSelections] = useState([]);
   const [cleanupPhrase, setCleanupPhrase] = useState('');
   const [logoChanged, setLogoChanged] = useState(false);
   const [pendingLogoFile, setPendingLogoFile] = useState(null);
   const [pendingLogoPreview, setPendingLogoPreview] = useState('');
   const activeSection = section;
+  const canWrite =
+    activeSection === 'temple'
+      ? hasPermission('settings.temple_identity.write')
+      : activeSection === 'receipt'
+        ? hasPermission('settings.receipt_settings.write')
+        : activeSection === 'cleanup'
+          ? hasPermission('settings.data_cleanup.write')
+          : hasPermission('settings.management.write');
   const settingsReadEndpoint = activeSection === 'temple'
     ? '/settings/temple-identity'
     : activeSection === 'receipt'
@@ -297,6 +308,11 @@ const SettingsPage = ({ section = null }) => {
   });
 
   const onSubmit = async (data) => {
+    if (!canWrite) {
+      showError('You have read-only access for this settings page.');
+      return;
+    }
+
     const confirmed = await showConfirm(
       'Update Settings',
       'Save these temple identity settings? Changes will apply to receipts and reports.',
@@ -348,6 +364,11 @@ const SettingsPage = ({ section = null }) => {
   };
 
   const handleCleanup = async () => {
+    if (!canWrite) {
+      showError('You have read-only access for data cleanup.');
+      return;
+    }
+
     if (cleanupSelections.length === 0) {
       showError('Select at least one data group to clear.');
       return;
@@ -559,6 +580,7 @@ const SettingsPage = ({ section = null }) => {
                 <Label className={templeLabelClass}>Temple Name</Label>
                 <Input
                   {...register('temple_name')}
+                  disabled={!canWrite}
                   className={templeFieldClass}
                   placeholder="e.g. Anegudde Sri Vinayaka Temple"
                 />
@@ -574,6 +596,7 @@ const SettingsPage = ({ section = null }) => {
                 <Label className={templeLabelClass}>Kannada Name</Label>
                 <Input
                   {...register('temple_name_kn')}
+                  disabled={!canWrite}
                   className={templeFieldClass}
                   placeholder="e.g. ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ"
                 />
@@ -593,6 +616,7 @@ const SettingsPage = ({ section = null }) => {
                       </div>
                     </div>
 
+                    {canWrite && (
                     <label className="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-white shadow-sm hover:bg-secondary transition-all active:scale-95">
                       <ImagePlus className="h-4 w-4" />
                       Choose Logo
@@ -610,6 +634,7 @@ const SettingsPage = ({ section = null }) => {
                         }}
                       />
                     </label>
+                    )}
                   </div>
                 </div>
               </div>
@@ -630,6 +655,7 @@ const SettingsPage = ({ section = null }) => {
                 <Label className={templeLabelClass}>Contact Number</Label>
                 <Input
                   {...register('temple_contact')}
+                  disabled={!canWrite}
                   className={templeFieldClass}
                   placeholder="08254-261257"
                 />
@@ -639,6 +665,7 @@ const SettingsPage = ({ section = null }) => {
                 <Label className={templeLabelClass}>Alternate Contact</Label>
                 <Input
                   {...register('alternate_contact')}
+                  disabled={!canWrite}
                   className={templeFieldClass}
                   placeholder="Additional phone number"
                 />
@@ -650,6 +677,7 @@ const SettingsPage = ({ section = null }) => {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#C97B63]/60" />
                   <Input
                     {...register('temple_email')}
+                    disabled={!canWrite}
                     className={cn(templeFieldClass, "pl-10")}
                     placeholder="contact@temple.com"
                   />
@@ -667,6 +695,7 @@ const SettingsPage = ({ section = null }) => {
                   <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#C97B63]/60" />
                   <Input
                     {...register('temple_website')}
+                    disabled={!canWrite}
                     className={cn(templeFieldClass, "pl-10")}
                     placeholder="https://www.temple.com"
                   />
@@ -694,6 +723,7 @@ const SettingsPage = ({ section = null }) => {
                 <Label className={templeLabelClass}>Address</Label>
                 <Input
                   {...register('temple_address')}
+                  disabled={!canWrite}
                   className={templeFieldClass}
                   placeholder="Temple full address"
                 />
@@ -703,6 +733,7 @@ const SettingsPage = ({ section = null }) => {
                 <Label className={templeLabelClass}>Google Maps</Label>
                 <Input
                   {...register('google_maps_link')}
+                  disabled={!canWrite}
                   className={templeFieldClass}
                   placeholder="https://maps.google.com/..."
                 />
@@ -730,6 +761,7 @@ const SettingsPage = ({ section = null }) => {
                 <Input
                   type="time"
                   {...register('opening_time')}
+                  disabled={!canWrite}
                   className={templeFieldClass}
                 />
               </div>
@@ -739,6 +771,7 @@ const SettingsPage = ({ section = null }) => {
                 <Input
                   type="time"
                   {...register('closing_time')}
+                  disabled={!canWrite}
                   className={templeFieldClass}
                 />
               </div>
@@ -747,6 +780,7 @@ const SettingsPage = ({ section = null }) => {
 
         </div>
 
+        {canWrite && (
         <div className="mt-6 flex flex-col justify-end gap-3 sm:flex-row">
           <Button
             type="button"
@@ -765,6 +799,7 @@ const SettingsPage = ({ section = null }) => {
             {updateAllMutation.isPending ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
+        )}
       </form>
       )}
 
@@ -785,6 +820,7 @@ const SettingsPage = ({ section = null }) => {
                   <Input
                     type="number"
                     {...register('receipt_padding')}
+                    disabled={!canWrite}
                     className={`${fieldClass} w-full text-center font-bold`}
                     placeholder="e.g. 4"
                   />
@@ -807,7 +843,8 @@ const SettingsPage = ({ section = null }) => {
                     </p>
                   </div>
                 </div>
-              </div>              <div className="flex justify-end gap-3 pt-8 border-t border-[#F8F4EE]">
+              </div>              {canWrite && (
+              <div className="flex justify-end gap-3 pt-8 border-t border-[#F8F4EE]">
                 <Button
                   type="button"
                   variant="ghost"
@@ -829,6 +866,7 @@ const SettingsPage = ({ section = null }) => {
                     : 'Save Changes'}
                 </Button>
               </div>
+              )}
             </CardContent>
           </Card>
 
@@ -842,16 +880,16 @@ const SettingsPage = ({ section = null }) => {
               </div>
 
               <div className="grid grid-cols-1 gap-4 pt-2">
-                <VisibilityToggle label="Temple Logo" name="show_temple_logo" control={control} />
-                <VisibilityToggle label="English Name" name="show_temple_name" control={control} />
-                <VisibilityToggle label="Kannada Name" name="show_temple_name_kn" control={control} />
-                <VisibilityToggle label="Address" name="show_temple_address" control={control} />
-                <VisibilityToggle label="Contact Number" name="show_temple_contact" control={control} />
-                <VisibilityToggle label="Alternate Contact" name="show_alternate_contact" control={control} />
-                <VisibilityToggle label="Email Address" name="show_temple_email" control={control} />
-                <VisibilityToggle label="Website" name="show_temple_website" control={control} />
-                <VisibilityToggle label="Timings" name="show_temple_timings" control={control} />
-                <VisibilityToggle label="Google Maps" name="show_google_maps_link" control={control} />
+                <VisibilityToggle label="Temple Logo" name="show_temple_logo" control={control} disabled={!canWrite} />
+                <VisibilityToggle label="English Name" name="show_temple_name" control={control} disabled={!canWrite} />
+                <VisibilityToggle label="Kannada Name" name="show_temple_name_kn" control={control} disabled={!canWrite} />
+                <VisibilityToggle label="Address" name="show_temple_address" control={control} disabled={!canWrite} />
+                <VisibilityToggle label="Contact Number" name="show_temple_contact" control={control} disabled={!canWrite} />
+                <VisibilityToggle label="Alternate Contact" name="show_alternate_contact" control={control} disabled={!canWrite} />
+                <VisibilityToggle label="Email Address" name="show_temple_email" control={control} disabled={!canWrite} />
+                <VisibilityToggle label="Website" name="show_temple_website" control={control} disabled={!canWrite} />
+                <VisibilityToggle label="Timings" name="show_temple_timings" control={control} disabled={!canWrite} />
+                <VisibilityToggle label="Google Maps" name="show_google_maps_link" control={control} disabled={!canWrite} />
               </div>
             </CardContent>
           </Card>
@@ -984,8 +1022,9 @@ const SettingsPage = ({ section = null }) => {
                 <label
                   key={group.id}
                   className={cn(
-                    "grid cursor-pointer grid-cols-[1.1fr_1.4fr_88px] items-center border-b border-[#F3E8DE] px-5 py-5 transition-colors last:border-b-0",
-                    checked ? "bg-[#FFF7ED]" : "hover:bg-[#FFFDFB]"
+                    "grid grid-cols-[1.1fr_1.4fr_88px] items-center border-b border-[#F3E8DE] px-5 py-5 transition-colors last:border-b-0",
+                    canWrite ? "cursor-pointer" : "cursor-not-allowed opacity-70",
+                    checked ? "bg-[#FFF7ED]" : canWrite && "hover:bg-[#FFFDFB]"
                   )}
                 >
                   <span className="text-[18px] font-black text-[#2B2B2B]">
@@ -998,6 +1037,7 @@ const SettingsPage = ({ section = null }) => {
                     <input
                       type="checkbox"
                       checked={checked}
+                      disabled={!canWrite}
                       onChange={() => toggleCleanupSelection(group.id)}
                       className="h-5 w-5 accent-[#B45309]"
                     />
@@ -1027,9 +1067,11 @@ const SettingsPage = ({ section = null }) => {
               <Input
                 value={cleanupPhrase}
                 onChange={(event) => setCleanupPhrase(event.target.value)}
+                disabled={!canWrite}
                 className={`${fieldClass} flex-1 font-bold`}
                 placeholder="Type CLEAR DATA"
               />
+              {canWrite && (
               <Button
                 type="button"
                 variant="error"
@@ -1044,6 +1086,7 @@ const SettingsPage = ({ section = null }) => {
                 <Trash2 className="mr-2 h-4 w-4" />
                 {cleanupMutation.isPending ? 'Clearing...' : 'Clear Selected Data'}
               </Button>
+              )}
             </div>
           </div>
         </div>

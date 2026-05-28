@@ -40,6 +40,7 @@ class SystemSettings(Base):
     footer_note = Column(Text, nullable=True)
     
     # Display Toggles
+    show_temple_logo = Column(Boolean, default=True, nullable=False, server_default=text("true"))
     show_temple_name = Column(Boolean, default=True, nullable=False, server_default=text("true"))
     show_temple_name_kn = Column(Boolean, default=True, nullable=False, server_default=text("true"))
     show_temple_address = Column(Boolean, default=True, nullable=False, server_default=text("true"))

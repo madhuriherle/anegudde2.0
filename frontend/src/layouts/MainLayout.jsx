@@ -37,9 +37,19 @@ const MainLayout = () => {
   const [menuData, setMenuData] = useState([]);
   const canAccessMain = hasMainAccess(user);
   const canAccessCanteen = hasCanteenAccess(user);
+  const privilegeKey = [
+    user?.id,
+    user?.is_all_access ? 'all' : 'limited',
+    ...(user?.privileges || []),
+  ].join('|');
 
   useEffect(() => {
     const fetchMenu = async () => {
+      if (!user) {
+        setMenuData([]);
+        return;
+      }
+
       try {
         const response = await api.get('/modules/menu');
         setMenuData(response.data);
@@ -47,8 +57,13 @@ const MainLayout = () => {
         console.error('Failed to fetch menu:', error);
       }
     };
+
     fetchMenu();
-  }, []);
+
+    const handleFocus = () => fetchMenu();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user, privilegeKey]);
 
   useEffect(() => {
     const path = location.pathname;
@@ -125,14 +140,13 @@ const MainLayout = () => {
         depth > 0 && "ml-4 py-1.5"
       )}
       onClick={() => {
-        if (item.route) {
+        if (canExpandChildren) {
+          toggleExpand(item.id);
+        } else if (item.route) {
           if (item.route === '/canteen') setActiveModule('canteen');
           if (item.route === '/' && activeModule === 'canteen') setActiveModule('main');
           navigate(item.route);
           setIsSidebarOpen(false);
-          if (canExpandChildren) toggleExpand(item.id);
-        } else if (canExpandChildren) {
-          toggleExpand(item.id);
         }
       }}>
       

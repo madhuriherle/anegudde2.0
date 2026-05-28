@@ -82,7 +82,7 @@ function App() {
         <Route path="/settings/units" element={<ProtectedRoute requiredPermission="units.read"><UnitsPage /></ProtectedRoute>} />
         <Route path="/items/menu-items" element={<ProtectedRoute requiredPermission="menu_items.read"><MenuItemsPage /></ProtectedRoute>} />
         <Route path="/settings/donation-types" element={<ProtectedRoute requiredPermission="donation_types.read"><DonationTypesPage /></ProtectedRoute>} />
-        <Route path="/settings/modules" element={<ProtectedRoute requiredPermission="users.write"><ModuleManagementPage /></ProtectedRoute>} />
+        <Route path="/settings/modules" element={<ProtectedRoute requiredPermission="users.modules.read" requiredRank={1}><ModuleManagementPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute requiredPermission="settings.management.read"><SettingsPage /></ProtectedRoute>} />
         <Route path="/settings/temple" element={<ProtectedRoute requiredPermission="settings.temple_identity.read"><TempleIdentitySettingsPage /></ProtectedRoute>} />
         <Route path="/settings/receipt" element={<ProtectedRoute requiredPermission="settings.receipt_settings.read"><ReceiptSettingsPage /></ProtectedRoute>} />

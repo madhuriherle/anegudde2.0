@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
-const ProtectedRoute = ({ children, requiredPermission }) => {
+const ProtectedRoute = ({ children, requiredPermission, requiredRank }) => {
   const { token, user, isLoading } = useAuth();
   const location = useLocation();
 
@@ -19,11 +19,22 @@ const ProtectedRoute = ({ children, requiredPermission }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requiredPermission && user) {
-    const hasPermission = user.is_all_access || user.privileges?.includes(requiredPermission);
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requiredPermission) {
+    const requiredPermissions = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission];
+    const hasPermission =
+      user.is_all_access ||
+      requiredPermissions.some((permission) => user.privileges?.includes(permission));
     if (!hasPermission) {
       return <Navigate to="/" replace />;
     }
+  }
+
+  if (requiredRank && (user.role_rank_level ?? 99) > requiredRank) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

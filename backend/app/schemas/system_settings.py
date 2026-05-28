@@ -71,6 +71,7 @@ class TempleIdentitySettingsUpdate(BaseModel):
 
 class ReceiptSettingsUpdate(BaseModel):
     receipt_padding: int
+    show_temple_logo: bool = True
     show_temple_name: bool = True
     show_temple_name_kn: bool = True
     show_temple_address: bool = True
@@ -112,6 +113,7 @@ class TempleIdentitySettingsOut(BaseModel):
 
 class ReceiptSettingsOut(BaseModel):
     receipt_padding: int
+    show_temple_logo: bool = True
     show_temple_name: bool = True
     show_temple_name_kn: bool = True
     show_temple_address: bool = True

@@ -42,8 +42,8 @@ const UsersPage = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
   const { hasPermission } = usePermission();
-  const canWrite = hasPermission('users.write');
-  const canDelete = hasPermission('users.delete');
+  const canWrite = hasPermission('users.management.write');
+  const canDelete = hasPermission('users.management.delete');
 
   // Filter States
   const pageSize = 50;

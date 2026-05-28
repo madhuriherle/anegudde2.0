@@ -58,12 +58,18 @@ def get_user_menu(
         is_all_access = current_user.role.is_all_access
         my_rank = current_user.role.rank_level
         if not is_all_access:
-            user_privileges = {rp.privilege.privilege_name for rp in current_user.role.privileges if rp.privilege and rp.privilege.status == 1}
+            user_privileges = {
+                rp.privilege.privilege_name
+                for rp in current_user.role.privileges
+                if rp.status == 1 and rp.privilege and rp.privilege.status == 1
+            }
     
     def build_tree(module):
         # Developer-only modules check
         if (module.name == "Module Management" or module.route == "/settings/modules") and my_rank != 1:
             return None
+
+        has_active_children = any(sm.status == 1 for sm in module.submodules)
 
         # 1. Filter submodules first
         visible_submodules = []
@@ -79,15 +85,15 @@ def get_user_menu(
         if is_all_access:
             should_be_visible = True
         else:
-            module_privs = {p.privilege_name for p in module.privileges if p.status == 1}
-            if module_privs:
-                if module_privs & user_privileges:
-                    should_be_visible = True
-            elif visible_submodules:
+            module_privs = {
+                p.privilege_name
+                for p in module.privileges
+                if p.status == 1 and p.privilege_name.endswith(".read")
+            }
+            if visible_submodules:
                 should_be_visible = True
-            elif not module.parent_id:
-                if visible_submodules:
-                    should_be_visible = True
+            elif not has_active_children and module.route and module_privs & user_privileges:
+                should_be_visible = True
 
         if not should_be_visible:
             return None

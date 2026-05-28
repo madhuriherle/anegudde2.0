@@ -23,12 +23,12 @@ def me(
 
     user_out = AuthUserOut.model_validate(current_user)
     user_out.active_financial_year = active_fy
-    user_out.is_all_access = current_user.role.is_all_access
+    user_out.is_all_access = current_user.role.is_all_access if current_user.role else False
     user_out.role_rank_level = current_user.role.rank_level if current_user.role else None
     user_out.privileges = [
         rp.privilege.privilege_name 
-        for rp in current_user.role.privileges 
-        if rp.status == 1
+        for rp in (current_user.role.privileges if current_user.role else [])
+        if rp.status == 1 and rp.privilege and rp.privilege.status == 1
     ]
     return user_out
 
