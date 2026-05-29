@@ -101,3 +101,59 @@ class PermissionChecker:
             db.close()
 
         return current_user
+
+
+class AnyPermissionChecker:
+    def __init__(self, required_privileges: list[str]):
+        self.required_privileges = required_privileges
+
+    def __call__(self, current_user: User = Depends(get_current_user)):
+        user_privileges = [
+            rp.privilege.privilege_name
+            for rp in (current_user.role.privileges if current_user.role else [])
+            if rp.status == 1 and rp.privilege and rp.privilege.status == 1
+        ]
+
+        is_all_access = bool(current_user.role and current_user.role.is_all_access)
+        matched_privilege = next(
+            (privilege for privilege in self.required_privileges if privilege in user_privileges),
+            None,
+        )
+
+        if not is_all_access and not matched_privilege:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Not enough permissions. Required one of: {', '.join(self.required_privileges)}",
+            )
+
+        privileges_to_check = self.required_privileges if is_all_access else [matched_privilege]
+        user_rank = current_user.role.rank_level if current_user.role else 99
+
+        db = SessionLocal()
+        try:
+            rank_blocked = (
+                db.query(Privilege)
+                .options(joinedload(Privilege.module))
+                .filter(
+                    Privilege.privilege_name.in_(privileges_to_check),
+                    Privilege.status == 1,
+                )
+                .all()
+            )
+
+            allowed_by_rank = any(
+                not privilege.module
+                or not privilege.module.min_rank_level
+                or user_rank <= privilege.module.min_rank_level
+                for privilege in rank_blocked
+            )
+
+            if not allowed_by_rank:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This action requires a higher rank.",
+                )
+        finally:
+            db.close()
+
+        return current_user

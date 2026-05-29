@@ -828,7 +828,7 @@ const UsageEntriesPage = () => {
                     <div></div>
                     <div className="text-base font-bold text-text-main text-center">Used</div>
                   </div>
-                  <div className="pr-2 space-y-2">
+                  <div className="max-h-[480px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
                     {(items || []).filter((i) => i.status === 1).map((item) => {
                         const itemError = errors.raw_items?.[item.id];
                         return (
@@ -865,7 +865,7 @@ const UsageEntriesPage = () => {
                       <div className="text-base font-bold text-text-main text-center">Qty</div>
                       <div className="text-base font-bold text-text-main text-center whitespace-nowrap">Approx.Amt</div>
                     </div>
-                    <div className="pr-2 space-y-3">
+                    <div className="max-h-[350px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
                       <div className="space-y-2">
                         {(menuItems || []).filter((m) => m.status === 1).map((menu) =>
                           <div key={menu.id} className="grid grid-cols-[1fr_80px_110px] gap-3 items-center min-h-[32px]">

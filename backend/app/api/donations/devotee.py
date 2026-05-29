@@ -10,7 +10,7 @@ router = APIRouter()
 @router.get("/list_devotees", response_model=PaginatedResponse[DevoteeOut])
 def list_devotees(
     db: Session = Depends(get_db),
-    current_user = Depends(PermissionChecker("devotees.read")),
+    current_user = Depends(PermissionChecker("donations.read")),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     q: str = Query(None)
@@ -21,7 +21,7 @@ def list_devotees(
 def get_devotee(
     devotee_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(PermissionChecker("devotees.read"))
+    current_user = Depends(PermissionChecker("donations.read"))
 ):
     devotee = devotee_service.get_devotee_details(devotee_id, db)
     if not devotee:
@@ -32,7 +32,7 @@ def get_devotee(
 def get_devotee_by_phone(
     phone: str,
     db: Session = Depends(get_db),
-    current_user = Depends(PermissionChecker("devotees.read"))
+    current_user = Depends(PermissionChecker("donations.read"))
 ):
     devotee = devotee_service.get_devotee_by_phone(phone, db)
     if not devotee:

@@ -98,7 +98,7 @@ def get_user_menu(
         else:
             if visible_submodules:
                 should_be_visible = True
-            elif not has_active_children and module.route and module_privs & user_privileges:
+            elif module.route and module_privs & user_privileges:
                 should_be_visible = True
 
         if not should_be_visible:

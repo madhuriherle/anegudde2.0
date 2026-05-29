@@ -140,6 +140,21 @@ const PrivilegeCheckbox = ({ checked, disabled, onChange }) => (
   />
 );
 
+const RowBadge = ({ children, tone = 'neutral' }) => {
+  const tones = {
+    neutral: 'border-[#E6D8C9] bg-[#FBF8F4] text-[#6F6257]',
+    module: 'border-[#D8C1A7] bg-[#F6E9D8] text-[#70431E]',
+    rank: 'border-[#D9C2B6] bg-[#F8ECE7] text-[#8C3E22]',
+    dependency: 'border-[#E7C9A4] bg-[#FFF5E8] text-[#A34D18]',
+  };
+
+  return (
+    <span className={`inline-flex h-6 items-center rounded-md border px-2 text-[11px] font-bold leading-none ${tones[tone]}`}>
+      {children}
+    </span>
+  );
+};
+
 const PrivilegesPage = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
@@ -198,9 +213,34 @@ const PrivilegesPage = () => {
     [menuRoots, selectedRoleRank]
   );
 
+  const editablePrivilegeIds = useMemo(
+    () =>
+      new Set(
+        groupedModules.flatMap((group) =>
+          group.rows.flatMap((row) => [
+            row.readPriv?.id,
+            row.writePriv?.id,
+            row.deletePriv?.id,
+            row.launcherReadPriv?.id,
+          ])
+        ).filter(Boolean)
+      ),
+    [groupedModules]
+  );
+
   React.useEffect(() => {
-    setLocalPrivIds(rolePrivilegeIds || []);
-  }, [rolePrivilegeIds]);
+    if (!rolePrivilegeIds) {
+      setLocalPrivIds([]);
+      return;
+    }
+
+    if (editablePrivilegeIds.size === 0) {
+      setLocalPrivIds(rolePrivilegeIds);
+      return;
+    }
+
+    setLocalPrivIds(rolePrivilegeIds.filter((id) => editablePrivilegeIds.has(id)));
+  }, [rolePrivilegeIds, editablePrivilegeIds]);
 
   const mutation = useMutation({
     mutationFn: async (privilege_ids) => {
@@ -322,7 +362,7 @@ const PrivilegesPage = () => {
     );
 
     if (confirmed) {
-      mutation.mutate(localPrivIds);
+      mutation.mutate(localPrivIds.filter((id) => editablePrivilegeIds.has(id)));
     }
   };
 
@@ -345,6 +385,42 @@ const PrivilegesPage = () => {
         onChange={() => setRowPrivilege(row, action)}
       />
     );
+  };
+
+  const renderRowMeta = (row) => {
+    const badges = [
+      <RowBadge key="type" tone={row.type === 'Launcher' ? 'module' : 'neutral'}>
+        {row.type}
+      </RowBadge>,
+    ];
+
+    if (row.path) {
+      badges.push(<RowBadge key="path">{row.path}</RowBadge>);
+    }
+
+    if (row.minRankLevel) {
+      badges.push(
+        <RowBadge key="rank" tone="rank">
+          Rank {row.minRankLevel}+
+        </RowBadge>
+      );
+    }
+
+    if (row.opensModuleName) {
+      badges.push(
+        <RowBadge key="opens" tone="dependency">
+          Opens {row.opensModuleName}
+        </RowBadge>
+      );
+    } else if (row.launcherReadPriv) {
+      badges.push(
+        <RowBadge key="requires" tone="dependency">
+          Needs Main Menu launcher
+        </RowBadge>
+      );
+    }
+
+    return <div className="mt-2 flex flex-wrap gap-1.5">{badges}</div>;
   };
 
   const renderGroup = (group) => (
@@ -413,16 +489,10 @@ const PrivilegesPage = () => {
                   >
                     <div className="mt-2 h-2 w-2 rounded-full bg-[#B77B45]" />
                     <div className="min-w-0">
-                      <div className="text-sm font-black text-[#23150E]">
+                      <div className="text-[15px] font-black leading-5 text-[#23150E]">
                         {row.label}
                       </div>
-                      <div className="mt-0.5 text-xs font-semibold text-[#887869]">
-                        {row.type}
-                        {row.path ? ` - ${row.path}` : ''}
-                        {row.minRankLevel ? ` - Rank ${row.minRankLevel}+` : ''}
-                        {row.opensModuleName ? ` - opens ${row.opensModuleName}` : ''}
-                        {!row.opensModuleName && row.launcherReadPriv ? ' - requires Main Menu launcher' : ''}
-                      </div>
+                      {renderRowMeta(row)}
                     </div>
                   </div>
                 </td>

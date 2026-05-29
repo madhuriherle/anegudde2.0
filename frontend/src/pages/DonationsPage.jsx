@@ -19,7 +19,7 @@ import { DetailItem } from '../components/ui/DetailItem';
 import { ReceiptViewerDialog } from '../components/ui/ReceiptViewerDialog';
 import { formatDate } from '../utils/date';
 import { formatQuantityWithUnit } from '../utils/quantity';
-import { Plus, Trash2, Search, X, ReceiptText, Settings } from 'lucide-react';
+import { Plus, Trash2, Search, X, ReceiptText, Settings, Check } from 'lucide-react';
 
 import { usePermission } from '../hooks/usePermission';
 
@@ -636,28 +636,34 @@ const DonationsPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="page-title">Donations</h2>
-        {canWrite && <div className="flex items-center gap-2">
-          {(canAmountConfigRead || canAmountConfigWrite || canAmountConfigDelete) && <Button
-            type="button"
-            variant="outline"
-            onClick={() => setAmountConfigOpen(true)}
-            className="h-10 w-10 p-0"
-            title="Configure specific amounts"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>}
-          <Button onClick={() => {
-            setEditingDonation(null);
-            resetDonationForm();
-            setOpen(true);
-          }} className="flex items-center gap-2">
-            Record New Donation
-          </Button>
-        </div>}
       </div>
 
-      <Card className="border-border-temple">
+      <Card className="border-border-temple shadow-sm">
         <CardContent className="p-4 sm:p-6">
+          <div className="mb-4 flex flex-col gap-3 border-b border-border-temple/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-secondary font-temple">Add Donation</h3>
+              <p className="text-sm font-medium text-text-main/60">Create donation entries and configure specific amount options.</p>
+            </div>
+            {canWrite && <div className="flex items-center gap-2">
+              {(canAmountConfigRead || canAmountConfigWrite || canAmountConfigDelete) && <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAmountConfigOpen(true)}
+                className="h-10 w-10 p-0"
+                title="Configure specific amounts"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>}
+              <Button onClick={() => {
+                setEditingDonation(null);
+                resetDonationForm();
+                setOpen(true);
+              }} className="h-10 px-5">
+                Record New Donation
+              </Button>
+            </div>}
+          </div>
           <div className="flex items-end gap-4">
             <div className="space-y-1.5 flex-1 max-w-md">
               <Label className="text-text-main font-medium">Search Devotee</Label>
@@ -675,7 +681,11 @@ const DonationsPage = () => {
         </CardContent>
       </Card>
 
-      <div className="rounded-xl border border-border-temple overflow-hidden bg-white">
+      <Card className="border-border-temple shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          <div className="border-b border-border-temple/40 bg-white px-4 py-3 sm:px-6">
+            <h3 className="text-lg font-bold text-secondary font-temple">Donation Records</h3>
+          </div>
         <DataTable
           columns={columns}
           data={donationsData?.items || []}
@@ -686,8 +696,8 @@ const DonationsPage = () => {
           pageSize={pageSize}
           onPageChange={(p) => setPage(p)}
           totalCount={donationsData?.total || 0} />
-        
-      </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={devoteeDetailsOpen} onOpenChange={setDevoteeDetailsOpen}>
         <DialogContent className="max-w-xl !flex !flex-col !p-0 border-border-temple shadow-2xl bg-white overflow-hidden">
@@ -957,10 +967,11 @@ const DonationsPage = () => {
                       <button
                         type="button"
                         onClick={() => setValue('donation_mode', 'ITEM')}
-                        className={`relative z-10 rounded-full text-sm font-black transition-colors ${
+                        className={`relative z-10 flex items-center justify-center gap-2 rounded-full text-sm font-black transition-colors ${
                           watchedDonationMode === 'ITEM' ? 'text-primary' : 'text-text-main/45'
                         }`}
                       >
+                        {watchedDonationMode === 'ITEM' && <Check className="h-4 w-4" />}
                         Item Donation
                       </button>
                       <button
@@ -969,10 +980,11 @@ const DonationsPage = () => {
                           setValue('donation_mode', 'AMOUNT');
                           setValue('items', [{ search_id: '', item_id: 0, quantity: 0 }]);
                         }}
-                        className={`relative z-10 rounded-full text-sm font-black transition-colors ${
+                        className={`relative z-10 flex items-center justify-center gap-2 rounded-full text-sm font-black transition-colors ${
                           watchedDonationMode === 'AMOUNT' ? 'text-primary' : 'text-text-main/45'
                         }`}
                       >
+                        {watchedDonationMode === 'AMOUNT' && <Check className="h-4 w-4" />}
                         Amount Donation
                       </button>
                     </div>
@@ -1161,7 +1173,7 @@ const DonationsPage = () => {
                   setEditingDonation(null);
                   resetDonationForm();
                 }}
-                className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold"
+                className="w-32 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold"
               >
                 Cancel
               </Button>
@@ -1201,10 +1213,10 @@ const DonationsPage = () => {
               </div>
               <div className="flex gap-2">
                 {canAmountConfigWrite && <Button type="submit" disabled={amountOptionMutation.isPending} className="h-10 bg-primary text-white font-bold">
-                  {amountOptionMutation.isPending ? 'Saving...' : editingAmountOption ? 'Update' : 'Save'}
+                  {amountOptionMutation.isPending ? 'Saving...' : 'Save'}
                 </Button>}
                 {canAmountConfigWrite && <Button type="button" variant="ghost" onClick={handleNewAmountOption} className="h-10 bg-white border border-[#D9C8AF] text-text-main font-bold">
-                  New
+                  Cancel
                 </Button>}
               </div>
             </form>
