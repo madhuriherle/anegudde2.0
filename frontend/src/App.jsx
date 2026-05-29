@@ -30,6 +30,7 @@ import ModuleManagementPage from './pages/ModuleManagementPage';
 import { StockSummaryPage } from './pages/StockSummaryPage';
 import TokenReportPage from './pages/TokenReportPage';
 import DonationReportPage from './pages/DonationReportPage';
+import PurchaseReportPage from './pages/PurchaseReportPage';
 import TokenDetailLedgerPage from './pages/TokenDetailLedgerPage';
 import CanteenSummaryPage from './pages/CanteenSummaryPage';
 import ManpowerReportPage from './pages/ManpowerReportPage';
@@ -69,6 +70,7 @@ function App() {
         <Route path="/reports/tokens" element={<ProtectedRoute requiredPermission="reports.tokens.read"><TokenReportPage /></ProtectedRoute>} />
         <Route path="/reports/tokens/:date" element={<ProtectedRoute requiredPermission="reports.tokens.read"><TokenDetailLedgerPage /></ProtectedRoute>} />
         <Route path="/reports/donations" element={<ProtectedRoute requiredPermission="reports.donations.read"><DonationReportPage /></ProtectedRoute>} />
+        <Route path="/reports/purchases" element={<ProtectedRoute requiredPermission="reports.purchases.read"><PurchaseReportPage /></ProtectedRoute>} />
         <Route path="/reports/stock-summary" element={<ProtectedRoute requiredPermission="reports.stock_summary.read"><StockSummaryPage /></ProtectedRoute>} />
         <Route path="/reports/canteen-summary" element={<ProtectedRoute requiredPermission="reports.canteen_summary.read"><CanteenSummaryPage /></ProtectedRoute>} />
         <Route path="/reports/manpower" element={<ProtectedRoute requiredPermission="reports.manpower.read"><ManpowerReportPage /></ProtectedRoute>} />

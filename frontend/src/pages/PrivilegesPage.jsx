@@ -32,11 +32,27 @@ const pickMostSpecificPrivilege = (privileges = [], action) => {
   })[0];
 };
 
-const buildGroupedModules = (menuRoots = []) => {
+const buildGroupedModules = (menuRoots = [], selectedRoleRank = 99) => {
+  const openerReadByRootId = new Map();
+  const rootById = new Map(menuRoots.map((root) => [root.id, root]));
+
+  const collectOpeners = (node) => {
+    const readPriv = pickMostSpecificPrivilege(node.privileges || [], 'read');
+    if (node.opens_module_id && readPriv) {
+      openerReadByRootId.set(node.opens_module_id, readPriv);
+    }
+    (node.submodules || []).forEach(collectOpeners);
+  };
+
+  menuRoots.forEach(collectOpeners);
+
   const buildRowsForRoot = (root) => {
     const rows = [];
+    const launcherReadPriv = openerReadByRootId.get(root.id) || null;
 
     const walk = (node, parentTrail = []) => {
+      if (node.min_rank_level && selectedRoleRank > node.min_rank_level) return;
+
       const trail = [...parentTrail, node.name];
       const linkedPrivs = node.privileges || [];
 
@@ -45,10 +61,10 @@ const buildGroupedModules = (menuRoots = []) => {
       const deletePriv = pickMostSpecificPrivilege(linkedPrivs, 'delete');
 
       const hasChildren = Boolean(node.submodules?.length);
+      const hasLinkedPrivilege = Boolean(readPriv || writePriv || deletePriv);
       const shouldRender =
         node.id !== root.id &&
-        !hasChildren &&
-        (node.route || readPriv || writePriv || deletePriv);
+        (hasLinkedPrivilege || (!hasChildren && node.route));
 
       if (shouldRender) {
         rows.push({
@@ -57,8 +73,14 @@ const buildGroupedModules = (menuRoots = []) => {
           depth: Math.max(trail.length - 2, 0),
           path: trail.slice(1).join(' / '),
           parent: trail.length > 1 ? trail[trail.length - 2] : root.name,
+          minRankLevel: node.min_rank_level,
+          opensModuleId: node.opens_module_id,
+          opensModuleName: node.opens_module_id ? rootById.get(node.opens_module_id)?.name : null,
+          launcherReadPriv: root.id !== node.id ? launcherReadPriv : null,
           type:
-            trail.length <= 2
+            node.opens_module_id
+              ? 'Launcher'
+              : trail.length <= 2
               ? 'Module'
               : trail.length === 3
                 ? 'Submodule'
@@ -76,13 +98,34 @@ const buildGroupedModules = (menuRoots = []) => {
     return rows;
   };
 
-  return menuRoots
+  const groups = menuRoots
     .map((root) => ({
       id: root.id,
       name: root.name,
       rows: buildRowsForRoot(root),
     }))
     .filter((group) => group.rows.length > 0);
+
+  const privilegeIdsByRootId = new Map(
+    groups.map((group) => [
+      group.id,
+      uniqueIds(group.rows.flatMap((row) => [
+        row.readPriv?.id,
+        row.writePriv?.id,
+        row.deletePriv?.id,
+      ])),
+    ])
+  );
+
+  return groups.map((group) => ({
+    ...group,
+    rows: group.rows.map((row) => ({
+      ...row,
+      openedModulePrivilegeIds: row.opensModuleId
+        ? privilegeIdsByRootId.get(row.opensModuleId) || []
+        : [],
+    })),
+  }));
 };
 
 const uniqueIds = (ids) => Array.from(new Set(ids.filter(Boolean)));
@@ -124,9 +167,9 @@ const PrivilegesPage = () => {
   });
 
   const { data: menuRoots } = useQuery({
-    queryKey: ['modules-menu-for-privileges'],
+    queryKey: ['modules-privilege-tree'],
     queryFn: async () => {
-      const res = await api.get('/modules/menu');
+      const res = await api.get('/modules/privilege-tree');
       return res.data;
     },
   });
@@ -141,30 +184,23 @@ const PrivilegesPage = () => {
     enabled: !!selectedRoleId,
   });
 
-  const groupedModules = useMemo(
-    () => {
-      const groups = buildGroupedModules(menuRoots || []);
-
-      return groups
-        .map((group) => ({
-          ...group,
-          rows: group.rows.filter((row) => row.label !== 'Module Management'),
-        }))
-        .filter((group) => group.rows.length > 0);
-    },
-    [menuRoots]
-  );
-
-  React.useEffect(() => {
-    setLocalPrivIds(rolePrivilegeIds || []);
-  }, [rolePrivilegeIds]);
-
   const selectedRole = roles?.find((r) => r.id === Number(selectedRoleId));
   const myRank = user?.role_rank_level ?? 99;
   const selectedRoleRank = selectedRole?.rank_level ?? 99;
   const isAllAccessRole = Boolean(selectedRole?.is_all_access);
   const isProtectedRole = selectedRole ? selectedRoleRank <= myRank : false;
   const canEdit = selectedRoleId && !isProtectedRole && !isAllAccessRole;
+
+  const groupedModules = useMemo(
+    () => {
+      return buildGroupedModules(menuRoots || [], selectedRoleRank);
+    },
+    [menuRoots, selectedRoleRank]
+  );
+
+  React.useEffect(() => {
+    setLocalPrivIds(rolePrivilegeIds || []);
+  }, [rolePrivilegeIds]);
 
   const mutation = useMutation({
     mutationFn: async (privilege_ids) => {
@@ -192,7 +228,7 @@ const PrivilegesPage = () => {
         ...group,
         rows: group.rows.filter((row) => {
           if (!search) return true;
-          return [group.name, row.label, row.parent, row.path, row.type]
+          return [group.name, row.label, row.parent, row.path, row.type, row.opensModuleName]
             .filter(Boolean)
             .some((value) => value.toLowerCase().includes(search));
         }),
@@ -227,8 +263,16 @@ const PrivilegesPage = () => {
         );
       }
 
+      if (action === 'read' && hasPrivilege && row.opensModuleId) {
+        next = next.filter((id) => !(row.openedModulePrivilegeIds || []).includes(id));
+      }
+
       if ((action === 'write' || action === 'delete') && !hasPrivilege && row.readPriv) {
         next.push(row.readPriv.id);
+      }
+
+      if (!hasPrivilege && row.launcherReadPriv) {
+        next.push(row.launcherReadPriv.id);
       }
 
       return uniqueIds(next);
@@ -255,12 +299,19 @@ const PrivilegesPage = () => {
         ? []
         : group.rows.map((row) => row.readPriv?.id).filter(Boolean);
 
+    const launcherReadIds = group.rows
+      .map((row) => row.launcherReadPriv?.id)
+      .filter(Boolean);
+
     setLocalPrivIds((prev) => {
       const allSelected = ids.every((id) => prev.includes(id));
       if (allSelected) {
-        return prev.filter((id) => !ids.includes(id));
+        const idsToRemove = action === 'read'
+          ? uniqueIds([...ids, ...launcherReadIds])
+          : ids;
+        return prev.filter((id) => !idsToRemove.includes(id));
       }
-      return uniqueIds([...prev, ...readIds, ...ids]);
+      return uniqueIds([...prev, ...readIds, ...launcherReadIds, ...ids]);
     });
   };
 
@@ -287,12 +338,10 @@ const PrivilegesPage = () => {
       return <span className="text-xs text-[#B8A999]">-</span>;
     }
 
-    const readMissing = action !== 'read' && !isChecked(row.readPriv);
-
     return (
       <PrivilegeCheckbox
         checked={isChecked(priv)}
-        disabled={!canEdit || readMissing}
+        disabled={!canEdit}
         onChange={() => setRowPrivilege(row, action)}
       />
     );
@@ -370,6 +419,9 @@ const PrivilegesPage = () => {
                       <div className="mt-0.5 text-xs font-semibold text-[#887869]">
                         {row.type}
                         {row.path ? ` - ${row.path}` : ''}
+                        {row.minRankLevel ? ` - Rank ${row.minRankLevel}+` : ''}
+                        {row.opensModuleName ? ` - opens ${row.opensModuleName}` : ''}
+                        {!row.opensModuleName && row.launcherReadPriv ? ' - requires Main Menu launcher' : ''}
                       </div>
                     </div>
                   </div>

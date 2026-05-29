@@ -7,6 +7,6 @@ from app.services.wastage_service import delete_wastage
 router = APIRouter()
 
 @router.delete("/delete_wastage/{wastage_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_wastage(wastage_id: int, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("wastages.delete"))):
+def remove_wastage(wastage_id: int, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("consumptions.delete"))):
     delete_wastage(wastage_id, db, current_user)
     return None

@@ -18,6 +18,7 @@ def generate_and_save_donation_receipt(donation_id: int, db: Session) -> str:
         donation = db.query(DonationEntry).options(
             joinedload(DonationEntry.items).joinedload(DonationItem.item).joinedload(Item.unit),
             joinedload(DonationEntry.donation_type_master),
+            joinedload(DonationEntry.donation_amount_master),
             joinedload(DonationEntry.user)
         ).filter(DonationEntry.id == donation_id).first()
 
@@ -64,18 +65,32 @@ def generate_and_save_donation_receipt(donation_id: int, db: Session) -> str:
             contact_parts.append(alternate_contact)
         timing_text = " - ".join(part for part in [opening_time, closing_time] if part)
         
-        # 3. Build items rows
+        amount_text = ""
+        if donation.total_gross_amount is not None:
+            amount_text = f"Rs. {float(donation.total_gross_amount):,.2f}"
+
+        user_code = donation.user_code or (donation.user.user_code if donation.user else "") or "-"
+
+        # 3. Build donation details rows
         items_rows = ""
-        for i, it in enumerate(donation.items, 1):
-            unit_name = it.item.unit.unit_name if it.item and it.item.unit else ""
-            item_name = it.item.item_name if it.item else "Unknown Item"
-            qty_val = float(it.quantity) if it.quantity else 0.0
-            qty_text = f"{qty_val:g} {unit_name}"
-            items_rows += f"""
-                <tr>
-                    <td class="item-line">{escape(item_name)} - {escape(qty_text)}</td>
-                </tr>
+        if donation.donation_mode == "AMOUNT":
+            amount_label = "Specific Amount" if donation.amount_donation_type == "SPECIFIC" else "Custom Amount"
+            option_title = donation.donation_amount_master.title if donation.donation_amount_master else ""
+            items_rows = f"""
+                <tr><td class="item-line">{escape(amount_label)}{f" - {escape(option_title)}" if option_title else ""}</td></tr>
+                <tr><td class="item-line amount-line">{escape(amount_text or "-")}</td></tr>
             """
+        else:
+            for i, it in enumerate(donation.items, 1):
+                unit_name = it.item.unit.unit_name if it.item and it.item.unit else ""
+                item_name = it.item.item_name if it.item else "Unknown Item"
+                qty_val = float(it.quantity) if it.quantity else 0.0
+                qty_text = f"{qty_val:g} {unit_name}"
+                items_rows += f"""
+                    <tr>
+                        <td class="item-line">{escape(item_name)} - {escape(qty_text)}</td>
+                    </tr>
+                """
 
         # 4. Build HTML content
         html_content = f"""
@@ -117,6 +132,7 @@ def generate_and_save_donation_receipt(donation_id: int, db: Session) -> str:
                 .items-header {{ font-size: 8pt; font-weight: 900; color: #5A2D1F; text-transform: uppercase; margin-bottom: 5px; border-bottom: 1px solid #E7D8CC; padding-bottom: 3px; }}
                 .items-table {{ width: 100%; border-collapse: collapse; }}
                 .items-table td {{ padding: 5px 0; border-bottom: 0.5pt solid #FAF7F2; font-size: 9pt; font-weight: 600; }}
+                .amount-line {{ font-size: 11pt !important; font-weight: 900 !important; color: #5A2D1F; }}
                 
                 .remarks-box {{ margin-top: 15px; font-size: 8.5pt; font-style: italic; color: #666; border-top: 1px dashed #E7D8CC; padding-top: 8px; }}
                 
@@ -149,15 +165,27 @@ def generate_and_save_donation_receipt(donation_id: int, db: Session) -> str:
                     <td class="label">Receipt No</td>
                     <td class="separator">:</td>
                     <td class="value" style="font-weight: 900; font-size: 10pt;">{donation.receipt_display_number or donation.id}</td>
-                    <td class="label" style="text-align: right; width: 60px;">Date</td>
+                    <td class="label" style="text-align: right; width: 75px;">User Code</td>
                     <td class="separator">:</td>
-                    <td class="value" style="text-align: right; width: 85px;">{donation.donation_date.strftime('%d-%m-%Y')}</td>
+                    <td class="value" style="text-align: right; width: 85px;">{escape(user_code)}</td>
+                </tr>
+                <tr>
+                    <td class="label">Date</td>
+                    <td class="separator">:</td>
+                    <td class="value" colspan="4">{donation.donation_date.strftime('%d-%m-%Y')}</td>
                 </tr>
                 <tr>
                     <td class="label">Donation Type</td>
                     <td class="separator">:</td>
                     <td class="value" colspan="4">{donation.donation_type_master.type_name if donation.donation_type_master else "General Donation"}</td>
                 </tr>
+                {f'''
+                <tr>
+                    <td class="label">Gross Amount</td>
+                    <td class="separator">:</td>
+                    <td class="value" colspan="4" style="font-size: 10pt; font-weight: 900;">{escape(amount_text)}</td>
+                </tr>
+                ''' if amount_text and donation.donation_mode == "ITEM" else ''}
                 <tr>
                     <td class="label">Devotee Name</td>
                     <td class="separator">:</td>
@@ -181,7 +209,7 @@ def generate_and_save_donation_receipt(donation_id: int, db: Session) -> str:
             </table>
 
             <div class="items-section">
-                <div class="items-header">Items Donated</div>
+                <div class="items-header">{'Amount Donation' if donation.donation_mode == "AMOUNT" else 'Items Donated'}</div>
                 <table class="items-table">
                     <tbody>
                         {items_rows}
@@ -189,7 +217,8 @@ def generate_and_save_donation_receipt(donation_id: int, db: Session) -> str:
                 </table>
             </div>
 
-            {f'<div class="remarks-box"><b>Remarks:</b> {donation.remarks}</div>' if donation.remarks else ''}
+            {f'<div class="remarks-box"><b>Note / Reason:</b> {escape(donation.amount_note)}</div>' if donation.amount_note else ''}
+            {f'<div class="remarks-box"><b>Remarks:</b> {escape(donation.remarks)}</div>' if donation.remarks else ''}
 
             <div class="footer-section">
                 <div class="signature-area">

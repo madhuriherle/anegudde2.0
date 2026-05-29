@@ -13,9 +13,8 @@ import {
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Avatar from '@radix-ui/react-avatar';
 import { useAuth } from '../context/AuthContext';
-import { usePermission } from '../hooks/usePermission';
 import { cn } from '../utils/cn';
-import { getDefaultPath, hasCanteenAccess, hasMainAccess } from '../utils/navigation';
+import { getDefaultPath, hasMainAccess } from '../utils/navigation';
 import Footer from '../components/Footer';
 import api from '../api/axios';
 
@@ -28,7 +27,6 @@ const DynamicIcon = ({ name, ...props }) => {
 
 const MainLayout = () => {
   const { user, logout } = useAuth();
-  const { hasPermission } = usePermission();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -36,7 +34,6 @@ const MainLayout = () => {
   const [expandedMenus, setExpandedMenus] = useState({});
   const [menuData, setMenuData] = useState([]);
   const canAccessMain = hasMainAccess(user);
-  const canAccessCanteen = hasCanteenAccess(user);
   const privilegeKey = [
     user?.id,
     user?.is_all_access ? 'all' : 'limited',
@@ -88,11 +85,13 @@ const MainLayout = () => {
     ) {
       setActiveModule('main');
     } else if (canteenPaths.some((p) => path.startsWith(p))) {
-      setActiveModule('canteen');
+      const canteenRoot = menuData.find((module) => module.name === 'Canteen Module');
+      setActiveModule(canteenRoot?.id || 'main');
     } else if (path === '/') {
-      setActiveModule(canAccessMain ? 'main' : 'canteen');
+      const firstNonMainRoot = menuData.find((module) => module.name !== 'Main Menu');
+      setActiveModule(canAccessMain ? 'main' : firstNonMainRoot?.id || 'main');
     }
-  }, [location.pathname, canAccessMain]);
+  }, [location.pathname, canAccessMain, menuData]);
 
   useEffect(() => {
     if (location.pathname === '/' && !canAccessMain) {
@@ -110,11 +109,20 @@ const MainLayout = () => {
   };
 
   const mainRoot = menuData.find(m => m.name === 'Main Menu');
-  const canteenRoot = menuData.find(m => m.name === 'Canteen Module');
+  const activeRoot = activeModule === 'main' ?
+    mainRoot :
+    menuData.find((module) => module.id === activeModule) || mainRoot;
 
-  const currentMenuItems = activeModule === 'canteen' || !canAccessMain ?
-    (canteenRoot?.submodules || []) :
-    (mainRoot?.submodules || []);
+  const findFirstRoute = (items = []) => {
+    for (const item of items) {
+      if (item.route) return item.route;
+      const childRoute = findFirstRoute(item.submodules || []);
+      if (childRoute) return childRoute;
+    }
+    return null;
+  };
+
+  const currentMenuItems = activeRoot?.submodules || [];
 
   const normalized = (value) => (value || '').toLowerCase().trim();
   const duplicateSystemSettingNames = new Set(['temple identity', 'receipt settings', 'data cleanup']);
@@ -127,7 +135,8 @@ const MainLayout = () => {
     const hasChildren = item.submodules && item.submodules.length > 0;
     const isExpanded = expandedMenus[item.id];
     const isActive = item.route && location.pathname === item.route;
-    const canExpandChildren = hasChildren;
+    const opensRoot = item.opens_module_id ? menuData.find((module) => module.id === item.opens_module_id) : null;
+    const canExpandChildren = hasChildren && !opensRoot;
 
     const content =
     <div
@@ -140,11 +149,14 @@ const MainLayout = () => {
         depth > 0 && "ml-4 py-1.5"
       )}
       onClick={() => {
-        if (canExpandChildren) {
+        if (opensRoot) {
+          setActiveModule(opensRoot.id);
+          navigate(item.route || findFirstRoute(opensRoot.submodules || []) || '/');
+          setIsSidebarOpen(false);
+        } else if (canExpandChildren) {
           toggleExpand(item.id);
         } else if (item.route) {
-          if (item.route === '/canteen') setActiveModule('canteen');
-          if (item.route === '/' && activeModule === 'canteen') setActiveModule('main');
+          if (item.route === '/' && activeModule !== 'main') setActiveModule('main');
           navigate(item.route);
           setIsSidebarOpen(false);
         }
@@ -187,10 +199,10 @@ const MainLayout = () => {
       <nav className="flex-1 overflow-y-auto no-scrollbar py-4 px-3 space-y-1">
         <div className="pb-2 px-3">
           <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] font-serif">
-            {activeModule === 'canteen' ? 'Canteen Module' : 'Main Menu'}
+            {activeRoot?.name || 'Main Menu'}
           </span>
         </div>
-        {activeModule === 'canteen' && canAccessMain && (
+        {activeModule !== 'main' && canAccessMain && (
           <div
             className="group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white"
             onClick={() => {
@@ -204,7 +216,7 @@ const MainLayout = () => {
           </div>
         )}
         {visibleMenuItems.map((item) => renderMenuItem(item))}
-        {activeModule === 'canteen' && canAccessMain && (
+        {activeModule !== 'main' && canAccessMain && (
           <div
             className="group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white"
             onClick={() => {

@@ -14,7 +14,7 @@ def sync_for_consumption(
     consumption_id: int,
     payload: List[StockAdjustmentCreate],
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("stock_adjustments.write"))
+    current_user: User = Depends(PermissionChecker("consumptions.write"))
 ):
     consumption = db.query(ConsumptionEntry).filter(ConsumptionEntry.id == consumption_id).first()
     if not consumption:

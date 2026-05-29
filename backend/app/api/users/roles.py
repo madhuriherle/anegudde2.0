@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import Role, User, Privilege, RolePrivilege
@@ -55,6 +55,28 @@ def update_role_privileges(
     # Can only modify weaker roles (higher rank number), never same or stronger role
     if target_rank <= my_rank:
         raise HTTPException(status_code=403, detail="Cannot modify privileges of same or higher role")
+
+    requested_privileges = (
+        db.query(Privilege)
+        .options(joinedload(Privilege.module))
+        .filter(Privilege.id.in_(payload.privilege_ids), Privilege.status == 1)
+        .all()
+    )
+    requested_ids = {privilege.id for privilege in requested_privileges}
+    invalid_ids = set(payload.privilege_ids) - requested_ids
+    if invalid_ids:
+        raise HTTPException(status_code=400, detail="One or more selected privileges are invalid")
+
+    blocked_privileges = [
+        privilege.privilege_name
+        for privilege in requested_privileges
+        if privilege.module and privilege.module.min_rank_level is not None and target_rank > privilege.module.min_rank_level
+    ]
+    if blocked_privileges:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Selected role rank cannot access: {', '.join(blocked_privileges)}",
+        )
 
     # Remove existing privileges
     db.query(RolePrivilege).filter(RolePrivilege.role_id == role_id).delete()

@@ -6,8 +6,10 @@ class ModuleBase(BaseModel):
     name: str
     icon: str | None = None
     parent_id: int | None = None
+    opens_module_id: int | None = None
     route: str | None = None
     display_order: int = 0
+    min_rank_level: int | None = None
     status: int = 1
 
     model_config = ConfigDict(from_attributes=True)
@@ -19,8 +21,10 @@ class ModuleUpdate(BaseModel):
     name: str | None = None
     icon: str | None = None
     parent_id: int | None = None
+    opens_module_id: int | None = None
     route: str | None = None
     display_order: int | None = None
+    min_rank_level: int | None = None
     status: int | None = None
 
     model_config = ConfigDict(from_attributes=True)

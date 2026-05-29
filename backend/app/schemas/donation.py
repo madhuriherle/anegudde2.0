@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from .item import ItemOut
 
 
@@ -11,6 +11,11 @@ class DonationItemIn(BaseModel):
 
 class DonationEntryCreate(BaseModel):
     donation_type: int = 1
+    donation_mode: str = "ITEM"
+    total_gross_amount: Decimal | None = None
+    amount_donation_type: str | None = None
+    donation_amount_master_id: int | None = None
+    amount_note: str | None = None
     donation_date: date
     devotee_id: int | None = None
     devotee_name: str
@@ -23,7 +28,24 @@ class DonationEntryCreate(BaseModel):
     remarks: str | None = None
     user_id: int
     status: int = 1
-    items: list[DonationItemIn]
+    items: list[DonationItemIn] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_donation_mode(self):
+        self.donation_mode = (self.donation_mode or "ITEM").upper()
+        if self.donation_mode not in {"ITEM", "AMOUNT"}:
+            raise ValueError("Donation mode must be ITEM or AMOUNT")
+        if self.donation_mode == "ITEM" and not self.items:
+            raise ValueError("At least one item is required")
+        if self.donation_mode == "AMOUNT":
+            self.amount_donation_type = (self.amount_donation_type or "CUSTOM").upper()
+            if self.amount_donation_type not in {"CUSTOM", "SPECIFIC"}:
+                raise ValueError("Amount donation type must be CUSTOM or SPECIFIC")
+            if self.total_gross_amount is None or self.total_gross_amount <= 0:
+                raise ValueError("Amount is required")
+            if self.amount_donation_type == "SPECIFIC" and not self.donation_amount_master_id:
+                raise ValueError("Specific amount selection is required")
+        return self
 
 
 class DonationItemOut(BaseModel):
@@ -44,6 +66,12 @@ class DonationEntryOut(BaseModel):
     receipt_prefix: str | None = None
     receipt_number: int | None = None
     receipt_display_number: str | None = None
+    donation_mode: str = "ITEM"
+    total_gross_amount: Decimal | None = None
+    amount_donation_type: str | None = None
+    donation_amount_master_id: int | None = None
+    amount_note: str | None = None
+    user_code: str | None = None
     donation_date: date
     devotee_id: int | None = None
     devotee_name: str
@@ -69,6 +97,35 @@ class UserMinimal(BaseModel):
     id: int
     username: str
     full_name: str
+    user_code: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DonationAmountMasterBase(BaseModel):
+    title: str
+    amount: Decimal
+    description: str | None = None
+    status: int = 1
+
+
+class DonationAmountMasterCreate(DonationAmountMasterBase):
+    pass
+
+
+class DonationAmountMasterUpdate(BaseModel):
+    title: str | None = None
+    amount: Decimal | None = None
+    description: str | None = None
+    status: int | None = None
+
+
+class DonationAmountMasterOut(DonationAmountMasterBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    created_by: int | None = None
+    updated_by: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -82,3 +139,4 @@ DonationEntryCreate.model_rebuild()
 DonationItemOut.model_rebuild()
 DonationEntryOut.model_rebuild()
 DonationEntryFullOut.model_rebuild()
+DonationAmountMasterOut.model_rebuild()

@@ -19,12 +19,17 @@ import { DetailItem } from '../components/ui/DetailItem';
 import { ReceiptViewerDialog } from '../components/ui/ReceiptViewerDialog';
 import { formatDate } from '../utils/date';
 import { formatQuantityWithUnit } from '../utils/quantity';
-import { Plus, Trash2, Search, X, ReceiptText } from 'lucide-react';
+import { Plus, Trash2, Search, X, ReceiptText, Settings } from 'lucide-react';
 
 import { usePermission } from '../hooks/usePermission';
 
 const formSchema = z.object({
   donation_type: z.coerce.number().min(1, 'Donation type is required'),
+  donation_mode: z.enum(['ITEM', 'AMOUNT']).default('ITEM'),
+  total_gross_amount: z.coerce.number().optional().nullable(),
+  amount_donation_type: z.enum(['CUSTOM', 'SPECIFIC']).optional(),
+  donation_amount_master_id: z.coerce.number().optional().nullable(),
+  amount_note: z.string().optional(),
   donation_date: z.string().min(1, 'Date is required'),
   devotee_name: z.string().min(1, 'Devotee name is required'),
   phone_number: z
@@ -39,9 +44,41 @@ const formSchema = z.object({
   remarks: z.string().optional(),
   items: z.array(z.object({
     search_id: z.string().optional(),
-    item_id: z.coerce.number().min(1, 'Item is required'),
-    quantity: z.coerce.number().min(0.001, 'Quantity is required')
-  })).min(1, 'At least one item is required')
+    item_id: z.coerce.number(),
+    quantity: z.coerce.number()
+  })).optional()
+}).superRefine((data, ctx) => {
+  if (data.donation_mode === 'ITEM') {
+    if (!data.items?.length) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items'], message: 'At least one item is required' });
+    }
+    (data.items || []).forEach((item, index) => {
+      if (!item.item_id || Number(item.item_id) < 1) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items', index, 'item_id'], message: 'Item is required' });
+      }
+      if (!item.quantity || Number(item.quantity) <= 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items', index, 'quantity'], message: 'Quantity is required' });
+      }
+    });
+    if (!data.total_gross_amount || Number(data.total_gross_amount) <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['total_gross_amount'], message: 'Total gross amount is required' });
+    }
+  }
+  if (data.donation_mode === 'AMOUNT') {
+    if (!data.total_gross_amount || Number(data.total_gross_amount) <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['total_gross_amount'], message: 'Amount is required' });
+    }
+    if (data.amount_donation_type === 'SPECIFIC' && !data.donation_amount_master_id) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['donation_amount_master_id'], message: 'Select a configured amount' });
+    }
+  }
+});
+
+const amountOptionSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  amount: z.coerce.number().min(0.01, 'Amount is required'),
+  description: z.string().optional(),
+  status: z.coerce.number().default(1)
 });
 
 
@@ -99,6 +136,9 @@ const DonationsPage = () => {
   const { hasPermission } = usePermission();
   const canWrite = hasPermission('donations.write');
   const canDelete = hasPermission('donations.delete');
+  const canAmountConfigRead = hasPermission('donations.amount_config.read');
+  const canAmountConfigWrite = hasPermission('donations.amount_config.write');
+  const canAmountConfigDelete = hasPermission('donations.amount_config.delete');
 
   const [open, setOpen] = useState(false);
   const [confirmingSave, setConfirmingSave] = useState(false);
@@ -119,6 +159,9 @@ const DonationsPage = () => {
   const [receiptViewerOpen, setReceiptViewerOpen] = useState(false);
   const [viewingReceiptId, setViewingReceiptId] = useState(null);
   const [viewingReceiptNumber, setViewingReceiptNumber] = useState('');
+  const [amountConfigOpen, setAmountConfigOpen] = useState(false);
+  const [editingAmountOption, setEditingAmountOption] = useState(null);
+  const [confirmingAmountDelete, setConfirmingAmountDelete] = useState(false);
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-list'],
@@ -130,6 +173,11 @@ const DonationsPage = () => {
     queryFn: async () => (await api.get('/donation-types/list_donation_types', { params: { status: null, page_size: 1000 } })).data
   });
 
+  const { data: amountOptionsData } = useQuery({
+    queryKey: ['donation-amount-options'],
+    queryFn: async () => (await api.get('/donations/list_amount_options')).data
+  });
+
   const items = useMemo(
     () => Array.isArray(itemsData) ? itemsData : itemsData?.items || [],
     [itemsData]
@@ -137,6 +185,8 @@ const DonationsPage = () => {
   const activeItems = useMemo(() => (items || []).filter((i) => i.status === 1), [items]);
   const donationTypes = useMemo(() => donationTypesData?.items || [], [donationTypesData]);
   const activeDonationTypes = useMemo(() => donationTypes.filter((type) => Number(type.status) === 1), [donationTypes]);
+  const amountOptions = useMemo(() => Array.isArray(amountOptionsData) ? amountOptionsData : [], [amountOptionsData]);
+  const activeAmountOptions = useMemo(() => amountOptions.filter((option) => Number(option.status) === 1), [amountOptions]);
   const annadanaDonationType = useMemo(
     () => donationTypes.find((type) => String(type.type_name || '').trim().toLowerCase() === 'annadana donation'),
     [donationTypes]
@@ -198,6 +248,11 @@ const DonationsPage = () => {
     defaultValues: {
       donation_date: toDateInputValue(new Date()),
       donation_type: 0,
+      donation_mode: 'ITEM',
+      total_gross_amount: '',
+      amount_donation_type: 'CUSTOM',
+      donation_amount_master_id: 0,
+      amount_note: '',
       devotee_name: '',
       phone_number: '',
       email: '',
@@ -216,11 +271,29 @@ const DonationsPage = () => {
   });
 
   const watchedDonationType = watch('donation_type');
+  const watchedDonationMode = watch('donation_mode');
+  const watchedAmountDonationType = watch('amount_donation_type');
+  const watchedAmountMasterId = watch('donation_amount_master_id');
+
+  const {
+    register: registerAmountOption,
+    handleSubmit: handleSubmitAmountOption,
+    reset: resetAmountOption,
+    formState: { errors: amountOptionErrors }
+  } = useForm({
+    resolver: zodResolver(amountOptionSchema),
+    defaultValues: { title: '', amount: '', description: '', status: 1 }
+  });
 
   const resetDonationForm = () => {
     reset({
       donation_date: toDateInputValue(new Date()),
       donation_type: 0,
+      donation_mode: 'ITEM',
+      total_gross_amount: '',
+      amount_donation_type: 'CUSTOM',
+      donation_amount_master_id: 0,
+      amount_note: '',
       devotee_name: '',
       phone_number: '',
       email: '',
@@ -250,6 +323,13 @@ const DonationsPage = () => {
       setDonationPrefixInput('');
     }
   }, [donationTypePrefixById, watchedDonationType]);
+
+  useEffect(() => {
+    if (watchedDonationMode === 'AMOUNT' && watchedAmountDonationType === 'SPECIFIC' && watchedAmountMasterId) {
+      const option = activeAmountOptions.find((item) => Number(item.id) === Number(watchedAmountMasterId));
+      if (option) setValue('total_gross_amount', option.amount);
+    }
+  }, [activeAmountOptions, watchedAmountDonationType, watchedAmountMasterId, watchedDonationMode, setValue]);
 
   // Suggest existing devotee details based on phone number.
   const watchedPhone = watch('phone_number');
@@ -314,21 +394,27 @@ const DonationsPage = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
-      const cleanedItems = payload.items.map(({ item_id, quantity }) => ({
+      const cleanedItems = (payload.items || []).map(({ item_id, quantity }) => ({
         item_id,
         quantity
       }));
+      const isItemDonation = payload.donation_mode === 'ITEM';
+      const normalizedPayload = {
+        ...payload,
+        total_gross_amount: payload.total_gross_amount ? Number(payload.total_gross_amount) : null,
+        amount_donation_type: isItemDonation ? null : payload.amount_donation_type,
+        donation_amount_master_id: isItemDonation || payload.amount_donation_type !== 'SPECIFIC' ? null : payload.donation_amount_master_id,
+        amount_note: isItemDonation ? null : payload.amount_note,
+        items: isItemDonation ? cleanedItems : [],
+        user_id: user?.id
+      };
       if (editingDonation) {
         return await api.put(`/donations/update_donation/${editingDonation.id}`, {
-          ...payload,
-          items: cleanedItems,
-          user_id: user?.id
+          ...normalizedPayload
         });
       }
       return await api.post('/donations/create_donation', {
-        ...payload,
-        items: cleanedItems,
-        user_id: user?.id
+        ...normalizedPayload
       });
     },
     onSuccess: (response) => {
@@ -345,6 +431,31 @@ const DonationsPage = () => {
     onError: (err) => {
       showError(err.response?.data?.detail || 'Failed to save donation');
     }
+  });
+
+  const amountOptionMutation = useMutation({
+    mutationFn: async (payload) => {
+      if (editingAmountOption) {
+        return api.put(`/donations/update_amount_option/${editingAmountOption.id}`, payload);
+      }
+      return api.post('/donations/create_amount_option', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['donation-amount-options'] });
+      showSuccess(editingAmountOption ? 'Amount option updated' : 'Amount option saved');
+      setEditingAmountOption(null);
+      resetAmountOption({ title: '', amount: '', description: '', status: 1 });
+    },
+    onError: (err) => showError(err.response?.data?.detail || 'Failed to save amount option')
+  });
+
+  const deleteAmountOptionMutation = useMutation({
+    mutationFn: async (id) => api.delete(`/donations/delete_amount_option/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['donation-amount-options'] });
+      showSuccess('Amount option disabled');
+    },
+    onError: (err) => showError(err.response?.data?.detail || 'Failed to disable amount option')
   });
 
   const deleteMutation = useMutation({
@@ -374,6 +485,11 @@ const DonationsPage = () => {
     reset({
       donation_date: donation.donation_date,
       donation_type: donation.donation_type || 0,
+      donation_mode: donation.donation_mode || 'ITEM',
+      total_gross_amount: donation.total_gross_amount || '',
+      amount_donation_type: donation.amount_donation_type || 'CUSTOM',
+      donation_amount_master_id: donation.donation_amount_master_id || 0,
+      amount_note: donation.amount_note || '',
       devotee_name: donation.devotee_name,
       phone_number: donation.phone_number,
       email: donation.email || '',
@@ -382,13 +498,13 @@ const DonationsPage = () => {
       state: donation.state || 'Karnataka',
       pincode: donation.pincode || '',
       remarks: donation.remarks || '',
-      items: (donation.items || []).map((it) => {
+      items: (donation.items?.length ? donation.items : [{ search_id: '', item_id: 0, quantity: 0 }]).map((it) => {
         const itemObj = items.find((i) => i.id === it.item_id);
         const code = itemObj?.serial_numbers?.[0]?.serial_number || '';
         return {
           search_id: code,
-          item_id: it.item_id,
-          quantity: it.quantity
+          item_id: it.item_id || 0,
+          quantity: it.quantity || 0
         };
       })
     });
@@ -409,6 +525,28 @@ const DonationsPage = () => {
     if (matchedType) {
       setValue('donation_type', Number(matchedType.id));
     }
+  };
+
+  const handleEditAmountOption = (option) => {
+    setEditingAmountOption(option);
+    resetAmountOption({
+      title: option.title || '',
+      amount: option.amount || '',
+      description: option.description || '',
+      status: Number(option.status ?? 1)
+    });
+  };
+
+  const handleNewAmountOption = () => {
+    setEditingAmountOption(null);
+    resetAmountOption({ title: '', amount: '', description: '', status: 1 });
+  };
+
+  const onSubmitAmountOption = (data) => {
+    amountOptionMutation.mutate({
+      ...data,
+      amount: Number(data.amount)
+    });
   };
 
   const onSubmit = async (data) => {
@@ -498,13 +636,24 @@ const DonationsPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="page-title">Donations</h2>
-        {canWrite && <Button onClick={() => {
-          setEditingDonation(null);
-          resetDonationForm();
-          setOpen(true);
-        }} className="flex items-center gap-2">
-          Record New Donation
-        </Button>}
+        {canWrite && <div className="flex items-center gap-2">
+          {(canAmountConfigRead || canAmountConfigWrite || canAmountConfigDelete) && <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAmountConfigOpen(true)}
+            className="h-10 w-10 p-0"
+            title="Configure specific amounts"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>}
+          <Button onClick={() => {
+            setEditingDonation(null);
+            resetDonationForm();
+            setOpen(true);
+          }} className="flex items-center gap-2">
+            Record New Donation
+          </Button>
+        </div>}
       </div>
 
       <Card className="border-border-temple">
@@ -589,6 +738,8 @@ const DonationsPage = () => {
                     <DetailItem label="Devotee Name" value={viewingDonation.devotee_name} />
                     <DetailItem label="Date" value={formatDate(viewingDonation.donation_date)} />
                     <DetailItem label="Donation Type" value={donationTypeNameById.get(Number(viewingDonation.donation_type)) || 'General Donation'} />
+                    <DetailItem label="Donation Mode" value={viewingDonation.donation_mode === 'AMOUNT' ? 'Amount Donation' : 'Item Donation'} />
+                    <DetailItem label="Gross Amount" value={viewingDonation.total_gross_amount ? `Rs. ${Number(viewingDonation.total_gross_amount).toFixed(2)}` : '-'} />
                     <DetailItem label="Phone" value={viewingDonation.phone_number} />
                     <DetailItem label="Email" value={viewingDonation.email} />
                     <DetailItem label="Address" value={viewingDonation.address} />
@@ -599,10 +750,16 @@ const DonationsPage = () => {
                   </div>
                 </div>
 
-                {/* Right Column: Donated Items */}
+                {/* Right Column: Donation Details */}
                 <div className="temple-form-section">
-                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">Donated Items</h4>
-                  <div className="overflow-hidden">
+                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">{viewingDonation.donation_mode === 'AMOUNT' ? 'Amount Donation' : 'Donated Items'}</h4>
+                  {viewingDonation.donation_mode === 'AMOUNT' ?
+                    <div className="grid grid-cols-1 gap-y-0.5">
+                      <DetailItem label="Amount Type" value={viewingDonation.amount_donation_type === 'SPECIFIC' ? 'Specific Amount' : 'Custom Amount'} />
+                      <DetailItem label="Amount" value={viewingDonation.total_gross_amount ? `Rs. ${Number(viewingDonation.total_gross_amount).toFixed(2)}` : '-'} />
+                      <DetailItem label="Note / Reason" value={viewingDonation.amount_note} />
+                    </div> :
+                    <div className="overflow-hidden">
                     <table className="w-full text-sm text-left border-collapse">
                       <tbody className="divide-y divide-border-temple/10">
                         {(viewingDonation.items || []).map((it) =>
@@ -615,7 +772,7 @@ const DonationsPage = () => {
                         )}
                       </tbody>
                     </table>
-                  </div>
+                  </div>}
                 </div>
               </div>
             }
@@ -644,7 +801,7 @@ const DonationsPage = () => {
           setOpen(true);
         }}
       >
-        <DialogContent className="w-[98vw] max-w-4xl max-h-[96vh] p-0 overflow-hidden border-border-temple shadow-2xl flex flex-col">
+        <DialogContent className="w-[98vw] max-w-5xl max-h-[96vh] p-0 overflow-hidden border-border-temple shadow-2xl flex flex-col">
           <DialogHeader className="m-0">
             <DialogTitle className="text-xl text-text-main font-temple">
               {editingDonation ? 'Edit Donation Entry' : 'Record New Donation'}
@@ -655,28 +812,16 @@ const DonationsPage = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col overflow-hidden flex-1">
             {/* Scrollable Form Body */}
             <div className="bg-white space-y-10 px-8 py-8 overflow-y-auto custom-scrollbar flex-1">
-              {/* Devotee Details Fields */}
+              {/* Devotee Information */}
               <div className="space-y-5">
-                {/* Row 1: Date & Type */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <Label className="text-text-main font-bold">Donation Date *</Label>
-                    <Input type="date" {...register('donation_date')} className="h-11 text-base text-text-main" />
-                    {errors.donation_date && <p className="text-xs text-error font-medium">{errors.donation_date.message}</p>}
+                <div className="flex items-center gap-3 border-b border-border-temple/40 pb-3">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                    <Search size={20} />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-text-main font-bold">Donation Type *</Label>
-                    <Select {...register('donation_type')} onChange={handleDonationTypeChange} className="h-11 text-base text-text-main">
-                      <option value={0}>Select Donation Type</option>
-                      {activeDonationTypes.map((type) =>
-                        <option key={type.id} value={type.id}>{type.type_name}</option>
-                      )}
-                    </Select>
-                    {errors.donation_type && <p className="text-xs text-error font-medium">{errors.donation_type.message}</p>}
-                  </div>
+                  <h4 className="text-lg font-bold text-secondary font-temple">Devotee Information</h4>
                 </div>
 
-                {/* Row 2: Mobile & Name */}
+                {/* Row 1: Mobile & Name */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Mobile Number *</Label>
@@ -736,7 +881,7 @@ const DonationsPage = () => {
                   </div>
                 }
 
-                {/* Row 3: Email & Address */}
+                {/* Row 2: Email & Address */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Email</Label>
@@ -749,7 +894,7 @@ const DonationsPage = () => {
                   </div>
                 </div>
 
-                {/* Row 4: City & State */}
+                {/* Row 3: City, State & Pincode */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">City</Label>
@@ -765,25 +910,89 @@ const DonationsPage = () => {
                   </div>
                 </div>
 
-                {/* Row 5: Pincode & Remarks */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Pincode</Label>
                     <Input {...register('pincode')} className="h-11 text-base text-text-main" />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-text-main font-bold">Remarks</Label>
-                    <Textarea 
-                      {...register('remarks')} 
-                      className="min-h-[80px] text-base text-text-main resize-none" 
-                      placeholder="Add any additional notes here..."
-                    />
-                  </div>
                 </div>
               </div>
 
-              {/* Donated Items Section */}
-              <div className="space-y-6 pt-4">
+              {/* Donation Details */}
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 border-b border-border-temple/40 pb-3">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                    <ReceiptText size={20} />
+                  </div>
+                  <h4 className="text-lg font-bold text-secondary font-temple">Donation Details</h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <Label className="text-text-main font-bold">Donation Date *</Label>
+                    <Input type="date" {...register('donation_date')} className="h-11 text-base text-text-main" />
+                    {errors.donation_date && <p className="text-xs text-error font-medium">{errors.donation_date.message}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-text-main font-bold">Donation Type *</Label>
+                    <Select {...register('donation_type')} onChange={handleDonationTypeChange} className="h-11 text-base text-text-main">
+                      <option value={0}>Select Donation Type</option>
+                      {activeDonationTypes.map((type) =>
+                        <option key={type.id} value={type.id}>{type.type_name}</option>
+                      )}
+                    </Select>
+                    {errors.donation_type && <p className="text-xs text-error font-medium">{errors.donation_type.message}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-text-main font-bold">Donation Mode *</Label>
+                    <div className="relative grid h-12 w-full grid-cols-2 rounded-full bg-[#EFE5D8] p-1 shadow-inner">
+                      <span
+                        className={`absolute left-1 top-1 h-10 w-[calc(50%-4px)] rounded-full bg-white shadow-md ring-1 ring-black/5 transition-transform duration-200 ${
+                          watchedDonationMode === 'AMOUNT' ? 'translate-x-full' : 'translate-x-0'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setValue('donation_mode', 'ITEM')}
+                        className={`relative z-10 rounded-full text-sm font-black transition-colors ${
+                          watchedDonationMode === 'ITEM' ? 'text-primary' : 'text-text-main/45'
+                        }`}
+                      >
+                        Item Donation
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setValue('donation_mode', 'AMOUNT');
+                          setValue('items', [{ search_id: '', item_id: 0, quantity: 0 }]);
+                        }}
+                        className={`relative z-10 rounded-full text-sm font-black transition-colors ${
+                          watchedDonationMode === 'AMOUNT' ? 'text-primary' : 'text-text-main/45'
+                        }`}
+                      >
+                        Amount Donation
+                      </button>
+                    </div>
+                  </div>
+                  {watchedDonationMode === 'ITEM' && <div className="space-y-1.5">
+                    <Label className="text-text-main font-bold">Amount *</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      {...register('total_gross_amount')}
+                      className="h-12 text-base text-text-main"
+                      placeholder="Enter amount"
+                    />
+                    {errors.total_gross_amount && <p className="text-xs text-error font-medium">{errors.total_gross_amount.message}</p>}
+                  </div>}
+                </div>
+              </div>
+
+              {/* Dynamic Donation Area */}
+              {watchedDonationMode === 'ITEM' && <div className="space-y-6 pt-4">
                 <div className="flex items-center gap-3 border-b border-border-temple/40 pb-3">
                   <div className="p-2 rounded-lg bg-primary/10 text-primary">
                     <ReceiptText size={20} />
@@ -887,7 +1096,59 @@ const DonationsPage = () => {
                   
                   {errors.items?.message && <p className="text-sm text-error font-black uppercase tracking-widest">{errors.items.message}</p>}
                 </div>
-              </div>
+              </div>}
+
+              {watchedDonationMode === 'AMOUNT' && <div className="space-y-6 pt-4">
+                <div className="flex items-center gap-3 border-b border-border-temple/40 pb-3">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                    <ReceiptText size={20} />
+                  </div>
+                  <h4 className="text-lg font-bold text-secondary font-temple">Amount Donation</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <Label className="text-text-main font-bold">Donation Type *</Label>
+                    <Select {...register('amount_donation_type')} className="h-11 text-base text-text-main">
+                      <option value="CUSTOM">Custom Amount</option>
+                      <option value="SPECIFIC">Specific Amount Selection</option>
+                    </Select>
+                  </div>
+                  {watchedAmountDonationType === 'SPECIFIC' && <div className="space-y-1.5">
+                    <Label className="text-text-main font-bold">Specific Amount *</Label>
+                    <Select {...register('donation_amount_master_id')} className="h-11 text-base text-text-main">
+                      <option value={0}>Select Amount</option>
+                      {activeAmountOptions.map((option) =>
+                        <option key={option.id} value={option.id}>{option.title} - Rs. {Number(option.amount).toFixed(2)}</option>
+                      )}
+                    </Select>
+                    {errors.donation_amount_master_id && <p className="text-xs text-error font-medium">{errors.donation_amount_master_id.message}</p>}
+                  </div>}
+                  <div className="space-y-1.5">
+                    <Label className="text-text-main font-bold">Amount *</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      {...register('total_gross_amount')}
+                      readOnly={watchedAmountDonationType === 'SPECIFIC'}
+                      className="h-11 text-base text-text-main"
+                    />
+                    {errors.total_gross_amount && <p className="text-xs text-error font-medium">{errors.total_gross_amount.message}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-text-main font-bold">Note / Reason</Label>
+                    <Textarea {...register('amount_note')} className="min-h-[80px] text-base text-text-main resize-none" />
+                  </div>
+                </div>
+              </div>}
+
+              {watchedDonationMode === 'ITEM' && <div className="space-y-1.5">
+                <Label className="text-text-main font-bold">Remarks</Label>
+                <Textarea
+                  {...register('remarks')}
+                  className="min-h-[80px] text-base text-text-main resize-none"
+                  placeholder="Add any additional notes here..."
+                />
+              </div>}
             </div>
 
             {/* Standard Footer Bar */}
@@ -909,6 +1170,90 @@ const DonationsPage = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={amountConfigOpen} onOpenChange={(val) => {
+        if (!val && confirmingAmountDelete) return;
+        setAmountConfigOpen(val);
+        if (!val) handleNewAmountOption();
+      }}>
+        <DialogContent className="w-[98vw] max-w-7xl max-h-[92vh] !flex !flex-col overflow-hidden border-border-temple shadow-2xl bg-white">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-xl text-text-main font-temple">Specific Amount Configuration</DialogTitle>
+            <DialogDescription className="sr-only">Configure predefined amount donation options.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 lg:grid-cols-[0.75fr_1.75fr] gap-8 overflow-y-auto custom-scrollbar py-4">
+            <form onSubmit={handleSubmitAmountOption(onSubmitAmountOption)} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-text-main font-bold">Title *</Label>
+                <Input {...registerAmountOption('title')} className="text-text-main" placeholder="100 Devotees - Per Day Amount" />
+                {amountOptionErrors.title && <p className="text-xs text-error font-medium">{amountOptionErrors.title.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main font-bold">Amount *</Label>
+                <Input {...registerAmountOption('amount')} inputMode="decimal" className="text-text-main" />
+                {amountOptionErrors.amount && <p className="text-xs text-error font-medium">{amountOptionErrors.amount.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main font-bold">Description</Label>
+                <Textarea {...registerAmountOption('description')} className="min-h-[80px] text-text-main resize-none" />
+              </div>
+              <div className="flex gap-2">
+                {canAmountConfigWrite && <Button type="submit" disabled={amountOptionMutation.isPending} className="h-10 bg-primary text-white font-bold">
+                  {amountOptionMutation.isPending ? 'Saving...' : editingAmountOption ? 'Update' : 'Save'}
+                </Button>}
+                {canAmountConfigWrite && <Button type="button" variant="ghost" onClick={handleNewAmountOption} className="h-10 bg-white border border-[#D9C8AF] text-text-main font-bold">
+                  New
+                </Button>}
+              </div>
+            </form>
+
+            <div className="rounded-xl border border-border-temple/40 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-bg-temple/60 text-text-main">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Title</th>
+                    <th className="px-4 py-3 text-right">Amount</th>
+                    <th className="px-4 py-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-temple/20">
+                  {activeAmountOptions.map((option) =>
+                    <tr key={option.id}>
+                      <td className="px-4 py-3 text-text-main font-medium whitespace-normal break-words">{option.title}</td>
+                      <td className="px-4 py-3 text-right text-text-main">Rs. {Number(option.amount).toFixed(2)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center gap-2">
+                          {canAmountConfigWrite && <button type="button" onClick={() => handleEditAmountOption(option)} className="action-btn-edit">Edit</button>}
+                          {canAmountConfigDelete && Number(option.status) === 1 && <button
+                            type="button"
+                            onClick={async () => {
+                              setConfirmingAmountDelete(true);
+                              const confirmed = await showConfirm('Delete Amount Option', `Delete "${option.title}"?`);
+                              setConfirmingAmountDelete(false);
+                              if (confirmed) deleteAmountOptionMutation.mutate(option.id);
+                            }}
+                            className="action-btn-delete"
+                          >
+                            Delete
+                          </button>}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {activeAmountOptions.length === 0 && <tr>
+                    <td colSpan={3} className="px-4 py-8 text-center text-text-main/60">No amount options configured</td>
+                  </tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <DialogFooter className="gap-3 border-t border-border-temple/40 pt-4">
+            <Button type="button" onClick={() => setAmountConfigOpen(false)} className="h-10 bg-primary text-white font-bold">
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

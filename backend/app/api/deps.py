@@ -67,19 +67,37 @@ class PermissionChecker:
         self.required_privilege = required_privilege
 
     def __call__(self, current_user: User = Depends(get_current_user)):
-        # Check for all-access flag instead of hardcoded names
-        if current_user.role and current_user.role.is_all_access:
-            return current_user
-
         user_privileges = [
             rp.privilege.privilege_name 
             for rp in (current_user.role.privileges if current_user.role else [])
             if rp.status == 1 and rp.privilege and rp.privilege.status == 1
         ]
 
-        if self.required_privilege not in user_privileges:
+        is_all_access = bool(current_user.role and current_user.role.is_all_access)
+
+        if not is_all_access and self.required_privilege not in user_privileges:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Not enough permissions. Required: {self.required_privilege}",
             )
+
+        # Rank-based module restriction check
+        # Find the privilege in DB to check its associated module's rank restriction
+        db = SessionLocal()
+        try:
+            priv = db.query(Privilege).options(joinedload(Privilege.module)).filter(
+                Privilege.privilege_name == self.required_privilege,
+                Privilege.status == 1
+            ).first()
+            
+            if priv and priv.module and priv.module.min_rank_level:
+                user_rank = current_user.role.rank_level if current_user.role else 99
+                if user_rank > priv.module.min_rank_level:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"This module requires Rank {priv.module.min_rank_level} or higher access.",
+                    )
+        finally:
+            db.close()
+
         return current_user

@@ -105,8 +105,10 @@ class Module(Base):
     name = Column(String(100), nullable=False)
     icon = Column(String(50), nullable=True)
     parent_id = Column(Integer, ForeignKey("modules.id"), nullable=True)
+    opens_module_id = Column(Integer, ForeignKey("modules.id"), nullable=True)
     route = Column(String(255), nullable=True)
     display_order = Column(Integer, default=0)
+    min_rank_level = Column(Integer, nullable=True) # If set, user must have rank <= this value
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
@@ -114,7 +116,8 @@ class Module(Base):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     # Self-referential relationship for submodules
-    submodules = relationship("Module", backref=backref("parent", remote_side=[id]))
+    submodules = relationship("Module", backref=backref("parent", remote_side=[id]), foreign_keys=[parent_id])
+    opens_module = relationship("Module", foreign_keys=[opens_module_id], remote_side=[id])
     privileges = relationship("Privilege", back_populates="module")
 
 class Privilege(Base):
@@ -139,6 +142,7 @@ class User(Base):
     password = Column(String(255), nullable=False)
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False, index=True)
     full_name = Column(String(150), nullable=False)
+    user_code = Column(String(20), nullable=True)
     email = Column(String(150), nullable=True)
     phone = Column(String(20), nullable=True)
     security_stamp = Column(String(100), nullable=True) # Used for session invalidation
@@ -215,6 +219,18 @@ class DonationType(Base):
     type_name = Column(String(100), unique=True, nullable=False)
     receipt_prefix = Column(String(20), nullable=True)
     status = Column(Integer, nullable=False, default=1, index=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
+class DonationAmountMaster(Base):
+    __tablename__ = "donation_amount_masters"
+    id = Column(Integer, primary_key=True)
+    title = Column(String(150), nullable=False)
+    amount = Column(Numeric(15, 3), nullable=False)
+    description = Column(String(255), nullable=True)
+    status = Column(Integer, nullable=False, default=1, server_default=text("1"), index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
@@ -494,6 +510,12 @@ class DonationEntry(Base):
     receipt_prefix = Column(String(20), nullable=True)
     receipt_number = Column(Integer, nullable=True)
     receipt_display_number = Column(String(50), nullable=True, index=True)
+    donation_mode = Column(String(20), nullable=False, default="ITEM", server_default="ITEM", index=True)
+    total_gross_amount = Column(Numeric(15, 3), nullable=True)
+    amount_donation_type = Column(String(20), nullable=True)
+    donation_amount_master_id = Column(Integer, ForeignKey("donation_amount_masters.id"), nullable=True, index=True)
+    amount_note = Column(Text, nullable=True)
+    user_code = Column(String(20), nullable=True)
     donation_date = Column(Date, nullable=False, index=True)
     devotee_id = Column(Integer, ForeignKey("devotees.id"), nullable=True, index=True)
     devotee_name = Column(String(150), nullable=False)
@@ -514,6 +536,7 @@ class DonationEntry(Base):
 
     user = relationship("User", foreign_keys=[user_id])
     donation_type_master = relationship("DonationType", foreign_keys=[donation_type])
+    donation_amount_master = relationship("DonationAmountMaster", foreign_keys=[donation_amount_master_id])
     financial_year = relationship("FinancialYear", foreign_keys=[financial_year_id])
     devotee = relationship("Devotee", back_populates="donations")
     items = relationship("DonationItem", back_populates="donation_entry", cascade="all, delete-orphan")

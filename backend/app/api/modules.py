@@ -4,7 +4,7 @@ from typing import List
 
 from app.db.models import Module, Privilege, User
 from app.schemas.module import ModuleCreate, ModuleUpdate, ModuleOut
-from app.api.deps import get_current_user, get_db
+from app.api.deps import PermissionChecker, get_current_user, get_db
 
 router = APIRouter(prefix="/modules", tags=["modules"])
 
@@ -65,31 +65,37 @@ def get_user_menu(
             }
     
     def build_tree(module):
-        # Developer-only modules check
-        if (module.name == "Module Management" or module.route == "/settings/modules") and my_rank != 1:
+        # Rank-based module restriction check
+        if module.min_rank_level is not None and my_rank > module.min_rank_level:
             return None
 
         has_active_children = any(sm.status == 1 for sm in module.submodules)
 
         # 1. Filter submodules first
         visible_submodules = []
+        visible_child_keys = set()
         for sm in module.submodules:
             if sm.status == 1:
                 sub_tree = build_tree(sm)
                 if sub_tree:
+                    child_key = sub_tree["route"] or f"name:{sub_tree['name'].lower()}"
+                    if child_key in visible_child_keys:
+                        continue
+                    visible_child_keys.add(child_key)
                     visible_submodules.append(sub_tree)
         
         # 2. Check if this module itself should be visible
         should_be_visible = False
         
+        module_privs = {
+            p.privilege_name
+            for p in module.privileges
+            if p.status == 1 and p.privilege_name.endswith(".read")
+        }
+
         if is_all_access:
-            should_be_visible = True
+            should_be_visible = bool(visible_submodules or module.route or module.parent_id is None)
         else:
-            module_privs = {
-                p.privilege_name
-                for p in module.privileges
-                if p.status == 1 and p.privilege_name.endswith(".read")
-            }
             if visible_submodules:
                 should_be_visible = True
             elif not has_active_children and module.route and module_privs & user_privileges:
@@ -103,7 +109,9 @@ def get_user_menu(
             "name": module.name,
             "icon": module.icon,
             "route": module.route,
+            "opens_module_id": module.opens_module_id,
             "display_order": module.display_order,
+            "min_rank_level": module.min_rank_level,
             "status": module.status,
             "parent_id": module.parent_id,
             "created_at": module.created_at,
@@ -128,6 +136,93 @@ def get_user_menu(
             final_menu.append(tree)
             
     return final_menu
+
+@router.get("/privilege-tree", response_model=List[ModuleOut])
+def get_privilege_tree(
+    *,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get the complete active module tree with linked privileges for role assignment.
+    Filtered by rank to prevent non-superadmins from seeing Developer modules.
+    """
+    # Permission check for accessing this tree
+    if not (current_user.role and current_user.role.is_all_access):
+        # Regular users need specific privilege
+        user_privileges = {
+            rp.privilege.privilege_name
+            for rp in current_user.role.privileges
+            if rp.status == 1 and rp.privilege and rp.privilege.status == 1
+        }
+        if "users.privileges.read" not in user_privileges:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    my_rank = current_user.role.rank_level if current_user.role else 99
+
+    modules = (
+        db.query(Module)
+        .options(selectinload(Module.privileges))
+        .filter(Module.status == 1)
+        .order_by(Module.display_order, Module.id)
+        .all()
+    )
+
+    modules_by_parent = {}
+    for module in modules:
+        modules_by_parent.setdefault(module.parent_id, []).append(module)
+
+    def build_tree(module):
+        # Rank-based module restriction check for the privilege tree
+        if module.min_rank_level is not None and my_rank > module.min_rank_level:
+            return None
+
+        active_privileges = sorted(
+            [privilege for privilege in module.privileges if privilege.status == 1],
+            key=lambda privilege: privilege.privilege_name
+        )
+
+        submodules = []
+        for child in modules_by_parent.get(module.id, []):
+            if child.status == 1:
+                child_tree = build_tree(child)
+                if child_tree:
+                    submodules.append(child_tree)
+
+        return {
+            "id": module.id,
+            "name": module.name,
+            "icon": module.icon,
+            "route": module.route,
+            "opens_module_id": module.opens_module_id,
+            "display_order": module.display_order,
+            "min_rank_level": module.min_rank_level,
+            "status": module.status,
+            "parent_id": module.parent_id,
+            "created_at": module.created_at,
+            "updated_at": module.updated_at,
+            "created_by": module.created_by,
+            "updated_by": module.updated_by,
+            "submodules": submodules,
+            "privileges": [
+                {
+                    "id": privilege.id,
+                    "privilege_name": privilege.privilege_name,
+                    "description": privilege.description,
+                    "status": privilege.status
+                }
+                for privilege in active_privileges
+            ]
+        }
+
+    final_tree = []
+    for root in modules_by_parent.get(None, []):
+        if root.status == 1:
+            tree = build_tree(root)
+            if tree:
+                final_tree.append(tree)
+    
+    return final_tree
 
 @router.get("/", response_model=List[ModuleOut])
 def list_modules(

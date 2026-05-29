@@ -22,6 +22,7 @@ export const canteenPermissions = [
   'reports.canteen_summary.read',
   'reports.manpower.read',
   'reports.donations.read',
+  'reports.purchases.read',
   'reports.tokens.read',
 ];
 
@@ -61,6 +62,7 @@ export const getDefaultPath = (user) => {
   if (hasPermission(user, 'item_categories.read')) return '/items/categories';
   if (hasPermission(user, 'menu_items.read')) return '/items/menu-items';
   if (hasPermission(user, 'reports.stock_summary.read')) return '/reports/stock-summary';
+  if (hasPermission(user, 'reports.purchases.read')) return '/reports/purchases';
   if (hasPermission(user, 'users.management.read')) return '/users';
   if (hasPermission(user, 'settings.management.read')) return '/settings';
   if (hasPermission(user, 'donation_types.read')) return '/settings/donation-types';

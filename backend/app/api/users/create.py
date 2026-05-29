@@ -30,6 +30,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), current_user
         username=payload.username,
         password=hash_password(payload.password),
         full_name=payload.full_name,
+        user_code=payload.user_code,
         role_id=payload.role_id,
         email=payload.email,
         phone=payload.phone,

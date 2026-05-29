@@ -48,6 +48,7 @@ const VALID_ROUTES = [
   '/reports/canteen-summary',
   '/reports/manpower',
   '/reports/donations',
+  '/reports/purchases',
   '/reports/tokens'
 ];
 
@@ -64,10 +65,17 @@ const ModuleManagementPage = () => {
     name: '',
     icon: '',
     route: '',
+    opens_module_id: null,
     display_order: 0,
     parent_id: null,
     status: 1
   });
+
+  const rootModuleOptions = modules.filter((module) => (
+    module.parent_id === null &&
+    module.name !== 'Main Menu' &&
+    module.id !== editingModule?.id
+  ));
 
   const fetchModules = async () => {
     setLoading(true);
@@ -97,6 +105,7 @@ const ModuleManagementPage = () => {
         name: module.name,
         icon: module.icon || '',
         route: module.route || '',
+        opens_module_id: module.opens_module_id || null,
         display_order: module.display_order,
         parent_id: module.parent_id,
         status: module.status
@@ -107,6 +116,7 @@ const ModuleManagementPage = () => {
         name: '',
         icon: '',
         route: '',
+        opens_module_id: null,
         display_order: 0,
         parent_id: parentId,
         status: 1
@@ -128,6 +138,7 @@ const ModuleManagementPage = () => {
 
     const payload = {
       ...formData,
+      opens_module_id: formData.opens_module_id ? Number(formData.opens_module_id) : null,
       route: isGroupModule ? '' : normalizedRoute
     };
 
@@ -334,6 +345,20 @@ const ModuleManagementPage = () => {
                   <p className="text-xs text-gray-500">Parent module with children. Route is disabled.</p>
                 )}
                 {routeError && <p className="text-xs text-red-600">{routeError}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-text-light uppercase tracking-widest">Open Module</label>
+                <select
+                  value={formData.opens_module_id || ''}
+                  onChange={e => setFormData({...formData, opens_module_id: e.target.value || null})}
+                  className="w-full px-4 py-3 rounded-xl border-border-temple/20 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                >
+                  <option value="">No module switch</option>
+                  {rootModuleOptions.map((module) => (
+                    <option key={module.id} value={module.id}>{module.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500">Use this for launchers like Main Menu &gt; Canteen / Office / Seva.</p>
               </div>
               <div className="flex items-center gap-3 pt-2">
                 <input 

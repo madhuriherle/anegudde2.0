@@ -8,7 +8,7 @@ router = APIRouter()
 def list_adjustments(
     consumption_entry_id: int | None = None,
     db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("stock_adjustments.read"))
+    _: User = Depends(PermissionChecker("consumptions.read"))
 ):
     query = db.query(StockAdjustment)
     if consumption_entry_id:

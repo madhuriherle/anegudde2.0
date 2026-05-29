@@ -192,9 +192,6 @@ def update_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.management.write"))
 ):
-    # Authorization check - Only All-Access roles (Temple Trustee)
-    _ensure_all_access(current_user)
-        
     settings = _get_settings_or_404(db)
         
     for field, value in settings_in.model_dump().items():
@@ -213,8 +210,6 @@ def update_temple_identity_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.temple_identity.write"))
 ):
-    _ensure_all_access(current_user)
-
     settings = _get_settings_or_404(db)
     for field, value in settings_in.model_dump().items():
         setattr(settings, field, value)
@@ -240,8 +235,6 @@ def update_receipt_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.receipt_settings.write"))
 ):
-    _ensure_all_access(current_user)
-
     settings = _get_settings_or_404(db)
     for field, value in settings_in.model_dump().items():
         setattr(settings, field, value)
@@ -267,9 +260,6 @@ def cleanup_operational_data(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.data_cleanup.write")),
 ):
-    if not current_user.role.is_all_access:
-        raise HTTPException(status_code=403, detail="Permission denied")
-
     if cleanup_in.confirmation_phrase != "CLEAR DATA":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -333,11 +323,8 @@ def cleanup_operational_data_alias(
 def upload_logo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.management.write"))
+    current_user: User = Depends(PermissionChecker("settings.temple_identity.write"))
 ):
-    if not current_user.role.is_all_access:
-        raise HTTPException(status_code=403, detail="Permission denied")
-
     settings = db.query(SystemSettings).first()
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
@@ -359,6 +346,6 @@ def upload_logo(
 def upload_logo_legacy(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.management.write"))
+    current_user: User = Depends(PermissionChecker("settings.temple_identity.write"))
 ):
     return upload_logo(file, db, current_user)

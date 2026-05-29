@@ -3,8 +3,8 @@ from decimal import Decimal
 import math
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import DonationEntry, DonationItem, Item, StockLedger, User, Devotee
-from app.schemas.donation import DonationEntryCreate
+from app.db.models import DonationAmountMaster, DonationEntry, DonationItem, Item, StockLedger, User, Devotee
+from app.schemas.donation import DonationAmountMasterCreate, DonationAmountMasterUpdate, DonationEntryCreate
 from app.services import devotee_service
 from app.schemas.devotee import DevoteeCreate
 from app.services.receipt_sequence_service import next_donation_receipt
@@ -27,6 +27,7 @@ def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = Non
     query = db.query(DonationEntry).options(
         joinedload(DonationEntry.items).joinedload(DonationItem.item),
         joinedload(DonationEntry.user),
+        joinedload(DonationEntry.donation_amount_master),
         joinedload(DonationEntry.devotee)
     ).filter(DonationEntry.status == 1)
 
@@ -64,12 +65,85 @@ def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = Non
 
 from app.utils.date_utils import get_today_ist
 
+def list_amount_masters(db: Session, active_only: bool = False):
+    query = db.query(DonationAmountMaster)
+    if active_only:
+        query = query.filter(DonationAmountMaster.status == 1)
+    return query.order_by(DonationAmountMaster.id.desc()).all()
+
+def create_amount_master(payload: DonationAmountMasterCreate, db: Session, current_user: User) -> DonationAmountMaster:
+    now = datetime.now(timezone.utc)
+    title = payload.title.strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    if payload.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be greater than zero")
+    row = DonationAmountMaster(
+        title=title,
+        amount=payload.amount,
+        description=payload.description,
+        status=payload.status,
+        created_at=now,
+        updated_at=now,
+        created_by=current_user.id,
+        updated_by=current_user.id,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+def update_amount_master(amount_id: int, payload: DonationAmountMasterUpdate, db: Session, current_user: User) -> DonationAmountMaster:
+    row = db.query(DonationAmountMaster).filter(DonationAmountMaster.id == amount_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Amount option not found")
+    if payload.title is not None:
+        title = payload.title.strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="Title is required")
+        row.title = title
+    if payload.amount is not None:
+        if payload.amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be greater than zero")
+        row.amount = payload.amount
+    if payload.description is not None:
+        row.description = payload.description
+    if payload.status is not None:
+        row.status = payload.status
+    row.updated_at = datetime.now(timezone.utc)
+    row.updated_by = current_user.id
+    db.commit()
+    db.refresh(row)
+    return row
+
+def delete_amount_master(amount_id: int, db: Session, current_user: User) -> None:
+    row = db.query(DonationAmountMaster).filter(DonationAmountMaster.id == amount_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Amount option not found")
+    row.status = 0
+    row.updated_at = datetime.now(timezone.utc)
+    row.updated_by = current_user.id
+    db.commit()
+
+def _validate_amount_selection(payload: DonationEntryCreate, db: Session) -> None:
+    if payload.donation_mode != "AMOUNT":
+        return
+    if payload.amount_donation_type == "SPECIFIC":
+        option = db.query(DonationAmountMaster).filter(
+            DonationAmountMaster.id == payload.donation_amount_master_id,
+            DonationAmountMaster.status == 1,
+        ).first()
+        if not option:
+            raise HTTPException(status_code=400, detail="Invalid specific amount selection")
+        payload.total_gross_amount = option.amount
+
 def create_donation(payload: DonationEntryCreate, db: Session, current_user: User) -> DonationEntry:
     now = datetime.now(timezone.utc)
     today = get_today_ist()
     
     if payload.donation_date > today:
         raise HTTPException(status_code=400, detail="Donation date cannot be in the future.")
+    _validate_amount_selection(payload, db)
 
     # CRM Logic: Link/Create Devotee
     devotee = devotee_service.create_or_update_devotee(
@@ -99,6 +173,12 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
         receipt_prefix=receipt_prefix,
         receipt_number=receipt_number,
         receipt_display_number=receipt_display_number,
+        donation_mode=payload.donation_mode,
+        total_gross_amount=payload.total_gross_amount,
+        amount_donation_type=payload.amount_donation_type if payload.donation_mode == "AMOUNT" else None,
+        donation_amount_master_id=payload.donation_amount_master_id if payload.donation_mode == "AMOUNT" and payload.amount_donation_type == "SPECIFIC" else None,
+        amount_note=payload.amount_note if payload.donation_mode == "AMOUNT" else None,
+        user_code=current_user.user_code,
         donation_date=payload.donation_date,
         devotee_id=devotee.id,
         devotee_name=payload.devotee_name, # Also keep snapshot in donation table
@@ -119,7 +199,7 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
     db.add(entry)
     db.flush()
     
-    for it in payload.items:
+    for it in (payload.items if payload.donation_mode == "ITEM" else []):
         # ... (rest of stock update logic)
         item = db.query(Item).filter(Item.id == it.item_id).first()
         if not item:
@@ -179,6 +259,7 @@ def get_donation(donation_id: int, db: Session) -> DonationEntry:
         .options(
             joinedload(DonationEntry.items).joinedload(DonationItem.item).joinedload(Item.unit),
             joinedload(DonationEntry.user),
+            joinedload(DonationEntry.donation_amount_master),
             joinedload(DonationEntry.devotee),
         )
         .filter(DonationEntry.id == donation_id, DonationEntry.status == 1)
@@ -194,6 +275,7 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
     
     if payload.donation_date > today:
         raise HTTPException(status_code=400, detail="Donation date cannot be in the future.")
+    _validate_amount_selection(payload, db)
 
     entry = db.query(DonationEntry).filter(DonationEntry.id == donation_id).first()
     if not entry:
@@ -229,6 +311,12 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
     # 2. Update Entry Meta
     entry.donation_date = payload.donation_date
     entry.donation_type = payload.donation_type or 1
+    entry.donation_mode = payload.donation_mode
+    entry.total_gross_amount = payload.total_gross_amount
+    entry.amount_donation_type = payload.amount_donation_type if payload.donation_mode == "AMOUNT" else None
+    entry.donation_amount_master_id = payload.donation_amount_master_id if payload.donation_mode == "AMOUNT" and payload.amount_donation_type == "SPECIFIC" else None
+    entry.amount_note = payload.amount_note if payload.donation_mode == "AMOUNT" else None
+    entry.user_code = current_user.user_code
     entry.devotee_id = devotee.id
     entry.devotee_name = payload.devotee_name
     entry.phone_number = payload.phone_number
@@ -242,7 +330,7 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
     entry.updated_by = current_user.id
 
     # 3. Add New Items and Apply New Stock
-    for it in payload.items:
+    for it in (payload.items if payload.donation_mode == "ITEM" else []):
         item = db.query(Item).filter(Item.id == it.item_id).first()
         if not item:
             raise HTTPException(status_code=400, detail=f"Invalid item_id: {it.item_id}")

@@ -16,6 +16,7 @@ class AuthUserOut(BaseModel):
     id: int
     username: str
     full_name: str
+    user_code: str | None = None
     role_id: int
     role_rank_level: int | None = None
     is_all_access: bool = False

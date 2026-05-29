@@ -8,6 +8,7 @@ from .update import router as update_router
 from .devotee import router as devotee_router
 from .receipt import router as receipt_router
 from .receipt_pdf import router as receipt_pdf_router
+from .amount_masters import router as amount_masters_router
 
 router = APIRouter(prefix="/donations", tags=["donations"])
 router.include_router(create_router)
@@ -18,3 +19,4 @@ router.include_router(update_router)
 router.include_router(devotee_router)
 router.include_router(receipt_router)
 router.include_router(receipt_pdf_router)
+router.include_router(amount_masters_router)

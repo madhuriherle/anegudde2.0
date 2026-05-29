@@ -29,6 +29,7 @@ const userSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
   full_name: z.string().min(1, 'Full name is required'),
+  user_code: z.string().max(20, 'User code must be 20 characters or less').optional().or(z.literal('')),
   email: z.string().email('Invalid email format').optional().or(z.literal('')),
   phone: z.string().regex(/^[0-9]{8,15}$/, 'Phone number must be between 8 and 15 digits').optional().or(z.literal('')),
   role_id: z.coerce.number().min(1, 'Role is required'),
@@ -120,7 +121,7 @@ const UsersPage = () => {
     if (userData) {
       reset({ ...userData, password: '' });
     } else {
-      reset({ username: '', password: '', full_name: '', email: '', phone: '', role_id: '', status: 1 });
+      reset({ username: '', password: '', full_name: '', user_code: '', email: '', phone: '', role_id: '', status: 1 });
     }
     setOpen(true);
   };
@@ -149,6 +150,11 @@ const UsersPage = () => {
   {
     accessorKey: 'full_name',
     header: 'Full Name'
+  },
+  {
+    accessorKey: 'user_code',
+    header: 'User Code',
+    cell: (info) => info.getValue() || '-'
   },
   {
     accessorKey: 'email',
@@ -276,6 +282,11 @@ const UsersPage = () => {
                 <Label className="text-text-main">Full Name *</Label>
                 <Input {...register('full_name')} className="text-text-main" />
                 {errors.full_name && <p className="text-xs text-red-500">{errors.full_name.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main">User Code</Label>
+                <Input {...register('user_code')} className="text-text-main uppercase" placeholder="PDK" />
+                {errors.user_code && <p className="text-xs text-red-500">{errors.user_code.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-text-main">Email Address</Label>
