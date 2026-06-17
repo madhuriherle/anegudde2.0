@@ -146,6 +146,7 @@ class ApiService {
         body: json.encode({
           'username': username.trim(),
           'password': password.trim(),
+          'client_type': 'desktop',
         }),
       );
 

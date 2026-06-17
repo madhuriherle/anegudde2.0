@@ -12,6 +12,7 @@ class Token(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+    client_type: str = "web"  # Default to web for backward compatibility
 
 
 class AuthUserOut(BaseModel):

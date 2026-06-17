@@ -43,10 +43,17 @@ def login_user(payload: LoginRequest, db: Session) -> Token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
 
     session_id = str(uuid.uuid4())
+    
+    # Set expiration based on client type
+    # Web: 24 hours hard limit (frontend will handle the 1-hour inactivity)
+    # Desktop: Permanent (None)
+    expires_minutes = 1440 if payload.client_type == "web" else None
+    
     token = create_access_token(
         subject=user.username, 
         session_id=session_id,
-        security_stamp=user.security_stamp
+        security_stamp=user.security_stamp,
+        expires_minutes=expires_minutes
     )
 
     db.add(
