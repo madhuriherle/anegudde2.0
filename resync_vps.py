@@ -1,5 +1,6 @@
 import paramiko
 import os
+import sys
 
 hostname = "187.127.173.27"
 username = "root"
@@ -8,14 +9,19 @@ password = "D-apps@123456"
 local_base = r"D:\python_project\anegudde\Anegudde_Inventory_System_RemoteAccess"
 remote_base = "/var/www/anegudde"
 
+def safe_print(value):
+    encoding = sys.stdout.encoding or "utf-8"
+    print(str(value).encode(encoding, errors="replace").decode(encoding, errors="replace"))
+
+
 def run_command(ssh, command):
-    print(f"Executing: {command}")
+    safe_print(f"Executing: {command}")
     stdin, stdout, stderr = ssh.exec_command(command)
     exit_status = stdout.channel.recv_exit_status()
-    out = stdout.read().decode().strip()
-    err = stderr.read().decode().strip()
-    if out: print(out)
-    if err: print(f"Error: {err}")
+    out = stdout.read().decode("utf-8", errors="replace").strip()
+    err = stderr.read().decode("utf-8", errors="replace").strip()
+    if out: safe_print(out)
+    if err: safe_print(f"Error: {err}")
     return exit_status, out, err
 
 def upload_dir(sftp, local_dir, remote_dir):

@@ -46,6 +46,53 @@ MODULE_PRIVILEGE_MAP = {
 }
 
 
+def _column_exists(conn, table_name, column_name):
+    return conn.execute(
+        sa.text(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = :table_name
+              AND column_name = :column_name
+            LIMIT 1
+            """
+        ),
+        {"table_name": table_name, "column_name": column_name},
+    ).scalar() is not None
+
+
+def _constraint_exists(conn, table_name, constraint_name):
+    return conn.execute(
+        sa.text(
+            """
+            SELECT 1
+            FROM information_schema.table_constraints
+            WHERE table_schema = current_schema()
+              AND table_name = :table_name
+              AND constraint_name = :constraint_name
+            LIMIT 1
+            """
+        ),
+        {"table_name": table_name, "constraint_name": constraint_name},
+    ).scalar() is not None
+
+
+def _ensure_roles_module_column(conn):
+    if not _column_exists(conn, "roles", "module_id"):
+        op.add_column("roles", sa.Column("module_id", sa.Integer(), nullable=True))
+
+    constraint_name = "fk_roles_module_id_modules"
+    if not _constraint_exists(conn, "roles", constraint_name):
+        op.create_foreign_key(
+            constraint_name,
+            "roles",
+            "modules",
+            ["module_id"],
+            ["id"],
+        )
+
+
 def _module_id(conn, name, parent_id=None):
     if parent_id is None:
         return conn.execute(
@@ -109,6 +156,7 @@ def _ensure_privilege(conn, privilege_name, module_id):
 
 def upgrade() -> None:
     conn = op.get_bind()
+    _ensure_roles_module_column(conn)
 
     main_id = _module_id(conn, "Main Menu")
     if not main_id:
