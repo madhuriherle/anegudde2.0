@@ -113,6 +113,7 @@ class Role(Base):
     role_name = Column(String(50), unique=True, nullable=False)
     rank_level = Column(Integer, nullable=False, default=99) # 1 = Top, higher = lower rank
     is_all_access = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    module_id = Column(Integer, ForeignKey("modules.id"), nullable=True)
     status = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
@@ -120,6 +121,7 @@ class Role(Base):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     privileges = relationship("RolePrivilege", back_populates="role", cascade="all, delete-orphan")
+    module = relationship("Module")
 
 class Module(Base):
     __tablename__ = "modules"

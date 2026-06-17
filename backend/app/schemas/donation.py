@@ -134,6 +134,7 @@ class DonationEntryFullOut(DonationEntryOut):
     items: list[DonationItemOut]
     user: UserMinimal | None = None
     donation_type_master: DonationTypeOut | None = None
+    donation_amount_master: DonationAmountMasterOut | None = None
 
 
 DonationEntryCreate.model_rebuild()

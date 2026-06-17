@@ -13,6 +13,7 @@ import PurchasesPage from './pages/PurchasesPage';
 import PurchaseReturnsPage from './pages/PurchaseReturnsPage';
 import UsageEntriesPage from './pages/UsageEntriesPage';
 import UsersPage from './pages/UsersPage';
+import RolesPage from './pages/RolesPage';
 import PrivilegesPage from './pages/PrivilegesPage';
 import ActivityLogsPage from './pages/ActivityLogsPage';
 import DevoteesPage from './pages/DevoteesPage';
@@ -79,6 +80,7 @@ function App() {
         <Route path="/reports/manpower" element={<ProtectedRoute requiredPermission="reports.manpower.read"><ManpowerReportPage /></ProtectedRoute>} />
         
         <Route path="/users" element={<ProtectedRoute requiredPermission={["users.management.read", "users.read"]}><UsersPage /></ProtectedRoute>} />
+        <Route path="/users/roles" element={<ProtectedRoute requiredPermission="users.privileges.read"><RolesPage /></ProtectedRoute>} />
         <Route path="/users/privileges" element={<ProtectedRoute requiredPermission="users.privileges.read"><PrivilegesPage /></ProtectedRoute>} />
         <Route path="/users/activity" element={<ProtectedRoute requiredPermission="activity_logs.read"><ActivityLogsPage /></ProtectedRoute>} />
         <Route path="/devotees" element={<ProtectedRoute requiredPermission="devotees.read"><DevoteesPage /></ProtectedRoute>} />

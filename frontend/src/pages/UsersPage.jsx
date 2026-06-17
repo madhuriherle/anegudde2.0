@@ -72,16 +72,18 @@ const UsersPage = () => {
   const [pageSize, setPageSize] = useState(50);
   const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
 
   const [open, setOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
   // Fetch Data
   const { data: users, isLoading } = useQuery({
-    queryKey: ['users', search, pageSize, status, page],
+    queryKey: ['users', search, pageSize, status, page, roleFilter],
     queryFn: async () => {
       const params = { q: search, page_size: pageSize, page };
       if (status !== 'all') params.status = status === 'active' ? 1 : 0;
+      if (roleFilter !== 'all') params.role_id = Number(roleFilter);
       const res = await api.get('/users/list_users', { params });
       return res.data;
     }
@@ -259,10 +261,11 @@ const UsersPage = () => {
         <CardContent className="p-4 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
             <div className="space-y-1.5">
-              <Label className="text-text-main">Rows</Label>
-              <Select value={pageSize.toString()} onChange={(e) => setPageSize(Number(e.target.value))}>
-                {[10, 20, 50, 100].map((size) =>
-                <option key={size} value={size}>{size}</option>
+              <Label className="text-text-main">Role</Label>
+              <Select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}>
+                <option value="all">All Roles</option>
+                {roles?.map((r) =>
+                  <option key={r.id} value={r.id}>{r.role_name}</option>
                 )}
               </Select>
             </div>
@@ -297,11 +300,7 @@ const UsersPage = () => {
         pageIndex={page - 1}
         pageSize={pageSize}
         totalCount={users?.total || 0}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }} />
+        onPageChange={setPage} />
       
       {/* View User Dialog */}
       <Dialog open={viewOpen} onOpenChange={handleViewClose}>

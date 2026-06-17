@@ -38,31 +38,39 @@ def get_user_menu(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get the menu structure filtered by user permissions and Rank.
+    Get the menu structure filtered by user permissions, Rank, and Module Scope.
     """
-    roots = (
-        db.query(Module)
-        .options(
-            selectinload(Module.submodules).selectinload(Module.submodules),
-            selectinload(Module.privileges)
-        )
-        .filter(Module.parent_id == None, Module.status == 1)
-        .order_by(Module.display_order)
-        .all()
-    )
-    
-    user_privileges = set()
-    is_all_access = False
     my_rank = 99
+    is_all_access = False
+    module_scope_id = None
+    user_privileges = set()
+
     if current_user.role:
         is_all_access = current_user.role.is_all_access
         my_rank = current_user.role.rank_level
+        module_scope_id = current_user.role.module_id
         if not is_all_access:
             user_privileges = {
                 rp.privilege.privilege_name
                 for rp in current_user.role.privileges
                 if rp.status == 1 and rp.privilege and rp.privilege.status == 1
             }
+
+    # Base query for modules
+    query = db.query(Module).options(
+        selectinload(Module.submodules).selectinload(Module.submodules),
+        selectinload(Module.privileges)
+    ).filter(Module.status == 1)
+
+    if module_scope_id:
+        # Scoped roles start from their assigned module branch.
+        scope_module = db.query(Module).filter(Module.id == module_scope_id, Module.status == 1).first()
+        if not scope_module:
+            return []
+        roots = [scope_module]
+    else:
+        # Otherwise fetch all top-level roots
+        roots = query.filter(Module.parent_id == None).order_by(Module.display_order).all()
     
     def build_tree(module):
         # Rank-based module restriction check

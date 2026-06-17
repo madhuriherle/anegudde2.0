@@ -19,6 +19,7 @@ def list_users(
     q: str | None = Query(None),
     status: int | None = Query(None),
     search_field: str | None = Query(None),
+    role_id: int | None = Query(None),
 ):
     # Only allowed if current_user has users.read permission
 
@@ -32,6 +33,9 @@ def list_users(
 
     if status is not None:
         query = query.filter(User.status == status)
+
+    if role_id is not None:
+        query = query.filter(User.role_id == role_id)
 
     if q:
         like = f"%{q}%"

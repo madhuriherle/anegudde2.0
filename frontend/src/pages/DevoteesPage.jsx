@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { Search, Users, X } from 'lucide-react';
+import { Search, Users, X, Loader2, AlertCircle } from 'lucide-react';
 import api from '../api/axios';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
@@ -11,13 +11,16 @@ import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { formatDate } from '../utils/date';
 import { formatQuantityWithUnit } from '../utils/quantity';
+import { cn } from '../utils/cn';
 
 const DevoteesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [selectedDevoteeId, setSelectedDevoteeId] = useState(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['devotees', searchTerm, page, pageSize],
@@ -31,82 +34,56 @@ const DevoteesPage = () => {
   const { data: devoteeDetails, isLoading: detailsLoading } = useQuery({
     queryKey: ['devotee-details', selectedDevoteeId],
     queryFn: async () => (await api.get(`/donations/get_devotee/${selectedDevoteeId}`)).data,
-    enabled: detailsOpen && selectedDevoteeId !== null
+    enabled: (profileOpen || historyOpen) && selectedDevoteeId !== null
   });
 
-  const handleView = (devotee) => {
+  const handleViewProfile = (devotee) => {
     setSelectedDevoteeId(devotee.id);
-    setDetailsOpen(true);
+    setProfileOpen(true);
+  };
+
+  const handleViewHistory = (devotee) => {
+    setSelectedDevoteeId(devotee.id);
+    setHistoryOpen(true);
   };
 
   const columns = useMemo(() => [
-  {
-    accessorKey: 'devotee_name',
-    header: 'Devotee Name',
-    size: 220,
-    cell: (info) =>
-    <span className="font-semibold text-text-main">{info.getValue()}</span>
-
-  },
-  {
-    accessorKey: 'phone_number',
-    header: 'Phone Number',
-    size: 150,
-    cell: (info) => <span className="text-text-main">{info.getValue()}</span>
-  },
-  {
-    accessorKey: 'email',
-    header: 'Email',
-    size: 220,
-    cell: (info) => <span className="text-text-normal">{info.getValue() || '-'}</span>
-  },
-  {
-    accessorKey: 'address',
-    header: 'Address',
-    cell: (info) =>
-    <span className="block max-w-[260px] break-words text-text-normal" title={info.getValue() || '-'}>
+    {
+      accessorKey: 'devotee_name',
+      header: 'Devotee Name',
+      size: 220,
+      cell: (info) =>
+        <span className="font-semibold text-text-main">{info.getValue()}</span>
+    },
+    {
+      accessorKey: 'phone_number',
+      header: 'Phone Number',
+      size: 150,
+      cell: (info) => <span className="text-text-main">{info.getValue()}</span>
+    },
+    {
+      accessorKey: 'address',
+      header: 'Address',
+      cell: (info) =>
+        <span className="block max-w-[460px] break-words text-text-normal line-clamp-1" title={info.getValue() || '-'}>
           {info.getValue() || '-'}
         </span>
-
-  },
-
-  {
-    accessorKey: 'city',
-    header: 'City',
-    size: 130,
-    cell: (info) => <span className="text-text-normal">{info.getValue() || '-'}</span>
-  },
-  {
-    accessorKey: 'state',
-    header: 'State',
-    size: 130,
-    cell: (info) => <span className="text-text-normal">{info.getValue() || '-'}</span>
-  },
-  {
-    accessorKey: 'pincode',
-    header: 'Pincode',
-    size: 110,
-    cell: (info) => <span className="text-text-normal">{info.getValue() || '-'}</span>
-  },
-  {
-    accessorKey: 'updated_at',
-    header: 'Last Updated',
-    size: 140,
-    cell: (info) => <span className="text-text-normal">{formatDate(info.getValue())}</span>
-  },
-  {
-    id: 'actions',
-    header: () => <div className="text-center">Actions</div>,
-    size: 120,
-    cell: (info) =>
-    <div className="flex justify-center">
-          <button onClick={() => handleView(info.row.original)} className="action-btn-view">
-            View
+    },
+    {
+      id: 'actions',
+      header: () => <div className="text-center">Actions</div>,
+      size: 200,
+      cell: (info) =>
+        <div className="flex justify-center gap-2">
+          <button onClick={() => handleViewProfile(info.row.original)} className="action-btn-view">
+            Profile
+          </button>
+          <button onClick={() => handleViewHistory(info.row.original)} className="action-btn-edit !bg-amber-600 !hover:bg-amber-700 !text-white !px-4">
+            History
           </button>
         </div>
-
-  }],
-  []);
+    }],
+    []);
 
   return (
     <div className="space-y-6">
@@ -116,33 +93,19 @@ const DevoteesPage = () => {
         </div>
       </div>
 
-      <Card className="border-border-temple shadow-sm">
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-bold text-text-main">Devotee Directory</h3>
-              </div>
-              <p className="text-sm text-text-light">
-                Contacts are created automatically from donation entries.
-              </p>
-            </div>
-
-            <div className="w-full space-y-1.5 lg:max-w-[360px]">
-              <Label className="text-text-main font-medium">Search Devotee</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-main/40" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Name, phone, email, address, city or pincode..."
-                  className="h-10 pl-10 text-text-main" />
-                
-              </div>
+      <Card className="border-border-temple shadow-sm bg-white">
+        <CardContent className="p-4 sm:p-5">
+          <div className="max-w-md">
+            <Label className="text-xs font-black uppercase tracking-widest text-secondary/60 mb-2 block">Search Devotee</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                className="h-11 pl-10 text-text-main rounded-xl" />
             </div>
           </div>
         </CardContent>
@@ -158,128 +121,201 @@ const DevoteesPage = () => {
         pageSize={pageSize}
         onPageChange={setPage}
         totalCount={data?.total || 0} />
-      
 
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-h-[88vh] max-w-5xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Devotee Details</DialogTitle>
-            <DialogDescription>
-              Contact information and donation history.
-            </DialogDescription>
+
+      {/* 1. PROFILE DIALOG (CLEAN LIST STYLE LIKE VENDOR) */}
+      <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
+        <DialogContent className="max-w-lg border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-xl text-secondary">Devotee Profile</DialogTitle>
           </DialogHeader>
 
-          {detailsLoading ?
-          <div className="py-12 text-center text-sm font-medium text-text-light">
-              Loading devotee details...
-            </div> :
-          devoteeDetails ?
-          <div className="space-y-5 pt-3">
-              <div className="grid grid-cols-1 gap-3 rounded-lg border border-border-temple bg-[#FFF8F0] p-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs font-bold uppercase text-text-light">Devotee Name</p>
-                  <p className="mt-1 font-semibold text-text-main">{devoteeDetails.devotee_name || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-text-light">Phone Number</p>
-                  <p className="mt-1 text-text-main">{devoteeDetails.phone_number || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-text-light">Email</p>
-                  <p className="mt-1 text-text-main">{devoteeDetails.email || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-text-light">Last Updated</p>
-                  <p className="mt-1 text-text-main">{formatDate(devoteeDetails.updated_at)}</p>
-                </div>
-                <div className="sm:col-span-2">
-                  <p className="text-xs font-bold uppercase text-text-light">Address</p>
-                  <p className="mt-1 text-text-main">{devoteeDetails.address || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-text-light">City</p>
-                  <p className="mt-1 text-text-main">{devoteeDetails.city || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-text-light">State</p>
-                  <p className="mt-1 text-text-main">{devoteeDetails.state || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-text-light">Pincode</p>
-                  <p className="mt-1 text-text-main">{devoteeDetails.pincode || '-'}</p>
-                </div>
-              </div>
+          {detailsLoading ? (
+            <div className="py-12 flex justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : devoteeDetails ? (
+            <div className="py-8 px-2 space-y-6">
+               <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
+                  <div className="font-bold text-secondary">Devotee Name</div>
+                  <div className="text-text-main font-bold text-center">:</div>
+                  <div className="text-text-main font-medium">{devoteeDetails.devotee_name}</div>
+               </div>
 
-              <div>
-                <h3 className="mb-3 text-base font-bold text-text-main">Donation History</h3>
-                <div className="overflow-hidden rounded-lg border border-border-temple">
-                  <table className="w-full min-w-[760px] table-fixed text-left text-sm">
+               <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
+                  <div className="font-bold text-secondary">Phone Number</div>
+                  <div className="text-text-main font-bold text-center">:</div>
+                  <div className="text-text-main font-medium">{devoteeDetails.phone_number}</div>
+               </div>
+
+               <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
+                  <div className="font-bold text-secondary">Email Address</div>
+                  <div className="text-text-main font-bold text-center">:</div>
+                  <div className="text-text-main font-medium">{devoteeDetails.email || '-'}</div>
+               </div>
+
+               <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
+                  <div className="font-bold text-secondary">Last Transaction</div>
+                  <div className="text-text-main font-bold text-center">:</div>
+                  <div className="text-text-main font-medium">{formatDate(devoteeDetails.updated_at)}</div>
+               </div>
+
+               <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
+                  <div className="font-bold text-secondary pt-0.5">Address</div>
+                  <div className="text-text-main font-bold text-center pt-0.5">:</div>
+                  <div className="text-text-main font-medium leading-relaxed">
+                    {[
+                        devoteeDetails.address,
+                        devoteeDetails.city,
+                        devoteeDetails.state,
+                        devoteeDetails.pincode
+                    ].filter(Boolean).join(', ') || '-'}
+                  </div>
+               </div>
+            </div>
+          ) : null}
+
+          <DialogFooter className="bg-[#F3E8D4] border-t border-border-temple/40 !px-6 !py-4">
+            <Button onClick={() => setProfileOpen(false)} className="bg-primary text-white font-bold h-10 px-10 hover:bg-primary-dark shadow-md">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2. HISTORY DIALOG (WIDE TABLE STYLE) */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-h-[85vh] max-w-7xl overflow-y-auto border-border-temple">
+          <DialogHeader className="border-b border-border-temple/40 pb-4 mb-4">
+            <DialogTitle className="text-xl text-secondary">Donation History</DialogTitle>
+            {devoteeDetails && (
+                <DialogDescription className="font-bold text-text-main mt-1">
+                    Showing records for: <span className="text-primary">{devoteeDetails.devotee_name}</span>
+                </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {detailsLoading ? (
+            <div className="py-20 flex justify-center">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+          ) : devoteeDetails ? (
+            <div className="space-y-4">
+                <div className="overflow-hidden rounded-2xl border border-border-temple/60 shadow-sm bg-white">
+                  <table className="w-full min-w-[900px] table-fixed text-left text-sm">
                     <colgroup>
-                      <col className="w-[13%]" />
-                      <col className="w-[34%]" />
-                      <col className="w-[18%]" />
-                      <col className="w-[20%]" />
+                      <col className="w-[10%]" />
+                      <col className="w-[12%]" />
                       <col className="w-[15%]" />
+                      <col className="w-[28%]" />
+                      <col className="w-[15%]" />
+                      <col className="w-[10%]" />
+                      <col className="w-[10%]" />
                     </colgroup>
                     <thead>
-                      <tr className="border-b border-border-temple bg-[#f8efe5] text-xs font-bold uppercase text-text-main">
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3">Items Donated</th>
-                        <th className="px-4 py-3">Quantity</th>
-                        <th className="px-4 py-3">Remarks</th>
-                        <th className="px-4 py-3">Recorded By</th>
+                      <tr className="border-b border-border-temple/40 bg-[#FBF9F6] text-[10px] font-black uppercase tracking-[0.15em] text-gray-500">
+                        <th className="px-6 py-4">Date</th>
+                        <th className="px-6 py-4">Receipt</th>
+                        <th className="px-6 py-4">Type</th>
+                        <th className="px-6 py-4">Donation Details</th>
+                        <th className="px-6 py-4 text-center">Qty / Amt</th>
+                        <th className="px-6 py-4">Remarks</th>
+                        <th className="px-6 py-4 text-right">User</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#f0e5da]">
+                    <tbody className="divide-y divide-[#F5F0E9]">
                       {devoteeDetails.donations?.length ?
                     devoteeDetails.donations.map((donation) =>
-                    <tr key={donation.id} className="align-top">
-                            <td className="px-4 py-3 text-text-main">{formatDate(donation.donation_date)}</td>
-                            <td className="px-4 py-3">
-                              <div className="space-y-1">
-                                {(donation.items || []).map((item) =>
-                          <div key={item.id} className="text-text-main">
-                                    {item.item?.item_name || '-'}
-                                  </div>
-                          )}
-                              </div>
+                    <tr key={donation.id} className="group align-top hover:bg-[#FFFAF3] transition-colors">
+                            <td className="px-6 py-4 text-text-main whitespace-nowrap">{formatDate(donation.donation_date)}</td>
+                            <td className="px-6 py-4">
+                                <span className="font-mono text-text-main">
+                                    {donation.receipt_display_number || '-'}
+                                </span>
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="space-y-1">
-                                {(donation.items || []).map((item) =>
-                          <div key={item.id} className="text-text-main">
-                                    {formatQuantityWithUnit(item.quantity, item.item?.unit)}
-                                  </div>
-                          )}
-                              </div>
+                            <td className="px-6 py-4">
+                                <span className="text-text-main">
+                                    {donation.donation_type_master?.type_name || 'General'}
+                                </span>
                             </td>
-                            <td className="px-4 py-3 text-text-normal">{donation.remarks || '-'}</td>
-                            <td className="px-4 py-3 text-text-normal">{donation.user?.full_name || '-'}</td>
+                            <td className="px-6 py-4">
+                              {donation.donation_mode === 1 ? (
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2">
+                                      <span className={cn(
+                                          "px-1.5 py-0.5 rounded text-xs uppercase",
+                                          donation.amount_donation_type === 'SPECIFIC' ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
+                                      )}>
+                                          {donation.amount_donation_type || 'Custom'}
+                                      </span>
+                                      <span className="text-text-main">
+                                          {donation.donation_amount_master?.title || 'Amount Donation'}
+                                      </span>
+                                  </div>
+                                  {donation.amount_note && <span className="text-sm text-gray-500 italic ml-10 border-l-2 border-gray-100 pl-2">{donation.amount_note}</span>}
+                                </div>
+                              ) : (
+                                <div className="space-y-1">
+                                  {(donation.items || []).map((item) =>
+                                    <div key={item.id} className="text-text-main flex items-center gap-1.5">
+                                      <div className="h-1 w-1 rounded-full bg-primary/40" />
+                                      {item.item?.item_name || '-'}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              {donation.donation_mode === 1 ? (
+                                <span className="text-text-main">
+                                  ₹{Number(donation.total_gross_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </span>
+                              ) : (
+                                <div className="space-y-1">
+                                  {(donation.items || []).map((item) =>
+                                    <div key={item.id} className="text-text-main">
+                                      {formatQuantityWithUnit(item.quantity, item.item?.unit)}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                                <p className="text-sm text-gray-500 leading-relaxed italic line-clamp-2">
+                                    {donation.remarks || '-'}
+                                </p>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                                <span className="inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500" title={donation.user?.full_name}>
+                                    {donation.user?.username || donation.user?.full_name || '-'}
+                                </span>
+                            </td>
                           </tr>
                     ) :
 
                     <tr>
-                          <td colSpan={5} className="px-4 py-10 text-center text-text-light">
-                            No donation history found.
+                          <td colSpan={6} className="px-6 py-20 text-center text-text-light font-bold italic">
+                            <div className="flex flex-col items-center gap-2">
+                                <AlertCircle size={32} className="text-gray-200" />
+                                <span>No history found.</span>
+                            </div>
                           </td>
                         </tr>
                     }
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div> :
-          null}
+            </div>
+          ) : null}
 
-          <DialogFooter className="!px-6 !py-4 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
-            <Button onClick={() => setDetailsOpen(false)} className="px-6 h-10 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-md">
+          <DialogFooter className="bg-[#F3E8D4] border-t border-border-temple/40 !px-6 !py-4">
+            <Button onClick={() => setHistoryOpen(false)} className="bg-primary text-white font-bold h-10 px-10 hover:bg-primary-dark shadow-md">
               Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>);
-
 };
 
 export default DevoteesPage;

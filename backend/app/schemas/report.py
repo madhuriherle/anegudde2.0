@@ -121,3 +121,19 @@ class ManpowerReportResponse(BaseModel):
     from_date: date
     to_date: date
     rows: list[ManpowerReportRow]
+
+
+class PurchaseDetailItem(BaseModel):
+    item_name: str
+    quantity: Decimal
+    price: Decimal
+    line_total: Decimal
+
+
+class PurchaseDetailRow(BaseModel):
+    purchase_date: date
+    vendor_name: str
+    bill_no: str | None = None
+    total_amount: Decimal
+    invoice_amount: Decimal | None = None
+    items: list[PurchaseDetailItem]

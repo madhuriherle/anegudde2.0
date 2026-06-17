@@ -3,20 +3,119 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import Role, User, Privilege, RolePrivilege
-from app.schemas.user import RoleOut, PrivilegeOut, RolePrivilegeUpdate
+from app.schemas.user import RoleOut, PrivilegeOut, RolePrivilegeUpdate, RoleCreate, RoleUpdate
 
 router = APIRouter()
 
 
 @router.get("/list_roles", response_model=list[RoleOut])
 def list_roles(db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("users.privileges.read"))):
-    # 1. Permission check
-    # Let's assume anyone with users.privileges.read can list roles, but they only see lower ranks
-    
+    """
+    List all active roles. Super admin sees all, others see only weaker roles.
+    """
     my_rank = current_user.role.rank_level if current_user.role else 99
-    
-    # Show only roles with rank strictly greater than mine (weaker roles)
-    return db.query(Role).filter(Role.rank_level > my_rank).all()
+
+    query = db.query(Role).filter(Role.status == 1)
+
+    # If not developer (rank 1), only show roles with higher rank (weaker)
+    if my_rank > 1:
+        query = query.filter(Role.rank_level > my_rank)
+
+    return query.order_by(Role.rank_level).all()
+
+
+@router.post("/create_role", response_model=RoleOut)
+def create_role(
+    payload: RoleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("users.privileges.write"))
+):
+    # Only all-access roles can create roles
+    if not current_user.role.is_all_access:
+        raise HTTPException(status_code=403, detail="Not authorized to create roles")
+
+    my_rank = current_user.role.rank_level if current_user.role else 99
+
+    # Can only create roles weaker than self
+    if payload.rank_level <= my_rank:
+        raise HTTPException(status_code=400, detail="Cannot create role with same or higher rank than yours")
+
+    # Check if name exists
+    existing = db.query(Role).filter(Role.role_name == payload.role_name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Role name already exists")
+
+    new_role = Role(
+        **payload.model_dump(),
+        created_by=current_user.id,
+        updated_by=current_user.id
+    )
+    db.add(new_role)
+    db.commit()
+    db.refresh(new_role)
+    return new_role
+
+
+@router.put("/update_role/{role_id}", response_model=RoleOut)
+def update_role(
+    role_id: int,
+    payload: RoleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("users.privileges.write"))
+):
+    if not current_user.role.is_all_access:
+        raise HTTPException(status_code=403, detail="Not authorized to update roles")
+
+    role = db.query(Role).filter(Role.id == role_id).first()
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+
+    my_rank = current_user.role.rank_level if current_user.role else 99
+
+    # Can only update roles weaker than self
+    if role.rank_level <= my_rank:
+        raise HTTPException(status_code=403, detail="Cannot update role with same or higher rank")
+
+    # If updating rank, new rank must also be weaker than self
+    if payload.rank_level is not None and payload.rank_level <= my_rank:
+        raise HTTPException(status_code=400, detail="New rank must be weaker than yours")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(role, key, value)
+
+    role.updated_by = current_user.id
+    db.commit()
+    db.refresh(role)
+    return role
+
+
+@router.delete("/delete_role/{role_id}")
+def delete_role(
+    role_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("users.privileges.write"))
+):
+    if not current_user.role.is_all_access:
+        raise HTTPException(status_code=403, detail="Not authorized to delete roles")
+
+    role = db.query(Role).filter(Role.id == role_id).first()
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+
+    my_rank = current_user.role.rank_level if current_user.role else 99
+    if role.rank_level <= my_rank:
+        raise HTTPException(status_code=403, detail="Cannot delete role with same or higher rank")
+
+    # Check if users are using this role
+    user_count = db.query(User).filter(User.role_id == role_id, User.status == 1).count()
+    if user_count > 0:
+        raise HTTPException(status_code=400, detail=f"Cannot delete role. It is assigned to {user_count} active users.")
+
+    role.status = 0
+    role.updated_by = current_user.id
+    db.commit()
+    return {"message": "Role deleted successfully"}
 
 
 @router.get("/list_privileges", response_model=list[PrivilegeOut])
@@ -26,8 +125,8 @@ def list_privileges(db: Session = Depends(get_db), _: User = Depends(PermissionC
 
 @router.get("/get_role_privileges/{role_id}", response_model=list[int])
 def get_role_privileges(
-    role_id: int, 
-    db: Session = Depends(get_db), 
+    role_id: int,
+    db: Session = Depends(get_db),
     _: User = Depends(PermissionChecker("users.privileges.read"))
 ):
     privs = db.query(RolePrivilege).filter(RolePrivilege.role_id == role_id, RolePrivilege.status == 1).all()
@@ -80,7 +179,7 @@ def update_role_privileges(
 
     # Remove existing privileges
     db.query(RolePrivilege).filter(RolePrivilege.role_id == role_id).delete()
-    
+
     # Add new privileges
     for priv_id in payload.privilege_ids:
         db.add(RolePrivilege(
@@ -90,6 +189,6 @@ def update_role_privileges(
             created_by=current_user.id,
             updated_by=current_user.id
         ))
-    
+
     db.commit()
     return {"message": "Privileges updated successfully"}

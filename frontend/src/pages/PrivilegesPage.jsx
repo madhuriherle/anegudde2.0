@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Settings } from 'lucide-react';
+import { Settings, ChevronDown, ChevronRight, Save as SaveIcon, Search as SearchIcon, ShieldCheck } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +9,12 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
+import { cn } from '../utils/cn';
+
+const DynamicIcon = ({ name, ...props }) => {
+  const IconComponent = Icons[name] || Icons.HelpCircle;
+  return <IconComponent {...props} />;
+};
 
 const getPrivilegeParts = (privilegeName = '') => {
   const parts = privilegeName.split('.');
@@ -32,26 +39,15 @@ const pickMostSpecificPrivilege = (privileges = [], action) => {
   })[0];
 };
 
-const buildGroupedModules = (menuRoots = [], selectedRoleRank = 99) => {
-  const openerReadByRootId = new Map();
-  const rootById = new Map(menuRoots.map((root) => [root.id, root]));
-
-  const collectOpeners = (node) => {
-    const readPriv = pickMostSpecificPrivilege(node.privileges || [], 'read');
-    if (node.opens_module_id && readPriv) {
-      openerReadByRootId.set(node.opens_module_id, readPriv);
-    }
-    (node.submodules || []).forEach(collectOpeners);
-  };
-
-  menuRoots.forEach(collectOpeners);
-
+const buildGroupedModules = (displayRoots = [], referenceRoots = [], selectedRoleRank = 99) => {
   const buildRowsForRoot = (root) => {
     const rows = [];
-    const launcherReadPriv = openerReadByRootId.get(root.id) || null;
+    const walkedModuleIds = new Set();
 
-    const walk = (node, parentTrail = []) => {
+    const walk = (node, parentTrail = [], parentIds = []) => {
       if (node.min_rank_level && selectedRoleRank > node.min_rank_level) return;
+      if (walkedModuleIds.has(node.id)) return;
+      walkedModuleIds.add(node.id);
 
       const trail = [...parentTrail, node.name];
       const linkedPrivs = node.privileges || [];
@@ -62,83 +58,78 @@ const buildGroupedModules = (menuRoots = [], selectedRoleRank = 99) => {
 
       const hasChildren = Boolean(node.submodules?.length);
       const hasLinkedPrivilege = Boolean(readPriv || writePriv || deletePriv);
-      const shouldRender =
-        node.id !== root.id &&
-        (hasLinkedPrivilege || (!hasChildren && node.route));
+
+      // Render if it has privileges, OR it's a leaf node with a route
+      const shouldRender = hasLinkedPrivilege || (!hasChildren && node.route);
 
       if (shouldRender) {
         rows.push({
           key: node.id,
           label: node.name,
-          depth: Math.max(trail.length - 2, 0),
-          path: trail.slice(1).join(' / '),
-          parent: trail.length > 1 ? trail[trail.length - 2] : root.name,
+          icon: node.icon,
+          depth: Math.max(trail.length - 1, 0),
+          path: trail.slice(0, -1).join(' / '),
+          parent: parentTrail.length > 0 ? parentTrail[parentTrail.length - 1] : null,
+          parentIds: [...parentIds],
           minRankLevel: node.min_rank_level,
-          opensModuleId: node.opens_module_id,
-          opensModuleName: node.opens_module_id ? rootById.get(node.opens_module_id)?.name : null,
-          launcherReadPriv: root.id !== node.id ? launcherReadPriv : null,
           type:
-            node.opens_module_id
-              ? 'Launcher'
-              : trail.length <= 2
-              ? 'Module'
-              : trail.length === 3
-                ? 'Submodule'
-                : 'Page',
+            trail.length === 1
+              ? 'Root'
+              : trail.length === 2
+                ? 'Module'
+                : trail.length === 3
+                  ? 'Submodule'
+                  : 'Page',
           readPriv,
           writePriv,
           deletePriv,
         });
       }
 
-      (node.submodules || []).forEach((child) => walk(child, trail));
+      (node.submodules || []).forEach((child) => walk(child, trail, [...parentIds, node.id]));
     };
 
     walk(root, []);
     return rows;
   };
 
-  const groups = menuRoots
+  const groups = displayRoots
     .map((root) => ({
       id: root.id,
       name: root.name,
+      icon: root.icon,
       rows: buildRowsForRoot(root),
     }))
     .filter((group) => group.rows.length > 0);
 
-  const privilegeIdsByRootId = new Map(
-    groups.map((group) => [
-      group.id,
-      uniqueIds(group.rows.flatMap((row) => [
-        row.readPriv?.id,
-        row.writePriv?.id,
-        row.deletePriv?.id,
-      ])),
-    ])
-  );
-
-  return groups.map((group) => ({
-    ...group,
-    rows: group.rows.map((row) => ({
-      ...row,
-      openedModulePrivilegeIds: row.opensModuleId
-        ? privilegeIdsByRootId.get(row.opensModuleId) || []
-        : [],
-    })),
-  }));
+  return groups;
 };
 
 const uniqueIds = (ids) => Array.from(new Set(ids.filter(Boolean)));
 
-const PrivilegeCheckbox = ({ checked, disabled, onChange }) => (
-  <input
-    type="checkbox"
-    checked={checked}
-    disabled={disabled}
-    onChange={onChange}
-    className="h-4 w-4 rounded border-[#CDB79F] accent-[#8B5E34] disabled:cursor-not-allowed disabled:opacity-50"
-  />
-);
+const PrivilegeCheckbox = ({ checked, disabled, onChange, indeterminate = false }) => {
+  const ref = React.useRef();
+
+  React.useEffect(() => {
+    if (ref.current) {
+      ref.current.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      disabled={disabled}
+      onChange={onChange}
+      className={cn(
+        "h-4 w-4 rounded border-[#CDB79F] accent-[#8B5E34] transition-all cursor-pointer",
+        disabled && "cursor-not-allowed opacity-50"
+      )}
+    />
+  );
+};
 
 const RowBadge = ({ children, tone = 'neutral' }) => {
   const tones = {
@@ -149,7 +140,7 @@ const RowBadge = ({ children, tone = 'neutral' }) => {
   };
 
   return (
-    <span className={`inline-flex h-6 items-center rounded-md border px-2 text-[11px] font-bold leading-none ${tones[tone]}`}>
+    <span className={`inline-flex h-5 items-center rounded px-1.5 text-[9px] font-black uppercase tracking-tight border ${tones[tone]}`}>
       {children}
     </span>
   );
@@ -164,19 +155,12 @@ const PrivilegesPage = () => {
   const [localPrivIds, setLocalPrivIds] = useState([]);
   const [moduleFilter, setModuleFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState({});
 
   const { data: roles } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
       const res = await api.get('/users/list_roles');
-      return res.data;
-    },
-  });
-
-  const { data: allPrivileges } = useQuery({
-    queryKey: ['all-privileges'],
-    queryFn: async () => {
-      const res = await api.get('/users/list_privileges');
       return res.data;
     },
   });
@@ -208,9 +192,28 @@ const PrivilegesPage = () => {
 
   const groupedModules = useMemo(
     () => {
-      return buildGroupedModules(menuRoots || [], selectedRoleRank);
+      let filteredRoots = menuRoots || [];
+      if (selectedRole?.module_id) {
+        const findBranch = (modules) => {
+          for (const m of modules) {
+            if (String(m.id) === String(selectedRole.module_id)) return [m];
+            if (m.submodules) {
+              const found = findBranch(m.submodules);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        const branch = findBranch(menuRoots || []);
+        if (branch) {
+          filteredRoots = branch;
+        } else {
+          filteredRoots = [];
+        }
+      }
+      return buildGroupedModules(filteredRoots, menuRoots || [], selectedRoleRank);
     },
-    [menuRoots, selectedRoleRank]
+    [menuRoots, selectedRoleRank, selectedRole?.module_id]
   );
 
   const editablePrivilegeIds = useMemo(
@@ -221,26 +224,53 @@ const PrivilegesPage = () => {
             row.readPriv?.id,
             row.writePriv?.id,
             row.deletePriv?.id,
-            row.launcherReadPriv?.id,
           ])
         ).filter(Boolean)
       ),
     [groupedModules]
   );
 
-  React.useEffect(() => {
+  const departmentOptions = useMemo(() => {
+    const options = [];
+
+    groupedModules.forEach((group) => {
+      options.push({
+        id: group.id,
+        name: group.name,
+        depth: 0,
+      });
+
+      group.rows
+        .filter((row) => row.depth === 1)
+        .forEach((row) => {
+          options.push({
+            id: row.key,
+            name: row.label,
+            depth: 1,
+          });
+        });
+    });
+
+    return options;
+  }, [groupedModules]);
+
+  useEffect(() => {
     if (!rolePrivilegeIds) {
       setLocalPrivIds([]);
       return;
     }
-
     if (editablePrivilegeIds.size === 0) {
       setLocalPrivIds(rolePrivilegeIds);
       return;
     }
-
     setLocalPrivIds(rolePrivilegeIds.filter((id) => editablePrivilegeIds.has(id)));
   }, [rolePrivilegeIds, editablePrivilegeIds]);
+
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      setCollapsedGroups({});
+    }
+  }, [searchTerm]);
 
   const mutation = useMutation({
     mutationFn: async (privilege_ids) => {
@@ -263,21 +293,36 @@ const PrivilegesPage = () => {
     const search = searchTerm.trim().toLowerCase();
 
     return groupedModules
-      .filter((group) => moduleFilter === 'all' || String(group.id) === moduleFilter)
-      .map((group) => ({
-        ...group,
-        rows: group.rows.filter((row) => {
+      .map((group) => {
+        const isWholeGroup =
+          moduleFilter === 'all' || String(group.id) === moduleFilter;
+
+        return {
+          ...group,
+          rows: group.rows.filter((row) => {
+          const isInSelectedDepartment =
+            isWholeGroup ||
+            String(row.key) === moduleFilter ||
+            row.parentIds.some((id) => String(id) === moduleFilter);
+
+          if (!isInSelectedDepartment) return false;
+
           if (!search) return true;
-          return [group.name, row.label, row.parent, row.path, row.type, row.opensModuleName]
+          return [group.name, row.label, row.parent, row.path, row.type]
             .filter(Boolean)
             .some((value) => value.toLowerCase().includes(search));
-        }),
-      }))
+          }),
+        };
+      })
       .filter((group) => group.rows.length > 0);
   }, [groupedModules, moduleFilter, searchTerm]);
 
   const isChecked = (priv) =>
     Boolean(priv && (isAllAccessRole || localPrivIds.includes(priv.id)));
+
+  const toggleGroup = (groupId) => {
+    setCollapsedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   const setRowPrivilege = (row, action) => {
     if (!canEdit) return;
@@ -303,55 +348,11 @@ const PrivilegesPage = () => {
         );
       }
 
-      if (action === 'read' && hasPrivilege && row.opensModuleId) {
-        next = next.filter((id) => !(row.openedModulePrivilegeIds || []).includes(id));
-      }
-
       if ((action === 'write' || action === 'delete') && !hasPrivilege && row.readPriv) {
         next.push(row.readPriv.id);
       }
 
-      if (!hasPrivilege && row.launcherReadPriv) {
-        next.push(row.launcherReadPriv.id);
-      }
-
       return uniqueIds(next);
-    });
-  };
-
-  const setGroupPrivilege = (group, action) => {
-    if (!canEdit) return;
-
-    const ids = group.rows
-      .map((row) =>
-        action === 'read'
-          ? row.readPriv?.id
-          : action === 'write'
-            ? row.writePriv?.id
-            : row.deletePriv?.id
-      )
-      .filter(Boolean);
-
-    if (ids.length === 0) return;
-
-    const readIds =
-      action === 'read'
-        ? []
-        : group.rows.map((row) => row.readPriv?.id).filter(Boolean);
-
-    const launcherReadIds = group.rows
-      .map((row) => row.launcherReadPriv?.id)
-      .filter(Boolean);
-
-    setLocalPrivIds((prev) => {
-      const allSelected = ids.every((id) => prev.includes(id));
-      if (allSelected) {
-        const idsToRemove = action === 'read'
-          ? uniqueIds([...ids, ...launcherReadIds])
-          : ids;
-        return prev.filter((id) => !idsToRemove.includes(id));
-      }
-      return uniqueIds([...prev, ...readIds, ...launcherReadIds, ...ids]);
     });
   };
 
@@ -375,7 +376,7 @@ const PrivilegesPage = () => {
           : row.deletePriv;
 
     if (!priv) {
-      return <span className="text-xs text-[#B8A999]">-</span>;
+      return <span className="text-[10px] text-gray-300 font-bold">—</span>;
     }
 
     return (
@@ -387,205 +388,192 @@ const PrivilegesPage = () => {
     );
   };
 
-  const renderRowMeta = (row) => {
-    const badges = [
-      <RowBadge key="type" tone={row.type === 'Launcher' ? 'module' : 'neutral'}>
-        {row.type}
-      </RowBadge>,
-    ];
+  const renderGroup = (group) => {
+    const isCollapsed = collapsedGroups[group.id];
 
-    if (row.path) {
-      badges.push(<RowBadge key="path">{row.path}</RowBadge>);
-    }
-
-    if (row.minRankLevel) {
-      badges.push(
-        <RowBadge key="rank" tone="rank">
-          Rank {row.minRankLevel}+
-        </RowBadge>
-      );
-    }
-
-    if (row.opensModuleName) {
-      badges.push(
-        <RowBadge key="opens" tone="dependency">
-          Opens {row.opensModuleName}
-        </RowBadge>
-      );
-    } else if (row.launcherReadPriv) {
-      badges.push(
-        <RowBadge key="requires" tone="dependency">
-          Needs Main Menu launcher
-        </RowBadge>
-      );
-    }
-
-    return <div className="mt-2 flex flex-wrap gap-1.5">{badges}</div>;
-  };
-
-  const renderGroup = (group) => (
-    <Card key={group.id} className="overflow-hidden border-[#E6D8C9] bg-white">
-      <div className="flex flex-col gap-3 border-b border-[#EDE2D6] bg-white px-4 py-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h3 className="text-base font-black text-[#2B2B2B]">{group.name}</h3>
-          <p className="text-xs font-semibold text-[#7A6A5A]">
-            {group.rows.length} permission items
-          </p>
+    return (
+      <Card key={group.id} className="overflow-hidden border-[#E6D8C9] bg-white shadow-sm hover:shadow-md transition-shadow">
+        <div
+          className="flex cursor-pointer select-none items-center justify-between border-b border-[#EDE2D6] bg-gradient-to-r from-white to-[#FDFBF9] px-5 py-4"
+          onClick={() => toggleGroup(group.id)}
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F3E8D4] text-primary">
+               {group.icon ? <DynamicIcon name={group.icon} size={20} /> : <Settings size={20} />}
+            </div>
+            <div>
+              <h3 className="text-[17px] font-black text-secondary">{group.name}</h3>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                {group.rows.length} permission items
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            {isCollapsed ? <ChevronRight className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
+          </div>
         </div>
 
-        {canEdit && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setGroupPrivilege(group, 'read')}
-              className="h-8 rounded-md bg-[#FAF3E7] px-3 text-xs font-bold text-[#6F431E] hover:bg-[#F1E2CF]"
-            >
-              All Read
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setGroupPrivilege(group, 'write')}
-              className="h-8 rounded-md bg-[#FAF3E7] px-3 text-xs font-bold text-[#6F431E] hover:bg-[#F1E2CF]"
-            >
-              All Write
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setGroupPrivilege(group, 'delete')}
-              className="h-8 rounded-md bg-[#FAF3E7] px-3 text-xs font-bold text-[#6F431E] hover:bg-[#F1E2CF]"
-            >
-              All Delete
-            </Button>
+        {!isCollapsed && (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] border-collapse text-left">
+              <thead className="bg-[#FBF9F6] text-[10px] uppercase tracking-[0.15em] text-gray-500">
+                <tr className="border-b border-[#EDE2D6]">
+                  <th className="px-6 py-4 font-black">Page / Module Hierarchy</th>
+                  <th className="w-24 px-4 py-4 text-center font-black">Read</th>
+                  <th className="w-24 px-4 py-4 text-center font-black">Write</th>
+                  <th className="w-24 px-4 py-4 text-center font-black">Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                {group.rows.map((row) => (
+                  <tr
+                    key={row.key}
+                    className="group border-b border-[#F5F0E9] last:border-b-0 hover:bg-[#FDFBF8] transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div
+                        className="flex items-start gap-4"
+                        style={{ paddingLeft: `${row.depth * 24}px` }}
+                      >
+                        <div className="relative flex flex-col items-center">
+                            {row.depth > 0 && (
+                                <div className="absolute -left-4 top-0 h-full border-l border-dashed border-[#D9C8AF]" />
+                            )}
+                            <div className={cn(
+                                "mt-1.5 h-3 w-3 rounded-full border-2 border-white ring-2 ring-[#F3E8D4]",
+                                row.type === 'Root' ? "bg-primary" : row.type === 'Module' ? "bg-[#B08968]" : "bg-gray-300"
+                            )} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className={cn(
+                            "font-black leading-tight",
+                            row.type === 'Root' ? "text-lg text-secondary" : row.type === 'Module' ? "text-[15px] text-secondary/80" : "text-sm text-gray-700"
+                          )}>
+                            {row.label}
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            <RowBadge tone="neutral">{row.type}</RowBadge>
+                            {row.path && <RowBadge>{row.path}</RowBadge>}
+                            {row.minRankLevel && <RowBadge tone="rank">Rank {row.minRankLevel}+</RowBadge>}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-center">{renderPermissionCell(row, 'read')}</td>
+                    <td className="px-4 py-4 text-center">{renderPermissionCell(row, 'write')}</td>
+                    <td className="px-4 py-4 text-center">{renderPermissionCell(row, 'delete')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left">
-          <thead className="bg-white text-xs uppercase tracking-wider text-[#7A6A5A]">
-            <tr className="border-b border-[#EDE2D6]">
-              <th className="px-4 py-3 font-black">Page / Module</th>
-              <th className="w-24 px-4 py-3 text-center font-black">Read</th>
-              <th className="w-24 px-4 py-3 text-center font-black">Write</th>
-              <th className="w-24 px-4 py-3 text-center font-black">Delete</th>
-            </tr>
-          </thead>
-          <tbody>
-            {group.rows.map((row) => (
-              <tr
-                key={row.key}
-                className="border-b border-[#F0E8DF] last:border-b-0 hover:bg-[#FFFDF9]"
-              >
-                <td className="px-4 py-3">
-                  <div
-                    className="flex items-start gap-3"
-                    style={{ paddingLeft: `${row.depth * 18}px` }}
-                  >
-                    <div className="mt-2 h-2 w-2 rounded-full bg-[#B77B45]" />
-                    <div className="min-w-0">
-                      <div className="text-[15px] font-black leading-5 text-[#23150E]">
-                        {row.label}
-                      </div>
-                      {renderRowMeta(row)}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-center">{renderPermissionCell(row, 'read')}</td>
-                <td className="px-4 py-3 text-center">{renderPermissionCell(row, 'write')}</td>
-                <td className="px-4 py-3 text-center">{renderPermissionCell(row, 'delete')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  );
+      </Card>
+    );
+  };
 
   return (
-    <div className="space-y-6 bg-[#F8F6F3] pb-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="page-title">Privilege Management</h2>
-          <p className="mt-1 text-sm font-medium text-[#777777]">
-            Assign access per page using a compact permission matrix.
-          </p>
-        </div>
+    <div className="relative min-h-[calc(100vh-160px)] space-y-6 pb-20">
+      {/* STICKY TOP ACTION BAR */}
+      <div className="sticky top-[-24px] z-[40] -mx-4 mb-6 bg-bg-temple/80 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="page-title">Privilege Management</h2>
+            <p className="mt-1 text-sm font-medium text-gray-500">
+              Define specific access levels for each department and page.
+            </p>
+          </div>
 
-        {canEdit && (
-          <Button
-            onClick={handleSave}
-            disabled={mutation.isPending}
-            className="h-10 bg-[#8B5E34] px-8 font-bold text-white hover:bg-[#754B29]"
-          >
-            {mutation.isPending ? 'Saving...' : 'Save'}
-          </Button>
-        )}
+          {canEdit && (
+            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-500">
+              <Button
+                onClick={() => setSelectedRoleId('')}
+                variant="ghost"
+                className="h-10 rounded-xl px-6 text-sm font-black text-gray-500 hover:bg-gray-100"
+              >
+                Reset
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={mutation.isPending}
+                className="h-10 gap-2 rounded-xl bg-primary px-8 text-sm font-black text-white shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+              >
+                {mutation.isPending ? <Icons.Loader2 className="animate-spin" size={18} /> : null}
+                {mutation.isPending ? 'Updating...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
-      <Card className="border-[#E6D8C9] bg-white">
-        <CardContent className="p-4 sm:p-5">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_240px_1fr]">
-            <div className="space-y-1.5">
-              <Label className="font-bold text-[#2B2B2B]">Role</Label>
+      <Card className="border-border-temple bg-white shadow-sm">
+        <CardContent className="p-5">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1fr_1fr]">
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-secondary/60">Target Role</Label>
               <Select
                 value={selectedRoleId}
                 onChange={(e) => setSelectedRoleId(e.target.value)}
-                className="bg-white"
+                className="h-11 font-bold text-secondary border-[#D9C8AF]"
               >
-                <option value="" disabled>
-                  Select a role
-                </option>
+                <option value="" disabled>Select a role to begin</option>
                 {roles?.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.role_name}
-                  </option>
+                  <option key={role.id} value={role.id}>{role.role_name}</option>
                 ))}
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="font-bold text-[#2B2B2B]">Module</Label>
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-secondary/60">Filter by Department</Label>
               <Select
                 value={moduleFilter}
                 onChange={(e) => setModuleFilter(e.target.value)}
-                className="bg-white"
+                className="h-11 border-[#D9C8AF]"
               >
-                <option value="all">All modules</option>
-                {groupedModules.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
+                <option value="all">Entire System (All Rooms)</option>
+                {departmentOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {'\u00A0'.repeat(option.depth * 2)}{option.name}
                   </option>
                 ))}
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="font-bold text-[#2B2B2B]">Search</Label>
-              <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search page or module"
-                className="h-10 w-full rounded-md border border-[#D9C8AF] bg-white px-3 text-sm outline-none focus:border-[#B77B45] focus:ring-1 focus:ring-[#B77B45]"
-              />
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-secondary/60">Quick Find</Label>
+              <div className="relative">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Find page or module..."
+                    className="h-11 w-full rounded-lg border border-[#D9C8AF] pl-10 pr-4 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
             </div>
           </div>
 
           {selectedRole && (
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-[#7A6A5A]">
-              <span className="rounded-full bg-[#FAF3E7] px-3 py-1 text-[#6F431E]">
-                {selectedRole.role_name}
-              </span>
-              {isAllAccessRole && <span>All access role. Permissions are shown as enabled.</span>}
-              {isProtectedRole && !isAllAccessRole && (
-                <span>This role cannot be modified from your current account.</span>
-              )}
-              {canEdit && <span>Write/Delete automatically includes Read.</span>}
+            <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-black text-primary">{selectedRole.role_name}</span>
+                </div>
+                {isAllAccessRole ? (
+                  <span className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-md border border-amber-100 italic">
+                    All access enabled. Every gate is open.
+                  </span>
+                ) : isProtectedRole ? (
+                  <span className="text-xs font-bold text-error bg-error/5 px-3 py-1 rounded-md border border-error/10">
+                    System Protection: Access levels for this role cannot be modified.
+                  </span>
+                ) : (
+                    <span className="text-xs font-bold text-gray-400 italic">
+                        Select checkboxes below to open specific doors for this role.
+                    </span>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
@@ -593,19 +581,24 @@ const PrivilegesPage = () => {
 
       {selectedRoleId ? (
         filteredGroups.length > 0 ? (
-          <div className="space-y-4">{filteredGroups.map(renderGroup)}</div>
+          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+            {filteredGroups.map(renderGroup)}
+          </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-[#D9C8AF] bg-white p-10 text-center text-sm font-bold text-[#777777]">
-            No permissions match this filter.
+          <div className="rounded-2xl border-2 border-dashed border-[#D9C8AF] bg-white p-20 text-center">
+            <SearchIcon className="mx-auto h-12 w-12 text-gray-200 mb-4" />
+            <p className="text-lg font-black text-secondary">No results found</p>
+            <p className="text-sm text-gray-400">Try searching for a different room or page name.</p>
           </div>
         )
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[#D9C8AF] bg-white py-20">
-          <div className="mb-4 rounded-full bg-[#F3E8DD] p-4">
-            <Settings className="h-8 w-8 text-[#8B5E34]" />
+        <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-[#D9C8AF] bg-white/50 py-32 animate-in fade-in zoom-in-95 duration-700">
+          <div className="mb-6 rounded-full bg-white p-6 shadow-xl shadow-primary/10">
+            <Icons.Key className="h-12 w-12 text-primary animate-bounce" />
           </div>
-          <p className="font-bold text-[#777777]">
-            Select a role to manage privileges.
+          <p className="text-xl font-black text-secondary">Ready to assign keys?</p>
+          <p className="mt-2 font-bold text-gray-400 max-w-sm text-center">
+            Select a role from the dropdown above to start managing their access to the system rooms.
           </p>
         </div>
       )}

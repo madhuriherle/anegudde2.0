@@ -1,12 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Printer } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import api from '../api/axios';
-import { Button } from '../components/ui/Button';
+import { useNotification } from '../context/NotificationContext';
+import { PrinterSelectDropdown } from '../components/PrinterSelectDropdown';
 import { Card, CardContent } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
-import { Select } from '../components/ui/Select';
 import { formatCurrency } from '../utils/currency';
 import { formatDate } from '../utils/date';
 
@@ -17,32 +17,17 @@ const toDateInputValue = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const formatPeriod = (period, groupBy) => {
-  if (!period) return '-';
-  if (groupBy === 'day') return formatDate(period);
-  if (groupBy === 'month') {
-    const [year, month] = period.split('-');
-    const date = new Date(Number(year), Number(month) - 1, 1);
-    return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
-  }
-  return period;
-};
-
 const PurchaseReportPage = () => {
   const today = toDateInputValue(new Date());
+  const { showError } = useNotification();
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
-  const [groupBy, setGroupBy] = useState('day');
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['purchase-report', fromDate, toDate, groupBy],
+  const { data: details = [], isLoading } = useQuery({
+    queryKey: ['purchase-details', fromDate, toDate],
     queryFn: async () => {
-      const res = await api.get('/reports/get_purchases_report', {
-        params: {
-          from_date: fromDate,
-          to_date: toDate,
-          group_by: groupBy,
-        },
+      const res = await api.get('/reports/get_purchase_details', {
+        params: { from_date: fromDate, to_date: toDate },
       });
       return res.data;
     },
@@ -50,63 +35,98 @@ const PurchaseReportPage = () => {
   });
 
   const totals = useMemo(() => {
-    return rows.reduce(
-      (acc, row) => ({
-        count: acc.count + Number(row.total_count || 0),
-        amount: acc.amount + Number(row.total_amount || 0),
+    return details.reduce(
+      (acc, d) => ({
+        count: acc.count + 1,
+        amount: acc.amount + Number(d.total_amount || 0),
       }),
       { count: 0, amount: 0 }
     );
-  }, [rows]);
+  }, [details]);
 
-  const averageAmount = totals.count > 0 ? totals.amount / totals.count : 0;
-
-  const handlePrint = () => {
+  const handlePrint = useCallback(() => {
+    if (!details.length) {
+      showError('No data available to print');
+      return;
+    }
     window.print();
-  };
+  }, [details, showError]);
 
   return (
     <div className="space-y-6 purchase-report-print">
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 10mm; }
+          html, body, #root, main {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
           header, aside, footer, .print\\:hidden { display: none !important; }
-          html, body, #root, main { background: #ffffff !important; }
           main { padding: 0 !important; margin: 0 !important; }
           .lg\\:pl-64 { padding-left: 0 !important; }
-          .purchase-report-print { padding: 0 !important; margin: 0 !important; background: #ffffff !important; }
+          .purchase-report-print {
+            padding: 0 !important; margin: 0 !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
+          .purchase-report-print { padding-top: 8mm !important; background: #ffffff !important; background-color: #ffffff !important; }
+          .purchase-report-print,
+          .purchase-report-print div,
+          .purchase-report-print section,
+          .purchase-report-print table,
+          .purchase-report-print thead,
+          .purchase-report-print tbody,
+          .purchase-report-print tfoot,
+          .purchase-report-print tr,
+          .purchase-report-print th,
+          .purchase-report-print td {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+          }
+          .purchase-report-print .report-table-wrap {
+            border: none !important;
+            box-shadow: none !important;
+          }
           .purchase-report-print table {
+            table-layout: fixed;
             width: 100% !important;
-            border-collapse: separate !important;
+            border-collapse: collapse !important;
             border-spacing: 0 !important;
-            border: 1px solid #d7c9ba !important;
+            border: 1.25px solid #8f7d6d !important;
           }
           .purchase-report-print thead { display: table-header-group !important; }
           .purchase-report-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
           .purchase-report-print th,
           .purchase-report-print td {
-            border-right: 1px solid #d7c9ba !important;
-            border-bottom: 1px solid #d7c9ba !important;
-            padding: 7px 8px !important;
-            background: #ffffff !important;
+            border: 1.25px solid #8f7d6d !important;
+            padding: 4px 6px !important;
           }
-          .purchase-report-print tr td:last-child,
-          .purchase-report-print tr th:last-child { border-right: none !important; }
-          .purchase-report-print .report-card { border: none !important; box-shadow: none !important; }
+          .purchase-report-print tfoot td {
+            border: 1.25px solid #8f7d6d !important;
+            font-weight: 800 !important;
+          }
+          .purchase-report-print .shadow-sm,
+          .purchase-report-print .shadow,
+          .purchase-report-print .shadow-lg,
+          .purchase-report-print .shadow-xl,
+          .purchase-report-print .shadow-2xl {
+            box-shadow: none !important;
+          }
+          .purchase-report-print .purchase-print-header {
+            border-bottom: none !important;
+          }
         }
       `}</style>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
-        <div>
-          <h2 className="page-title">Purchase Report</h2>
-          <p className="mt-1 text-sm font-medium text-text-light">
-            Date-wise purchase summary for the selected period.
-          </p>
-        </div>
-        <Button variant="outline" onClick={handlePrint} className="text-text-main">
-          <Printer className="mr-2 h-4 w-4" />
-          Print
-        </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+        <h2 className="page-title">Purchase Report</h2>
+        <PrinterSelectDropdown
+          context="REPORT_PURCHASE"
+          onPrint={handlePrint}
+          buttonLabel="Print"
+        />
       </div>
 
       <Card className="border-border-temple print:hidden">
@@ -130,47 +150,14 @@ const PurchaseReportPage = () => {
                 className="h-10 text-text-main"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label className="font-medium text-text-main">Group By</Label>
-              <Select
-                value={groupBy}
-                onChange={(e) => setGroupBy(e.target.value)}
-                className="h-10 text-text-main"
-              >
-                <option value="day">Day</option>
-                <option value="month">Month</option>
-                <option value="year">Year</option>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 print:hidden md:grid-cols-3">
-        <Card className="border-border-temple bg-white">
-          <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-text-light">Total Amount</p>
-            <p className="mt-2 text-2xl font-black text-text-main">{formatCurrency(totals.amount)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border-temple bg-white">
-          <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-text-light">Purchase Count</p>
-            <p className="mt-2 text-2xl font-black text-text-main">{totals.count}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border-temple bg-white">
-          <CardContent className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-text-light">Average Amount</p>
-            <p className="mt-2 text-2xl font-black text-text-main">{formatCurrency(averageAmount)}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="report-card overflow-hidden rounded-lg border border-border-temple bg-white shadow-sm">
-        <div className="border-b border-border-temple/40 p-5 text-center">
+      <div className="report-table-wrap overflow-hidden rounded-lg border border-border-temple bg-white shadow-sm print:border-none print:shadow-none">
+        <div className="purchase-print-header border-b border-border-temple/40 p-5 text-center">
           <h1 className="font-temple text-xl font-bold uppercase text-text-main">
-            Anegudde Sri Vinayaka Temple, Kumbhashi
+            ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ
           </h1>
           <p className="mt-1 text-sm font-bold uppercase text-text-main">
             Purchase Report From {formatDate(fromDate)} To {formatDate(toDate)}
@@ -178,41 +165,49 @@ const PurchaseReportPage = () => {
         </div>
 
         <div className="overflow-x-auto print:overflow-visible">
-          <table className="w-full table-fixed text-left text-sm">
+          <table className="w-full border-collapse text-left text-sm">
             <thead className="border-b border-border-temple bg-[#FFF4E6] text-xs font-bold uppercase tracking-wider text-text-main">
               <tr>
-                <th className="w-[45%] px-4 py-3">Period</th>
-                <th className="w-[25%] px-4 py-3 text-right">No. of Purchases</th>
-                <th className="w-[30%] px-4 py-3 text-right">Total Amount</th>
+                <th className="border border-border-temple px-4 py-3 w-[12%]">Date</th>
+                <th className="border border-border-temple px-4 py-3 w-[18%]">Vendor</th>
+                <th className="border border-border-temple px-4 py-3 w-[10%]">Bill No</th>
+                <th className="border border-border-temple px-4 py-3 w-[36%]">Items</th>
+                <th className="border border-border-temple px-4 py-3 text-right w-[12%]">Amount</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-temple/20">
+            <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={3} className="px-4 py-12 text-center text-sm font-medium text-text-light">
+                  <td colSpan={5} className="border border-border-temple px-4 py-12 text-center text-sm font-medium text-text-light">
                     <div className="flex items-center justify-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Loading purchase report...
                     </div>
                   </td>
                 </tr>
-              ) : rows.length ? (
-                rows.map((row) => (
-                  <tr key={row.period} className="hover:bg-[#fffaf4]">
-                    <td className="px-4 py-3 font-medium text-text-main">
-                      {formatPeriod(row.period, groupBy)}
+              ) : details.length ? (
+                details.map((d, i) => (
+                  <tr key={i} className="hover:bg-[#fffaf4]">
+                    <td className="border border-border-temple px-4 py-3 text-text-main whitespace-nowrap">
+                      {formatDate(d.purchase_date)}
                     </td>
-                    <td className="px-4 py-3 text-right text-text-main">
-                      {Number(row.total_count || 0)}
+                    <td className="border border-border-temple px-4 py-3 text-text-main">{d.vendor_name}</td>
+                    <td className="border border-border-temple px-4 py-3 text-text-main">{d.bill_no || '-'}</td>
+                    <td className="border border-border-temple px-4 py-3 text-text-main">
+                      {d.items.map((it, j) => (
+                        <span key={j} className="block">
+                          {it.item_name} - {it.quantity} × {it.price}
+                        </span>
+                      ))}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-text-main">
-                      {formatCurrency(row.total_amount)}
+                    <td className="border border-border-temple px-4 py-3 text-right font-semibold text-text-main whitespace-nowrap">
+                      {formatCurrency(d.total_amount)}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={3} className="px-4 py-12 text-center font-bold text-text-main">
+                  <td colSpan={5} className="border border-border-temple px-4 py-12 text-center font-bold text-text-main">
                     No purchases found
                   </td>
                 </tr>
@@ -220,9 +215,10 @@ const PurchaseReportPage = () => {
             </tbody>
             <tfoot className="border-t-2 border-border-temple bg-[#FAF3E7] font-black text-text-main">
               <tr>
-                <td className="px-4 py-4 uppercase tracking-wider">Grand Total</td>
-                <td className="px-4 py-4 text-right">{totals.count}</td>
-                <td className="px-4 py-4 text-right">{formatCurrency(totals.amount)}</td>
+                <td colSpan={2} className="border border-border-temple px-4 py-4 uppercase tracking-wider">Grand Total</td>
+                <td className="border border-border-temple px-4 py-4">{totals.count} entries</td>
+                <td className="border border-border-temple"></td>
+                <td className="border border-border-temple px-4 py-4 text-right">{formatCurrency(totals.amount)}</td>
               </tr>
             </tfoot>
           </table>

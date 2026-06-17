@@ -525,12 +525,6 @@ const DonationsPage = () => {
     setOpen(true);
   };
 
-  const handleDonationTypeChange = (event) => {
-    const donationTypeId = Number(event.target.value);
-    setValue('donation_type', donationTypeId);
-    setDonationPrefixInput(donationTypePrefixById.get(donationTypeId) || '');
-  };
-
   const handleDonationPrefixChange = (event) => {
     const nextPrefix = event.target.value.toUpperCase();
     setDonationPrefixInput(nextPrefix);
@@ -818,7 +812,7 @@ const DonationsPage = () => {
           setOpen(true);
         }}
       >
-        <DialogContent className="w-[98vw] max-w-5xl max-h-[96vh] p-0 overflow-hidden border-border-temple shadow-2xl flex flex-col">
+        <DialogContent className="h-[86vh] max-h-[920px] w-[98vw] max-w-5xl p-0 overflow-hidden border-border-temple shadow-2xl flex flex-col">
           <DialogHeader className="m-0">
             <DialogTitle className="text-xl text-text-main font-temple">
               {editingDonation ? 'Edit Donation Entry' : 'Record New Donation'}
@@ -826,9 +820,10 @@ const DonationsPage = () => {
             <DialogDescription className="sr-only">Form to record devotee details and donated items.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col overflow-hidden flex-1">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {/* Scrollable Form Body */}
-            <div className="bg-white space-y-10 px-8 py-8 overflow-y-auto custom-scrollbar flex-1">
+            <div className="min-h-0 flex-1 overflow-y-auto bg-white px-8 py-8 custom-scrollbar">
+              <div className="space-y-10">
               {/* Devotee Information */}
               <div className="space-y-5">
                 <div className="flex items-center gap-3 border-b border-border-temple/40 pb-3">
@@ -952,7 +947,11 @@ const DonationsPage = () => {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Donation Type *</Label>
-                    <Select {...register('donation_type')} onChange={handleDonationTypeChange} className="h-11 text-base text-text-main">
+                    <Select {...register('donation_type')} onChange={(e) => {
+                      const id = Number(e.target.value);
+                      setValue('donation_type', id);
+                      setDonationPrefixInput(donationTypePrefixById.get(id) || '');
+                    }} className="h-11 text-base text-text-main">
                       <option value={0}>Select Donation Type</option>
                       {activeDonationTypes.map((type) =>
                         <option key={type.id} value={type.id}>{type.type_name}</option>
@@ -1126,24 +1125,69 @@ const DonationsPage = () => {
                   </div>
                   <h4 className="text-lg font-bold text-secondary font-temple">Amount Donation</h4>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <Label className="text-text-main font-bold">Donation Type *</Label>
-                    <Select {...register('amount_donation_type')} className="h-11 text-base text-text-main">
-                      <option value="CUSTOM">Custom Amount</option>
-                      <option value="SPECIFIC">Specific Amount Selection</option>
-                    </Select>
+                <div className="space-y-4">
+                  <Label className="text-text-main font-bold">Select Amount</Label>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={watchedAmountDonationType === 'CUSTOM'}
+                      onClick={() => {
+                        setValue('amount_donation_type', 'CUSTOM');
+                        setValue('donation_amount_master_id', 0);
+                        setValue('total_gross_amount', '');
+                      }}
+                      className={`grid min-h-[64px] grid-cols-[18px_1fr] items-center gap-3 rounded-xl border-2 px-4 py-3 text-left text-sm font-bold transition-all cursor-pointer ${
+                        watchedAmountDonationType === 'CUSTOM'
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-border-temple/40 bg-white text-text-main hover:border-primary/40'
+                      }`}
+                    >
+                      <span className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                        watchedAmountDonationType === 'CUSTOM' ? 'border-primary' : 'border-gray-300'
+                      }`}>
+                        {watchedAmountDonationType === 'CUSTOM' && (
+                          <span className="w-2 h-2 rounded-full bg-primary" />
+                        )}
+                      </span>
+                      <span className="min-w-0 truncate leading-tight">Custom Amount</span>
+                    </button>
+                    {activeAmountOptions.map((option) => (
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={Number(watchedAmountMasterId) === Number(option.id)}
+                        key={option.id}
+                        onClick={() => {
+                          setValue('amount_donation_type', 'SPECIFIC');
+                          setValue('donation_amount_master_id', option.id);
+                          setValue('total_gross_amount', option.amount);
+                        }}
+                        className={`grid min-h-[64px] grid-cols-[18px_1fr] items-center gap-3 rounded-xl border-2 px-4 py-3 text-sm font-bold transition-all cursor-pointer ${
+                          Number(watchedAmountMasterId) === Number(option.id)
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : 'border-border-temple/40 bg-white text-text-main hover:border-primary/40'
+                        }`}
+                      >
+                        <span className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                          Number(watchedAmountMasterId) === Number(option.id) ? 'border-primary' : 'border-gray-300'
+                        }`}>
+                          {Number(watchedAmountMasterId) === Number(option.id) && (
+                            <span className="w-2 h-2 rounded-full bg-primary" />
+                          )}
+                        </span>
+                        <span className="min-w-0 leading-tight">
+                          <span className="block truncate font-mono">₹{Number(option.amount).toFixed(0)}</span>
+                          <span className="block truncate text-xs font-semibold text-text-main/70" title={option.title}>
+                            {option.title}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
                   </div>
-                  {watchedAmountDonationType === 'SPECIFIC' && <div className="space-y-1.5">
-                    <Label className="text-text-main font-bold">Specific Amount *</Label>
-                    <Select {...register('donation_amount_master_id')} className="h-11 text-base text-text-main">
-                      <option value={0}>Select Amount</option>
-                      {activeAmountOptions.map((option) =>
-                        <option key={option.id} value={option.id}>{option.title} - Rs. {Number(option.amount).toFixed(2)}</option>
-                      )}
-                    </Select>
-                    {errors.donation_amount_master_id && <p className="text-xs text-error font-medium">{errors.donation_amount_master_id.message}</p>}
-                  </div>}
+                  {errors.donation_amount_master_id && <p className="text-xs text-error font-medium">{errors.donation_amount_master_id.message}</p>}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Amount *</Label>
                     <Input
@@ -1151,7 +1195,7 @@ const DonationsPage = () => {
                       inputMode="decimal"
                       {...register('total_gross_amount')}
                       readOnly={watchedAmountDonationType === 'SPECIFIC'}
-                      className="h-11 text-base text-text-main"
+                      className={`h-11 text-base text-text-main ${watchedAmountDonationType === 'SPECIFIC' ? 'bg-gray-50' : ''}`}
                     />
                     {errors.total_gross_amount && <p className="text-xs text-error font-medium">{errors.total_gross_amount.message}</p>}
                   </div>
@@ -1170,6 +1214,7 @@ const DonationsPage = () => {
                   placeholder="Add any additional notes here..."
                 />
               </div>}
+              </div>
             </div>
 
             {/* Standard Footer Bar */}

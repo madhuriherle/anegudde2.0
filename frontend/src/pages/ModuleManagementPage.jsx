@@ -348,7 +348,7 @@ const ModuleManagementPage = () => {
                 {routeError && <p className="text-xs text-red-600">{routeError}</p>}
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-text-light uppercase tracking-widest">Open Module</label>
+                <label className="text-[10px] font-black text-text-light uppercase tracking-widest">Open Module (Legacy)</label>
                 <select
                   value={formData.opens_module_id || ''}
                   onChange={e => setFormData({...formData, opens_module_id: e.target.value || null})}
@@ -359,7 +359,9 @@ const ModuleManagementPage = () => {
                     <option key={module.id} value={module.id}>{module.name}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500">Use this for launchers like Main Menu &gt; Canteen / Office / Seva.</p>
+                <p className="text-xs text-gray-500 font-medium italic">
+                    Note: Prefer using the 'One House' parent-child hierarchy. This field is for legacy launcher support only.
+                </p>
               </div>
               <div className="flex items-center gap-3 pt-2">
                 <input 

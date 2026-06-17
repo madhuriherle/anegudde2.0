@@ -19,6 +19,7 @@ const CONTEXT_LABELS = {
   REPORT_CANTEEN: 'Canteen Report',
   REPORT_DONATION: 'Donation Report',
   REPORT_TOKEN: 'Token Report',
+  REPORT_PURCHASE: 'Purchase Report',
 };
 
 const CONTEXTS = Object.keys(CONTEXT_LABELS);

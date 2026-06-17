@@ -33,6 +33,30 @@ const normalizeReceiptPrefix = (value) => {
   return prefix;
 };
 
+const getDonationScopeModules = (modules = []) => {
+  const mainMenu = modules.find((module) =>
+    String(module.name || '').trim().toLowerCase() === 'main menu'
+  );
+
+  if (!mainMenu) {
+    return modules.map((module) => ({
+      value: module.id,
+      label: module.name,
+    }));
+  }
+
+  return [
+    {
+      value: mainMenu.id,
+      label: mainMenu.name,
+    },
+    ...(mainMenu.submodules || []).map((module) => ({
+      value: module.id,
+      label: `${'\u00A0\u00A0'}${module.name}`,
+    })),
+  ];
+};
+
 const DonationTypesPage = () => {
   const queryClient = useQueryClient();
   const { showConfirm, showError, showSuccess } = useNotification();
@@ -49,20 +73,17 @@ const DonationTypesPage = () => {
     queryFn: async () => (await api.get('/donation-types/list_donation_types', { params: { status: null, page_size: 1000 } })).data
   });
 
-  const { data: rootModules } = useQuery({
-    queryKey: ['root-modules'],
+  const { data: moduleTree } = useQuery({
+    queryKey: ['modules-privilege-tree'],
     queryFn: async () => {
-      const response = await api.get('/modules/menu');
+      const response = await api.get('/modules/privilege-tree');
       return response.data;
     }
   });
 
   const moduleOptions = useMemo(() => {
-    return (rootModules || []).map(m => ({
-      value: m.id,
-      label: m.name
-    }));
-  }, [rootModules]);
+    return getDonationScopeModules(moduleTree || []);
+  }, [moduleTree]);
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm({
     resolver: zodResolver(donationTypeSchema),
@@ -146,7 +167,7 @@ const DonationTypesPage = () => {
       header: 'Linked Modules',
       cell: (info) => {
         const modules = info.getValue() || [];
-        if (modules.length === 0) return <span className="text-xs text-text-main/70 font-medium">All Modules</span>;
+        if (modules.length === 0) return <span className="text-xs text-text-main/70 font-medium">Global - All Modules</span>;
         return (
           <div className="flex flex-wrap gap-1">
             {modules.map(m => (
@@ -303,7 +324,7 @@ const DonationTypesPage = () => {
                     onChange={(selected) => onChange(selected ? selected.map(s => s.value) : [])}
                     onBlur={onBlur}
                     styles={customSelectStyles}
-                    placeholder="Select root modules..."
+                    placeholder="Select where this donation type should appear..."
                     className="react-select-container"
                     classNamePrefix="react-select"
                     closeMenuOnSelect={false}
@@ -311,7 +332,7 @@ const DonationTypesPage = () => {
                 )}
               />
               <p className="text-[11px] text-text-main mt-1 px-1">
-                Leave empty to show in all root modules (Canteen, Office, etc.)
+                Leave empty for Global / Main Menu access. Select Canteen Module to show only in Canteen donations.
               </p>
             </div>
 

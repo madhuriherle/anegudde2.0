@@ -1,7 +1,7 @@
 import math
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import String
+from sqlalchemy import String, or_
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, AnyPermissionChecker
@@ -31,7 +31,12 @@ def list_donation_types(
         query = query.filter(DonationType.status == status)
         
     if module_id is not None:
-        query = query.filter(DonationType.modules.any(id=module_id))
+        query = query.filter(
+            or_(
+                ~DonationType.modules.any(),
+                DonationType.modules.any(id=module_id),
+            )
+        )
 
     total = query.count()
     items = query.order_by(DonationType.status.desc(), DonationType.type_name.asc()).offset(offset).limit(page_size).all()

@@ -8,8 +8,23 @@ class RoleOut(BaseModel):
     role_name: str
     rank_level: int
     is_all_access: bool
+    module_id: int | None = None
+    status: int
 
     model_config = ConfigDict(from_attributes=True)
+
+class RoleCreate(BaseModel):
+    role_name: str
+    rank_level: int
+    is_all_access: bool = False
+    module_id: int | None = None
+
+class RoleUpdate(BaseModel):
+    role_name: str | None = None
+    rank_level: int | None = None
+    is_all_access: bool | None = None
+    module_id: int | None = None
+    status: int | None = None
 
 class PrivilegeOut(BaseModel):
     id: int

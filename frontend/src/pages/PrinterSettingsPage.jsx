@@ -16,7 +16,15 @@ const PrinterSettingsPage = () => {
   const { hasPermission } = usePermission();
   const canWrite = hasPermission('settings.management.write');
   const { machineId } = usePrinterConfig(CONTEXTS[0]);
-  const { availablePrinters, isAgentRunning, checking: agentChecking, defaultPrinter } = usePrinterAgent();
+  const {
+    availablePrinters,
+    printerDetails,
+    activePrinters,
+    isAgentRunning,
+    checking: agentChecking,
+    defaultPrinter,
+    refreshPrinters,
+  } = usePrinterAgent();
 
   const [newEntries, setNewEntries] = useState({});
   const [editing, setEditing] = useState({});
@@ -97,12 +105,23 @@ const PrinterSettingsPage = () => {
               </p>
             </div>
           </div>
-          {isAgentRunning && (
-            <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-700 text-xs font-bold rounded-full uppercase tracking-wider">
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              Connected
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {isAgentRunning && (
+              <span className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-700 text-xs font-bold rounded-full uppercase tracking-wider">
+                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                Connected
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={refreshPrinters}
+              disabled={agentChecking}
+              className="flex h-8 items-center gap-1.5 rounded-lg border border-border-temple/60 bg-white px-3 text-xs font-bold text-text-main hover:bg-gray-50 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${agentChecking ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
         </div>
         
         <CardContent className="p-6">
@@ -123,41 +142,70 @@ const PrinterSettingsPage = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              <h4 className="text-sm font-bold text-secondary uppercase tracking-wider">Available Printers on this PC</h4>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h4 className="text-sm font-bold text-secondary uppercase tracking-wider">Printers on this PC</h4>
+                <span className="text-xs font-bold text-text-light">
+                  {activePrinters.length} active / {availablePrinters.length} installed
+                </span>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {availablePrinters.length > 0 ? (
-                  availablePrinters.map((name) => (
-                    <div 
-                      key={name}
-                      className="group flex flex-col p-4 rounded-xl border border-border-temple/60 bg-white hover:border-primary/50 hover:shadow-md transition-all cursor-default"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <Printer className="h-4 w-4 text-primary/60 group-hover:text-primary" />
-                        {name === defaultPrinter && (
-                          <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">DEFAULT</span>
-                        )}
+                  availablePrinters.map((name) => {
+                    const detail = printerDetails.find((printer) => printer.name === name);
+                    const isOnline = detail ? detail.is_online : true;
+                    const statusText = detail?.status_text || (isOnline ? 'Ready' : 'Offline');
+
+                    return (
+                      <div
+                        key={name}
+                        className={`group flex flex-col p-4 rounded-xl border bg-white transition-all cursor-default ${
+                          isOnline
+                            ? 'border-border-temple/60 hover:border-primary/50 hover:shadow-md'
+                            : 'border-red-100 bg-red-50/30'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          {isOnline ? (
+                            <Printer className="h-4 w-4 text-primary/60 group-hover:text-primary" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          )}
+                          <div className="flex flex-wrap justify-end gap-1">
+                            {(detail?.is_default || name === defaultPrinter) && (
+                              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">DEFAULT</span>
+                            )}
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              isOnline ? 'text-green-600 bg-green-50' : 'text-red-700 bg-red-100'
+                            }`}>
+                              {isOnline ? 'ONLINE' : statusText.toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm font-bold text-text-main truncate mb-1" title={name}>{name}</p>
+                        <p className="text-[11px] font-medium text-text-light mb-3 truncate" title={statusText}>{statusText}</p>
+                        <div className="grid grid-cols-2 gap-2 mt-auto">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!isOnline}
+                            className="h-7 text-[10px] font-bold px-0 py-0"
+                            onClick={() => handleAddOrUpdate('TOKEN', name)}
+                          >
+                            SET TOKEN
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!isOnline}
+                            className="h-7 text-[10px] font-bold px-0 py-0"
+                            onClick={() => handleAddOrUpdate('DONATION_RECEIPT', name)}
+                          >
+                            SET DONATION
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-sm font-bold text-text-main truncate mb-3" title={name}>{name}</p>
-                      <div className="grid grid-cols-2 gap-2 mt-auto">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-7 text-[10px] font-bold px-0 py-0"
-                          onClick={() => handleAddOrUpdate('TOKEN', name)}
-                        >
-                          SET TOKEN
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-7 text-[10px] font-bold px-0 py-0"
-                          onClick={() => handleAddOrUpdate('DONATION_RECEIPT', name)}
-                        >
-                          SET DONATION
-                        </Button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-sm text-text-light italic">No printers found by the agent.</p>
                 )}
@@ -257,4 +305,3 @@ const PrinterSettingsPage = () => {
 };
 
 export default PrinterSettingsPage;
-

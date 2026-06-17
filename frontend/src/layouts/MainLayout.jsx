@@ -99,7 +99,7 @@ const MainLayout = () => {
     ) {
       setActiveModule('main');
     } else if (canteenPaths.some((p) => path.startsWith(p))) {
-      const canteenRoot = menuData.find((module) => module.name === 'Canteen Module');
+      const canteenRoot = findModuleByName(menuData, 'Canteen Module');
       setActiveModule(canteenRoot?.id || 'main');
     } else if (path === '/') {
       const firstNonMainRoot = menuData.find((module) => module.name !== 'Main Menu');
@@ -123,9 +123,28 @@ const MainLayout = () => {
   };
 
   const mainRoot = menuData.find(m => m.name === 'Main Menu');
+
+  const findModuleById = (modules, id) => {
+    for (const module of modules || []) {
+      if (module.id === id) return module;
+      const found = findModuleById(module.submodules || [], id);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const findModuleByName = (modules, name) => {
+    for (const module of modules || []) {
+      if (module.name === name) return module;
+      const found = findModuleByName(module.submodules || [], name);
+      if (found) return found;
+    }
+    return null;
+  };
+
   const activeRoot = activeModule === 'main' ?
-    mainRoot :
-    menuData.find((module) => module.id === activeModule) || mainRoot;
+    (mainRoot || menuData[0]) :
+    (findModuleById(menuData, activeModule) || mainRoot || menuData[0]);
 
   const findFirstRoute = (items = []) => {
     for (const item of items) {
@@ -136,7 +155,11 @@ const MainLayout = () => {
     return null;
   };
 
-  const currentMenuItems = activeRoot?.submodules || [];
+  let currentMenuItems = activeRoot?.submodules || [];
+  // Special case: if the root has no submodules but has a route, it might be the only item
+  if (currentMenuItems.length === 0 && activeRoot?.route && !mainRoot) {
+    currentMenuItems = [activeRoot];
+  }
 
   const normalized = (value) => (value || '').toLowerCase().trim();
   const duplicateSystemSettingNames = new Set(['temple identity', 'receipt settings', 'data cleanup']);
@@ -152,8 +175,8 @@ const MainLayout = () => {
     const hasChildren = item.submodules && item.submodules.length > 0;
     const isExpanded = expandedMenus[item.id];
     const isActive = item.route && location.pathname === item.route;
-    const opensRoot = item.opens_module_id ? menuData.find((module) => module.id === item.opens_module_id) : null;
-    const canExpandChildren = hasChildren && !opensRoot;
+    const opensRoom = activeModule === 'main' && canAccessMain && item.name === 'Canteen Module' && hasChildren;
+    const canExpandChildren = hasChildren && !opensRoom;
 
     const content =
     <div
@@ -166,23 +189,33 @@ const MainLayout = () => {
         depth > 0 && "ml-4 py-1.5"
       )}
       onClick={() => {
-        if (opensRoot) {
-          setActiveModule(opensRoot.id);
-          navigate(item.route || findFirstRoute(opensRoot.submodules || []) || '/');
+        if (opensRoom) {
+          setActiveModule(item.id);
+          navigate(findFirstRoute(item.submodules || []) || item.route || '/canteen');
           setIsSidebarOpen(false);
-        } else if (canExpandChildren) {
-          toggleExpand(item.id);
         } else if (item.route) {
           if (item.route === '/' && activeModule !== 'main') setActiveModule('main');
           navigate(item.route);
           setIsSidebarOpen(false);
+        } else if (canExpandChildren) {
+          toggleExpand(item.id);
         }
       }}>
       
         {item.icon && <DynamicIcon name={item.icon} className={cn("w-5 h-5", isActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />}
         <span className="flex-1">{item.name}</span>
         {canExpandChildren && (
-      isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)
+          <button
+            type="button"
+            className="rounded p-1 hover:bg-white/10"
+            onClick={(event) => {
+              event.stopPropagation();
+              toggleExpand(item.id);
+            }}
+          >
+            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+        )
       }
       </div>;
 

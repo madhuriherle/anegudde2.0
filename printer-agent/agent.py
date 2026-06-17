@@ -24,6 +24,83 @@ except ImportError:
 PORT = 5623
 AGENT_NAME = 'opencode-printer-agent'
 
+PRINTER_STATUS_FLAGS = (
+    (0x00000080, 'Offline'),
+    (0x00000001, 'Paused'),
+    (0x00000002, 'Error'),
+    (0x00000400, 'Printing'),
+    (0x00000200, 'Busy'),
+    (0x00000004, 'Pending deletion'),
+    (0x00000008, 'Paper jam'),
+    (0x00000010, 'Paper out'),
+    (0x00000020, 'Manual feed'),
+    (0x00000040, 'Paper problem'),
+    (0x00000100, 'I/O active'),
+    (0x00000800, 'Output bin full'),
+    (0x00001000, 'Not available'),
+    (0x00002000, 'Waiting'),
+    (0x00004000, 'Processing'),
+    (0x00008000, 'Initializing'),
+    (0x00010000, 'Warming up'),
+    (0x00020000, 'Toner low'),
+    (0x00040000, 'No toner'),
+    (0x00080000, 'Page punt'),
+    (0x00100000, 'User intervention required'),
+    (0x00200000, 'Out of memory'),
+    (0x00400000, 'Door open'),
+    (0x00800000, 'Server unknown'),
+    (0x01000000, 'Power save'),
+)
+
+BLOCKING_STATUS_FLAGS = (
+    0x00000080,  # offline
+    0x00000001,  # paused
+    0x00000002,  # error
+    0x00000004,  # pending deletion
+    0x00000008,  # paper jam
+    0x00000010,  # paper out
+    0x00001000,  # not available
+    0x00100000,  # user intervention required
+    0x00400000,  # door open
+)
+
+
+def get_printer_status(name, default_printer=''):
+    status = 0
+    status_text = 'Ready'
+    details = []
+
+    try:
+        handle = win32print.OpenPrinter(name)
+        try:
+            info = win32print.GetPrinter(handle, 2)
+            status = int(info.get('Status') or 0)
+        finally:
+            win32print.ClosePrinter(handle)
+    except Exception as exc:
+        return {
+            'name': name,
+            'is_default': name == default_printer,
+            'is_online': False,
+            'status': None,
+            'status_text': f'Unavailable: {exc}',
+            'details': ['Unavailable'],
+        }
+
+    if status:
+        details = [label for bit, label in PRINTER_STATUS_FLAGS if status & bit]
+        status_text = ', '.join(details) if details else f'Status {status}'
+
+    is_online = not any(status & bit for bit in BLOCKING_STATUS_FLAGS)
+    return {
+        'name': name,
+        'is_default': name == default_printer,
+        'is_online': is_online,
+        'status': status,
+        'status_text': status_text,
+        'details': details,
+    }
+
 
 class PrinterAgentHandler(BaseHTTPRequestHandler):
 
@@ -42,6 +119,7 @@ class PrinterAgentHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Private-Network', 'true')
         self.send_header('Content-Length', str(len(body)))
         self.end_headers()
+        self.wfile.write(body)
 
     def _send_html(self, html, status=200):
         body = html.encode()
@@ -94,7 +172,17 @@ class PrinterAgentHandler(BaseHTTPRequestHandler):
                     default = win32print.GetDefaultPrinter()
                 except Exception:
                     pass
-                self._send_json({'printers': printers, 'default': default})
+                printer_details = [get_printer_status(name, default) for name in printers]
+                self._send_json({
+                    'printers': printers,
+                    'printer_details': printer_details,
+                    'active_printers': [
+                        printer['name']
+                        for printer in printer_details
+                        if printer['is_online']
+                    ],
+                    'default': default,
+                })
             except Exception as e:
                 self._send_json({'error': f'Failed to enumerate printers: {e}'}, 500)
 

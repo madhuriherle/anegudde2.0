@@ -35,6 +35,8 @@ def get_devotee_details(devotee_id: int, db: Session) -> Devotee:
             .joinedload(DonationItem.item)
             .joinedload(Item.unit),
             joinedload(Devotee.donations).joinedload(DonationEntry.user),
+            joinedload(Devotee.donations).joinedload(DonationEntry.donation_type_master),
+            joinedload(Devotee.donations).joinedload(DonationEntry.donation_amount_master),
         )
         .filter(Devotee.id == devotee_id, Devotee.status == 1)
         .first()

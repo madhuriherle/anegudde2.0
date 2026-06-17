@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Printer, Check, Loader2, AlertCircle, ChevronDown, Settings2 } from 'lucide-react';
+import { Printer, Check, Loader2, AlertCircle, Settings2, RefreshCw } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../api/axios';
 import { usePrinterConfig, CONTEXT_LABELS, getOrCreateMachineId } from '../hooks/usePrinterConfig';
@@ -9,7 +9,16 @@ import { useNotification } from '../context/NotificationContext';
 export function PrinterSelectDropdown({ context, onPrint, disabled, buttonLabel = 'Print', pdfUrl }) {
   const queryClient = useQueryClient();
   const { printerName, setPrinterName, save, isSaving } = usePrinterConfig(context);
-  const { availablePrinters, defaultPrinter, isAgentRunning, checking: agentChecking, printViaAgent } = usePrinterAgent();
+  const {
+    availablePrinters,
+    printerDetails,
+    activePrinters,
+    defaultPrinter,
+    isAgentRunning,
+    checking: agentChecking,
+    refreshPrinters,
+    printViaAgent,
+  } = usePrinterAgent();
   const { showSuccess, showError } = useNotification();
   
   const [open, setOpen] = useState(false);
@@ -31,8 +40,11 @@ export function PrinterSelectDropdown({ context, onPrint, disabled, buttonLabel 
 
   const savedPrinters = savedList?.filter((c) => c.printer_name) || [];
   const uniqueNames = [...new Set(savedPrinters.map((c) => c.printer_name))];
+  const detailByName = new Map(printerDetails.map((printer) => [printer.name, printer]));
+  const activePrinterNames = printerDetails.length > 0 ? activePrinters : availablePrinters;
   const printerOptions = [
-    ...availablePrinters,
+    ...activePrinterNames,
+    ...availablePrinters.filter((pname) => !activePrinterNames.includes(pname)),
     ...uniqueNames.filter((pname) => !availablePrinters.includes(pname)),
   ];
   const selectedPrinterName = printerName || defaultPrinter;
@@ -71,6 +83,14 @@ export function PrinterSelectDropdown({ context, onPrint, disabled, buttonLabel 
         return;
       }
 
+      const selectedDetail = detailByName.get(selectedName);
+      if (selectedDetail && selectedDetail.is_online === false) {
+        setPrintError(`${selectedName} is ${selectedDetail.status_text || 'offline'}. Select an active printer or click Refresh.`);
+        setOpen(true);
+        setPrinting(false);
+        return;
+      }
+
       if (isAgentRunning && pdfUrl) {
         const result = await printViaAgent(selectedName, pdfUrl);
         if (result.error) {
@@ -93,7 +113,7 @@ export function PrinterSelectDropdown({ context, onPrint, disabled, buttonLabel 
     } finally {
       setPrinting(false);
     }
-  }, [name, isAgentRunning, pdfUrl, printViaAgent, onPrint, showSuccess, open]);
+  }, [name, detailByName, isAgentRunning, pdfUrl, printViaAgent, onPrint, showSuccess, open]);
 
   const handleQuickPrint = (e) => {
     e.stopPropagation();
@@ -170,22 +190,61 @@ export function PrinterSelectDropdown({ context, onPrint, disabled, buttonLabel 
             <div className="space-y-6">
               {printerOptions.length > 0 && (
                 <div>
-                  <label className="text-xs font-bold text-[#8B4513] uppercase tracking-wider mb-3 block">Available Printers</label>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <label className="text-xs font-bold text-[#8B4513] uppercase tracking-wider">Active Printers</label>
+                    <button
+                      type="button"
+                      onClick={refreshPrinters}
+                      disabled={agentChecking}
+                      className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border-temple/60 bg-white px-2 text-[10px] font-bold text-text-main hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${agentChecking ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </button>
+                  </div>
+                  {activePrinterNames.length === 0 && isAgentRunning && (
+                    <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                      <p className="text-xs font-semibold text-amber-800">
+                        No active printer found. Check printer power/cable and click Refresh.
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                    {printerOptions.map((pname) => (
-                      <button
-                        key={pname}
-                        onClick={() => setName(pname)}
-                        className={`flex h-12 items-center justify-between rounded-xl border px-4 text-left text-sm font-semibold transition-all ${
-                          name === pname
-                            ? 'border-primary bg-primary/5 text-primary shadow-sm'
-                            : 'border-border-temple/50 bg-white text-text-main hover:border-primary/30'
-                        }`}
-                      >
-                        <span className="truncate">{pname}</span>
-                        {name === pname && <Check className="h-4 w-4 shrink-0" />}
-                      </button>
-                    ))}
+                    {printerOptions.map((pname) => {
+                      const detail = detailByName.get(pname);
+                      const isOnline = detail ? detail.is_online : true;
+                      const statusText = detail?.status_text || (isOnline ? 'Ready' : 'Offline');
+
+                      return (
+                        <button
+                          key={pname}
+                          onClick={() => setName(pname)}
+                          className={`flex min-h-14 items-center justify-between gap-3 rounded-xl border px-4 py-2 text-left text-sm font-semibold transition-all ${
+                            name === pname
+                              ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                              : 'border-border-temple/50 bg-white text-text-main hover:border-primary/30'
+                          } ${!isOnline ? 'opacity-70' : ''}`}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate">{pname}</span>
+                            <span className="mt-1 flex flex-wrap gap-1">
+                              {detail?.is_default && (
+                                <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-black uppercase text-blue-700">
+                                  Default
+                                </span>
+                              )}
+                              <span className={`rounded px-1.5 py-0.5 text-[9px] font-black uppercase ${
+                                isOnline ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                              }`}>
+                                {isOnline ? 'Online' : statusText}
+                              </span>
+                            </span>
+                          </span>
+                          {name === pname && <Check className="h-4 w-4 shrink-0" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
