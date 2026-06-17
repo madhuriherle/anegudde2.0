@@ -14,6 +14,7 @@ from app.db.models import (
     ItemPrice,
     LoginHistory,
     MonthlyStockSummary,
+    PrinterConfig,
     PurchaseBill,
     PurchaseEntry,
     PurchaseItem,
@@ -27,6 +28,12 @@ from app.db.models import (
     User,
     WastageEntry,
     WastageItem,
+)
+from app.schemas.printer_config import (
+    PrinterConfigCreate,
+    PrinterConfigUpdate,
+    PrinterConfigOut,
+    PrinterConfigListOut,
 )
 from app.schemas.system_settings import (
     DataCleanupSettingsOut,
@@ -107,11 +114,10 @@ def get_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _ensure_any_settings_read_access(current_user)
     settings = db.query(SystemSettings).options(joinedload(SystemSettings.current_year)).first()
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
-    
+
     # Map relationship field to schema field
     res = SystemSettingsOut.model_validate(settings)
     if settings.current_year:
@@ -329,8 +335,9 @@ def upload_logo(
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
 
+    import time
     file_extension = os.path.splitext(file.filename)[1]
-    file_path = f"uploads/logos/temple_logo{file_extension}"
+    file_path = f"uploads/logos/temple_logo_{int(time.time())}{file_extension}"
     
     os.makedirs("uploads/logos", exist_ok=True)
     with open(file_path, "wb") as buffer:
@@ -349,3 +356,84 @@ def upload_logo_legacy(
     current_user: User = Depends(PermissionChecker("settings.temple_identity.write"))
 ):
     return upload_logo(file, db, current_user)
+
+
+# ─── Printer Config Endpoints ────────────────────────────────────────────────
+
+@router.get("/printer-configs", response_model=PrinterConfigListOut)
+def list_printer_configs(
+    machine_id: str | None = None,
+    context: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_any_settings_read_access(current_user)
+    q = db.query(PrinterConfig)
+    if machine_id:
+        q = q.filter(PrinterConfig.machine_id == machine_id)
+    if context:
+        q = q.filter(PrinterConfig.context == context)
+    items = q.order_by(PrinterConfig.context, PrinterConfig.machine_id.nullslast()).all()
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/printer-config", response_model=PrinterConfigOut | None)
+def get_printer_config(
+    context: str,
+    machine_id: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_any_settings_read_access(current_user)
+    q = db.query(PrinterConfig).filter(PrinterConfig.context == context)
+    if machine_id:
+        q = q.filter(PrinterConfig.machine_id == machine_id)
+    else:
+        q = q.filter(PrinterConfig.machine_id.is_(None))
+    return q.first()
+
+
+@router.put("/printer-config", response_model=PrinterConfigOut)
+def upsert_printer_config(
+    config_in: PrinterConfigCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("settings.management.write")),
+):
+    q = db.query(PrinterConfig).filter(PrinterConfig.context == config_in.context)
+    if config_in.machine_id:
+        q = q.filter(PrinterConfig.machine_id == config_in.machine_id)
+    else:
+        q = q.filter(PrinterConfig.machine_id.is_(None))
+
+    existing = q.first()
+    if existing:
+        existing.printer_name = config_in.printer_name
+        existing.is_default = config_in.is_default
+        existing.updated_by = current_user.id
+    else:
+        existing = PrinterConfig(
+            machine_id=config_in.machine_id,
+            context=config_in.context,
+            printer_name=config_in.printer_name,
+            is_default=config_in.is_default,
+            created_by=current_user.id,
+            updated_by=current_user.id,
+        )
+        db.add(existing)
+
+    db.commit()
+    db.refresh(existing)
+    return existing
+
+
+@router.delete("/printer-config/{config_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_printer_config(
+    config_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("settings.management.write")),
+):
+    config = db.query(PrinterConfig).filter(PrinterConfig.id == config_id).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Printer config not found")
+    db.delete(config)
+    db.commit()

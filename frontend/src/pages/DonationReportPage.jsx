@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Printer, Loader2 } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import api from '../api/axios';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
 import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
+import { PrinterSelectDropdown } from '../components/PrinterSelectDropdown';
 import { Button } from '../components/ui/Button';
 import { formatDate } from '../utils/date';
 import { formatQuantityWithUnit } from '../utils/quantity';
@@ -158,10 +159,11 @@ const DonationReportPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <h2 className="page-title">Donation Report</h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handlePrint} className="text-text-main">
-            <Printer className="w-4 h-4 mr-2" />
-            Print
-          </Button>
+          <PrinterSelectDropdown
+            context="REPORT_DONATION"
+            onPrint={handlePrint}
+            buttonLabel="Print"
+          />
         </div>
       </div>
 

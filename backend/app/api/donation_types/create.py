@@ -1,25 +1,22 @@
 from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-
 from app.api.deps import get_current_user, get_db, PermissionChecker
-from app.db.models import DonationType, User
+from app.db.models import DonationType, User, Module
 from app.schemas.donation_type import DonationTypeCreate, DonationTypeOut
 
 router = APIRouter()
 
-
-def normalize_receipt_prefix(value: str) -> str:
-    prefix = value.strip().upper()
+def normalize_receipt_prefix(value: str | None) -> str | None:
+    prefix = (value or "").strip().upper()
     if prefix and prefix[-1].isalnum():
         return f"{prefix}-"
-    return prefix
-
+    return prefix or None
 
 @router.post("/create_donation_type", response_model=DonationTypeOut, status_code=status.HTTP_201_CREATED)
 def create_donation_type(
     payload: DonationTypeCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("donation_types.write")),
 ):
@@ -33,13 +30,25 @@ def create_donation_type(
     row = DonationType(
         type_name=type_name,
         receipt_prefix=receipt_prefix,
+        is_item_donation=payload.is_item_donation,
         status=payload.status,
         created_at=now,
         updated_at=now,
         created_by=current_user.id,
         updated_by=current_user.id,
     )
+    
+    if payload.module_ids:
+        modules = db.query(Module).filter(Module.id.in_(payload.module_ids)).all()
+        row.modules = modules
+
     db.add(row)
     db.commit()
     db.refresh(row)
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "type_name": row.type_name
+    }
+    
     return row

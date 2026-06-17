@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import ItemCategory, ItemType, User
@@ -8,6 +8,7 @@ router = APIRouter()
 @router.post("/create_category", response_model=ItemCategoryOut, status_code=status.HTTP_201_CREATED)
 def create_category(
     payload: ItemCategoryCreate, 
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: User = Depends(PermissionChecker("item_categories.write"))
 ):
@@ -44,5 +45,11 @@ def create_category(
         updated_by=current_user.id,
     )
     db.add(row); db.commit(); db.refresh(row)
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "category_name": row.category_name
+    }
+    
     return row
 

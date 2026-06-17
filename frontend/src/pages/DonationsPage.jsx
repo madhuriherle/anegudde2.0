@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -184,7 +185,15 @@ const DonationsPage = () => {
   );
   const activeItems = useMemo(() => (items || []).filter((i) => i.status === 1), [items]);
   const donationTypes = useMemo(() => donationTypesData?.items || [], [donationTypesData]);
-  const activeDonationTypes = useMemo(() => donationTypes.filter((type) => Number(type.status) === 1), [donationTypes]);
+  const activeDonationTypes = useMemo(() => (
+    donationTypes.filter((type) => {
+      if (Number(type.status) !== 1) return false;
+      const linkedModules = type.modules || [];
+      return linkedModules.length === 0 || linkedModules.some((module) =>
+        String(module.name || '').trim().toLowerCase().includes('canteen')
+      );
+    })
+  ), [donationTypes]);
   const amountOptions = useMemo(() => Array.isArray(amountOptionsData) ? amountOptionsData : [], [amountOptionsData]);
   const activeAmountOptions = useMemo(() => amountOptions.filter((option) => Number(option.status) === 1), [amountOptions]);
   const annadanaDonationType = useMemo(
@@ -274,6 +283,10 @@ const DonationsPage = () => {
   const watchedDonationMode = watch('donation_mode');
   const watchedAmountDonationType = watch('amount_donation_type');
   const watchedAmountMasterId = watch('donation_amount_master_id');
+  const selectedDonationType = useMemo(
+    () => activeDonationTypes.find((type) => Number(type.id) === Number(watchedDonationType)),
+    [activeDonationTypes, watchedDonationType]
+  );
 
   const {
     register: registerAmountOption,
@@ -401,6 +414,7 @@ const DonationsPage = () => {
       const isItemDonation = payload.donation_mode === 'ITEM';
       const normalizedPayload = {
         ...payload,
+        donation_mode: isItemDonation ? 0 : 1,
         total_gross_amount: payload.total_gross_amount ? Number(payload.total_gross_amount) : null,
         amount_donation_type: isItemDonation ? null : payload.amount_donation_type,
         donation_amount_master_id: isItemDonation || payload.amount_donation_type !== 'SPECIFIC' ? null : payload.donation_amount_master_id,
@@ -485,7 +499,7 @@ const DonationsPage = () => {
     reset({
       donation_date: donation.donation_date,
       donation_type: donation.donation_type || 0,
-      donation_mode: donation.donation_mode || 'ITEM',
+      donation_mode: Number(donation.donation_mode) === 1 ? 'AMOUNT' : 'ITEM',
       total_gross_amount: donation.total_gross_amount || '',
       amount_donation_type: donation.amount_donation_type || 'CUSTOM',
       donation_amount_master_id: donation.donation_amount_master_id || 0,
@@ -636,34 +650,28 @@ const DonationsPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="page-title">Donations</h2>
+        {canWrite && <div className="flex items-center gap-2">
+          {(canAmountConfigRead || canAmountConfigWrite || canAmountConfigDelete) && <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAmountConfigOpen(true)}
+            className="h-10 w-10 p-0"
+            title="Configure specific amounts"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>}
+          <Button onClick={() => {
+            setEditingDonation(null);
+            resetDonationForm();
+            setOpen(true);
+          }} className="h-10 px-5">
+            Record New Donation
+          </Button>
+        </div>}
       </div>
 
-      <Card className="border-border-temple shadow-sm">
-        <CardContent className="p-4 sm:p-6">
-          <div className="mb-4 flex flex-col gap-3 border-b border-border-temple/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-lg font-bold text-secondary font-temple">Add Donation</h3>
-              <p className="text-sm font-medium text-text-main/60">Create donation entries and configure specific amount options.</p>
-            </div>
-            {canWrite && <div className="flex items-center gap-2">
-              {(canAmountConfigRead || canAmountConfigWrite || canAmountConfigDelete) && <Button
-                type="button"
-                variant="outline"
-                onClick={() => setAmountConfigOpen(true)}
-                className="h-10 w-10 p-0"
-                title="Configure specific amounts"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>}
-              <Button onClick={() => {
-                setEditingDonation(null);
-                resetDonationForm();
-                setOpen(true);
-              }} className="h-10 px-5">
-                Record New Donation
-              </Button>
-            </div>}
-          </div>
+      <Card className="border-border-temple shadow-sm overflow-hidden">
+        <CardContent className="px-4 sm:px-6 py-4">
           <div className="flex items-end gap-4">
             <div className="space-y-1.5 flex-1 max-w-md">
               <Label className="text-text-main font-medium">Search Devotee</Label>
@@ -674,7 +682,6 @@ const DonationsPage = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 h-10 text-text-main" />
-                
               </div>
             </div>
           </div>
@@ -748,7 +755,7 @@ const DonationsPage = () => {
                     <DetailItem label="Devotee Name" value={viewingDonation.devotee_name} />
                     <DetailItem label="Date" value={formatDate(viewingDonation.donation_date)} />
                     <DetailItem label="Donation Type" value={donationTypeNameById.get(Number(viewingDonation.donation_type)) || 'General Donation'} />
-                    <DetailItem label="Donation Mode" value={viewingDonation.donation_mode === 'AMOUNT' ? 'Amount Donation' : 'Item Donation'} />
+                    <DetailItem label="Donation Mode" value={Number(viewingDonation.donation_mode) === 1 ? 'Amount Donation' : 'Item Donation'} />
                     <DetailItem label="Gross Amount" value={viewingDonation.total_gross_amount ? `Rs. ${Number(viewingDonation.total_gross_amount).toFixed(2)}` : '-'} />
                     <DetailItem label="Phone" value={viewingDonation.phone_number} />
                     <DetailItem label="Email" value={viewingDonation.email} />
@@ -762,8 +769,8 @@ const DonationsPage = () => {
 
                 {/* Right Column: Donation Details */}
                 <div className="temple-form-section">
-                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">{viewingDonation.donation_mode === 'AMOUNT' ? 'Amount Donation' : 'Donated Items'}</h4>
-                  {viewingDonation.donation_mode === 'AMOUNT' ?
+                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">{Number(viewingDonation.donation_mode) === 1 ? 'Amount Donation' : 'Donated Items'}</h4>
+                  {Number(viewingDonation.donation_mode) === 1 ?
                     <div className="grid grid-cols-1 gap-y-0.5">
                       <DetailItem label="Amount Type" value={viewingDonation.amount_donation_type === 'SPECIFIC' ? 'Specific Amount' : 'Custom Amount'} />
                       <DetailItem label="Amount" value={viewingDonation.total_gross_amount ? `Rs. ${Number(viewingDonation.total_gross_amount).toFixed(2)}` : '-'} />
@@ -966,8 +973,9 @@ const DonationsPage = () => {
                       />
                       <button
                         type="button"
+                        disabled={!selectedDonationType}
                         onClick={() => setValue('donation_mode', 'ITEM')}
-                        className={`relative z-10 flex items-center justify-center gap-2 rounded-full text-sm font-black transition-colors ${
+                        className={`relative z-10 flex items-center justify-center gap-2 rounded-full text-sm font-black transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
                           watchedDonationMode === 'ITEM' ? 'text-primary' : 'text-text-main/45'
                         }`}
                       >
@@ -976,11 +984,12 @@ const DonationsPage = () => {
                       </button>
                       <button
                         type="button"
+                        disabled={!selectedDonationType}
                         onClick={() => {
                           setValue('donation_mode', 'AMOUNT');
                           setValue('items', [{ search_id: '', item_id: 0, quantity: 0 }]);
                         }}
-                        className={`relative z-10 flex items-center justify-center gap-2 rounded-full text-sm font-black transition-colors ${
+                        className={`relative z-10 flex items-center justify-center gap-2 rounded-full text-sm font-black transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
                           watchedDonationMode === 'AMOUNT' ? 'text-primary' : 'text-text-main/45'
                         }`}
                       >

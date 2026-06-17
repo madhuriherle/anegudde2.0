@@ -14,12 +14,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import Footer from '../components/Footer';
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required')
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters')
 });
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, user, isLoading } = useAuth();
   const { showSuccess, showError } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,6 +27,13 @@ const LoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const from = location.state?.from?.pathname || '/';
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (!isLoading && user) {
+      navigate(from, { replace: true });
+    }
+  }, [user, isLoading, navigate, from]);
 
   const {
     register,
@@ -40,8 +47,14 @@ const LoginPage = () => {
     setError(null);
     setIsSubmitting(true);
 
+    // Trim whitespace to prevent accidental login failures
+    const cleanData = {
+      username: data.username.trim(),
+      password: data.password.trim()
+    };
+
     try {
-      const response = await api.post('/auth/login', data);
+      const response = await api.post('/auth/login', cleanData);
       await login(response.data.access_token);
       showSuccess('Login successful! Welcome back.');
       navigate('/', { replace: true });

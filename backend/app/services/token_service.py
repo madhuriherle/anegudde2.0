@@ -1,12 +1,12 @@
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 import math
 import re
 from fastapi import HTTPException
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import TokenGeneration, TokenDetail, User
+from app.db.models import TokenGeneration, TokenDetail, User, FinancialYear, SystemSettings
 from app.schemas.token import TokenDetailCreate
-from app.services.receipt_sequence_service import next_token_receipt
+from app.services.receipt_sequence_service import TOKEN_RECEIPT_PREFIX, _format_receipt, _get_financial_year_for_date, _get_settings
 
 def _ensure_token_partition_for_timestamp(db: Session, ts: datetime) -> None:
     year = ts.year
@@ -62,23 +62,25 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
         ).with_for_update().first()
 
     # 2. Calculate Manual ID for Partitioned Table (Global Max)
-    # Note: In a high-traffic system, a Sequence is better than func.max()
     max_id = db.query(func.max(TokenDetail.id)).scalar() or 0
     next_id = max_id + 1
 
-    # 3. Calculate Receipt Number (Scoped to financial year)
-    financial_year_id, receipt_prefix, next_receipt, receipt_display_number = next_token_receipt(db, target_date)
+    # 3. Calculate Receipt Number (under row lock, atomic)
+    settings = _get_settings(db)
+    financial_year = _get_financial_year_for_date(db, target_date)
+    generation.last_receipt_number += 1
+    next_receipt = generation.last_receipt_number
+    receipt_display_number = _format_receipt(TOKEN_RECEIPT_PREFIX, next_receipt, settings.receipt_padding, financial_year.name)
 
     # 4. Save Token Detail
     new_detail = TokenDetail(
         id=next_id,
         generation_id=generation.id,
-        financial_year_id=financial_year_id,
-        receipt_prefix=receipt_prefix,
+        financial_year_id=financial_year.id,
+        receipt_prefix=TOKEN_RECEIPT_PREFIX,
         receipt_number=next_receipt,
         receipt_display_number=receipt_display_number,
         token_count=payload.token_count,
-        # created_at is the partitioning key, use UTC but keep it consistent
         created_at=now_utc,
         updated_at=now_utc,
         created_by=current_user.id,
@@ -180,27 +182,40 @@ def get_token_details_by_date(target_date: date, db: Session, page: int = 1, pag
         "total_pages": math.ceil(total_receipts / page_size) if total_receipts > 0 else 0
     }
 
-def list_all_token_details(db: Session, page: int = 1, page_size: int = 50, start_date: date = None, end_date: date = None):
+def _ist_to_utc_bound(date_val: date, time_str: str | None, is_end: bool) -> datetime:
+    if time_str:
+        h, m = map(int, time_str.split(':'))
+        dt_ist = datetime(date_val.year, date_val.month, date_val.day, h, m, 59 if is_end else 0)
+    elif is_end:
+        dt_ist = datetime(date_val.year, date_val.month, date_val.day, 23, 59, 59)
+    else:
+        dt_ist = datetime(date_val.year, date_val.month, date_val.day, 0, 0, 0)
+    return dt_ist - timedelta(hours=5, minutes=30)
+
+
+def list_all_token_details(db: Session, page: int = 1, page_size: int = 50,
+                           start_date: date = None, end_date: date = None,
+                           start_time: str = None, end_time: str = None):
     query = db.query(TokenDetail).options(joinedload(TokenDetail.creator))
     
+    # The system primarily serves India (IST = UTC+5:30).
+    # Since created_at is stored in UTC, we must adjust date+time filters to match IST bounds.
     if start_date:
-        # Convert date to datetime at start of day
-        start_dt = datetime.combine(start_date, datetime.min.time())
-        query = query.filter(TokenDetail.created_at >= start_dt)
+        start_dt_utc = _ist_to_utc_bound(start_date, start_time, is_end=False)
+        query = query.filter(TokenDetail.created_at >= start_dt_utc)
     
     if end_date:
-        # Convert date to datetime at end of day
-        end_dt = datetime.combine(end_date, datetime.max.time())
-        query = query.filter(TokenDetail.created_at <= end_dt)
+        end_dt_utc = _ist_to_utc_bound(end_date, end_time, is_end=True)
+        query = query.filter(TokenDetail.created_at <= end_dt_utc)
         
     total = query.count()
     
     # Calculate total tokens for the filtered range in a separate, simpler query
     sum_query = db.query(func.coalesce(func.sum(TokenDetail.token_count), 0))
     if start_date:
-        sum_query = sum_query.filter(TokenDetail.created_at >= datetime.combine(start_date, datetime.min.time()))
+        sum_query = sum_query.filter(TokenDetail.created_at >= _ist_to_utc_bound(start_date, start_time, is_end=False))
     if end_date:
-        sum_query = sum_query.filter(TokenDetail.created_at <= datetime.combine(end_date, datetime.max.time()))
+        sum_query = sum_query.filter(TokenDetail.created_at <= _ist_to_utc_bound(end_date, end_time, is_end=True))
     
     total_tokens = sum_query.scalar()
 

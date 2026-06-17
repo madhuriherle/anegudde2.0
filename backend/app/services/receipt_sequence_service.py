@@ -1,6 +1,7 @@
 from datetime import date, datetime, timezone
 
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.models import DonationType, FinancialYear, ReceiptSequence, SystemSettings
@@ -85,10 +86,20 @@ def _next_sequence_number(
 
 
 def next_token_receipt(db: Session, target_date: date) -> tuple[int, str, int, str]:
+    from app.db.models import TokenDetail, TokenGeneration
     settings = _get_settings(db)
     financial_year = _get_financial_year_for_date(db, target_date)
     prefix = TOKEN_RECEIPT_PREFIX
-    number = _next_sequence_number(db, financial_year.id, TOKEN_SEQUENCE, prefix)
+
+    # Reset numbering daily: Find the max receipt number for this specific date
+    generation = db.query(TokenGeneration).filter(TokenGeneration.date == target_date).first()
+    last_num = 0
+    if generation:
+        last_num = db.query(func.max(TokenDetail.receipt_number)).filter(
+            TokenDetail.generation_id == generation.id
+        ).scalar() or 0
+    
+    number = last_num + 1
     display_number = _format_receipt(prefix, number, settings.receipt_padding, financial_year.name)
     return financial_year.id, prefix, number, display_number
 

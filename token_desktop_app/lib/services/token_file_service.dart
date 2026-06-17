@@ -5,13 +5,8 @@ class TokenFileService {
 
   const TokenFileService();
 
-  Future<void> writeLatestTokenCount(Map<String, dynamic> tokenData) async {
-    final tokenCount = tokenData['token_count'];
-    if (tokenCount == null) {
-      throw const FormatException('Token response did not include token_count');
-    }
-
-    final content = tokenCount.toString();
+  Future<void> writeTokenCount(int count) async {
+    final content = count.toString();
     final targetDirs = _targetDirectories();
 
     Object? lastError;
@@ -25,6 +20,7 @@ class TokenFileService {
         await File(
           '${dir.path}${Platform.pathSeparator}$fileName',
         ).writeAsString(content, flush: true);
+        print('Successfully updated $fileName with count: $content at ${dir.path}');
         return;
       } catch (e, st) {
         lastError = e;

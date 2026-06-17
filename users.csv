@@ -1,6 +1,0 @@
-"id","username","password","role_id","full_name","email","phone","status","created_at","updated_at","created_by","updated_by","security_stamp"
-1,"admin","123456",2,"System Administrator","madhuri.h@d-apps.in","9876543211",1,"2026-05-10 23:25:42.573958","2026-05-21 16:40:33.878619",NULL,1,NULL
-2,"d-apps","123456",1,"D-Apps","","",1,"2026-05-12 13:25:05.589832","2026-05-12 13:25:05.589832",1,1,NULL
-3,"madhuri","123456",3,"Madhuri Herle","madhuri.h@d-apps.in","",1,"2026-05-12 17:58:53.502903","2026-05-20 10:15:41.624561",1,1,NULL
-4,"admincanteen","123456",4,"Madhuri Herle","madhuri.h@d-apps.in","9876543211",1,"2026-05-20 21:32:43.030191","2026-05-20 21:32:43.030191",1,1,NULL
-5,"superadmin","123456",2,"Developer Admin",NULL,NULL,1,"2026-05-22 10:34:07.619467","2026-05-22 10:34:07.619467",NULL,NULL,"cc1226de-1aa9-4ec9-897c-99b4873762b2"

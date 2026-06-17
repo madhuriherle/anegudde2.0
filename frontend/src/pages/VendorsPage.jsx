@@ -26,12 +26,13 @@ import { formatCurrency } from '../utils/currency';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 import { usePermission } from '../hooks/usePermission';
 import { toDisplayCase } from '../utils/text';
+import { X, Plus, Pencil, Trash2, Search } from 'lucide-react';
 
 const vendorSchema = z.object({
   vendor_code: z.string().optional().or(z.literal('')).or(z.null()),
   vendor_name: z.string().min(1, 'Name is required'),
   contact_person: z.string().optional().or(z.literal('')).or(z.null()),
-  contact_number: z.string().regex(/^[0-9]{10}$/, 'Contact number must be exactly 10 digits'),
+  contact_number: z.string().regex(/^\+?[\d\s-]{8,15}$/, 'Invalid contact number'),
   address_line1: z.string().min(1, 'Address is required'),
   city: z.string().optional().or(z.literal('')).or(z.null()),
   state: z.string().optional().or(z.literal('')).or(z.null()),
@@ -79,7 +80,7 @@ const VendorsPage = () => {
 
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(50);
 
   const [open, setOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
@@ -107,7 +108,7 @@ const VendorsPage = () => {
 
   const vendors = useMemo(() => vendorsData?.items ?? [], [vendorsData]);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(vendorSchema),
     mode: 'onChange'
   });
@@ -159,7 +160,7 @@ const VendorsPage = () => {
         vendor_code: vendor.vendor_code ?? '',
         contact_person: vendor.contact_person ?? '',
         city: vendor.city ?? '',
-        state: vendor.state ?? '',
+        state: vendor.state ?? 'Karnataka',
         postal_code: vendor.postal_code ?? '',
         opening_balance: String(vendor.opening_balance ?? '0')
       });
@@ -171,7 +172,7 @@ const VendorsPage = () => {
         contact_number: '',
         address_line1: '',
         city: '',
-        state: '',
+        state: 'Karnataka',
         postal_code: '',
         opening_balance: '0',
         status: 1
@@ -276,7 +277,9 @@ const VendorsPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="page-title">Vendor Management</h2>
-        {canWrite && <Button onClick={() => handleOpen()} className="bg-primary hover:bg-secondary text-white font-bold">Add New Vendor</Button>}
+        <div className="flex items-center gap-3">
+          {canWrite && <Button onClick={() => handleOpen()} className="bg-primary hover:bg-secondary text-white font-bold">Add New Vendor</Button>}
+        </div>
       </div>
 
       <Card className="border-border-temple">
@@ -284,11 +287,14 @@ const VendorsPage = () => {
           <div className="flex flex-wrap gap-4 items-end">
             <div className="space-y-1.5 w-full sm:w-72">
               <Label className="text-text-main">Search</Label>
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="text-text-main" />
-              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 text-text-main"
+                  placeholder="Search vendors..." />
+              </div>
             </div>
           </div>
         </CardContent>
@@ -404,7 +410,36 @@ const VendorsPage = () => {
                   </div>
                   <div>
                     <Label className="text-text-main">State</Label>
-                    <Input {...register('state')} className="text-text-main" />
+                    <select {...register('state')} className="w-full h-10 px-3 py-2 bg-white border border-border-temple/40 rounded-md text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20">
+                      <option value="Karnataka">Karnataka</option>
+                      <option value="Andhra Pradesh">Andhra Pradesh</option>
+                      <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                      <option value="Assam">Assam</option>
+                      <option value="Bihar">Bihar</option>
+                      <option value="Chhattisgarh">Chhattisgarh</option>
+                      <option value="Goa">Goa</option>
+                      <option value="Gujarat">Gujarat</option>
+                      <option value="Haryana">Haryana</option>
+                      <option value="Himachal Pradesh">Himachal Pradesh</option>
+                      <option value="Jharkhand">Jharkhand</option>
+                      <option value="Kerala">Kerala</option>
+                      <option value="Madhya Pradesh">Madhya Pradesh</option>
+                      <option value="Maharashtra">Maharashtra</option>
+                      <option value="Manipur">Manipur</option>
+                      <option value="Meghalaya">Meghalaya</option>
+                      <option value="Mizoram">Mizoram</option>
+                      <option value="Nagaland">Nagaland</option>
+                      <option value="Odisha">Odisha</option>
+                      <option value="Punjab">Punjab</option>
+                      <option value="Rajasthan">Rajasthan</option>
+                      <option value="Sikkim">Sikkim</option>
+                      <option value="Tamil Nadu">Tamil Nadu</option>
+                      <option value="Telangana">Telangana</option>
+                      <option value="Tripura">Tripura</option>
+                      <option value="Uttar Pradesh">Uttar Pradesh</option>
+                      <option value="Uttarakhand">Uttarakhand</option>
+                      <option value="West Bengal">West Bengal</option>
+                    </select>
                   </div>
                   <div>
                     <Label className="text-text-main">Pin Code</Label>

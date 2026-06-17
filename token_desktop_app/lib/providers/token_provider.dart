@@ -44,6 +44,18 @@ class TokenProvider with ChangeNotifier {
 
       _dailyTotal = tokenResponse['total_tokens'] ?? 0;
       _totalReceipts = tokenResponse['total'] ?? 0;
+
+      // Update the text file for external displays if it's for today
+      final now = DateTime.now();
+      if (_selectedDate.year == now.year &&
+          _selectedDate.month == now.month &&
+          _selectedDate.day == now.day) {
+        try {
+          await _tokenFileService.writeTokenCount(_dailyTotal);
+        } catch (e) {
+          print('Token file update failed: $e');
+        }
+      }
     } catch (e) {
       print('Fetch Data Error: $e');
       _dailyTotal = 0;
@@ -66,13 +78,9 @@ class TokenProvider with ChangeNotifier {
         'date': dateStr,
       });
 
-      try {
-        await _tokenFileService.writeLatestTokenCount(response);
-      } catch (e) {
-        print('Token file update failed: $e');
-      }
+      print('Token Generated Successfully: $response');
 
-      await fetchDailyTotal(); // Refresh total
+      await fetchDailyTotal(); // Refresh total and update mpd.txt
       _isLoading = false;
       notifyListeners();
       return response;

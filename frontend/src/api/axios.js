@@ -11,7 +11,8 @@ api.interceptors.request.use((config) => {
   if (config.data instanceof FormData && config.headers) {
     delete config.headers['Content-Type'];
   }
-  const token = localStorage.getItem('token');
+  let token = null;
+  try { token = localStorage.getItem('token'); } catch {}
   if (token && token !== 'null' && token !== 'undefined') {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -22,8 +23,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      // Only reload if we are not already on the login page
+      try { localStorage.removeItem('token'); } catch {}
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }

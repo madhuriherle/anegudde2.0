@@ -48,49 +48,67 @@ def generate_and_save_donation_receipt(donation_id: int, db: Session) -> str:
 
         temple_name = settings.temple_name if settings and settings.temple_name else "Anegudde Sri Vinayaka Temple"
         temple_name_kn = settings.temple_name_kn if settings and settings.temple_name_kn else ""
-        temple_subtitle = settings.temple_subtitle if settings and settings.temple_subtitle and settings.temple_subtitle.lower() != 'none' else ""
         temple_address = settings.temple_address if settings and settings.temple_address else ""
         temple_contact = settings.temple_contact if settings and settings.temple_contact else ""
         alternate_contact = settings.alternate_contact if settings and settings.alternate_contact else ""
         temple_email = settings.temple_email if settings and settings.temple_email else ""
-        temple_website = settings.temple_website if settings and settings.temple_website else ""
-        opening_time = settings.opening_time if settings and settings.opening_time else ""
-        closing_time = settings.closing_time if settings and settings.closing_time else ""
-        google_maps_link = settings.google_maps_link if settings and settings.google_maps_link else ""
-
+        
         contact_parts = []
         if is_visible("show_temple_contact") and temple_contact:
             contact_parts.append(temple_contact)
         if is_visible("show_alternate_contact") and alternate_contact:
             contact_parts.append(alternate_contact)
-        timing_text = " - ".join(part for part in [opening_time, closing_time] if part)
-        
-        amount_text = ""
-        if donation.total_gross_amount is not None:
-            amount_text = f"Rs. {float(donation.total_gross_amount):,.2f}"
 
         user_code = donation.user_code or (donation.user.user_code if donation.user else "") or "-"
 
-        # 3. Build donation details rows
-        items_rows = ""
-        if donation.donation_mode == "AMOUNT":
-            amount_label = "Specific Amount" if donation.amount_donation_type == "SPECIFIC" else "Custom Amount"
-            option_title = donation.donation_amount_master.title if donation.donation_amount_master else ""
-            items_rows = f"""
-                <tr><td class="item-line">{escape(amount_label)}{f" - {escape(option_title)}" if option_title else ""}</td></tr>
-                <tr><td class="item-line amount-line">{escape(amount_text or "-")}</td></tr>
-            """
+        # 3. Build donation details rows (Physical Receipt Style)
+        sl_no = 1
+        seva_name = donation.donation_type_master.type_name if donation.donation_type_master else "General Donation"
+        
+        # Determine Rate and Total
+        if donation.donation_type_master and donation.donation_type_master.is_item_donation:
+            total_val = 0.0
+            rate_val = 0.0
         else:
-            for i, it in enumerate(donation.items, 1):
+            total_val = float(donation.total_gross_amount) if donation.total_gross_amount else 0.0
+            rate_val = total_val
+        
+        # Build sub-description text (Items or Notes)
+        sub_desc_text = ""
+        if donation.donation_mode == 0: # 0: ITEM
+            sub_items = []
+            for it in donation.items:
                 unit_name = it.item.unit.unit_name if it.item and it.item.unit else ""
                 item_name = it.item.item_name if it.item else "Unknown Item"
                 qty_val = float(it.quantity) if it.quantity else 0.0
-                qty_text = f"{qty_val:g} {unit_name}"
-                items_rows += f"""
-                    <tr>
-                        <td class="item-line">{escape(item_name)} - {escape(qty_text)}</td>
-                    </tr>
-                """
+                sub_items.append(f"{item_name} - {qty_val:g} {unit_name}")
+            sub_desc_text = ", ".join(sub_items)
+        else:
+            notes = []
+            if donation.amount_note: notes.append(donation.amount_note)
+            if donation.remarks: notes.append(donation.remarks)
+            sub_desc_text = " / ".join(notes)
+
+        items_rows = f"""
+            <tr style="height: 8mm;">
+                <td style="text-align: center; border-right: 1pt solid #5A2D1F;">{sl_no}</td>
+                <td style="border-right: 1pt solid #5A2D1F; font-weight: 800;">{escape(seva_name)}</td>
+                <td style="text-align: center; border-right: 1pt solid #5A2D1F;">1</td>
+                <td style="text-align: right; border-right: 1pt solid #5A2D1F;">{rate_val:,.2f}</td>
+                <td style="text-align: right;">{total_val:,.2f}</td>
+            </tr>
+        """
+
+        if sub_desc_text:
+            items_rows += f"""
+                <tr>
+                    <td colspan="3" style="padding: 3pt 8pt; font-weight: 700; font-size: 9pt; border-right: 1pt solid #5A2D1F; text-transform: uppercase; line-height: 1.2;">
+                        {escape(sub_desc_text)}
+                    </td>
+                    <td style="border-right: 1pt solid #5A2D1F;"></td>
+                    <td></td>
+                </tr>
+            """
 
         # 4. Build HTML content
         html_content = f"""
@@ -99,128 +117,180 @@ def generate_and_save_donation_receipt(donation_id: int, db: Session) -> str:
             <meta charset="UTF-8">
             <style>
                 @page {{
-                    size: A5 portrait;
-                    margin: 8mm;
+                    size: A5 landscape;
+                    margin: 5mm;
                 }}
                 body {{
                     font-family: "Nirmala UI", "Nirmala", "Segoe UI", Arial, sans-serif;
                     font-size: 8.5pt;
-                    line-height: 1.35;
+                    line-height: 1.3;
                     color: #2b1d17;
                     margin: 0;
                     padding: 0;
                     -webkit-print-color-adjust: exact;
                     print-color-adjust: exact;
                 }}
-                .receipt-container {{ min-height: 185mm; display: flex; flex-direction: column; padding: 5px; }}
-                .header-section {{ text-align: center; border-bottom: 2px solid #5A2D1F; padding-bottom: 8px; margin-bottom: 12px; }}
-                .temple-logo {{ height: 50px; margin-bottom: 4px; }}
-                .temple-kn {{ font-size: 16pt; font-weight: 800; color: #5A2D1F; margin: 0; }}
-                .temple-en {{ font-size: 11pt; font-weight: 800; text-transform: uppercase; margin: 1px 0; color: #5A2D1F; }}
-                .temple-info {{ font-size: 8pt; color: #4B4B4B; margin: 1px 0; }}
+                .receipt-container {{ 
+                    width: 100%;
+                    min-height: 120mm; 
+                    display: flex; 
+                    flex-direction: column; 
+                    padding: 10px;
+                    background: #fff;
+                }}
                 
-                .receipt-title-box {{ text-align: center; margin: 12px 0; }}
-                .receipt-title {{ display: inline-block; font-size: 11pt; font-weight: 900; color: #5A2D1F; border-bottom: 1.5pt solid #5A2D1F; padding-bottom: 2px; text-transform: uppercase; letter-spacing: 0.05em; }}
+                .header-section {{ text-align: center; margin-bottom: 8px; }}
+                .temple-logo {{ height: 45px; margin-bottom: 4px; }}
+                .temple-kn {{ font-size: 14pt; font-weight: 800; color: #5A2D1F; margin: 0; }}
+                .temple-en {{ font-size: 10pt; font-weight: 800; text-transform: uppercase; margin: 1px 0; color: #5A2D1F; }}
+                .temple-info {{ font-size: 7.5pt; color: #4B4B4B; margin: 0; }}
                 
-                .details-table {{ width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 8.5pt; }}
-                .details-table td {{ padding: 3.5px 0; vertical-align: top; }}
-                .label {{ font-weight: 800; color: #5A2D1F; width: 95px; }}
-                .separator {{ width: 15px; text-align: center; color: #5A2D1F; font-weight: 800; }}
+                .title-row {{ 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: center; 
+                    margin: 5px 0;
+                    border-top: 1.5pt solid #5A2D1F;
+                    border-bottom: 1.5pt solid #5A2D1F;
+                    padding: 4px 0;
+                }}
+                .receipt-title {{ font-size: 10pt; font-weight: 900; color: #5A2D1F; text-transform: uppercase; }}
+                .receipt-title-kn {{ font-size: 11pt; font-weight: 800; color: #5A2D1F; }}
+                
+                .details-grid {{ 
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 10px;
+                    margin-bottom: 10px;
+                }}
+                .details-table {{ width: 100%; border-collapse: collapse; font-size: 8.5pt; }}
+                .details-table td {{ padding: 2px 0; vertical-align: top; }}
+                .label {{ font-weight: 800; color: #5A2D1F; width: 85px; }}
+                .separator {{ width: 10px; text-align: center; color: #5A2D1F; font-weight: 800; }}
                 .value {{ font-weight: 500; }}
+
+                .main-table {{ 
+                    width: 100%; 
+                    border: 1pt solid #5A2D1F; 
+                    border-collapse: collapse; 
+                    margin-top: 5px;
+                }}
+                .main-table th {{ 
+                    border: 1pt solid #5A2D1F; 
+                    padding: 4px; 
+                    background: #FDF8F3; 
+                    font-size: 8pt;
+                    color: #5A2D1F;
+                    text-align: center;
+                }}
+                .main-table td {{ 
+                    padding: 6px 8px; 
+                    vertical-align: top; 
+                    font-size: 9pt;
+                }}
+                .sub-description {{ 
+                    font-size: 8.5pt; 
+                    color: #444; 
+                    margin-top: 4px; 
+                    padding-left: 10px;
+                    font-style: italic;
+                    line-height: 1.2;
+                }}
                 
-                .items-section {{ margin-top: 10px; flex: 1; }}
-                .items-header {{ font-size: 8pt; font-weight: 900; color: #5A2D1F; text-transform: uppercase; margin-bottom: 5px; border-bottom: 1px solid #E7D8CC; padding-bottom: 3px; }}
-                .items-table {{ width: 100%; border-collapse: collapse; }}
-                .items-table td {{ padding: 5px 0; border-bottom: 0.5pt solid #FAF7F2; font-size: 9pt; font-weight: 600; }}
-                .amount-line {{ font-size: 11pt !important; font-weight: 900 !important; color: #5A2D1F; }}
-                
-                .remarks-box {{ margin-top: 15px; font-size: 8.5pt; font-style: italic; color: #666; border-top: 1px dashed #E7D8CC; padding-top: 8px; }}
-                
-                .footer-section {{ margin-top: auto; padding-top: 40px; padding-bottom: 10px; display: flex; justify-content: flex-end; }}
-                .signature-area {{ text-align: center; width: 180px; }}
+                .total-row {{ border-top: 1.5pt solid #5A2D1F; font-weight: 900; }}
+                .total-label {{ text-align: right; padding-right: 10px; text-transform: uppercase; color: #5A2D1F; }}
+                .total-value {{ text-align: right; font-size: 11pt; border-left: 1pt solid #5A2D1F; }}
+
+                .footer-section {{ 
+                    margin-top: 20px; 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: flex-end;
+                }}
+                .signature-area {{ text-align: center; width: 160px; }}
                 .signature-line {{ border-top: 1pt solid #5A2D1F; margin-bottom: 4px; }}
-                .signature-label {{ font-size: 8pt; font-weight: 800; color: #5A2D1F; text-transform: uppercase; }}
+                .signature-label {{ font-size: 7.5pt; font-weight: 800; color: #5A2D1F; text-transform: uppercase; }}
                 
-                .system-footer {{ margin-top: 15px; font-size: 7pt; color: #AAA; text-align: center; border-top: 0.5pt solid #FAF7F2; padding-top: 5px; }}
+                .system-footer {{ 
+                    margin-top: 10px; 
+                    font-size: 7pt; 
+                    color: #AAA; 
+                    text-align: center; 
+                    border-top: 0.5pt solid #EEE; 
+                    padding-top: 4px; 
+                }}
             </style>
         </head>
         <body>
           <div class="receipt-container">
             <div class="header-section">
-                {f'<img src="{logo_path}" class="temple-logo">' if is_visible("show_temple_logo") and logo_path else ''}
                 {f'<div class="temple-kn">{escape(temple_name_kn)}</div>' if is_visible("show_temple_name_kn") and temple_name_kn else ''}
                 {f'<div class="temple-en">{escape(temple_name)}</div>' if is_visible("show_temple_name") and temple_name else ''}
-                {f'<div class="temple-info">{temple_subtitle}</div>' if temple_subtitle else ''}
                 {f'<div class="temple-info">{escape(temple_address)}</div>' if is_visible("show_temple_address") and temple_address else ''}
                 {f'<div class="temple-info">Contact: {escape(" / ".join(contact_parts))}</div>' if contact_parts else ''}
-                {f'<div class="temple-info">Email: {escape(temple_email)}</div>' if is_visible("show_temple_email") and temple_email else ''}
             </div>
 
-            <div class="receipt-title-box">
-                <div class="receipt-title">Donation Receipt</div>
+            <div class="title-row">
+                <div class="receipt-title-kn">ಸೇವಾ ರಶೀದಿ</div>
+                <div class="receipt-title">/ Seva Receipt</div>
+                <div style="font-size: 8pt; color: #5A2D1F;">Date: {donation.donation_date.strftime('%d-%m-%Y')}</div>
             </div>
 
-            <table class="details-table">
-                <tr>
-                    <td class="label">Receipt No</td>
-                    <td class="separator">:</td>
-                    <td class="value" style="font-weight: 900; font-size: 10pt;">{donation.receipt_display_number or donation.id}</td>
-                    <td class="label" style="text-align: right; width: 75px;">User Code</td>
-                    <td class="separator">:</td>
-                    <td class="value" style="text-align: right; width: 85px;">{escape(user_code)}</td>
-                </tr>
-                <tr>
-                    <td class="label">Date</td>
-                    <td class="separator">:</td>
-                    <td class="value" colspan="4">{donation.donation_date.strftime('%d-%m-%Y')}</td>
-                </tr>
-                <tr>
-                    <td class="label">Donation Type</td>
-                    <td class="separator">:</td>
-                    <td class="value" colspan="4">{donation.donation_type_master.type_name if donation.donation_type_master else "General Donation"}</td>
-                </tr>
-                {f'''
-                <tr>
-                    <td class="label">Gross Amount</td>
-                    <td class="separator">:</td>
-                    <td class="value" colspan="4" style="font-size: 10pt; font-weight: 900;">{escape(amount_text)}</td>
-                </tr>
-                ''' if amount_text and donation.donation_mode == "ITEM" else ''}
-                <tr>
-                    <td class="label">Devotee Name</td>
-                    <td class="separator">:</td>
-                    <td class="value" colspan="4" style="font-size: 10pt; font-weight: 800;">{donation.devotee_name}</td>
-                </tr>
-                <tr>
-                    <td class="label">Phone</td>
-                    <td class="separator">:</td>
-                    <td class="value" colspan="4">{donation.phone_number}</td>
-                </tr>
-                <tr>
-                    <td class="label">Address</td>
-                    <td class="separator">:</td>
-                    <td class="value" colspan="4">
-                        {donation.address or '-'}
-                        {f", {donation.city}" if donation.city else ""}
-                        {f", {donation.state}" if donation.state else ""}
-                        {f" - {donation.pincode}" if donation.pincode else ""}
-                    </td>
-                </tr>
-            </table>
-
-            <div class="items-section">
-                <div class="items-header">{'Amount Donation' if donation.donation_mode == "AMOUNT" else 'Items Donated'}</div>
-                <table class="items-table">
-                    <tbody>
-                        {items_rows}
-                    </tbody>
+            <div class="details-grid">
+                <table class="details-table">
+                    <tr>
+                        <td class="label">Receipt No</td>
+                        <td class="separator">:</td>
+                        <td class="value" style="font-weight: 900;">{donation.receipt_display_number or donation.id}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Name</td>
+                        <td class="separator">:</td>
+                        <td class="value" style="font-weight: 800; text-transform: uppercase;">{donation.devotee_name}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Address</td>
+                        <td class="separator">:</td>
+                        <td class="value">{donation.address or '-'}</td>
+                    </tr>
+                </table>
+                <table class="details-table">
+                    <tr>
+                        <td class="label">User Code</td>
+                        <td class="separator">:</td>
+                        <td class="value">{escape(user_code)}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Phone</td>
+                        <td class="separator">:</td>
+                        <td class="value">{donation.phone_number or '-'}</td>
+                    </tr>
                 </table>
             </div>
 
-            {f'<div class="remarks-box"><b>Note / Reason:</b> {escape(donation.amount_note)}</div>' if donation.amount_note else ''}
-            {f'<div class="remarks-box"><b>Remarks:</b> {escape(donation.remarks)}</div>' if donation.remarks else ''}
+            <table class="main-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">ಕ್ರ.ಸಂ.<br>Sl.No</th>
+                        <th>ಸೇವಾ ವಿವರ<br>Seva Description</th>
+                        <th style="width: 60px;">ಪ್ರಮಾಣ<br>Qty</th>
+                        <th style="width: 90px;">ದರ<br>Rate</th>
+                        <th style="width: 100px;">ಮೊಬಲಗು<br>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {items_rows}
+                    <tr class="total-row">
+                        <td colspan="4" class="total-label">TOTAL</td>
+                        <td class="total-value">{total_val:,.2f}</td>
+                    </tr>
+                </tbody>
+            </table>
 
             <div class="footer-section">
+                <div style="font-size: 8pt; color: #666; font-style: italic;">
+                    {donation.donation_date.strftime('%d-%m-%Y')}
+                </div>
                 <div class="signature-area">
                     <div class="signature-line"></div>
                     <div class="signature-label">Authorized Signatory</div>

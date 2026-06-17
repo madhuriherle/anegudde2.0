@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 import '../providers/token_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/printing_service.dart';
+import '../services/printer_config_service.dart';
+import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,6 +21,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _countController = TextEditingController();
   final _focusNode = FocusNode();
   Timer? _refreshTimer;
+  final PrinterConfigService _printerConfigService = PrinterConfigService();
+  String _selectedPrinterName = '';
+  List<Printer> _availablePrinters = [];
+  bool _showPrinterSelector = false;
 
   void _refocusCountInput() {
     if (!mounted) return;
@@ -36,6 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<TokenProvider>(context, listen: false).fetchDailyTotal();
+      _initPrinterConfig();
       _refocusCountInput();
     });
 
@@ -43,6 +51,106 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (!mounted) return;
       Provider.of<TokenProvider>(context, listen: false).fetchDailyTotal();
     });
+  }
+
+  Future<void> _initPrinterConfig() async {
+    try {
+      final saved = await _printerConfigService.getSavedPrinter('TOKEN');
+      final printers = await _printerConfigService.listAvailablePrinters();
+      if (!mounted) return;
+      setState(() {
+        _selectedPrinterName = saved ?? '';
+        _availablePrinters = printers;
+      });
+    } catch (e) {
+      print('Printer init error: $e');
+    }
+  }
+
+  Future<void> _showPrinterPicker() async {
+    final printers = await _printerConfigService.listAvailablePrinters();
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Select Printer for Tokens'),
+              content: SizedBox(
+                width: 400,
+                child: printers.isEmpty
+                    ? const Text('No printers found.')
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Available Printers:',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const SizedBox(height: 8),
+                          ...printers.map((p) => RadioListTile<String>(
+                            title: Text(p.name, style: const TextStyle(fontSize: 13)),
+                            subtitle: p.isDefault
+                                ? const Text('Default printer', style: TextStyle(fontSize: 11))
+                                : null,
+                            value: p.name,
+                            groupValue: _selectedPrinterName,
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() {
+                                  _selectedPrinterName = val;
+                                });
+                              }
+                            },
+                          )),
+                          const SizedBox(height: 8),
+                          TextField(
+                            decoration: const InputDecoration(
+                              labelText: 'Or type printer name',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            controller: TextEditingController(text: _selectedPrinterName),
+                            onChanged: (val) {
+                              setDialogState(() {
+                                _selectedPrinterName = val;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    await _printerConfigService.savePrinter('TOKEN', _selectedPrinterName);
+                    if (!mounted) return;
+                    setState(() {});
+                    Navigator.pop(ctx);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Printer saved: $_selectedPrinterName'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Save & Close'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -141,11 +249,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     elevation: 3,
                     tooltip: '',
                     onSelected: (value) {
-                      if (value == 'logout') {
+                      if (value == 'profile') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileScreen(),
+                          ),
+                        );
+                      } else if (value == 'logout') {
                         _showLogoutConfirmation(context, authProvider);
                       }
                     },
                     itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'profile',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.person_outline,
+                              size: 18,
+                              color: Color(0xFF4A3728),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Profile',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF4A3728),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
                       const PopupMenuItem(
                         value: 'logout',
                         child: Row(
@@ -427,7 +563,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ),
 
-                              SizedBox(height: screenHeight < 760 ? 24 : 32),
+                              SizedBox(height: screenHeight < 760 ? 12 : 16),
+
+                              // Printer Selector Button
+                              SizedBox(
+                                width: fieldWidth,
+                                height: 36,
+                                child: OutlinedButton.icon(
+                                  onPressed: _showPrinterPicker,
+                                  icon: Icon(
+                                    Icons.print_outlined,
+                                    size: 16,
+                                    color: const Color(0xFF4A3728).withOpacity(0.6),
+                                  ),
+                                  label: Text(
+                                    _selectedPrinterName.isNotEmpty
+                                        ? 'Printer: $_selectedPrinterName'
+                                        : 'Select Printer...',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF4A3728),
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(
+                                      color: Colors.brown.withOpacity(0.15),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(height: screenHeight < 760 ? 16 : 20),
 
                               // Responsive Print Button
                               SizedBox(
@@ -571,7 +741,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _countController.clear();
 
       try {
-        await PrintingService.printToken(response);
+        await PrintingService.printToken(response, printerName: _selectedPrinterName.isNotEmpty ? _selectedPrinterName : null);
         await _showSuccessPopup(context, response);
       } catch (e) {
         print('Printing error: $e');

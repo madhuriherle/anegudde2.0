@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../utils/currency';
 import { cn } from '../utils/cn';
+import { safeFormatTime } from '../utils/date';
 import { RefreshCw } from 'lucide-react';
 
 const DashboardPage = () => {
@@ -123,7 +124,7 @@ const DashboardPage = () => {
                   <div key={idx} className="grid grid-cols-3 items-center px-6 py-3 hover:bg-[#FAF7F2] transition-colors group cursor-default">
                         <div className="text-left text-base text-text-main font-normal truncate pr-2">{row.receipt_no}</div>
                         <div className="text-center text-sm text-text-main/70 font-normal">
-                          {new Date(row.issued_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {safeFormatTime(row.issued_at, { hour: '2-digit', minute: '2-digit' })}
                         </div>
                         <div className="text-right text-base font-normal text-amber-900 group-hover:text-amber-950 transition-colors pr-1">
                           {Number(row.token_count || 0).toLocaleString()}

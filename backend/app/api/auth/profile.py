@@ -1,10 +1,11 @@
+import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.core.security import hash_password
+from app.core.security import encrypt_password, hash_password
 from app.db.models import User, FinancialYear
 from app.schemas.auth import AuthUserOut, ProfileUpdateRequest
 
@@ -22,8 +23,10 @@ def me(
         active_fy = db.query(FinancialYear).filter(FinancialYear.status == 1).order_by(FinancialYear.id.desc()).first()
 
     user_out = AuthUserOut.model_validate(current_user)
+    user_out.created_at = current_user.created_at
     user_out.active_financial_year = active_fy
     user_out.is_all_access = current_user.role.is_all_access if current_user.role else False
+    user_out.role_name = current_user.role.role_name if current_user.role else None
     user_out.role_rank_level = current_user.role.rank_level if current_user.role else None
     user_out.privileges = [
         rp.privilege.privilege_name 
@@ -36,6 +39,7 @@ def me(
 @router.put("/update_profile", response_model=AuthUserOut)
 def update_profile(
     payload: ProfileUpdateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -58,11 +62,15 @@ def update_profile(
     current_user.email = email
     current_user.phone = phone
 
-    if payload.password and payload.password.strip():
-        current_user.password = hash_password(payload.password.strip())
-
+    current_user.security_stamp = str(uuid.uuid4())
     current_user.updated_at = datetime.now(timezone.utc)
     current_user.updated_by = current_user.id
+    
+    # Attach audit metadata
+    request.state.audit_meta = {
+        "actor_name": current_user.full_name or current_user.username
+    }
+    
     db.commit()
     db.refresh(current_user)
     return me(current_user=current_user, db=db)

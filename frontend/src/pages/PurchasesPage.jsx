@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash, Upload, FileText } from 'lucide-react';
+import { Plus, Search, Trash, Upload, FileText, Clock, History, X } from 'lucide-react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,7 +23,7 @@ import {
 import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 import { DetailItem } from '../components/ui/DetailItem';
-import { formatDate } from '../utils/date';
+import { formatDate, safeFormatTime, safeFormatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { formatQuantityWithUnit } from '../utils/quantity';
 import { usePermission } from '../hooks/usePermission';
@@ -59,6 +59,7 @@ const PurchasesPage = () => {
   const { hasPermission } = usePermission();
   const canWrite = hasPermission('purchases.write');
   const canDelete = hasPermission('purchases.delete');
+  const canReadActivityLogs = hasPermission('purchases.read');
 
   // Filter States
   const [page, setPage] = useState(1);
@@ -97,6 +98,80 @@ const PurchasesPage = () => {
       return res.data;
     }
   });
+
+  const [activityExpanded, setActivityExpanded] = useState(false);
+  const activityDrawerRef = useRef(null);
+
+  useEffect(() => {
+    if (!activityExpanded) return undefined;
+
+    const handleOutsideClick = (event) => {
+      if (
+        activityDrawerRef.current &&
+        !activityDrawerRef.current.contains(event.target)
+      ) {
+        setActivityExpanded(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [activityExpanded]);
+
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ['purchase-activities'],
+    queryFn: async () => {
+      const res = await api.get('/audit/page_activity', { params: { page: 'purchases', page_size: 20 } });
+      return res.data?.items || [];
+    },
+    enabled: !!canReadActivityLogs,
+    retry: false,
+    refetchInterval: 15000
+  });
+
+  const getActivityMeta = (log) => {
+    if (log.method === 'POST') {
+      return { title: 'Purchase Added', verb: 'created' };
+    }
+    if (log.method === 'PUT') {
+      return { title: 'Purchase Edited', verb: 'updated' };
+    }
+    return { title: 'Purchase Deleted', verb: 'deleted' };
+  };
+
+  const getActivitySentenceParts = (log) => {
+    const { verb } = getActivityMeta(log);
+    const actorName = log.meta?.actor_name || log.username || 'System';
+    const vendorName = log.meta?.vendor_name;
+    const billNo = log.meta?.bill_no;
+    const actionText = billNo ? `${verb} purchase Bill No. ${billNo}` : `${verb} a purchase`;
+    return { actorName, actionText, targetName: vendorName, targetPrefix: ' from ' };
+  };
+
+  const formatActivityDay = (value) => {
+    const activityDate = new Date(value);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const isSameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    if (isSameDay(activityDate, today)) return 'Today';
+    if (isSameDay(activityDate, yesterday)) return 'Yesterday';
+    return safeFormatDate(activityDate, { day: '2-digit', month: 'short' });
+  };
+
+  const groupedActivityData = useMemo(() => {
+    return (activityData || []).reduce((groups, log) => {
+      const day = formatActivityDay(log.activity_at);
+      if (!groups[day]) groups[day] = [];
+      groups[day].push(log);
+      return groups;
+    }, {});
+  }, [activityData]);
 
   const { data: vendorsData } = useQuery({
     queryKey: ['vendors-list'],
@@ -524,7 +599,7 @@ const PurchasesPage = () => {
   ], [vendors, deleteMutation, showConfirm, canWrite, canDelete]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="page-title">Purchase Entries</h2>
@@ -538,37 +613,51 @@ const PurchasesPage = () => {
 
       <Card className="border-border-temple">
         <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="space-y-1.5 w-full sm:w-44">
-              <Label className="text-text-main font-medium">From Date</Label>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="text-text-main"
-              />
-            </div>
-            <div className="space-y-1.5 w-full sm:w-44">
-              <Label className="text-text-main font-medium">To Date</Label>
-              <Input
-                type="date"
-                value={toDate}
-                min={fromDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="text-text-main"
-              />
-            </div>
-            <div className="space-y-1.5 w-full sm:w-72">
-              <Label className="text-text-main font-medium">Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-main/50" />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-wrap gap-4 items-end">
+              <div className="space-y-1.5 w-full sm:w-44">
+                <Label className="text-text-main font-medium">From Date</Label>
                 <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10 text-text-main"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="text-text-main"
                 />
               </div>
+              <div className="space-y-1.5 w-full sm:w-44">
+                <Label className="text-text-main font-medium">To Date</Label>
+                <Input
+                  type="date"
+                  value={toDate}
+                  min={fromDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="text-text-main"
+                />
+              </div>
+              <div className="space-y-1.5 w-full sm:w-72">
+                <Label className="text-text-main font-medium">Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-main/50" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-10 text-text-main"
+                  />
+                </div>
+              </div>
             </div>
+            {canReadActivityLogs && (
+              <button
+                onClick={() => setActivityExpanded(!activityExpanded)}
+                className={cn(
+                  "relative flex h-10 w-10 shrink-0 items-center justify-center self-end text-primary transition-colors hover:text-primary/80 active:scale-95 group",
+                  activityExpanded && "text-primary/70"
+                )}
+                title={activityExpanded ? "Close History" : "View Purchase History"}
+              >
+                <History className="w-6 h-6 transition-colors" />
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -586,6 +675,80 @@ const PurchasesPage = () => {
           totalCount={purchasesData?.total || 0}
         />
       </div>
+
+      {canReadActivityLogs && (
+        <div className={cn(
+          "fixed top-0 right-0 h-full w-[360px] max-w-[94vw] bg-white shadow-[-10px_0_40px_rgba(0,0,0,0.08)] border-l border-border-temple/40 z-30 transition-transform duration-300 ease-out transform",
+          activityExpanded ? "translate-x-0" : "translate-x-full"
+        )} ref={activityDrawerRef}>
+          <div className="flex h-full flex-col">
+            <div className="m-0 flex items-center justify-between border-b border-border-temple/40 bg-[#FAF7F2] px-5 py-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-primary shadow-sm border border-border-temple/40">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-secondary font-temple uppercase tracking-widest">Recent Activity</h3>
+              </div>
+              <button onClick={() => setActivityExpanded(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-text-main/40 hover:bg-white hover:text-text-main">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-[#FFFCF8] px-5 py-4 custom-scrollbar">
+              {activityLoading ? (
+                [...Array(5)].map((_, i) => (
+                  <div key={i} className="mb-4 animate-pulse space-y-3 rounded-xl bg-white p-4 shadow-sm">
+                    <div className="h-3 bg-bg-temple rounded w-3/4"></div>
+                    <div className="h-2 bg-bg-temple rounded w-1/2"></div>
+                  </div>
+                ))
+              ) : (!activityData || activityData.length === 0) ? (
+                <div className="p-10 text-center space-y-2">
+                  <div className="w-12 h-12 bg-bg-temple rounded-full flex items-center justify-center mx-auto opacity-40">
+                    <History className="w-6 h-6 text-text-main" />
+                  </div>
+                  <p className="text-xs text-text-main/40 italic">No recent activities</p>
+                </div>
+              ) : (
+                Object.entries(groupedActivityData).map(([day, logs]) => (
+                  <div key={day} className="mb-5 last:mb-0">
+                    <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-text-main/40">{day}</div>
+                    <div className="relative divide-y divide-border-temple/40 bg-white before:absolute before:left-[14px] before:top-3 before:bottom-3 before:w-px before:bg-primary/45">
+                      {logs.map((log) => {
+                        const { actorName, actionText, targetName, targetPrefix } = getActivitySentenceParts(log);
+                        return (
+                          <div key={log.id} className="relative py-3 pl-7 pr-3 transition-colors">
+                            <div className="absolute left-[14px] top-[19px] h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-primary" />
+                            <div className="min-w-0 flex-1 pt-0.5">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="text-xs font-semibold leading-tight text-text-main">
+                                    <span className="font-bold text-primary">{actorName}</span>
+                                    <span className="text-text-main"> {actionText}</span>
+                                    {targetName && (
+                                      <>
+                                        <span className="text-text-main">{targetPrefix}</span>
+                                        <span className="font-bold text-primary">{targetName}</span>
+                                      </>
+                                    )}
+                                  </p>
+                                </div>
+                                <span className="shrink-0 text-[10px] font-bold text-text-main/70">
+                                  {safeFormatTime(log.activity_at, { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* View Details Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>

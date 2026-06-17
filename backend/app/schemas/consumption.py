@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
+from .base import UTCBaseModel
 
 
 class ConsumptionItemIn(BaseModel):
@@ -26,7 +27,7 @@ class ConsumptionEntryCreate(BaseModel):
     items: list[ConsumptionItemIn] = []
 
 
-class ConsumptionEntryOut(BaseModel):
+class ConsumptionEntryOut(UTCBaseModel):
     id: int
     usage_date: date
     people_served: int | None = None
@@ -45,10 +46,8 @@ class ConsumptionEntryOut(BaseModel):
     created_by: int | None = None
     updated_by: int | None = None
 
-    model_config = ConfigDict(from_attributes=True)
 
-
-class ConsumptionItemOut(BaseModel):
+class ConsumptionItemOut(UTCBaseModel):
     id: int
     consumption_entry_id: int
     item_id: int
@@ -57,8 +56,6 @@ class ConsumptionItemOut(BaseModel):
     net_quantity: Decimal
     unit_cost_at_time: Decimal | None = None
     line_total: Decimal
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class ConsumptionEntryUpdate(BaseModel):
@@ -75,12 +72,10 @@ class ConsumptionEntryUpdate(BaseModel):
     items: list[ConsumptionItemIn] = []
 
 
-class UserMinimal(BaseModel):
+class UserMinimal(UTCBaseModel):
     id: int
     username: str
     full_name: str
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class ConsumptionEntryFullOut(ConsumptionEntryOut):

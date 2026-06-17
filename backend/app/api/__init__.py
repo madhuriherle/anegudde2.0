@@ -30,6 +30,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             token,
             os.getenv("SECRET_KEY", "change_me"),
             algorithms=[os.getenv("ALGORITHM", "HS256")],
+            options={"verify_exp": False},
         )
         username: str | None = payload.get("sub")
         if username is None:

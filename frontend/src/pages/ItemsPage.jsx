@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Clock, X, Plus, Pencil, Trash2, Search } from 'lucide-react';
 
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,7 +25,7 @@ import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 import { DetailItem } from '../components/ui/DetailItem';
 import { formatCurrency } from '../utils/currency';
-import { formatDate } from '../utils/date';
+import { formatDate, safeFormatDate } from '../utils/date';
 import { formatQuantityWithUnit } from '../utils/quantity';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 import { cn } from '../utils/cn';
@@ -37,7 +37,7 @@ const itemSchema = z.object({
   unit_id: z.coerce.number().min(1, 'Unit is required'),
   opening_stock: z.coerce.string().default('0'),
   current_stock: z.coerce.string().default('0'),
-  default_price: z.coerce.number().default(0),
+  default_price: z.coerce.number().min(0, 'Price cannot be negative').default(0),
   min_stock_level: z.coerce.number().min(0, 'Cannot be negative'),
   max_stock_level: z.coerce.number().min(0, 'Cannot be negative'),
   status: z.coerce.number().default(1),
@@ -346,7 +346,9 @@ const ItemsPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="page-title">Item Management</h2>
-        {canWrite && <Button onClick={() => handleOpen()} className="text-text-main font-bold">Add New Item</Button>}
+        <div className="flex items-center gap-3">
+          {canWrite && <Button onClick={() => handleOpen()} className="text-text-main font-bold">Add New Item</Button>}
+        </div>
       </div>
 
       <Card className="border-border-temple">
@@ -354,15 +356,17 @@ const ItemsPage = () => {
           <div className="flex flex-wrap gap-4 items-end">
             <div className="space-y-1.5 w-full sm:w-72">
               <Label className="text-text-main">Search</Label>
-              <Input
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="text-text-main"
-                placeholder="Search items..." />
-              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="pl-10 text-text-main"
+                  placeholder="Search items..." />
+              </div>
             </div>
             <div className="space-y-1.5 w-full sm:w-72">
               <Label className="text-text-main">Category</Label>

@@ -3,9 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   Eye,
-  Loader2 } from
+  Loader2,
+  Printer } from
 'lucide-react';
 import api from '../api/axios';
+import { PrinterSelectDropdown } from '../components/PrinterSelectDropdown';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
@@ -72,6 +74,10 @@ const TokenReportPage = () => {
 
   const generations = useMemo(() => generationsData?.items ?? [], [generationsData]);
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const handleViewDetails = (date) => {
     navigate(`/reports/tokens/${date}`);
   };
@@ -87,16 +93,97 @@ const TokenReportPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 token-report-print">
+      <style>{`
+        @media print {
+          @page { size: A4 portrait; margin: 10mm; }
+          header, aside, footer, .print\\:hidden { display: none !important; }
+          main { padding: 0 !important; margin: 0 !important; }
+          .lg\\:pl-64 { padding-left: 0 !important; }
+          html, body, #root, main, .token-report-print {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
+          body {
+            background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .token-report-print {
+            padding: 0 !important; margin: 0 !important; width: 100% !important;
+          }
+          .token-report-print .token-print-header {
+            display: block !important;
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #d7c9ba;
+            padding-bottom: 15px;
+          }
+          .token-report-print table { 
+            width: 100% !important; 
+            border-collapse: collapse !important; 
+            border: 1px solid #d7c9ba !important;
+            table-layout: fixed !important;
+          }
+          .token-report-print th, .token-report-print td { 
+            border: 1px solid #d7c9ba !important; 
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+          }
+          .token-report-print thead { 
+            display: table-header-group !important; 
+          }
+          .token-report-print thead th {
+            background-color: #FFF4E6 !important;
+            color: #000 !important;
+            font-weight: bold !important;
+            text-transform: uppercase !important;
+          }
+
+          /* Hide pagination and other non-print elements */
+          .token-report-print .flex.items-center.justify-between,
+          .token-report-print button,
+          .token-report-print .print\\:hidden {
+            display: none !important;
+          }
+
+          .token-report-print .border-border-temple {
+            border: none !important;
+          }
+          .token-report-print .shadow-sm {
+            box-shadow: none !important;
+          }
+        }
+        .token-print-header { display: none; }
+      `}</style>
+
+      {/* Canteen-style Print Header */}
+      <div className="token-print-header text-center">
+        <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ (ಅನ್ನದಾನ)</h1>
+        <p className="text-sm font-bold text-text-main mt-1">
+          TOKEN ISSUED SUMMARY REPORT
+        </p>
+        <p className="text-xs text-text-main mt-1">
+          Range: {formatDate(activeDateRange.startDate)} to {formatDate(activeDateRange.endDate)}
+        </p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h2 className="page-title">
             Token Issued Report
           </h2>
         </div>
+        <div className="flex items-center gap-2">
+          <PrinterSelectDropdown
+            context="REPORT_TOKEN"
+            onPrint={handlePrint}
+            buttonLabel="Print"
+          />
+        </div>
       </div>
 
-      <Card className="border-border-temple shadow-sm">
+      <Card className="border-border-temple shadow-sm print:hidden">
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1.5 w-full sm:w-56">

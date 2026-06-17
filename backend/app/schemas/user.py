@@ -1,6 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
+from .password import validate_password_complexity
 
 class RoleOut(BaseModel):
     id: int
@@ -33,6 +34,11 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_password_complexity(value)
+
 class UserUpdate(BaseModel):
     username: str | None = None
     full_name: str | None = None
@@ -44,6 +50,13 @@ class UserUpdate(BaseModel):
     status: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return value
+        return validate_password_complexity(value)
 
 class UserOut(UserBase):
     id: int

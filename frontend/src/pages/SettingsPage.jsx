@@ -31,6 +31,7 @@ import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
 import { usePermission } from '../hooks/usePermission';
 import { cn } from '../utils/cn';
+import PrinterSettingsPage from './PrinterSettingsPage';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';
@@ -43,18 +44,23 @@ const settingsSchema = z
     temple_name: z.string().nullish().transform((value) => value ?? ''),
     temple_name_kn: z.string().nullish().transform((value) => value ?? ''),
     temple_address: z.string().nullish().transform((value) => value ?? ''),
-    temple_contact: z.string().nullish().transform((value) => value ?? ''),
-    alternate_contact: z.string().nullish().transform((value) => value ?? ''),
+    temple_contact: z.string().regex(/^\+?[\d\s-]{8,15}$/, 'Invalid contact number').nullish().transform((value) => value ?? '').optional().or(z.literal('')),
+    alternate_contact: z.string().regex(/^\+?[\d\s-]{8,15}$/, 'Invalid contact number').nullish().transform((value) => value ?? '').optional().or(z.literal('')),
+    receipt_office_contact: z.string().regex(/^\+?[\d\s-]{8,15}$/, 'Invalid contact number').nullish().transform((value) => value ?? '').optional().or(z.literal('')),
+    receipt_seva_counter_contact: z.string().regex(/^\+?[\d\s-]{8,15}$/, 'Invalid contact number').nullish().transform((value) => value ?? '').optional().or(z.literal('')),
+    receipt_guest_house_contact: z.string().regex(/^\+?[\d\s-]{8,15}$/, 'Invalid contact number').nullish().transform((value) => value ?? '').optional().or(z.literal('')),
     temple_email: z
       .string()
-      .email('Invalid email')
+      .email('Invalid email address')
       .nullish()
       .transform((value) => value ?? '')
       .optional()
       .or(z.literal('')),
     temple_website: z
       .string()
-      .url('Invalid URL')
+      .refine((val) => !val || /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(val), {
+        message: 'Invalid website URL (e.g. https://temple.com)',
+      })
       .nullish()
       .transform((value) => value ?? '')
       .optional()
@@ -63,7 +69,9 @@ const settingsSchema = z
     closing_time: z.string().nullish().transform((value) => value ?? ''),
     google_maps_link: z
       .string()
-      .url('Invalid URL')
+      .refine((val) => !val || /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(val) || val.includes('maps'), {
+        message: 'Invalid Google Maps link',
+      })
       .nullish()
       .transform((value) => value ?? '')
       .optional()
@@ -72,8 +80,22 @@ const settingsSchema = z
     footer_note: z.string().nullish().transform((value) => value ?? ''),
     receipt_padding: z.coerce
       .number()
-      .min(0, 'Must be 0 or more')
-      .max(10, 'Max 10 digits allowed'),
+      .min(1, 'Must be at least 1 digit')
+      .max(10, 'Max 10 digits allowed')
+      .nullish()
+      .transform((val) => val ?? 4),
+    receipt_top_offset: z.coerce
+      .number()
+      .min(-50, 'Must be -50 mm or more')
+      .max(50, 'Must be 50 mm or less')
+      .optional()
+      .default(0),
+    receipt_left_offset: z.coerce
+      .number()
+      .min(-50, 'Must be -50 mm or more')
+      .max(50, 'Must be 50 mm or less')
+      .optional()
+      .default(0),
     // Toggles
     show_temple_logo: z.boolean().optional().default(true),
     show_temple_name: z.boolean().optional().default(true),
@@ -95,7 +117,7 @@ const fieldClass =
   'h-11 rounded-lg border-border-temple/60 bg-white px-4 text-base text-text-main focus:border-primary focus:ring-1 focus:ring-primary transition-all w-full';
 
 const labelClass =
-  'block text-base font-semibold text-text-main mb-2';
+  'block text-sm font-medium text-[#5F5F5F] mb-2';
 
 const VisibilityToggle = ({ label, name, control, disabled = false }) => (
   <div className="flex items-center justify-between gap-3">
@@ -146,6 +168,9 @@ const textSettingFields = [
   'temple_address',
   'temple_contact',
   'alternate_contact',
+  'receipt_office_contact',
+  'receipt_seva_counter_contact',
+  'receipt_guest_house_contact',
   'temple_email',
   'temple_website',
   'opening_time',
@@ -161,6 +186,8 @@ const templeIdentityFields = [
 
 const receiptSettingsFields = [
   'receipt_padding',
+  'receipt_top_offset',
+  'receipt_left_offset',
   'show_temple_logo',
   'show_temple_name',
   'show_temple_name_kn',
@@ -207,7 +234,9 @@ const SettingsPage = ({ section = null }) => {
         ? hasPermission('settings.receipt_settings.write')
         : activeSection === 'cleanup'
           ? hasPermission('settings.data_cleanup.write')
-          : hasPermission('settings.management.write');
+          : activeSection === 'printers'
+            ? hasPermission('settings.management.write')
+            : hasPermission('settings.management.write');
   const settingsReadEndpoint = activeSection === 'temple'
     ? '/settings/temple-identity'
     : activeSection === 'receipt'
@@ -327,6 +356,10 @@ const SettingsPage = ({ section = null }) => {
         opening_time: convertToAMPM(data.opening_time),
         closing_time: convertToAMPM(data.closing_time),
       };
+      if (activeSection === 'receipt') {
+        payload.receipt_top_offset = 0;
+        payload.receipt_left_offset = 0;
+      }
       if (pendingLogoFile) {
         const uploadResult = await logoUploadMutation.mutateAsync(pendingLogoFile);
         payload = {
@@ -345,8 +378,15 @@ const SettingsPage = ({ section = null }) => {
   };
 
   const onInvalid = (formErrors) => {
-    const firstError = Object.values(formErrors)[0];
-    showError(firstError?.message || 'Please fix the highlighted fields before saving.');
+    console.error('Form Validation Errors:', formErrors);
+    const firstError = Object.entries(formErrors)[0];
+    if (firstError) {
+      const [field, error] = firstError;
+      const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+      showError(`${fieldName}: ${error.message || 'Invalid value'}`);
+    } else {
+      showError('Please fix the highlighted fields before saving.');
+    }
   };
 
   const handleDiscard = () => {
@@ -410,6 +450,9 @@ const SettingsPage = ({ section = null }) => {
   const templeAddress = watchedValues.temple_address || '';
   const templeContact = watchedValues.temple_contact || '';
   const alternateContact = watchedValues.alternate_contact || '';
+  const receiptOfficeContact = watchedValues.receipt_office_contact || '';
+  const receiptSevaCounterContact = watchedValues.receipt_seva_counter_contact || '';
+  const receiptGuestHouseContact = watchedValues.receipt_guest_house_contact || '';
   const templeEmail = watchedValues.temple_email || '';
   const templeWebsite = watchedValues.temple_website || '';
   const openingTime = convertToAMPM(watchedValues.opening_time) || '';
@@ -432,6 +475,7 @@ const SettingsPage = ({ section = null }) => {
     10
   );
   const sampleReceiptNumber = String(1).padStart(receiptPaddingPreview, '0');
+  const sampleReceiptDisplayNumber = `ADRNO: ${sampleReceiptNumber}`;
 
   const settingsCards = [
     {
@@ -451,6 +495,14 @@ const SettingsPage = ({ section = null }) => {
       path: '/settings/receipt',
     },
     {
+      id: 'printers',
+      title: 'Printer Settings',
+      description: 'Manage printer assignments per task for each computer.',
+      icon: Printer,
+      action: 'Configure',
+      path: '/settings/printers',
+    },
+    {
       id: 'cleanup',
       title: 'Data Cleanup',
       description: 'Clear operational history while keeping master setup data protected.',
@@ -466,9 +518,11 @@ const SettingsPage = ({ section = null }) => {
       ? 'Temple Identity'
       : activeSection === 'receipt'
         ? 'Receipt Settings'
-        : activeSection === 'cleanup'
-          ? 'Data Cleanup'
-        : 'System Settings';
+        : activeSection === 'printers'
+          ? 'Printer Settings'
+          : activeSection === 'cleanup'
+            ? 'Data Cleanup'
+          : 'System Settings';
   const financialYearName = settings?.financial_year_name || 'Not set';
   const templeFieldClass =
     'h-11 rounded-lg border-border-temple/60 bg-white px-4 text-base text-text-main focus:border-primary focus:ring-1 focus:ring-primary transition-all w-full shadow-none';
@@ -485,7 +539,13 @@ const SettingsPage = ({ section = null }) => {
       activeSection === 'temple' ? "bg-[#F8F4EE]" : "bg-[#F8F4EE]"
     )}>
       {/* Header */}
-      <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div
+        className={cn(
+          "mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between",
+          activeSection === 'receipt' &&
+            "sticky top-0 z-30 -mx-4 border-b border-[#E7D8CC] bg-[#F8F4EE]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+        )}
+      >
         <div className={activeSection ? 'flex items-center gap-3' : ''}>
           {activeSection && (
             <Button
@@ -504,6 +564,29 @@ const SettingsPage = ({ section = null }) => {
           </h2>
           </div>
         </div>
+
+        {activeSection === 'receipt' && canWrite && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleDiscard}
+              disabled={!isDirty || updateAllMutation.isPending}
+              className="h-10 rounded-lg border border-[#E7D8CC] bg-white px-5 font-bold text-[#2B2B2B] hover:bg-[#F8F4EE]"
+            >
+              Reset
+            </Button>
+
+            <Button
+              type="submit"
+              form="receipt-settings-form"
+              disabled={!isDirty || updateAllMutation.isPending}
+              className="h-10 min-w-[160px] rounded-lg border-none bg-primary px-6 font-bold text-white shadow-sm hover:bg-primary/90"
+            >
+              {updateAllMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        )}
       </div>
 
       {!activeSection && (
@@ -606,8 +689,8 @@ const SettingsPage = ({ section = null }) => {
                 <Label className={templeLabelClass}>Temple Logo</Label>
                 <div className="rounded-xl border border-dashed border-border-temple/60 bg-bg-temple/30 p-4">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-border-temple/60 bg-white shadow-sm overflow-hidden p-2">
+                    <div className="flex items-center gap-4 w-full">
+                      <div className="flex aspect-[3/1] w-full items-center justify-center rounded-xl border border-border-temple/60 bg-white shadow-sm overflow-hidden p-2">
                         <img
                           src={logoPreview}
                           alt="Temple Logo"
@@ -651,24 +734,58 @@ const SettingsPage = ({ section = null }) => {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <Label className={templeLabelClass}>Contact Number</Label>
-                <Input
-                  {...register('temple_contact')}
-                  disabled={!canWrite}
-                  className={templeFieldClass}
-                  placeholder="08254-261257"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className={templeLabelClass}>Contact Number</Label>
+                  <Input
+                    {...register('temple_contact')}
+                    disabled={!canWrite}
+                    className={templeFieldClass}
+                    placeholder="08254-261257"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className={templeLabelClass}>Alternate Contact</Label>
+                  <Input
+                    {...register('alternate_contact')}
+                    disabled={!canWrite}
+                    className={templeFieldClass}
+                    placeholder="Additional phone number"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className={templeLabelClass}>Alternate Contact</Label>
-                <Input
-                  {...register('alternate_contact')}
-                  disabled={!canWrite}
-                  className={templeFieldClass}
-                  placeholder="Additional phone number"
-                />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label className={templeLabelClass}>Receipt Office</Label>
+                  <Input
+                    {...register('receipt_office_contact')}
+                    disabled={!canWrite}
+                    className={templeFieldClass}
+                    placeholder="74060 93533"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className={templeLabelClass}>Seva Counter</Label>
+                  <Input
+                    {...register('receipt_seva_counter_contact')}
+                    disabled={!canWrite}
+                    className={templeFieldClass}
+                    placeholder="94802 72221"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className={templeLabelClass}>Guest House</Label>
+                  <Input
+                    {...register('receipt_guest_house_contact')}
+                    disabled={!canWrite}
+                    className={templeFieldClass}
+                    placeholder="97406 73533"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -762,7 +879,16 @@ const SettingsPage = ({ section = null }) => {
                   type="time"
                   {...register('opening_time')}
                   disabled={!canWrite}
-                  className={templeFieldClass}
+                  className={cn(templeFieldClass, "cursor-pointer")}
+                  onClick={(e) => {
+                    try {
+                      if (typeof e.target.showPicker === 'function') {
+                        e.target.showPicker();
+                      }
+                    } catch (err) {
+                      console.debug('showPicker not supported');
+                    }
+                  }}
                 />
               </div>
 
@@ -772,7 +898,16 @@ const SettingsPage = ({ section = null }) => {
                   type="time"
                   {...register('closing_time')}
                   disabled={!canWrite}
-                  className={templeFieldClass}
+                  className={cn(templeFieldClass, "cursor-pointer")}
+                  onClick={(e) => {
+                    try {
+                      if (typeof e.target.showPicker === 'function') {
+                        e.target.showPicker();
+                      }
+                    } catch (err) {
+                      console.debug('showPicker not supported');
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -805,8 +940,9 @@ const SettingsPage = ({ section = null }) => {
 
       {activeSection === 'receipt' && (
         <form
+          id="receipt-settings-form"
           onSubmit={handleSubmit(onSubmit, onInvalid)}
-          className="grid grid-cols-1 xl:grid-cols-[0.75fr_1.25fr] gap-8 items-start"
+          className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start"
         >
           <div className="space-y-5">
           <Card className="rounded-3xl border border-[#E7D8CC] bg-white shadow-lg overflow-hidden">
@@ -839,34 +975,12 @@ const SettingsPage = ({ section = null }) => {
                   </Label>
                   <div className="rounded-lg border border-dashed border-[#E7D8CC] bg-[#F8F4EE] flex items-center justify-center h-11 overflow-hidden px-4">
                     <p className="text-base font-bold text-[#2B2B2B] truncate w-full text-center tracking-widest">
-                      {sampleReceiptNumber}
+                      {sampleReceiptDisplayNumber}
                     </p>
                   </div>
                 </div>
-              </div>              {canWrite && (
-              <div className="flex justify-end gap-3 pt-8 border-t border-[#F8F4EE]">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleDiscard}
-                  className="h-11 flex-1 font-bold text-[15px] text-[#2B2B2B] hover:bg-[#F8F4EE] border border-[#E7D8CC] rounded-lg"
-                >
-                  Discard
-                </Button>
-
-                <Button
-                  type="submit"
-                  disabled={
-                    !isDirty || updateAllMutation.isPending
-                  }
-                  className="h-11 flex-1 font-bold text-white text-[15px] bg-primary hover:bg-primary/90 border-none shadow-sm rounded-lg"
-                >
-                  {updateAllMutation.isPending
-                    ? 'Saving...'
-                    : 'Save Changes'}
-                </Button>
               </div>
-              )}
+
             </CardContent>
           </Card>
 
@@ -896,10 +1010,10 @@ const SettingsPage = ({ section = null }) => {
           </div>
 
           <div className="space-y-5">
-            <Card className="rounded-2xl border border-[#E7D8CC] bg-white shadow-lg overflow-hidden">
+            <Card className="w-full rounded-2xl border border-[#E7D8CC] bg-white shadow-lg overflow-hidden">
               <CardContent className="p-0">
-                <div className="bg-[#FFFDFB] px-8 py-8">
-                  <div className="mx-auto max-w-[520px] rounded-xl border border-[#E7D8CC] bg-white px-8 py-7 text-center shadow-sm">
+                <div className="w-full bg-[#FFFDFB] p-5">
+                  <div className="w-full rounded-xl border border-[#E7D8CC] bg-white px-8 py-7 text-center shadow-sm">
                     {watchedValues.show_temple_logo && (
                       <img
                         src={logoPreview}
@@ -926,9 +1040,19 @@ const SettingsPage = ({ section = null }) => {
                       </p>
                     )}
 
-                    {((showTempleContact && templeContact) || (showAlternateContact && alternateContact)) && (
+                    {(
+                      receiptOfficeContact ||
+                      receiptSevaCounterContact ||
+                      receiptGuestHouseContact ||
+                      (showTempleContact && templeContact) ||
+                      (showAlternateContact && alternateContact)
+                    ) && (
                       <p className="mt-2 text-[14px] font-semibold text-[#2B2B2B]">
-                        Contact : {[showTempleContact && templeContact, showAlternateContact && alternateContact].filter(Boolean).join(' / ')}
+                        Contact : {[
+                          receiptOfficeContact ? `Office: ${receiptOfficeContact}` : showTempleContact && templeContact,
+                          receiptSevaCounterContact ? `Seva Counter: ${receiptSevaCounterContact}` : showAlternateContact && alternateContact,
+                          receiptGuestHouseContact ? `Guest House: ${receiptGuestHouseContact}` : null
+                        ].filter(Boolean).join(' | ')}
                       </p>
                     )}
 
@@ -971,11 +1095,12 @@ const SettingsPage = ({ section = null }) => {
                         <p className="text-[11px] font-bold uppercase tracking-widest text-[#8B6F5A]">
                           Sample Receipt No
                         </p>
-                        <p className="mt-1 font-mono text-[22px] font-black tracking-[0.18em] text-[#2B2B2B]">
-                          {sampleReceiptNumber}
+                        <p className="mt-1 break-words font-mono text-[20px] font-black tracking-widest text-[#2B2B2B] sm:text-[22px]">
+                          {sampleReceiptDisplayNumber}
                         </p>
                       </div>
                     </div>
+
                   </div>
                 </div>
 
@@ -990,6 +1115,10 @@ const SettingsPage = ({ section = null }) => {
             </Card>
           </div>
         </form>
+      )}
+
+      {activeSection === 'printers' && (
+        <PrinterSettingsPage />
       )}
 
       {activeSection === 'cleanup' && (

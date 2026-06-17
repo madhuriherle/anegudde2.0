@@ -1,19 +1,17 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import date as dt_date, datetime as dt_datetime
 from typing import List, Optional
+from .base import UTCBaseModel
 
-class UserMinimal(BaseModel):
+class UserMinimal(UTCBaseModel):
     id: int
     full_name: str
-    
-    class Config:
-        from_attributes = True
 
 class TokenDetailCreate(BaseModel):
     token_count: int
     date: Optional[dt_date] = None
 
-class TokenDetailResponse(BaseModel):
+class TokenDetailResponse(UTCBaseModel):
     id: int
     generation_id: int
     financial_year_id: Optional[int] = None
@@ -23,24 +21,18 @@ class TokenDetailResponse(BaseModel):
     token_count: int
     created_at: dt_datetime
     creator: Optional[UserMinimal] = None
-    
-    class Config:
-        from_attributes = True
 
 class TokenGenerationCreate(BaseModel):
     date: dt_date
     total_tokens: int
 
-class TokenGenerationResponse(BaseModel):
+class TokenGenerationResponse(UTCBaseModel):
     id: int
     date: dt_date
     total_tokens: int
     created_at: dt_datetime
     details: Optional[List[TokenDetailResponse]] = []
     creator: Optional[UserMinimal] = None
-
-    class Config:
-        from_attributes = True
 
 class TokenDetailPaginatedResponse(BaseModel):
     items: List[TokenDetailResponse]

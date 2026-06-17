@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, Query, status, Request
+from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_current_user, get_db, PermissionChecker
-from app.db.models import User
+from app.db.models import User, PurchaseReturnEntry
 from app.schemas.purchase_return import PurchaseReturnEntryCreate, PurchaseReturnEntryOut
 from app.services import purchase_return_service
 from app.schemas.base import PaginatedResponse
@@ -22,28 +22,63 @@ def list_returns(
 @router.post("/create_return", response_model=PurchaseReturnEntryOut)
 def create_return(
     payload: PurchaseReturnEntryCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("purchase_returns.write"))
 ):
-    return purchase_return_service.create_purchase_return(payload, db, current_user)
+    entry = purchase_return_service.create_purchase_return(payload, db, current_user)
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
+        "bill_no": entry.purchase_entry.bill_no if entry.purchase_entry else None,
+        "return_date": entry.return_date.isoformat() if entry.return_date else None
+    }
+    
+    return entry
 
 
 @router.put("/update_return/{return_id}", response_model=PurchaseReturnEntryOut)
 def update_return(
     return_id: int,
     payload: PurchaseReturnEntryCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("purchase_returns.write"))
 ):
-    return purchase_return_service.update_purchase_return(return_id, payload, db, current_user)
+    entry = purchase_return_service.update_purchase_return(return_id, payload, db, current_user)
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
+        "bill_no": entry.purchase_entry.bill_no if entry.purchase_entry else None,
+        "return_date": entry.return_date.isoformat() if entry.return_date else None
+    }
+    
+    return entry
 
 
 @router.delete("/delete_return/{return_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_return(
     return_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("purchase_returns.delete"))
 ):
+    # Fetch details before deletion for snapshot
+    entry = (
+        db.query(PurchaseReturnEntry)
+        .options(joinedload(PurchaseReturnEntry.vendor), joinedload(PurchaseReturnEntry.purchase_entry))
+        .filter(PurchaseReturnEntry.id == return_id)
+        .first()
+    )
+    if entry:
+        request.state.audit_meta = {
+            "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
+            "bill_no": entry.purchase_entry.bill_no if entry.purchase_entry else None,
+            "return_date": entry.return_date.isoformat() if entry.return_date else None
+        }
+
     purchase_return_service.delete_purchase_return(return_id, db, current_user)
     return None
 

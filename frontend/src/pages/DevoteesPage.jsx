@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { Search, Users } from 'lucide-react';
+import { Search, Users, X } from 'lucide-react';
 import api from '../api/axios';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/Dialog';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { formatDate } from '../utils/date';
@@ -110,8 +110,10 @@ const DevoteesPage = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="page-title">Devotees</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h2 className="page-title">Devotees</h2>
+        </div>
       </div>
 
       <Card className="border-border-temple shadow-sm">

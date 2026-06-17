@@ -1,5 +1,3 @@
-$ErrorActionPreference = "Stop"
-
 Set-Location -Path "$PSScriptRoot\backend"
 
 if (Test-Path ".\.venv\Scripts\Activate.ps1") {
@@ -7,7 +5,7 @@ if (Test-Path ".\.venv\Scripts\Activate.ps1") {
 }
 
 try {
-  $ipv4 = (Get-NetIPAddress -AddressFamily IPv4 |
+  $ipv4 = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
     Where-Object {
       $_.IPAddress -notlike "127.*" -and
       $_.IPAddress -notlike "169.254.*" -and

@@ -25,7 +25,8 @@ const AuthContext = createContext(undefined);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => {
-    const savedToken = localStorage.getItem('token');
+    let savedToken = null;
+    try { savedToken = localStorage.getItem('token'); } catch {}
     return savedToken === 'null' || savedToken === 'undefined' ? null : savedToken;
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -38,28 +39,40 @@ export const AuthProvider = ({ children }) => {
       console.error('Failed to fetch user', error);
       if (error.response?.status === 401) {
         logout();
+      } else {
+        setUser(null);
       }
     }
   };
 
   useEffect(() => {
-    if (token) {
-      fetchUser().finally(() => setIsLoading(false));
-    } else {
+    const initAuth = async () => {
+      if (token) {
+        await fetchUser();
+      }
       setIsLoading(false);
-    }
+    };
+    initAuth();
   }, [token]);
 
   const login = async (newToken) => {
-    localStorage.setItem('token', newToken);
+    try { localStorage.setItem('token', newToken); } catch {}
     setToken(newToken);
     await fetchUser();
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
+  const logout = async () => {
+    try {
+      if (token) {
+        await api.post('/auth/logout');
+      }
+    } catch (e) {
+      console.error('Logout log failed', e);
+    } finally {
+      try { localStorage.removeItem('token'); } catch {}
+      setToken(null);
+      setUser(null);
+    }
   };
 
   return (

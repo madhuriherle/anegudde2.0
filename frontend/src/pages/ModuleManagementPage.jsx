@@ -35,6 +35,7 @@ const VALID_ROUTES = [
   '/settings/temple',
   '/settings/receipt',
   '/settings/cleanup',
+  '/settings/printers',
   '/settings/donation-types',
   '/vendors',
   '/purchases',

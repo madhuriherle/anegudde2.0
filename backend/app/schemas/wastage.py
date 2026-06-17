@@ -1,23 +1,18 @@
 from datetime import date, datetime
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
-from app.schemas.menu_item import MenuItemOut
-from app.schemas.item import ItemOut
-
-
+from .base import UTCBaseModel
 from app.schemas.unit import UnitOut
 
-class MenuItemMinimal(BaseModel):
+class MenuItemMinimal(UTCBaseModel):
     id: int
     dish_name: str
     unit: UnitOut | None = None
-    model_config = ConfigDict(from_attributes=True)
 
-class ItemMinimal(BaseModel):
+class ItemMinimal(UTCBaseModel):
     id: int
     item_name: str
     unit: UnitOut | None = None
-    model_config = ConfigDict(from_attributes=True)
 
 class WastageItemIn(BaseModel):
     menu_item_id: int | None = None
@@ -35,7 +30,7 @@ class WastageEntryCreate(BaseModel):
     items: list[WastageItemIn] = []
 
 
-class WastageEntryOut(BaseModel):
+class WastageEntryOut(UTCBaseModel):
     id: int
     wastage_date: date
     times_cooked: int
@@ -47,10 +42,8 @@ class WastageEntryOut(BaseModel):
     created_by: int | None = None
     updated_by: int | None = None
 
-    model_config = ConfigDict(from_attributes=True)
 
-
-class WastageItemOut(BaseModel):
+class WastageItemOut(UTCBaseModel):
     id: int
     wastage_entry_id: int
     wastage_date: date
@@ -61,8 +54,6 @@ class WastageItemOut(BaseModel):
     menu_item: MenuItemMinimal | None = None
     item: ItemMinimal | None = None
 
-    model_config = ConfigDict(from_attributes=True)
-
 
 class WastageEntryUpdate(BaseModel):
     wastage_date: date
@@ -70,12 +61,10 @@ class WastageEntryUpdate(BaseModel):
     consumption_entry_id: int | None = None
     items: list[WastageItemIn] = []
 
-class UserMinimal(BaseModel):
+class UserMinimal(UTCBaseModel):
     id: int
     username: str
     full_name: str
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class WastageEntryFullOut(WastageEntryOut):

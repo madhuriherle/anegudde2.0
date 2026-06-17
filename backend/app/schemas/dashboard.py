@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel
+from .base import UTCBaseModel
 
 
 class DashboardOverview(BaseModel):
@@ -14,7 +15,7 @@ class DashboardOverview(BaseModel):
     total_outstanding_balance: Decimal
 
 
-class DashboardToday(BaseModel):
+class DashboardToday(UTCBaseModel):
     purchase_amount: Decimal
     consumption_entries: int
     consumption_value: Decimal
@@ -42,7 +43,7 @@ class DailyWastageDetail(BaseModel):
     amount: Decimal
 
 
-class DailyTokenDetail(BaseModel):
+class DailyTokenDetail(UTCBaseModel):
     receipt_no: int
     token_count: int
     issued_by: str | None = None
@@ -55,7 +56,7 @@ class LowStockRow(BaseModel):
     current_stock: Decimal
     min_stock_level: Decimal | None = None
 
-class RecentActivityRow(BaseModel):
+class RecentActivityRow(UTCBaseModel):
     activity_type: str  # 'purchase', 'consumption', 'wastage', 'payment', 'adjustment'
     title: str
     description: str

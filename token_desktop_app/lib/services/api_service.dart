@@ -189,6 +189,15 @@ class ApiService {
     return _handleResponse(response);
   }
 
+  Future<dynamic> put(String endpoint, Map<String, dynamic> body) async {
+    final response = await http.put(
+      _buildUri(endpoint),
+      headers: await _headers(),
+      body: json.encode(body),
+    );
+    return _handleResponse(response);
+  }
+
   dynamic _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return json.decode(response.body);

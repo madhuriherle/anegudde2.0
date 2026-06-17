@@ -37,9 +37,13 @@ export const mainPermissions = [
   'users.modules.read',
   'activity_logs.read',
   'settings.management.read',
-  'settings.data_cleanup.write',
+  'settings.temple_identity.read',
+  'settings.receipt_settings.read',
+  'settings.data_cleanup.read',
+  'units.read',
   'donation_types.read',
   'devotees.read',
+  'profile.read',
 ];
 
 export const hasCanteenAccess = (user) => hasAnyPermission(user, canteenPermissions);
@@ -66,6 +70,7 @@ export const getDefaultPath = (user) => {
   if (hasPermission(user, 'users.management.read')) return '/users';
   if (hasPermission(user, 'settings.management.read')) return '/settings';
   if (hasPermission(user, 'donation_types.read')) return '/settings/donation-types';
+  if (hasPermission(user, 'profile.read')) return '/profile';
 
-  return '/profile';
+  return '/no-access';
 };

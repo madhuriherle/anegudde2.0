@@ -18,8 +18,6 @@ import { getDefaultPath, hasMainAccess } from '../utils/navigation';
 import Footer from '../components/Footer';
 import api from '../api/axios';
 
-const templeLogoSrc = '/temple-logo-permanent.png';
-
 const DynamicIcon = ({ name, ...props }) => {
   const IconComponent = Icons[name] || Icons.HelpCircle;
   return <IconComponent {...props} />;
@@ -33,12 +31,27 @@ const MainLayout = () => {
   const [activeModule, setActiveModule] = useState('main');
   const [expandedMenus, setExpandedMenus] = useState({});
   const [menuData, setMenuData] = useState([]);
+  const [templeLogoSrc, setTempleLogoSrc] = useState('/temple-logo-permanent.png');
   const canAccessMain = hasMainAccess(user);
   const privilegeKey = [
     user?.id,
     user?.is_all_access ? 'all' : 'limited',
     ...(user?.privileges || []),
   ].join('|');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get('/settings/get_current_settings');
+        if (response.data?.temple_logo) {
+          setTempleLogoSrc(response.data.temple_logo);
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -81,6 +94,7 @@ const MainLayout = () => {
       path.startsWith('/settings/temple') ||
       path.startsWith('/settings/receipt') ||
       path.startsWith('/settings/cleanup') ||
+      path.startsWith('/settings/printers') ||
       path.startsWith('/settings/donation-types')
     ) {
       setActiveModule('main');
@@ -127,9 +141,12 @@ const MainLayout = () => {
   const normalized = (value) => (value || '').toLowerCase().trim();
   const duplicateSystemSettingNames = new Set(['temple identity', 'receipt settings', 'data cleanup']);
   const hasSystemSettingsParent = currentMenuItems.some((item) => normalized(item.name) === 'system settings');
-  const visibleMenuItems = hasSystemSettingsParent ?
-    currentMenuItems.filter((item) => !duplicateSystemSettingNames.has(normalized(item.name))) :
-    currentMenuItems;
+  const visibleMenuItems = currentMenuItems.filter((item) => {
+    const name = normalized(item.name);
+    if (name === 'profile') return false;
+    if (hasSystemSettingsParent && duplicateSystemSettingNames.has(name)) return false;
+    return true;
+  });
 
   const renderMenuItem = (item, depth = 0) => {
     const hasChildren = item.submodules && item.submodules.length > 0;
@@ -297,13 +314,15 @@ const MainLayout = () => {
                   align="end"
                   sideOffset={8}>
                   
-                  <DropdownMenu.Item
-                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50 outline-none cursor-pointer"
-                    onClick={() => navigate('/profile')}>
-                    
-                    <User className="w-4 h-4" />
-                    Profile
-                  </DropdownMenu.Item>
+                  {(user?.is_all_access || user?.privileges?.includes('profile.read')) && (
+                    <DropdownMenu.Item
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50 outline-none cursor-pointer"
+                      onClick={() => navigate('/profile')}>
+                      
+                      <Icons.User className="w-4 h-4" />
+                      Profile
+                    </DropdownMenu.Item>
+                  )}
                   <DropdownMenu.Separator className="h-px bg-gray-100 my-1" />
                   <DropdownMenu.Item
                     className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-error hover:bg-error/5 outline-none cursor-pointer font-medium"

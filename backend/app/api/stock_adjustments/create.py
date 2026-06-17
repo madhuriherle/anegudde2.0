@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import Item, StockAdjustment, StockLedger, User, ConsumptionEntry
@@ -13,12 +13,19 @@ router = APIRouter()
 def sync_for_consumption(
     consumption_id: int,
     payload: List[StockAdjustmentCreate],
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("consumptions.write"))
 ):
     consumption = db.query(ConsumptionEntry).filter(ConsumptionEntry.id == consumption_id).first()
     if not consumption:
         raise HTTPException(status_code=404, detail="Consumption entry not found")
+
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "consumption_id": consumption_id,
+        "usage_date": consumption.usage_date.isoformat() if consumption.usage_date else None
+    }
 
     now = datetime.now(timezone.utc)
 

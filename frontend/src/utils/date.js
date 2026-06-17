@@ -4,6 +4,34 @@ const isValidDate = (value) => {
   return !Number.isNaN(d.getTime());
 };
 
+/**
+ * Safer wrapper for toLocaleTimeString with Kolkata timezone fallback
+ */
+export const safeFormatTime = (date, options = {}) => {
+  if (!isValidDate(date)) return '-';
+  const d = new Date(date);
+  try {
+    return d.toLocaleTimeString('en-IN', { ...options, timeZone: 'Asia/Kolkata' });
+  } catch (err) {
+    console.warn('Kolkata timezone not supported or insecure, falling back to local time');
+    return d.toLocaleTimeString('en-IN', options);
+  }
+};
+
+/**
+ * Safer wrapper for toLocaleDateString with Kolkata timezone fallback
+ */
+export const safeFormatDate = (date, options = {}) => {
+  if (!isValidDate(date)) return '-';
+  const d = new Date(date);
+  try {
+    return d.toLocaleDateString('en-IN', { ...options, timeZone: 'Asia/Kolkata' });
+  } catch (err) {
+    console.warn('Kolkata timezone not supported or insecure, falling back to local date');
+    return d.toLocaleDateString('en-IN', options);
+  }
+};
+
 export const formatDate = (value) => {
   if (!isValidDate(value)) return '-';
   const d = new Date(value);
@@ -17,7 +45,7 @@ export const formatDateTime = (value) => {
   if (!isValidDate(value)) return '-';
   const d = new Date(value);
   const date = formatDate(d);
-  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const time = safeFormatTime(d, { hour: '2-digit', minute: '2-digit' });
   return `${date} ${time}`;
 };
 

@@ -3,12 +3,23 @@ from decimal import Decimal
 import math
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
-from app.db.models import DonationAmountMaster, DonationEntry, DonationItem, Item, StockLedger, User, Devotee
+from app.db.models import DonationAmountMaster, DonationEntry, DonationItem, Item, StockLedger, User, Devotee, DonationType
 from app.schemas.donation import DonationAmountMasterCreate, DonationAmountMasterUpdate, DonationEntryCreate
 from app.services import devotee_service
 from app.schemas.devotee import DevoteeCreate
 from app.services.receipt_sequence_service import next_donation_receipt
 from app.utils.donation_receipt import generate_and_save_donation_receipt
+
+def _validate_donation_type(payload: DonationEntryCreate, db: Session) -> int:
+    donation_type_id = payload.donation_type or 1
+    donation_type = (
+        db.query(DonationType)
+        .filter(DonationType.id == donation_type_id, DonationType.status == 1)
+        .first()
+    )
+    if not donation_type:
+        raise HTTPException(status_code=400, detail="Invalid donation type")
+    return donation_type_id
 
 def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = None, donation_type_id: int | None = None):
     # ... (existing smart search logic remains same)
@@ -126,7 +137,7 @@ def delete_amount_master(amount_id: int, db: Session, current_user: User) -> Non
     db.commit()
 
 def _validate_amount_selection(payload: DonationEntryCreate, db: Session) -> None:
-    if payload.donation_mode != "AMOUNT":
+    if payload.donation_mode != 1:  # 1: AMOUNT
         return
     if payload.amount_donation_type == "SPECIFIC":
         option = db.query(DonationAmountMaster).filter(
@@ -141,8 +152,6 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
     now = datetime.now(timezone.utc)
     today = get_today_ist()
     
-    if payload.donation_date > today:
-        raise HTTPException(status_code=400, detail="Donation date cannot be in the future.")
     _validate_amount_selection(payload, db)
 
     # CRM Logic: Link/Create Devotee
@@ -160,7 +169,7 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
         current_user
     )
 
-    donation_type_id = payload.donation_type or 1
+    donation_type_id = _validate_donation_type(payload, db)
     financial_year_id, receipt_prefix, receipt_number, receipt_display_number = next_donation_receipt(
         db,
         payload.donation_date,
@@ -175,9 +184,9 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
         receipt_display_number=receipt_display_number,
         donation_mode=payload.donation_mode,
         total_gross_amount=payload.total_gross_amount,
-        amount_donation_type=payload.amount_donation_type if payload.donation_mode == "AMOUNT" else None,
-        donation_amount_master_id=payload.donation_amount_master_id if payload.donation_mode == "AMOUNT" and payload.amount_donation_type == "SPECIFIC" else None,
-        amount_note=payload.amount_note if payload.donation_mode == "AMOUNT" else None,
+        amount_donation_type=payload.amount_donation_type if payload.donation_mode == 1 else None,
+        donation_amount_master_id=payload.donation_amount_master_id if payload.donation_mode == 1 and payload.amount_donation_type == "SPECIFIC" else None,
+        amount_note=payload.amount_note if payload.donation_mode == 1 else None,
         user_code=current_user.user_code,
         donation_date=payload.donation_date,
         devotee_id=devotee.id,
@@ -199,7 +208,7 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
     db.add(entry)
     db.flush()
     
-    for it in (payload.items if payload.donation_mode == "ITEM" else []):
+    for it in (payload.items if payload.donation_mode == 0 else []):
         # ... (rest of stock update logic)
         item = db.query(Item).filter(Item.id == it.item_id).first()
         if not item:
@@ -259,6 +268,7 @@ def get_donation(donation_id: int, db: Session) -> DonationEntry:
         .options(
             joinedload(DonationEntry.items).joinedload(DonationItem.item).joinedload(Item.unit),
             joinedload(DonationEntry.user),
+            joinedload(DonationEntry.donation_type_master),
             joinedload(DonationEntry.donation_amount_master),
             joinedload(DonationEntry.devotee),
         )
@@ -273,8 +283,6 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
     now = datetime.now(timezone.utc)
     today = get_today_ist()
     
-    if payload.donation_date > today:
-        raise HTTPException(status_code=400, detail="Donation date cannot be in the future.")
     _validate_amount_selection(payload, db)
 
     entry = db.query(DonationEntry).filter(DonationEntry.id == donation_id).first()
@@ -310,12 +318,12 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
 
     # 2. Update Entry Meta
     entry.donation_date = payload.donation_date
-    entry.donation_type = payload.donation_type or 1
+    entry.donation_type = _validate_donation_type(payload, db)
     entry.donation_mode = payload.donation_mode
     entry.total_gross_amount = payload.total_gross_amount
-    entry.amount_donation_type = payload.amount_donation_type if payload.donation_mode == "AMOUNT" else None
-    entry.donation_amount_master_id = payload.donation_amount_master_id if payload.donation_mode == "AMOUNT" and payload.amount_donation_type == "SPECIFIC" else None
-    entry.amount_note = payload.amount_note if payload.donation_mode == "AMOUNT" else None
+    entry.amount_donation_type = payload.amount_donation_type if payload.donation_mode == 1 else None
+    entry.donation_amount_master_id = payload.donation_amount_master_id if payload.donation_mode == 1 and payload.amount_donation_type == "SPECIFIC" else None
+    entry.amount_note = payload.amount_note if payload.donation_mode == 1 else None
     entry.user_code = current_user.user_code
     entry.devotee_id = devotee.id
     entry.devotee_name = payload.devotee_name
@@ -330,7 +338,7 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
     entry.updated_by = current_user.id
 
     # 3. Add New Items and Apply New Stock
-    for it in (payload.items if payload.donation_mode == "ITEM" else []):
+    for it in (payload.items if payload.donation_mode == 0 else []):
         item = db.query(Item).filter(Item.id == it.item_id).first()
         if not item:
             raise HTTPException(status_code=400, detail=f"Invalid item_id: {it.item_id}")

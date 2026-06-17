@@ -6,34 +6,34 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, AnyPermissionChecker
 from app.db.models import DonationType, User
-from app.schemas.base import PaginatedResponse
 from app.schemas.donation_type import DonationTypeOut
+from app.schemas.base import PaginatedResponse
 
 router = APIRouter()
-
 
 @router.get("/list_donation_types", response_model=PaginatedResponse[DonationTypeOut])
 def list_donation_types(
     db: Session = Depends(get_db),
-    _: User = Depends(AnyPermissionChecker(["donation_types.read", "donations.read"])),
+    _: User = Depends(AnyPermissionChecker(["donation_types.read", "donations.write", "donations.read"])),
     page: int = Query(1, ge=1),
-    page_size: int = Query(100, ge=1, le=1000),
-    q: str | None = Query(None),
-    status: int | None = Query(None),
+    page_size: int = Query(20, ge=1, le=1000),
+    q: str = Query(None),
+    status: int = Query(None),
+    module_id: int = Query(None)
 ):
-    query = db.query(DonationType)
+    offset = (page - 1) * page_size
+    query = db.query(DonationType).filter(DonationType.status != -1)
+    
+    if q:
+        query = query.filter(DonationType.type_name.ilike(f"%{q}%"))
+        
     if status is not None:
         query = query.filter(DonationType.status == status)
-    if q:
-        like = f"%{q}%"
-        query = query.filter(
-            DonationType.type_name.ilike(like)
-            | DonationType.receipt_prefix.ilike(like)
-            | DonationType.id.cast(String).ilike(like)
-        )
+        
+    if module_id is not None:
+        query = query.filter(DonationType.modules.any(id=module_id))
 
     total = query.count()
-    offset = (page - 1) * page_size
     items = query.order_by(DonationType.status.desc(), DonationType.type_name.asc()).offset(offset).limit(page_size).all()
 
     return {

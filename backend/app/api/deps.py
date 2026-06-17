@@ -30,6 +30,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             token,
             os.getenv("SECRET_KEY", "change_me"),
             algorithms=[os.getenv("ALGORITHM", "HS256")],
+            options={"verify_exp": False},
         )
         username: str | None = payload.get("sub")
         token_stamp: str | None = payload.get("ss")
@@ -81,8 +82,8 @@ class PermissionChecker:
                 detail=f"Not enough permissions. Required: {self.required_privilege}",
             )
 
-        # Rank-based module restriction check
-        # Find the privilege in DB to check its associated module's rank restriction
+        # Rank and Status module restriction check
+        # Find the privilege in DB to check its associated module's rank and status restriction
         db = SessionLocal()
         try:
             priv = db.query(Privilege).options(joinedload(Privilege.module)).filter(
@@ -90,13 +91,22 @@ class PermissionChecker:
                 Privilege.status == 1
             ).first()
             
-            if priv and priv.module and priv.module.min_rank_level:
-                user_rank = current_user.role.rank_level if current_user.role else 99
-                if user_rank > priv.module.min_rank_level:
+            if priv and priv.module:
+                # 1. Check Module Status
+                if priv.module.status == 0:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
-                        detail=f"This module requires Rank {priv.module.min_rank_level} or higher access.",
+                        detail=f"The '{priv.module.name}' module is currently disabled by administrator.",
                     )
+
+                # 2. Check Rank Restriction
+                if priv.module.min_rank_level:
+                    user_rank = current_user.role.rank_level if current_user.role else 99
+                    if user_rank > priv.module.min_rank_level:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"This module requires Rank {priv.module.min_rank_level} or higher access.",
+                        )
         finally:
             db.close()
 
@@ -131,7 +141,7 @@ class AnyPermissionChecker:
 
         db = SessionLocal()
         try:
-            rank_blocked = (
+            privileges_objs = (
                 db.query(Privilege)
                 .options(joinedload(Privilege.module))
                 .filter(
@@ -141,14 +151,20 @@ class AnyPermissionChecker:
                 .all()
             )
 
-            allowed_by_rank = any(
-                not privilege.module
-                or not privilege.module.min_rank_level
-                or user_rank <= privilege.module.min_rank_level
-                for privilege in rank_blocked
+            # Check if any allowed privilege belongs to an active module and user meets rank
+            allowed = any(
+                (not p.module or (p.module.status == 1 and (not p.module.min_rank_level or user_rank <= p.module.min_rank_level)))
+                for p in privileges_objs
             )
 
-            if not allowed_by_rank:
+            if not allowed:
+                # Find if it was specifically blocked by module status or rank
+                is_disabled = any(p.module and p.module.status == 0 for p in privileges_objs)
+                if is_disabled:
+                     raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="This feature is currently disabled by administrator.",
+                    )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="This action requires a higher rank.",

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, PermissionChecker
@@ -8,10 +8,21 @@ router = APIRouter()
 
 
 @router.delete("/delete_vendor/{vendor_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_vendor(vendor_id: int, db: Session = Depends(get_db), _: User = Depends(PermissionChecker("vendors.delete"))):
+def delete_vendor(
+    vendor_id: int, 
+    request: Request,
+    db: Session = Depends(get_db), 
+    _: User = Depends(PermissionChecker("vendors.delete"))
+):
     vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "vendor_name": vendor.vendor_name,
+        "vendor_code": vendor.vendor_code
+    }
     
     vendor.status = 0
     db.commit()

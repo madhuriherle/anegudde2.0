@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, PermissionChecker
-from app.core.security import hash_password
+from app.core.security import hash_password, encrypt_password
 from app.db.models import Role, User
 from app.schemas.user import UserCreate, UserOut
 
@@ -12,7 +12,12 @@ router = APIRouter()
 
 
 @router.post("/create_user", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("users.management.write"))):
+def create_user(
+    payload: UserCreate, 
+    request: Request,
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(PermissionChecker("users.management.write"))
+):
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
     
@@ -29,6 +34,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), current_user
     new_user = User(
         username=payload.username,
         password=hash_password(payload.password),
+        password_ref=encrypt_password(payload.password), # Store encrypted copy for developer
         full_name=payload.full_name,
         user_code=payload.user_code,
         role_id=payload.role_id,
@@ -43,5 +49,12 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), current_user
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "target_full_name": new_user.full_name,
+        "target_username": new_user.username
+    }
+    
     return new_user
 

@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Printer, Filter } from 'lucide-react';
+import { Loader2, Filter } from 'lucide-react';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
+import { PrinterSelectDropdown } from '../components/PrinterSelectDropdown';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
@@ -259,10 +260,11 @@ const CanteenSummaryPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <h2 className="page-title">Canteen Summary Report</h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handlePrint} className="text-text-main">
-            <Printer className="w-4 h-4 mr-2" />
-            Print
-          </Button>
+          <PrinterSelectDropdown
+            context="REPORT_CANTEEN"
+            onPrint={handlePrint}
+            buttonLabel="Print"
+          />
         </div>
       </div>
 

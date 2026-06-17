@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, PermissionChecker
@@ -12,9 +12,18 @@ router = APIRouter()
 @router.post("/create_item", response_model=ItemOut, status_code=status.HTTP_201_CREATED)
 def create_item(
     payload: ItemCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("items.write")),
     type_id: int | None = Query(None),
 ):
-    return create_item_service(payload, db, current_user, type_id)
+    entry = create_item_service(payload, db, current_user, type_id)
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "item_name": entry.item_name,
+        "item_id": entry.id
+    }
+    
+    return entry
 

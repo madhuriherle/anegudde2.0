@@ -1,6 +1,0 @@
-"id","role_name","status","created_at","updated_at","created_by","updated_by","is_all_access","rank_level"
-1,"Admin",1,"2026-05-10 23:25:42.573958","2026-05-22 10:15:07.586794",NULL,NULL,False,3
-2,"Super Admin",1,"2026-05-12 13:30:30.596585","2026-05-22 10:15:07.586794",NULL,NULL,True,1
-3,"Temple Trustee",1,"2026-05-12 13:30:30.599116","2026-05-22 10:15:07.586794",NULL,NULL,True,2
-4,"Canteen Manager",1,"2026-05-12 13:30:30.600641","2026-05-22 10:15:07.586794",NULL,NULL,False,4
-5,"Canteen Supervisor",1,"2026-05-22 10:15:07.594371","2026-05-22 10:15:07.594375",NULL,NULL,False,5

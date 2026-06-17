@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, field_validator
+from .base import UTCBaseModel
 
 
 class PurchaseItemIn(BaseModel):
@@ -9,15 +10,13 @@ class PurchaseItemIn(BaseModel):
     price: Decimal
 
 
-class PurchaseBillOut(BaseModel):
+class PurchaseBillOut(UTCBaseModel):
     id: int
     purchase_id: int
     file_name: str
     file_path: str
     file_type: str | None = None
     created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class PurchaseEntryCreate(BaseModel):
@@ -37,7 +36,7 @@ class PurchaseEntryCreate(BaseModel):
         return v
 
 
-class PurchaseItemOut(BaseModel):
+class PurchaseItemOut(UTCBaseModel):
     id: int
     purchase_entry_id: int
     item_id: int
@@ -45,10 +44,8 @@ class PurchaseItemOut(BaseModel):
     price: Decimal
     line_total: Decimal
 
-    model_config = ConfigDict(from_attributes=True)
 
-
-class PurchaseEntryOut(BaseModel):
+class PurchaseEntryOut(UTCBaseModel):
     id: int
     vendor_id: int
     purchase_date: date
@@ -62,8 +59,6 @@ class PurchaseEntryOut(BaseModel):
     created_by: int | None = None
     updated_by: int | None = None
     bills: list[PurchaseBillOut] = []
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class PurchaseEntryUpdate(BaseModel):
@@ -81,12 +76,10 @@ class PurchaseEntryUpdate(BaseModel):
         return v
 
 
-class UserMinimal(BaseModel):
+class UserMinimal(UTCBaseModel):
     id: int
     username: str
     full_name: str
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class PurchaseEntryFullOut(PurchaseEntryOut):

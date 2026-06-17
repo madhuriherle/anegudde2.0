@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, PermissionChecker
@@ -13,6 +13,7 @@ router = APIRouter()
 @router.post("/create_vendor", response_model=VendorOut, status_code=status.HTTP_201_CREATED)
 def create_vendor(
     payload: VendorCreate, 
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: User = Depends(PermissionChecker("vendors.write"))
 ):
@@ -48,4 +49,11 @@ def create_vendor(
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "vendor_name": vendor.vendor_name,
+        "vendor_code": vendor.vendor_code
+    }
+    
     return vendor

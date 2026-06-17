@@ -128,7 +128,7 @@ class PrintingService {
     return bytes!.buffer.asUint8List();
   }
 
-  static Future<void> printToken(Map<String, dynamic> tokenData) async {
+  static Future<void> printToken(Map<String, dynamic> tokenData, {String? printerName}) async {
     final doc = pw.Document();
 
     // Use standard Helvetica fonts for English text to avoid TTF parsing issues
@@ -279,13 +279,29 @@ class PrintingService {
       ),
     );
 
-    // Try to find the default printer to skip the dialog
+    // Try to find the target printer
     try {
       final printers = await Printing.listPrinters();
-      final defaultPrinter = printers.firstWhere((p) => p.isDefault, orElse: () => printers.first);
-      
+      Printer? targetPrinter;
+
+      if (printerName != null && printerName.isNotEmpty) {
+        // Try exact match first
+        targetPrinter = printers.where((p) => p.name == printerName).toList().isNotEmpty
+            ? printers.firstWhere((p) => p.name == printerName)
+            : null;
+        // Try case-insensitive contains
+        targetPrinter ??= printers.where((p) =>
+            p.name.toLowerCase().contains(printerName.toLowerCase())).toList().isNotEmpty
+            ? printers.firstWhere((p) =>
+                p.name.toLowerCase().contains(printerName.toLowerCase()))
+            : null;
+      }
+
+      // Fall back to default printer if no match
+      targetPrinter ??= printers.firstWhere((p) => p.isDefault, orElse: () => printers.first);
+
       await Printing.directPrintPdf(
-        printer: defaultPrinter,
+        printer: targetPrinter,
         onLayout: (PdfPageFormat format) => doc.save(),
         name: 'Token_$receiptNo',
       );

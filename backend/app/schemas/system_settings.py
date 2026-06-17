@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from datetime import datetime
 from typing import Optional
 
@@ -9,6 +9,9 @@ class SystemSettingsBase(BaseModel):
     temple_address: Optional[str] = None
     temple_contact: Optional[str] = None
     alternate_contact: Optional[str] = None
+    receipt_office_contact: Optional[str] = None
+    receipt_seva_counter_contact: Optional[str] = None
+    receipt_guest_house_contact: Optional[str] = None
     temple_email: Optional[str] = None
     temple_website: Optional[str] = None
     temple_logo: Optional[str] = None
@@ -17,6 +20,8 @@ class SystemSettingsBase(BaseModel):
     google_maps_link: Optional[str] = None
     footer_note: Optional[str] = None
     receipt_padding: int
+    receipt_top_offset: float = Field(default=0.0, ge=-50, le=50)
+    receipt_left_offset: float = Field(default=0.0, ge=-50, le=50)
     
     # Display Toggles
     show_temple_logo: bool = True
@@ -45,6 +50,9 @@ class TempleIdentitySettingsUpdate(BaseModel):
     temple_address: Optional[str] = None
     temple_contact: Optional[str] = None
     alternate_contact: Optional[str] = None
+    receipt_office_contact: Optional[str] = None
+    receipt_seva_counter_contact: Optional[str] = None
+    receipt_guest_house_contact: Optional[str] = None
     temple_email: Optional[str] = None
     temple_website: Optional[str] = None
     opening_time: Optional[str] = None
@@ -71,6 +79,8 @@ class TempleIdentitySettingsUpdate(BaseModel):
 
 class ReceiptSettingsUpdate(BaseModel):
     receipt_padding: int
+    receipt_top_offset: float = Field(default=0.0, ge=-50, le=50)
+    receipt_left_offset: float = Field(default=0.0, ge=-50, le=50)
     show_temple_logo: bool = True
     show_temple_name: bool = True
     show_temple_name_kn: bool = True
@@ -88,6 +98,9 @@ class TempleIdentitySettingsOut(BaseModel):
     temple_address: Optional[str] = None
     temple_contact: Optional[str] = None
     alternate_contact: Optional[str] = None
+    receipt_office_contact: Optional[str] = None
+    receipt_seva_counter_contact: Optional[str] = None
+    receipt_guest_house_contact: Optional[str] = None
     temple_email: Optional[str] = None
     temple_website: Optional[str] = None
     opening_time: Optional[str] = None
@@ -112,7 +125,24 @@ class TempleIdentitySettingsOut(BaseModel):
 
 
 class ReceiptSettingsOut(BaseModel):
+    temple_name: Optional[str] = None
+    temple_name_kn: Optional[str] = None
+    temple_address: Optional[str] = None
+    temple_contact: Optional[str] = None
+    alternate_contact: Optional[str] = None
+    receipt_office_contact: Optional[str] = None
+    receipt_seva_counter_contact: Optional[str] = None
+    receipt_guest_house_contact: Optional[str] = None
+    temple_email: Optional[str] = None
+    temple_website: Optional[str] = None
+    opening_time: Optional[str] = None
+    closing_time: Optional[str] = None
+    google_maps_link: Optional[str] = None
+    temple_logo: Optional[str] = None
+    footer_note: Optional[str] = None
     receipt_padding: int
+    receipt_top_offset: float = 0.0
+    receipt_left_offset: float = 0.0
     show_temple_logo: bool = True
     show_temple_name: bool = True
     show_temple_name_kn: bool = True

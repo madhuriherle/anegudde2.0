@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Any, Optional
 from pydantic import BaseModel
+from .base import UTCBaseModel
 
-class ActivityLogOut(BaseModel):
+class ActivityLogOut(UTCBaseModel):
     id: int
     user_id: Optional[int]
     username: Optional[str]
@@ -16,6 +17,3 @@ class ActivityLogOut(BaseModel):
     ip_address: Optional[str]
     duration_ms: Optional[int]
     meta: dict[str, Any]
-
-    class Config:
-        from_attributes = True

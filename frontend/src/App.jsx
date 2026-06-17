@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/LoginPage';
+import NoAccessPage from './pages/NoAccessPage';
 import ModulesPage from './pages/ModulesPage';
 import CanteenDashboardPage from './pages/CanteenDashboardPage';
 import OfficePage from './pages/OfficePage';
@@ -25,6 +26,7 @@ import SettingsPage from './pages/SettingsPage';
 import TempleIdentitySettingsPage from './pages/TempleIdentitySettingsPage';
 import ReceiptSettingsPage from './pages/ReceiptSettingsPage';
 import DataCleanupPage from './pages/DataCleanupPage';
+import PrinterSettingsSettingsPage from './pages/PrinterSettingsSettingsPage';
 import ProfilePage from './pages/ProfilePage';
 import ModuleManagementPage from './pages/ModuleManagementPage';
 import { StockSummaryPage } from './pages/StockSummaryPage';
@@ -51,11 +53,12 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/no-access" element={<NoAccessPage />} />
 
       <Route element={<MainLayout />}>
         <Route path="/" element={<ProtectedRoute><DefaultRoute /></ProtectedRoute>} />
         <Route path="/canteen" element={<ProtectedRoute requiredPermission="dashboard.read"><CanteenDashboardPage /></ProtectedRoute>} />
-        <Route path="/office" element={<ProtectedRoute requiredPermission="donations.read"><OfficePage /></ProtectedRoute>} />
+        <Route path="/office" element={<ProtectedRoute requiredPermission="main.office.read"><OfficePage /></ProtectedRoute>} />
         <Route path="/vendors" element={<ProtectedRoute requiredPermission="vendors.read"><VendorsPage /></ProtectedRoute>} />
         <Route path="/items" element={<ProtectedRoute requiredPermission="items.read"><Navigate to="/items/rawitem" replace /></ProtectedRoute>} />
         <Route path="/items/rawitem" element={<ProtectedRoute requiredPermission="items.read"><ItemsPage /></ProtectedRoute>} />
@@ -75,21 +78,22 @@ function App() {
         <Route path="/reports/canteen-summary" element={<ProtectedRoute requiredPermission="reports.canteen_summary.read"><CanteenSummaryPage /></ProtectedRoute>} />
         <Route path="/reports/manpower" element={<ProtectedRoute requiredPermission="reports.manpower.read"><ManpowerReportPage /></ProtectedRoute>} />
         
-        <Route path="/users" element={<ProtectedRoute requiredPermission="users.management.read"><UsersPage /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute requiredPermission={["users.management.read", "users.read"]}><UsersPage /></ProtectedRoute>} />
         <Route path="/users/privileges" element={<ProtectedRoute requiredPermission="users.privileges.read"><PrivilegesPage /></ProtectedRoute>} />
         <Route path="/users/activity" element={<ProtectedRoute requiredPermission="activity_logs.read"><ActivityLogsPage /></ProtectedRoute>} />
         <Route path="/devotees" element={<ProtectedRoute requiredPermission="devotees.read"><DevoteesPage /></ProtectedRoute>} />
-        
+
         <Route path="/items/categories" element={<ProtectedRoute requiredPermission="item_categories.read"><ItemCategoriesPage /></ProtectedRoute>} />
         <Route path="/settings/units" element={<ProtectedRoute requiredPermission="units.read"><UnitsPage /></ProtectedRoute>} />
         <Route path="/items/menu-items" element={<ProtectedRoute requiredPermission="menu_items.read"><MenuItemsPage /></ProtectedRoute>} />
         <Route path="/settings/donation-types" element={<ProtectedRoute requiredPermission="donation_types.read"><DonationTypesPage /></ProtectedRoute>} />
         <Route path="/settings/modules" element={<ProtectedRoute requiredPermission="users.modules.read" requiredRank={1}><ModuleManagementPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute requiredPermission="settings.management.read"><SettingsPage /></ProtectedRoute>} />
-        <Route path="/settings/temple" element={<ProtectedRoute requiredPermission="settings.temple_identity.read"><TempleIdentitySettingsPage /></ProtectedRoute>} />
-        <Route path="/settings/receipt" element={<ProtectedRoute requiredPermission="settings.receipt_settings.read"><ReceiptSettingsPage /></ProtectedRoute>} />
-        <Route path="/settings/cleanup" element={<ProtectedRoute requiredPermission="settings.data_cleanup.read"><DataCleanupPage /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute requiredPermission={["settings.management.read", "settings.temple_identity.read", "settings.receipt_settings.read", "settings.data_cleanup.read", "settings.read"]}><SettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/temple" element={<ProtectedRoute requiredPermission={["settings.temple_identity.read", "settings.management.read", "settings.read"]}><TempleIdentitySettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/receipt" element={<ProtectedRoute requiredPermission={["settings.receipt_settings.read", "settings.management.read", "settings.read"]}><ReceiptSettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/cleanup" element={<ProtectedRoute requiredPermission={["settings.data_cleanup.read", "settings.management.read", "settings.read"]}><DataCleanupPage /></ProtectedRoute>} />
+        <Route path="/settings/printers" element={<ProtectedRoute requiredPermission={["settings.management.read", "settings.read"]}><PrinterSettingsSettingsPage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute requiredPermission="profile.read"><ProfilePage /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

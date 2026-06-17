@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, PermissionChecker
@@ -11,7 +11,13 @@ router = APIRouter()
 
 
 @router.put("/update_vendor/{vendor_id}", response_model=VendorOut)
-def update_vendor(vendor_id: int, payload: VendorUpdate, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("vendors.write"))):
+def update_vendor(
+    vendor_id: int, 
+    payload: VendorUpdate, 
+    request: Request,
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(PermissionChecker("vendors.write"))
+):
     vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
@@ -32,6 +38,13 @@ def update_vendor(vendor_id: int, payload: VendorUpdate, db: Session = Depends(g
         vendor.updated_by = current_user.id
         db.commit()
         db.refresh(vendor)
+        
+        # Attach snapshot metadata for audit logging
+        request.state.audit_meta = {
+            "vendor_name": vendor.vendor_name,
+            "vendor_code": vendor.vendor_code
+        }
+        
         return vendor
     except HTTPException:
         raise

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user, PermissionChecker
 from app.db.models import MenuItem, User
@@ -11,6 +11,7 @@ router = APIRouter()
 def update_menu_item(
     item_id: int,
     payload: MenuItemUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("menu_items.write")),
 ):
@@ -35,4 +36,10 @@ def update_menu_item(
     
     db.commit()
     db.refresh(db_item)
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "dish_name": db_item.dish_name
+    }
+    
     return db_item

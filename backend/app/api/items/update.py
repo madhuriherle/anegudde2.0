@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, PermissionChecker
@@ -13,8 +13,17 @@ router = APIRouter()
 def update_item(
     item_id: int,
     payload: ItemUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("items.write")),
     type_id: int | None = Query(None),
 ):
-    return update_item_service(item_id, payload, db, current_user, type_id)
+    entry = update_item_service(item_id, payload, db, current_user, type_id)
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "item_name": entry.item_name,
+        "item_id": entry.id
+    }
+    
+    return entry

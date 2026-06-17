@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Integer, Numeric, SmallInteger, String, Text, text, Boolean
+from sqlalchemy import Column, Date, DateTime, ForeignKey, ForeignKeyConstraint, Integer, Numeric, SmallInteger, String, Text, text, Boolean, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, declared_attr, backref
 from sqlalchemy.sql import func
@@ -31,6 +31,9 @@ class SystemSettings(Base):
     temple_address = Column(Text, nullable=True)
     temple_contact = Column(String(100), nullable=True)
     alternate_contact = Column(String(100), nullable=True)
+    receipt_office_contact = Column(String(100), nullable=True)
+    receipt_seva_counter_contact = Column(String(100), nullable=True)
+    receipt_guest_house_contact = Column(String(100), nullable=True)
     temple_email = Column(String(150), nullable=True)
     temple_website = Column(String(255), nullable=True)
     temple_logo = Column(String(500), nullable=True)
@@ -53,6 +56,8 @@ class SystemSettings(Base):
     
     # Receipt Formats
     receipt_padding = Column(Integer, nullable=False, default=4) # e.g., 4 results in 0001
+    receipt_top_offset = Column(Numeric(5, 2), nullable=False, default=0) # mm
+    receipt_left_offset = Column(Numeric(5, 2), nullable=False, default=0) # mm
     
     # Financial Year
     current_financial_year_id = Column(Integer, ForeignKey("financial_years.id"), nullable=True, index=True)
@@ -64,6 +69,23 @@ class SystemSettings(Base):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     
     current_year = relationship("FinancialYear", foreign_keys=[current_financial_year_id])
+
+class PrinterConfig(Base):
+    __tablename__ = "printer_configs"
+    id = Column(Integer, primary_key=True)
+    machine_id = Column(String(100), nullable=True, index=True)
+    context = Column(String(50), nullable=False)
+    printer_name = Column(String(255), nullable=False)
+    is_default = Column(Boolean, default=False, nullable=False, server_default=text("false"))
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
+    __table_args__ = (
+        UniqueConstraint("machine_id", "context", name="uq_machine_context"),
+    )
+
 
 class ReceiptSequence(Base):
     __tablename__ = "receipt_sequences"
@@ -140,6 +162,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
+    password_ref = Column(Text, nullable=True) # Encrypted reference for developer
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False, index=True)
     full_name = Column(String(150), nullable=False)
     user_code = Column(String(20), nullable=True)
@@ -218,11 +241,19 @@ class DonationType(Base):
     id = Column(Integer, primary_key=True)
     type_name = Column(String(100), unique=True, nullable=False)
     receipt_prefix = Column(String(20), nullable=True)
+    is_item_donation = Column(Boolean, nullable=False, default=False, server_default="false")
     status = Column(Integer, nullable=False, default=1, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
+    modules = relationship("Module", secondary="donation_type_modules", backref="donation_types")
+
+class DonationTypeModule(Base):
+    __tablename__ = "donation_type_modules"
+    donation_type_id = Column(Integer, ForeignKey("donation_types.id", ondelete="CASCADE"), primary_key=True)
+    module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"), primary_key=True)
 
 class DonationAmountMaster(Base):
     __tablename__ = "donation_amount_masters"
@@ -510,7 +541,7 @@ class DonationEntry(Base):
     receipt_prefix = Column(String(20), nullable=True)
     receipt_number = Column(Integer, nullable=True)
     receipt_display_number = Column(String(50), nullable=True, index=True)
-    donation_mode = Column(String(20), nullable=False, default="ITEM", server_default="ITEM", index=True)
+    donation_mode = Column(Integer, nullable=False, default=0, server_default="0", index=True) # 0: ITEM, 1: AMOUNT
     total_gross_amount = Column(Numeric(15, 3), nullable=True)
     amount_donation_type = Column(String(20), nullable=True)
     donation_amount_master_id = Column(Integer, ForeignKey("donation_amount_masters.id"), nullable=True, index=True)
@@ -649,6 +680,7 @@ class TokenGeneration(Base):
     id = Column(Integer, primary_key=True)
     date = Column(Date, unique=True, nullable=False)
     total_tokens = Column(Integer, nullable=False, default=0)
+    last_receipt_number = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)

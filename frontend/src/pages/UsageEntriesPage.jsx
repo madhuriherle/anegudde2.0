@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -18,7 +18,7 @@ import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { formatQuantityWithUnit } from '../utils/quantity';
 import { cn } from '../utils/cn';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Clock, History, X } from 'lucide-react';
 
 import { usePermission } from '../hooks/usePermission';
 
@@ -78,6 +78,7 @@ const UsageEntriesPage = () => {
   const canDelete = hasPermission('consumptions.delete');
   const canReadUsage = hasPermission('consumptions.read');
   const canWriteUsage = hasPermission('consumptions.write');
+  const canReadActivityLogs = hasPermission('consumptions.read');
 
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -88,8 +89,10 @@ const UsageEntriesPage = () => {
   const [editingConsumption, setEditingConsumption] = useState(null);
   const [editingWastageEntryId, setEditingWastageEntryId] = useState(null);
   const [customDate, setCustomDate] = useState('');
+  const [activityExpanded, setActivityExpanded] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const activityDrawerRef = useRef(null);
 
   const { data: consumptionsData, isLoading: consumptionsLoading } = useQuery({
     queryKey: ['consumptions', customDate, page, pageSize],
@@ -99,6 +102,75 @@ const UsageEntriesPage = () => {
       return (await api.get('/daily-usage/list_consumptions', { params })).data;
     }
   });
+
+  React.useEffect(() => {
+    if (!activityExpanded) return undefined;
+
+    const handleOutsideClick = (event) => {
+      if (
+        activityDrawerRef.current &&
+        !activityDrawerRef.current.contains(event.target)
+      ) {
+        setActivityExpanded(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [activityExpanded]);
+
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ['daily-usage-activities'],
+    queryFn: async () => {
+      const res = await api.get('/audit/page_activity', { params: { page: 'daily_usage', page_size: 20 } });
+      return res.data?.items || [];
+    },
+    enabled: !!canReadActivityLogs,
+    retry: false,
+    refetchInterval: 15000
+  });
+
+  const getActivityMeta = (log) => {
+    if (log.method === 'POST') {
+      return { title: 'Usage Entry Added', verb: 'created' };
+    }
+    if (log.method === 'PUT') {
+      return { title: 'Usage Entry Edited', verb: 'updated' };
+    }
+    return { title: 'Usage Entry Deleted', verb: 'deleted' };
+  };
+
+  const getActivitySentenceParts = (log) => {
+    const { verb } = getActivityMeta(log);
+    const actorName = log.meta?.actor_name || log.username || 'System';
+    const usageDate = log.meta?.usage_date ? formatDate(log.meta.usage_date) : null;
+    return { actorName, actionText: `${verb} daily usage`, targetName: usageDate, targetPrefix: ' for ' };
+  };
+
+  const formatActivityDay = (value) => {
+    const activityDate = new Date(value);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const isSameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    if (isSameDay(activityDate, today)) return 'Today';
+    if (isSameDay(activityDate, yesterday)) return 'Yesterday';
+    return activityDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  };
+
+  const groupedActivityData = useMemo(() => {
+    return (activityData || []).reduce((groups, log) => {
+      const day = formatActivityDay(log.activity_at);
+      if (!groups[day]) groups[day] = [];
+      groups[day].push(log);
+      return groups;
+    }, {});
+  }, [activityData]);
   const filteredConsumptions = useMemo(() => {
     return consumptionsData?.items || [];
   }, [consumptionsData]);
@@ -496,7 +568,7 @@ const UsageEntriesPage = () => {
   [deleteMutation, showConfirm, canWrite, canDelete]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="page-title">Daily Usage Entry</h2>
         {canWrite && <Button onClick={openNew} className="text-text-main">Add Usage Entry</Button>}
@@ -504,16 +576,30 @@ const UsageEntriesPage = () => {
 
       <Card className="border-border-temple">
         <CardContent className="p-4 sm:p-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-            <div className="space-y-1.5 w-full sm:w-56">
-              <Label className="text-text-main">Date</Label>
-              <Input
-                type="date"
-                value={customDate}
-                onChange={(e) => setCustomDate(e.target.value)}
-                className="text-text-main" />
-              
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+              <div className="space-y-1.5 w-full sm:w-56">
+                <Label className="text-text-main">Date</Label>
+                <Input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  className="text-text-main" />
+
+              </div>
             </div>
+            {canReadActivityLogs && (
+              <button
+                onClick={() => setActivityExpanded(!activityExpanded)}
+                className={cn(
+                  "relative flex h-10 w-10 shrink-0 items-center justify-center self-end text-primary transition-colors hover:text-primary/80 active:scale-95 group",
+                  activityExpanded && "text-primary/70"
+                )}
+                title={activityExpanded ? "Close History" : "View Usage History"}
+              >
+                <History className="w-6 h-6 transition-colors" />
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -528,6 +614,80 @@ const UsageEntriesPage = () => {
         pageSize={pageSize}
         onPageChange={(p) => setPage(p)}
         totalCount={consumptionsData?.total || 0} />
+
+      {canReadActivityLogs && (
+        <div className={cn(
+          "fixed top-0 right-0 h-full w-[360px] max-w-[94vw] bg-white shadow-[-10px_0_40px_rgba(0,0,0,0.08)] border-l border-border-temple/40 z-30 transition-transform duration-300 ease-out transform",
+          activityExpanded ? "translate-x-0" : "translate-x-full"
+        )} ref={activityDrawerRef}>
+          <div className="flex h-full flex-col">
+            <div className="m-0 flex items-center justify-between border-b border-border-temple/40 bg-[#FAF7F2] px-5 py-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-primary shadow-sm border border-border-temple/40">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-secondary font-temple uppercase tracking-widest">Recent Activity</h3>
+              </div>
+              <button onClick={() => setActivityExpanded(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-text-main/40 hover:bg-white hover:text-text-main">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-[#FFFCF8] px-5 py-4 custom-scrollbar">
+              {activityLoading ? (
+                [...Array(5)].map((_, i) => (
+                  <div key={i} className="mb-4 animate-pulse space-y-3 rounded-xl bg-white p-4 shadow-sm">
+                    <div className="h-3 bg-bg-temple rounded w-3/4"></div>
+                    <div className="h-2 bg-bg-temple rounded w-1/2"></div>
+                  </div>
+                ))
+              ) : (!activityData || activityData.length === 0) ? (
+                <div className="p-10 text-center space-y-2">
+                  <div className="w-12 h-12 bg-bg-temple rounded-full flex items-center justify-center mx-auto opacity-40">
+                    <History className="w-6 h-6 text-text-main" />
+                  </div>
+                  <p className="text-xs text-text-main/40 italic">No recent activities</p>
+                </div>
+              ) : (
+                Object.entries(groupedActivityData).map(([day, logs]) => (
+                  <div key={day} className="mb-5 last:mb-0">
+                    <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-text-main/40">{day}</div>
+                    <div className="relative divide-y divide-border-temple/40 bg-white before:absolute before:left-[14px] before:top-3 before:bottom-3 before:w-px before:bg-primary/45">
+                      {logs.map((log) => {
+                        const { actorName, actionText, targetName, targetPrefix } = getActivitySentenceParts(log);
+                        return (
+                          <div key={log.id} className="relative py-3 pl-7 pr-3 transition-colors">
+                            <div className="absolute left-[14px] top-[19px] h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-primary" />
+                            <div className="min-w-0 flex-1 pt-0.5">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="text-xs font-semibold leading-tight text-text-main">
+                                    <span className="font-bold text-primary">{actorName}</span>
+                                    <span className="text-text-main"> {actionText}</span>
+                                    {targetName && (
+                                      <>
+                                        <span className="text-text-main">{targetPrefix}</span>
+                                        <span className="font-bold text-primary">{targetName}</span>
+                                      </>
+                                    )}
+                                  </p>
+                                </div>
+                                <span className="shrink-0 text-[10px] font-bold text-text-main/70">
+                                  {new Date(log.activity_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>

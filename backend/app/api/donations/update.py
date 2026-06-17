@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, PermissionChecker
 from app.db.models import User
@@ -11,7 +11,16 @@ router = APIRouter()
 def update_donation(
     donation_id: int,
     payload: DonationEntryCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("donations.write"))
 ):
-    return donation_service.update_donation(donation_id, payload, db, current_user)
+    entry = donation_service.update_donation(donation_id, payload, db, current_user)
+    
+    # Attach snapshot metadata for audit logging
+    request.state.audit_meta = {
+        "devotee_name": entry.devotee_name,
+        "receipt_display_number": entry.receipt_display_number
+    }
+    
+    return entry

@@ -39,6 +39,7 @@ export function DataTable({
   pageIndex = 0,
   pageSize = 50,
   onPageChange,
+  onPageSizeChange,
   totalCount
 }) {
   const [sorting, setSorting] = React.useState([]);
@@ -143,6 +144,22 @@ export function DataTable({
           }
           </div>
           <div className="flex items-center space-x-6 lg:space-x-8">
+            {onPageSizeChange && (
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-500 font-medium">Rows per page</label>
+                <select
+                  value={pageSize}
+                  onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                  className="h-8 px-2 border border-gray-200 rounded-md text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={200}>200</option>
+                  <option value={500}>500</option>
+                  <option value={1000}>1000</option>
+                </select>
+              </div>
+            )}
             <div className="flex items-center space-x-2">
               <p className="text-sm font-bold text-gray-700">Page {pageIndex + 1} of{' '}
                 {Math.max(1, pageCount)}</p>

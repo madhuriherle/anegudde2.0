@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Loader2 } from 'lucide-react';
+import NoAccessPage from '../pages/NoAccessPage';
 
 const ProtectedRoute = ({ children, requiredPermission, requiredRank }) => {
   const { token, user, isLoading } = useAuth();
@@ -29,12 +30,12 @@ const ProtectedRoute = ({ children, requiredPermission, requiredRank }) => {
       user.is_all_access ||
       requiredPermissions.some((permission) => user.privileges?.includes(permission));
     if (!hasPermission) {
-      return <Navigate to="/" replace />;
+      return <NoAccessPage />;
     }
   }
 
   if (requiredRank && (user.role_rank_level ?? 99) > requiredRank) {
-    return <Navigate to="/" replace />;
+    return <NoAccessPage />;
   }
 
   return <>{children}</>;

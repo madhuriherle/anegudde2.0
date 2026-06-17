@@ -28,18 +28,35 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
             user_id, session_id = user_info
 
             action = f"{request.method} {request.url.path}"
-            activity_status = "SUCCESS" if response.status_code < 400 else "FAILED"
-            reason = None if activity_status == "SUCCESS" else f"HTTP {response.status_code}"
+            
+            # Refined activity status logic: 
+            # - SUCCESS for 2xx/3xx
+            # - SUCCESS/NOT_FOUND for 404 GET (usually search/lookup)
+            # - FAILED for others (401, 403, 500, etc.)
+            if response.status_code < 400:
+                activity_status = "SUCCESS"
+                reason = None
+            elif response.status_code == 404 and request.method == "GET":
+                activity_status = "SUCCESS"
+                reason = "Not Found (404)"
+            else:
+                activity_status = "FAILED"
+                reason = f"HTTP {response.status_code}"
 
             client_ip = request.client.host if request.client else None
             user_agent = request.headers.get("user-agent")
             request_id = response.headers.get("X-Request-ID")
             route_template = self._get_route_template(request)
             error_code = None if response.status_code < 400 else f"HTTP_{response.status_code}"
+            
+            # Extract metadata from request state if attached by the endpoint
+            audit_meta = getattr(request.state, "audit_meta", {})
+            
             meta = {
                 "query_params": dict(request.query_params),
                 "path_params": request.path_params,
                 "status_family": f"{response.status_code // 100}xx",
+                **audit_meta
             }
 
             db = SessionLocal()
@@ -101,7 +118,7 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
         algorithm = os.getenv("ALGORITHM", "HS256")
 
         try:
-            payload = jwt.decode(token, secret_key, algorithms=[algorithm])
+            payload = jwt.decode(token, secret_key, algorithms=[algorithm], options={"verify_exp": False})
             username = payload.get("sub")
             session_id = payload.get("sid")
             if not username:

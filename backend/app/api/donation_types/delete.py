@@ -1,9 +1,8 @@
 from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlalchemy import exc
 from sqlalchemy.orm import Session
-
-from app.api.deps import get_current_user, get_db, PermissionChecker
+from app.api.deps import get_db, PermissionChecker
 from app.db.models import DonationEntry, DonationType, User
 
 router = APIRouter()
@@ -12,6 +11,7 @@ router = APIRouter()
 @router.delete("/delete_donation_type/{donation_type_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_donation_type(
     donation_type_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("donation_types.delete")),
 ):
@@ -19,7 +19,13 @@ def delete_donation_type(
     if not row:
         raise HTTPException(status_code=404, detail="Donation type not found")
 
-    has_donations = db.query(DonationEntry.id).filter(DonationEntry.donation_type == donation_type_id).first()
+    request.state.audit_meta = {"donation_type_name": row.type_name}
+
+    has_donations = (
+        db.query(DonationEntry.id)
+        .filter(DonationEntry.donation_type == donation_type_id)
+        .first()
+    )
     if has_donations:
         row.status = 0
         row.updated_at = datetime.now(timezone.utc)
@@ -27,6 +33,14 @@ def delete_donation_type(
         db.commit()
         return None
 
-    db.delete(row)
-    db.commit()
+    try:
+        db.delete(row)
+        db.commit()
+    except exc.IntegrityError:
+        db.rollback()
+        row.status = 0
+        row.updated_at = datetime.now(timezone.utc)
+        row.updated_by = current_user.id
+        db.commit()
+
     return None

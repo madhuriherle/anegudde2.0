@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_user, PermissionChecker
+from app.api.deps import get_db, PermissionChecker
 from app.db.models import MenuItem, User
 from app.schemas.menu_item import MenuItemCreate, MenuItemOut
 
@@ -10,6 +10,7 @@ router = APIRouter()
 @router.post("/create_menu_item", response_model=MenuItemOut, status_code=status.HTTP_201_CREATED)
 def create_menu_item(
     payload: MenuItemCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("menu_items.write"))
 ):
@@ -37,4 +38,8 @@ def create_menu_item(
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
+
+    # Attach snapshot metadata
+    request.state.audit_meta = {"dish_name": db_item.dish_name}
+
     return db_item

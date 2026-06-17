@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Select from 'react-select';
 
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../api/axios';
@@ -12,6 +13,9 @@ import { DataTable } from '../components/ui/DataTable';
 import { InlineStatusSelect } from '../components/ui/InlineStatusSelect';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
+import { Badge } from '../components/ui/Badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/Dialog';
+import { X, Plus, Info, Search } from 'lucide-react';
 
 import { usePermission } from '../hooks/usePermission';
 import { cn } from '../utils/cn';
@@ -19,12 +23,12 @@ import { cn } from '../utils/cn';
 const donationTypeSchema = z.object({
   type_name: z.string().min(1, 'Type name is required'),
   receipt_prefix: z.string().optional(),
-  status: z.coerce.number().default(1)
+  status: z.coerce.number().default(1),
+  module_ids: z.array(z.number()).optional()
 });
 
 const normalizeReceiptPrefix = (value) => {
   const prefix = String(value || '').trim().toUpperCase();
-  // Don't add hyphen if it ends with special characters like } or -
   if (prefix && /[A-Z0-9]$/.test(prefix)) return `${prefix}-`;
   return prefix;
 };
@@ -36,19 +40,37 @@ const DonationTypesPage = () => {
   const canWrite = hasPermission('donation_types.write');
   const canDelete = hasPermission('donation_types.delete');
 
+  const [open, setOpen] = useState(false);
   const [editingType, setEditingType] = useState(null);
+  const [search, setSearch] = useState('');
 
   const { data: donationTypes, isLoading } = useQuery({
     queryKey: ['donation-types'],
     queryFn: async () => (await api.get('/donation-types/list_donation_types', { params: { status: null, page_size: 1000 } })).data
   });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  const { data: rootModules } = useQuery({
+    queryKey: ['root-modules'],
+    queryFn: async () => {
+      const response = await api.get('/modules/menu');
+      return response.data;
+    }
+  });
+
+  const moduleOptions = useMemo(() => {
+    return (rootModules || []).map(m => ({
+      value: m.id,
+      label: m.name
+    }));
+  }, [rootModules]);
+
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm({
     resolver: zodResolver(donationTypeSchema),
     defaultValues: {
       type_name: '',
       receipt_prefix: '',
-      status: 1
+      status: 1,
+      module_ids: []
     }
   });
 
@@ -90,20 +112,23 @@ const DonationTypesPage = () => {
     reset({
       type_name: type.type_name,
       receipt_prefix: type.receipt_prefix,
-      status: type.status
+      status: type.status,
+      module_ids: (type.modules || []).map(m => m.id)
     });
+    setOpen(true);
   };
 
   const handleCancel = () => {
+    setOpen(false);
     setEditingType(null);
-    reset({ type_name: '', receipt_prefix: '', status: 1 });
+    reset({ type_name: '', receipt_prefix: '', status: 1, module_ids: [] });
   };
 
   const onSubmit = async (data) => {
     const isEditMode = Boolean(editingType);
     const confirmed = await showConfirm(
-      isEditMode ? 'Update Donation Type' : 'Add Donation Type',
-      isEditMode ? 'Update this donation type?' : 'Add this donation type?'
+      isEditMode ? 'Update Donation Type' : 'Save Donation Type',
+      isEditMode ? 'Are you sure you want to update this donation type?' : 'Are you sure you want to save this new donation type?'
     );
     if (confirmed) {
       mutation.mutate({ ...data, id: editingType?.id, isEditMode });
@@ -111,142 +136,212 @@ const DonationTypesPage = () => {
   };
 
   const columns = useMemo(() => [
-  {
-    accessorKey: 'type_name',
-    header: 'Donation Type',
-    cell: (info) => <span className="font-medium text-text-main">{info.getValue()}</span>
-  },
-  {
-    accessorKey: 'receipt_prefix',
-    header: 'Donation Code',
-    cell: (info) => {
-      const val = info.getValue() || '';
-      return <span className="font-mono font-black text-primary">{val.endsWith('-') ? val.slice(0, -1) : val}</span>;
-    }
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: (info) =>
-    <InlineStatusSelect
-      value={Number(info.getValue() ?? 1)}
-      disabled={statusMutation.isPending || !canWrite}
-      onChange={async (nextStatus) => {
-        const confirmed = await showConfirm(
-          'Update Status',
-          `Are you sure you want to ${Number(nextStatus) === 1 ? 'activate' : 'deactivate'} "${info.row.original.type_name}"?`
+    {
+      accessorKey: 'type_name',
+      header: 'Donation Type',
+      cell: (info) => <span className="font-bold text-text-main">{info.getValue()}</span>
+    },
+    {
+      accessorKey: 'modules',
+      header: 'Linked Modules',
+      cell: (info) => {
+        const modules = info.getValue() || [];
+        if (modules.length === 0) return <span className="text-xs text-text-main/70 font-medium">All Modules</span>;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {modules.map(m => (
+              <Badge key={m.id} variant="secondary" className="bg-[#F8F4EE] text-secondary border-secondary/20 text-[10px] px-2 py-0.5">
+                {m.name}
+              </Badge>
+            ))}
+          </div>
         );
-        if (confirmed) statusMutation.mutate({ id: info.row.original.id, status: nextStatus });
-      }} />
-
-
-  },
-  {
-    id: 'actions',
-    header: () => <div className="text-center">Actions</div>,
-    cell: (info) =>
-    <div className="flex items-center justify-center gap-2">
+      }
+    },
+    {
+      accessorKey: 'receipt_prefix',
+      header: 'Donation Code',
+      cell: (info) => {
+        const val = info.getValue() || '';
+        return <span className="font-mono font-black text-primary">{val.endsWith('-') ? val.slice(0, -1) : val}</span>;
+      }
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: (info) => (
+        <InlineStatusSelect
+          value={Number(info.getValue() ?? 1)}
+          disabled={statusMutation.isPending || !canWrite}
+          onChange={async (nextStatus) => {
+            const confirmed = await showConfirm(
+              'Update Status',
+              `Are you sure you want to ${Number(nextStatus) === 1 ? 'activate' : 'deactivate'} "${info.row.original.type_name}"?`
+            );
+            if (confirmed) statusMutation.mutate({ id: info.row.original.id, status: nextStatus });
+          }}
+        />
+      )
+    },
+    {
+      id: 'actions',
+      header: () => <div className="text-center">Actions</div>,
+      cell: (info) => (
+        <div className="flex items-center justify-center gap-2">
           {canWrite && <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>}
-          {canDelete && <button
-        onClick={async () => {
-          const confirmed = await showConfirm('Delete Donation Type', `Delete "${info.row.original.type_name}"? Existing donations will disable it instead.`);
-          if (confirmed) deleteMutation.mutate(info.row.original.id);
-        }}
-        className="action-btn-delete">
-        
-            Delete
-          </button>}
+          {canDelete && (
+            <button
+              onClick={async () => {
+                const confirmed = await showConfirm('Delete Donation Type', `Delete "${info.row.original.type_name}"? Existing donations will disable it instead.`);
+                if (confirmed) deleteMutation.mutate(info.row.original.id);
+              }}
+              className="action-btn-delete"
+            >
+              Delete
+            </button>
+          )}
         </div>
+      )
+    }
+  ], [statusMutation, showConfirm, deleteMutation, canWrite, canDelete]);
 
-  }],
-  [statusMutation, showConfirm, deleteMutation, canWrite, canDelete]);
-
-  const sortedTypes = useMemo(() => {
+  const filteredAndSortedTypes = useMemo(() => {
     const list = donationTypes?.items || [];
-    return [...list].sort((a, b) => {
+    const filtered = list.filter(t => 
+      t.type_name.toLowerCase().includes(search.toLowerCase()) || 
+      (t.receipt_prefix || '').toLowerCase().includes(search.toLowerCase())
+    );
+    return [...filtered].sort((a, b) => {
       if (a.status !== b.status) return b.status - a.status;
       return a.type_name.localeCompare(b.type_name);
     });
-  }, [donationTypes]);
+  }, [donationTypes, search]);
+
+  const customSelectStyles = {
+    control: (provided, state) => ({
+      ...provided,
+      borderColor: state.isFocused ? '#B08968' : 'rgba(176, 137, 104, 0.5)',
+      boxShadow: state.isFocused ? '0 0 0 1px #B08968' : 'none',
+      '&:hover': { borderColor: '#B08968' },
+      borderRadius: '0.5rem',
+      fontSize: '14px',
+      minHeight: '42px'
+    }),
+    multiValue: (provided) => ({ ...provided, backgroundColor: '#F6EEDF', borderRadius: '4px' }),
+    multiValueLabel: (provided) => ({ ...provided, color: '#5C2E1F', fontWeight: 'bold', fontSize: '12px' }),
+    multiValueRemove: (provided) => ({ ...provided, color: '#5C2E1F', '&:hover': { backgroundColor: '#5C2E1F', color: 'white' } })
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="page-title">Manage Donation Types</h2>
+        <h2 className="page-title">Donation Types</h2>
+        {canWrite && (
+          <Button onClick={() => setOpen(true)} className="text-text-main font-bold px-8 h-11 border-none shadow-md">
+            Add New Donation Type
+          </Button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {canWrite && <div className="lg:col-span-4 space-y-2">
-          <Card className="border-border-temple sticky top-6">
-            <CardContent className="p-6">
-              <div className="flex flex-col space-y-1.5 bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4 -mx-6 -mt-6 mb-6 select-none rounded-t-lg">
-                <h3 className="text-[18px] font-bold text-[#2F1F14] m-0 font-temple">
-                  {editingType ? 'Edit Donation Type' : 'Add Donation Type'}
-                </h3>
-              </div>
-
-              <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
-                <div className="space-y-2">
-                  <Label className="text-text-main font-medium">Donation Type *</Label>
-                  <Input {...register('type_name')} className="border-border-temple/50" />
-                  {errors.type_name && <p className="text-xs text-error">{errors.type_name.message}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-text-main font-medium">Donation Code</Label>
-                  <Input {...register('receipt_prefix')} placeholder="e.g. {FY}-ANN" className="border-border-temple/50 font-mono uppercase" />
-                  {errors.receipt_prefix && <p className="text-xs text-error">{errors.receipt_prefix.message}</p>}
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  {editingType && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={handleCancel}
-                      className="h-11 flex-1 font-bold text-[15px] text-[#2B2B2B] hover:bg-[#F8F4EE] border border-[#E7D8CC] rounded-lg"
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    onClick={handleSubmit(onSubmit)}
-                    disabled={mutation.isPending}
-                    className="h-11 flex-1 font-bold text-white text-[15px] bg-primary hover:bg-primary/90 border-none shadow-sm rounded-lg"
-                  >
-                    {mutation.isPending ? 'Saving...' : 'Save'}
-                  </Button>
-                </div>              </form>
-            </CardContent>
-          </Card>
-          <div className="bg-white border border-orange-100 rounded-lg px-4 py-3 shadow-sm">
-            <h3 className="text-xs font-bold tracking-wide text-[#8B4513] uppercase mb-2">
-              Donation Code Hint
-            </h3>
-
-            <div className="space-y-1.5 text-xs leading-relaxed text-gray-800">
-              <p>
-                Use <code className="font-semibold text-gray-900">{'{FY}'}</code> for financial year.
-              </p>
-              <p>
-                Pattern: <code className="font-semibold text-gray-900">{'{FY}'}-CODE</code>
-              </p>
-              <p>
-                Example: <code className="font-semibold text-gray-900">{'{FY}'}-ANN {'->'} 2026-27-ANN00001</code>
-              </p>
+      <Card className="border-border-temple shadow-sm bg-white">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Quick search donation types..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 h-10 border-border-temple/50 text-text-main"
+              />
             </div>
           </div>
-        </div>}
+        </CardContent>
+      </Card>
 
-        <div className={cn("lg:col-span-8", !canWrite && "lg:col-span-12")}>
-          <Card className="border-border-temple shadow-sm overflow-hidden">
-            <DataTable columns={columns} data={sortedTypes} loading={isLoading} />
-          </Card>
-        </div>
-      </div>
-    </div>);
+      <Card className="border-border-temple shadow-sm overflow-hidden bg-white">
+        <DataTable columns={columns} data={filteredAndSortedTypes} loading={isLoading} />
+      </Card>
 
+      <Dialog open={open} onOpenChange={(val) => { if (!val && !mutation.isPending) handleCancel(); }}>
+        <DialogContent
+          className="max-w-2xl border-border-temple shadow-2xl bg-white"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="bg-[#F3E8D4] border-b border-border-temple/40">
+            <DialogTitle>
+              {editingType ? 'Edit Donation Type' : 'New Donation Type'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4 pb-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5">
+                <Label className="text-text-main font-bold">Donation Type *</Label>
+                <Input {...register('type_name')} className="h-11 border-border-temple text-text-main" />
+                {errors.type_name && <p className="text-xs text-error font-medium">{errors.type_name.message}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-text-main font-bold">Donation Code</Label>
+                <Input {...register('receipt_prefix')} className="h-11 border-border-temple font-mono uppercase text-text-main" />
+                {errors.receipt_prefix && <p className="text-xs text-error font-medium">{errors.receipt_prefix.message}</p>}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-text-main font-bold">Display In Modules</Label>
+              <Controller
+                name="module_ids"
+                control={control}
+                render={({ field: { value, onChange, onBlur } }) => (
+                  <Select
+                    isMulti
+                    options={moduleOptions}
+                    value={moduleOptions.filter(opt => (value || []).includes(opt.value))}
+                    onChange={(selected) => onChange(selected ? selected.map(s => s.value) : [])}
+                    onBlur={onBlur}
+                    styles={customSelectStyles}
+                    placeholder="Select root modules..."
+                    className="react-select-container"
+                    classNamePrefix="react-select"
+                    closeMenuOnSelect={false}
+                  />
+                )}
+              />
+              <p className="text-[11px] text-text-main mt-1 px-1">
+                Leave empty to show in all root modules (Canteen, Office, etc.)
+              </p>
+            </div>
+
+            <div className="bg-[#FAF7F2] border border-orange-100/50 rounded-lg p-3">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Info className="w-3 h-3 text-primary/60" />
+                <span className="text-[9px] font-black tracking-widest text-secondary uppercase">Formatting Hint</span>
+              </div>
+              <div className="text-[11px] text-text-main/70 leading-relaxed space-y-0.5" style={{ fontSize: '11px' }}>
+                <p style={{ fontSize: '11px' }}>Custom prefix is optional. Use <code className="font-bold text-primary" style={{ fontSize: '11px' }}>{'{FY}'}</code> as a placeholder for the current Financial year.</p>
+                <div className="space-y-0.5">
+                  <p style={{ fontSize: '11px' }}><code className="font-bold text-text-main" style={{ fontSize: '11px' }}>{'{FY}'}-SEVA</code> → <span className="text-secondary font-bold" style={{ fontSize: '11px' }}>2026-27-SEVA00001</span></p>
+                  <p style={{ fontSize: '11px' }}><code className="font-bold text-text-main" style={{ fontSize: '11px' }}>SEVA</code> → <span className="text-secondary font-bold" style={{ fontSize: '11px' }}>SEVA01</span></p>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="bg-[#F3E8D4] border-t border-border-temple/40 mt-6">
+              <Button type="button" variant="ghost" onClick={handleCancel} className="w-32 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending} className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+                {mutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 };
 
 export default DonationTypesPage;

@@ -11,7 +11,7 @@ def check_usage(
     entity_type: str = Query(...), # vendor, item, category, etc
     entity_id: int = Query(...),
     db: Session = Depends(get_db),
-    _: User = Depends(PermissionChecker("debug.read"))
+    _: User = Depends(get_current_user)
 ):
     """
     Checks if an entity has usage in other tables before deletion.

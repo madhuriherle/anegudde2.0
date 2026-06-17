@@ -99,6 +99,7 @@
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-border-temple/40 rounded-full hover:bg-border-temple/60 transition-colors;
   }
+
 }
 
 @layer base {
