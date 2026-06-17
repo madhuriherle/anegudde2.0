@@ -50,8 +50,45 @@ def list_purchase_returns(db: Session, page: int = 1, page_size: int = 20, q: st
         "total_pages": math.ceil(total / page_size) if total > 0 else 0
     }
 
+def _validate_return_quantities(payload, db: Session, exclude_return_id: int = None):
+    # Get original purchase items
+    purchase_items = db.query(PurchaseItem).filter(
+        PurchaseItem.purchase_entry_id == payload.purchase_entry_id
+    ).all()
+    purchase_map = {pi.item_id: pi.quantity for pi in purchase_items}
+    
+    # Get all other returns for this bill
+    query = db.query(PurchaseReturnItem).join(PurchaseReturnEntry).filter(
+        PurchaseReturnEntry.purchase_entry_id == payload.purchase_entry_id,
+        PurchaseReturnEntry.status == 1
+    )
+    if exclude_return_id:
+        query = query.filter(PurchaseReturnEntry.id != exclude_return_id)
+        
+    returned_items = query.all()
+    returned_map = {}
+    for ri in returned_items:
+        returned_map[ri.item_id] = returned_map.get(ri.item_id, Decimal("0")) + ri.quantity
+        
+    # Check each item in payload
+    for it in payload.items:
+        purchased_qty = purchase_map.get(it.item_id, Decimal("0"))
+        already_returned = returned_map.get(it.item_id, Decimal("0"))
+        remaining = purchased_qty - already_returned
+        
+        if Decimal(str(it.quantity)) > remaining:
+            item = db.query(Item).filter(Item.id == it.item_id).first()
+            item_name = item.item_name if item else f"Item #{it.item_id}"
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot return {it.quantity} for {item_name}. Purchased: {purchased_qty}, Already Returned: {already_returned}, Remaining: {remaining}"
+            )
+
 def create_purchase_return(payload, db: Session, current_user: User):
     now = datetime.now(timezone.utc)
+    
+    # Validation
+    _validate_return_quantities(payload, db)
     
     total_amount = Decimal("0")
     for it in payload.items:
@@ -122,9 +159,25 @@ def get_vendor_bills(vendor_id: int, db: Session):
     ).order_by(PurchaseEntry.purchase_date.desc()).all()
 
 def get_bill_items(purchase_id: int, db: Session):
-    return db.query(PurchaseItem).options(joinedload(PurchaseItem.item)).filter(
+    items = db.query(PurchaseItem).options(joinedload(PurchaseItem.item)).filter(
         PurchaseItem.purchase_entry_id == purchase_id
     ).all()
+    
+    # Calculate already returned quantities for this bill
+    returned_items = db.query(PurchaseReturnItem).join(PurchaseReturnEntry).filter(
+        PurchaseReturnEntry.purchase_entry_id == purchase_id,
+        PurchaseReturnEntry.status == 1
+    ).all()
+    
+    returned_map = {}
+    for ri in returned_items:
+        returned_map[ri.item_id] = returned_map.get(ri.item_id, Decimal("0")) + ri.quantity
+        
+    for it in items:
+        it.returned_quantity = returned_map.get(it.item_id, Decimal("0"))
+        it.unit_name = it.item.unit.unit_name if it.item and it.item.unit else ""
+        
+    return items
 
 
 def _reverse_purchase_return_effects(entry: PurchaseReturnEntry, db: Session):
@@ -148,6 +201,9 @@ def update_purchase_return(return_id: int, payload, db: Session, current_user: U
     ).first()
     if not entry:
         raise HTTPException(status_code=404, detail="Purchase return not found")
+
+    # Validation
+    _validate_return_quantities(payload, db, exclude_return_id=return_id)
 
     _reverse_purchase_return_effects(entry, db)
     db.query(PurchaseReturnItem).filter(PurchaseReturnItem.return_entry_id == entry.id).delete()

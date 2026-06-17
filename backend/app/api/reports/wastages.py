@@ -14,12 +14,13 @@ router = APIRouter()
 
 @router.get("/get_wastages_report", response_model=list[ReportRow])
 def wastages_report(
-    from_date: date = Query(...), 
-    to_date: date = Query(...), 
-    group_by: str = Query("day"), 
-    db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("reports.wastages.read"))
+    from_date: date = Query(...),
+    to_date: date = Query(...),
+    group_by: str = Query("day"),
+    db: Session = Depends(get_db),
+    _: User = Depends(PermissionChecker("reports.consumptions.read"))
 ):
+
     period = period_expr(group_by, WastageEntry.wastage_date)
     rows = (
         db.query(period.label("period"), func.count(WastageEntry.id).label("total_amount"), func.count(WastageEntry.id).label("total_count"))

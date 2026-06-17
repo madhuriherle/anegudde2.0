@@ -65,15 +65,15 @@ const RolesPage = () => {
     }
   });
 
-  const flattenModules = (modules, depth = 0) => {
+  const flattenModules = (modules) => {
     let flat = [];
-    // Only include modules up to depth 1 (Main Modules and their direct functional sections)
-    if (depth > 1) return [];
-
-    modules.forEach(m => {
-      flat.push({ id: m.id, name: m.name, depth });
-      if (m.submodules && m.submodules.length > 0) {
-        flat = [...flat, ...flattenModules(m.submodules, depth + 1)];
+    (modules || []).forEach(m => {
+      flat.push({ id: m.id, name: m.name, depth: 0 });
+      // If this is Main Menu, also include its direct children (Canteen, Office, etc.)
+      if (m.name === "Main Menu" && m.submodules) {
+        m.submodules.forEach(sm => {
+          flat.push({ id: sm.id, name: sm.name, depth: 1 });
+        });
       }
     });
     return flat;
@@ -321,7 +321,15 @@ const RolesPage = () => {
               {editingRole ? 'Edit Role' : 'New Role'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pt-6">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-5 pt-6"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+              }
+            }}
+          >
             <div className="space-y-5">
               <div className="space-y-1.5">
                 <Label className="text-text-main font-bold">Role Name *</Label>

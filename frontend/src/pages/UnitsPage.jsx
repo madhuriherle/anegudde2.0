@@ -276,7 +276,15 @@ const UnitsPage = () => {
               {editingUnit ? 'Edit Unit' : 'New Unit'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4 pb-0">
+          <form 
+            onSubmit={handleSubmit(onSubmit)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+              }
+            }}
+            className="space-y-6 pt-4 pb-0"
+          >
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-text-main">Unit Name *</Label>

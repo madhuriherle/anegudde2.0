@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "./Dialog";
 import { Loader2, X, Receipt } from 'lucide-react';
@@ -168,6 +169,7 @@ export function ReceiptViewerDialog({
             <DialogTitle className="text-lg font-bold font-temple text-[#2F1F14] uppercase tracking-tight m-0">
               Receipt Preview: {donationData?.receipt_display_number || '...'}
             </DialogTitle>
+            <DialogDescription className="sr-only">Preview of the donation receipt.</DialogDescription>
           </div>
         </div>
 

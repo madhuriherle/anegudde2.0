@@ -876,7 +876,15 @@ const PurchasesPage = () => {
             </DialogTitle>
             <DialogDescription className="sr-only">Form to record or update a purchase from a vendor.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col flex-1 min-h-0 overflow-hidden"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+              }
+            }}
+          >
             <div className="bg-white space-y-6 px-6 pt-4 pb-4 overflow-y-auto flex-1 min-h-0">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 justify-items-start">
                 <div className="space-y-1.5 w-full max-w-[320px]">

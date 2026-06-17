@@ -218,13 +218,18 @@ const PurchaseReturnsPage = () => {
     const numQty = parseFloat(qty) || 0;
     const originalItem = billItems?.find((bi) => bi.item_id === itemId);
 
-    if (originalItem && numQty > originalItem.quantity) {
-      await showError(`Cannot return more than purchased (${originalItem.quantity})`);
-      // Clear the wrongly entered field after user clicks OK
-      setReturnItems((prev) => prev.map((ri) =>
-      ri.item_id === itemId ? { ...ri, return_qty: '' } : ri
-      ));
-      return;
+    if (originalItem) {
+      const alreadyReturned = parseFloat(originalItem.returned_quantity) || 0;
+      const remaining = originalItem.quantity - alreadyReturned;
+
+      if (numQty > remaining) {
+        await showError(`Cannot return more than remaining (${remaining.toFixed(3)}). Total Purchased: ${originalItem.quantity}, Already Returned: ${alreadyReturned}`);
+        // Clear the wrongly entered field after user clicks OK
+        setReturnItems((prev) => prev.map((ri) =>
+        ri.item_id === itemId ? { ...ri, return_qty: '' } : ri
+        ));
+        return;
+      }
     }
 
     setReturnItems((prev) => prev.map((ri) =>
@@ -236,9 +241,14 @@ const PurchaseReturnsPage = () => {
     const validItems = returnItems.filter((ri) => (parseFloat(ri.return_qty) || 0) > 0);
 
     // Check for any item exceeding purchased quantity
-    const exceedingItems = normalizedReturnItems.filter((ri) => (parseFloat(ri.return_qty) || 0) > ri.quantity);
+    const exceedingItems = normalizedReturnItems.filter((ri) => {
+      const alreadyReturned = parseFloat(ri.returned_quantity) || 0;
+      const remaining = ri.quantity - alreadyReturned;
+      return (parseFloat(ri.return_qty) || 0) > remaining;
+    });
+    
     if (exceedingItems.length > 0) {
-      showError(`Cannot return more than purchased for: ${exceedingItems.map((i) => i.item_name).join(', ')}`);
+      showError(`Cannot return more than remaining for: ${exceedingItems.map((i) => i.item_name).join(', ')}`);
       return;
     }
 
@@ -276,6 +286,7 @@ const PurchaseReturnsPage = () => {
         ...ri,
         item_name: ri.item_name || bi?.item_name || 'N/A',
         quantity: bi?.quantity ?? ri.quantity ?? 0,
+        returned_quantity: bi?.returned_quantity ?? 0,
         unit_name: bi?.unit_name ?? ri.unit_name ?? ''
       };
     });
@@ -566,7 +577,9 @@ const PurchaseReturnsPage = () => {
                           <thead className="bg-bg-temple border-b border-border-temple">
                             <tr>
                               <th className="text-left px-4 py-3 font-normal text-text-main">Item</th>
-                              <th className="text-right px-4 py-3 font-normal text-text-main">Purchased Qty</th>
+                              <th className="text-right px-4 py-3 font-normal text-text-main">Purchased</th>
+                              <th className="text-right px-4 py-3 font-normal text-text-main">Returned</th>
+                              <th className="text-right px-4 py-3 font-normal text-text-main">Remaining</th>
                               <th className="text-right px-4 py-3 font-normal text-text-main w-32">Return Qty</th>
                               <th className="text-right px-4 py-3 font-normal text-text-main">Price</th>
                               <th className="text-right px-4 py-3 font-normal text-text-main">Total</th>
@@ -575,11 +588,15 @@ const PurchaseReturnsPage = () => {
                           </thead>
                           <tbody className="divide-y divide-border-temple/40">
                             {normalizedReturnItems.map((ri) => {
-                            const isInvalid = (parseFloat(ri.return_qty) || 0) > ri.quantity;
+                            const alreadyReturned = parseFloat(ri.returned_quantity) || 0;
+                            const remaining = ri.quantity - alreadyReturned;
+                            const isInvalid = (parseFloat(ri.return_qty) || 0) > remaining;
                             return (
                               <tr key={ri.item_id} className={cn("bg-white hover:bg-bg-temple/5 transition-colors", isInvalid && "bg-red-50/50")}>
                                   <td className="px-4 py-3 text-text-main font-normal">{ri.item_name}</td>
-                                  <td className="text-right px-4 py-3 text-text-main font-normal">{ri.quantity} {ri.unit_name}</td>
+                                  <td className="text-right px-4 py-3 text-text-main font-normal">{ri.quantity}</td>
+                                  <td className="text-right px-4 py-3 text-amber-600 font-bold">{alreadyReturned > 0 ? alreadyReturned : '-'}</td>
+                                  <td className="text-right px-4 py-3 text-green-600 font-bold">{remaining}</td>
                                   <td className="px-4 py-3">
                                     <Input
                                     type="text"
@@ -600,7 +617,7 @@ const PurchaseReturnsPage = () => {
                                   
                                     {isInvalid &&
                                   <p className="text-[10px] text-red-600 mt-1 font-bold text-right italic">
-                                        Max: {ri.quantity}
+                                        Max: {remaining}
                                       </p>
                                   }
                                   </td>

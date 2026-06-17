@@ -189,9 +189,10 @@ const DonationsPage = () => {
     donationTypes.filter((type) => {
       if (Number(type.status) !== 1) return false;
       const linkedModules = type.modules || [];
-      return linkedModules.length === 0 || linkedModules.some((module) =>
-        String(module.name || '').trim().toLowerCase().includes('canteen')
-      );
+      return linkedModules.length === 0 || linkedModules.some((module) => {
+        const name = String(module.name || '').trim().toLowerCase();
+        return name.includes('canteen') || name.includes('main menu');
+      });
     })
   ), [donationTypes]);
   const amountOptions = useMemo(() => Array.isArray(amountOptionsData) ? amountOptionsData : [], [amountOptionsData]);
@@ -813,14 +814,22 @@ const DonationsPage = () => {
         }}
       >
         <DialogContent className="h-[86vh] max-h-[920px] w-[98vw] max-w-5xl p-0 overflow-hidden border-border-temple shadow-2xl flex flex-col">
-          <DialogHeader className="m-0">
+          <DialogHeader className="!m-0 border-b border-border-temple/40 !px-8 !py-6 shrink-0 bg-[#F3E8D4]">
             <DialogTitle className="text-xl text-text-main font-temple">
               {editingDonation ? 'Edit Donation Entry' : 'Record New Donation'}
             </DialogTitle>
             <DialogDescription className="sr-only">Form to record devotee details and donated items.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <form 
+            onSubmit={handleSubmit(onSubmit)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+              }
+            }}
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+          >
             {/* Scrollable Form Body */}
             <div className="min-h-0 flex-1 overflow-y-auto bg-white px-8 py-8 custom-scrollbar">
               <div className="space-y-10">
@@ -1250,7 +1259,15 @@ const DonationsPage = () => {
             <DialogDescription className="sr-only">Configure predefined amount donation options.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 lg:grid-cols-[0.75fr_1.75fr] gap-8 overflow-y-auto custom-scrollbar py-4">
-            <form onSubmit={handleSubmitAmountOption(onSubmitAmountOption)} className="space-y-4">
+            <form 
+              onSubmit={handleSubmitAmountOption(onSubmitAmountOption)} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                  e.preventDefault();
+                }
+              }}
+              className="space-y-4"
+            >
               <div className="space-y-1.5">
                 <Label className="text-text-main font-bold">Title *</Label>
                 <Input {...registerAmountOption('title')} className="text-text-main" placeholder="100 Devotees - Per Day Amount" />

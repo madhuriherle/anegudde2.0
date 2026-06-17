@@ -64,11 +64,24 @@ BLOCKING_STATUS_FLAGS = (
     0x00400000,  # door open
 )
 
+VIRTUAL_PRINTER_NAMES = (
+    'microsoft print to pdf',
+    'microsoft xps document writer',
+    'onenote',
+    'fax',
+)
+
+
+def is_virtual_printer(name):
+    normalized = (name or '').strip().lower()
+    return any(virtual_name in normalized for virtual_name in VIRTUAL_PRINTER_NAMES)
+
 
 def get_printer_status(name, default_printer=''):
     status = 0
     status_text = 'Ready'
     details = []
+    is_virtual = is_virtual_printer(name)
 
     try:
         handle = win32print.OpenPrinter(name)
@@ -81,6 +94,7 @@ def get_printer_status(name, default_printer=''):
         return {
             'name': name,
             'is_default': name == default_printer,
+            'is_virtual': is_virtual,
             'is_online': False,
             'status': None,
             'status_text': f'Unavailable: {exc}',
@@ -91,14 +105,15 @@ def get_printer_status(name, default_printer=''):
         details = [label for bit, label in PRINTER_STATUS_FLAGS if status & bit]
         status_text = ', '.join(details) if details else f'Status {status}'
 
-    is_online = not any(status & bit for bit in BLOCKING_STATUS_FLAGS)
+    is_online = is_virtual or not any(status & bit for bit in BLOCKING_STATUS_FLAGS)
     return {
         'name': name,
         'is_default': name == default_printer,
+        'is_virtual': is_virtual,
         'is_online': is_online,
         'status': status,
-        'status_text': status_text,
-        'details': details,
+        'status_text': 'Virtual printer' if is_virtual and status_text == 'Ready' else status_text,
+        'details': ['Virtual'] if is_virtual and not details else details,
     }
 
 
@@ -115,9 +130,11 @@ class PrinterAgentHandler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With')
         self.send_header('Access-Control-Allow-Private-Network', 'true')
+        self.send_header('Access-Control-Max-Age', '86400')
         self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
         self.end_headers()
         self.wfile.write(body)
 

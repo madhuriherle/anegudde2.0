@@ -37,12 +37,12 @@ export const mainPermissions = [
   'users.modules.read',
   'activity_logs.read',
   'settings.management.read',
+  'settings.printers.read',
   'settings.temple_identity.read',
   'settings.receipt_settings.read',
   'settings.data_cleanup.read',
   'units.read',
   'donation_types.read',
-  'devotees.read',
   'profile.read',
 ];
 

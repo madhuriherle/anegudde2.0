@@ -149,7 +149,15 @@ const ProfilePage = () => {
             </div>
           </CardHeader>
           <CardContent className="p-6 bg-white">
-            <form onSubmit={handleProfileUpdate} className="space-y-6">
+            <form
+              onSubmit={handleProfileUpdate}
+              className="space-y-6"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                  e.preventDefault();
+                }
+              }}
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
                   <Label className="text-text-main font-bold">Username *</Label>
@@ -217,7 +225,15 @@ const ProfilePage = () => {
               </div>
             </CardHeader>
             <CardContent className="p-6 bg-white">
-              <form onSubmit={handlePasswordChange} className="space-y-6">
+              <form
+                onSubmit={handlePasswordChange}
+                className="space-y-6"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                    e.preventDefault();
+                  }
+                }}
+              >
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <Label className="text-text-main font-bold">Current Password</Label>

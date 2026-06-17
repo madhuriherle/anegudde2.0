@@ -193,7 +193,15 @@ const ItemCategoriesPage = () => {
                   {editingCategory ? 'Edit Category' : 'Add New Category'}
                 </h3>
               </div>
-              <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
+              <form
+                onSubmit={(e) => e.preventDefault()}
+                className="space-y-5"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                    e.preventDefault();
+                  }
+                }}
+              >
                 <div className="space-y-2">
                   <Label className="text-text-main font-medium">Category Name *</Label>
                   <Input {...register('category_name')} className="border-border-temple/50" />

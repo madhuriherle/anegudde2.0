@@ -168,6 +168,16 @@ def get_privilege_tree(
 
     my_rank = current_user.role.rank_level if current_user.role else 99
 
+    # Modules to hide from the Privilege Management screen because they are
+    # redundant, technical, or handled within other modules.
+    HIDDEN_FROM_PRIVILEGES = {
+        "Item Type",
+        "Devotees",
+        "Wastages",
+        "Reports",  # Hide the generic grouping headers
+        # We keep "Canteen Module", "Master Settings", "Users" as they serve as the "Rooms" for filtering
+    }
+
     modules = (
         db.query(Module)
         .options(selectinload(Module.privileges))
@@ -185,6 +195,12 @@ def get_privilege_tree(
         if module.min_rank_level is not None and my_rank > module.min_rank_level:
             return None
 
+        # Filter out hidden modules
+        if module.name in HIDDEN_FROM_PRIVILEGES:
+            # We don't return the module itself, but we still want to process its children
+            # to see if THEY should be shown (like "Daily Usage Entry" under "Canteen Module")
+            pass
+        
         active_privileges = sorted(
             [privilege for privilege in module.privileges if privilege.status == 1],
             key=lambda privilege: privilege.privilege_name
@@ -195,7 +211,14 @@ def get_privilege_tree(
             if child.status == 1:
                 child_tree = build_tree(child)
                 if child_tree:
-                    submodules.append(child_tree)
+                    if isinstance(child_tree, list):
+                        submodules.extend(child_tree)
+                    else:
+                        submodules.append(child_tree)
+
+        # If this module is hidden, return its children instead of itself
+        if module.name in HIDDEN_FROM_PRIVILEGES:
+            return submodules if submodules else None
 
         return {
             "id": module.id,
@@ -228,7 +251,10 @@ def get_privilege_tree(
         if root.status == 1:
             tree = build_tree(root)
             if tree:
-                final_tree.append(tree)
+                if isinstance(tree, list):
+                    final_tree.extend(tree)
+                else:
+                    final_tree.append(tree)
     
     return final_tree
 

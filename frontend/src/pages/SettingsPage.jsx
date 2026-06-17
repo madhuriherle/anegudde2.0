@@ -142,7 +142,7 @@ const ToggleField = VisibilityToggle;
 const cleanupGroups = [
   {
     id: 'canteen_tokens',
-    title: 'Canteen Token Data',
+    title: 'Mahaprasad Token Data',
     description: 'Token generations and token receipt details.',
   },
   {
@@ -235,7 +235,7 @@ const SettingsPage = ({ section = null }) => {
         : activeSection === 'cleanup'
           ? hasPermission('settings.data_cleanup.write')
           : activeSection === 'printers'
-            ? hasPermission('settings.management.write')
+            ? hasPermission('settings.printers.write')
             : hasPermission('settings.management.write');
   const settingsReadEndpoint = activeSection === 'temple'
     ? '/settings/temple-identity'
@@ -243,7 +243,9 @@ const SettingsPage = ({ section = null }) => {
       ? '/settings/get_current_settings'
       : activeSection === 'cleanup'
         ? '/settings/data-cleanup'
-        : '/settings/get_current_settings';
+        : activeSection === 'printers'
+          ? '/settings/printer-configs'
+          : '/settings/get_current_settings';
 
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ['system-settings', activeSection || 'root'],
@@ -646,6 +648,11 @@ const SettingsPage = ({ section = null }) => {
       {activeSection === 'temple' && (
       <form
         onSubmit={handleSubmit(onSubmit, onInvalid)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+            e.preventDefault();
+          }
+        }}
         className="max-w-6xl mx-auto"
       >
         <div className="grid grid-cols-1 gap-6 pb-8 lg:grid-cols-2">
@@ -942,6 +949,11 @@ const SettingsPage = ({ section = null }) => {
         <form
           id="receipt-settings-form"
           onSubmit={handleSubmit(onSubmit, onInvalid)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+              e.preventDefault();
+            }
+          }}
           className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start"
         >
           <div className="space-y-5">

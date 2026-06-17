@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const AGENT_URL = 'http://localhost:5623';
+const AGENT_URL = 'http://127.0.0.1:5623';
 
 export function usePrinterAgent() {
   const [availablePrinters, setAvailablePrinters] = useState([]);
@@ -15,9 +15,11 @@ export function usePrinterAgent() {
     setChecking(true);
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2000);
+      const timeout = setTimeout(() => controller.abort(), 5000);
       const res = await fetch(`${AGENT_URL}/api/printers`, {
         signal: controller.signal,
+        mode: 'cors',
+        cache: 'no-store',
       });
       clearTimeout(timeout);
 

@@ -228,7 +228,15 @@ const MenuItemsPage = () => {
                   </h3>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                <form
+                  onSubmit={handleSubmit(onSubmit)}
+                  className="space-y-5"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                      e.preventDefault();
+                    }
+                  }}
+                >
                   <div className="space-y-2">
                     <Label className="text-text-main font-medium">Dish Name *</Label>
                     <Input

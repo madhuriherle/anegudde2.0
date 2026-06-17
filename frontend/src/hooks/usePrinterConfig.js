@@ -16,13 +16,26 @@ function getOrCreateMachineId() {
 const CONTEXT_LABELS = {
   DONATION_RECEIPT: 'Donation Receipt',
   TOKEN: 'Token Receipt',
-  REPORT_CANTEEN: 'Canteen Report',
+  REPORT_STOCK: 'Stock Summary Report',
+  REPORT_CANTEEN: 'Canteen Summary Report',
+  REPORT_MANPOWER: 'Manpower Report',
   REPORT_DONATION: 'Donation Report',
-  REPORT_TOKEN: 'Token Report',
+  REPORT_TOKEN: 'Token Issued Report',
   REPORT_PURCHASE: 'Purchase Report',
 };
 
 const CONTEXTS = Object.keys(CONTEXT_LABELS);
+
+export function usePrinterContexts() {
+  return useQuery({
+    queryKey: ['printer-contexts'],
+    queryFn: async () => {
+      const res = await api.get('/settings/printer-contexts');
+      return res.data; // Array of {code, label}
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
 
 export function usePrinterConfig(context) {
   const queryClient = useQueryClient();

@@ -192,7 +192,14 @@ const PrivilegesPage = () => {
 
   const groupedModules = useMemo(
     () => {
-      let filteredRoots = menuRoots || [];
+      let rawRoots = menuRoots || [];
+      
+      // If the only root is "Main Menu", flatten it so its children become the rooms
+      if (rawRoots.length === 1 && rawRoots[0].name === "Main Menu") {
+        rawRoots = rawRoots[0].submodules || [];
+      }
+
+      let filteredRoots = rawRoots;
       if (selectedRole?.module_id) {
         const findBranch = (modules) => {
           for (const m of modules) {
@@ -204,7 +211,7 @@ const PrivilegesPage = () => {
           }
           return null;
         };
-        const branch = findBranch(menuRoots || []);
+        const branch = findBranch(rawRoots);
         if (branch) {
           filteredRoots = branch;
         } else {
@@ -231,27 +238,12 @@ const PrivilegesPage = () => {
   );
 
   const departmentOptions = useMemo(() => {
-    const options = [];
-
-    groupedModules.forEach((group) => {
-      options.push({
-        id: group.id,
-        name: group.name,
-        depth: 0,
-      });
-
-      group.rows
-        .filter((row) => row.depth === 1)
-        .forEach((row) => {
-          options.push({
-            id: row.key,
-            name: row.label,
-            depth: 1,
-          });
-        });
-    });
-
-    return options;
+    // Only show the top-level Groups in the filter to keep it clean
+    return groupedModules.map((group) => ({
+      id: group.id,
+      name: group.name,
+      depth: 0,
+    }));
   }, [groupedModules]);
 
   useEffect(() => {
@@ -388,8 +380,139 @@ const PrivilegesPage = () => {
     );
   };
 
+  const toggleColumn = (group, action) => {
+    if (!canEdit) return;
+
+    const privs = group.rows.map(row => 
+      action === 'read' ? row.readPriv : 
+      action === 'write' ? row.writePriv : 
+      row.deletePriv
+    ).filter(Boolean);
+
+    if (privs.length === 0) return;
+
+    const allChecked = privs.every(p => localPrivIds.includes(p.id));
+
+    setLocalPrivIds(prev => {
+      let next;
+      if (allChecked) {
+        // Uncheck all in this column
+        const idsToRemove = new Set(privs.map(p => p.id));
+        next = prev.filter(id => !idsToRemove.has(id));
+
+        // If unchecking READ, also uncheck WRITE and DELETE for these rows
+        if (action === 'read') {
+          group.rows.forEach(row => {
+            if (row.writePriv) next = next.filter(id => id !== row.writePriv.id);
+            if (row.deletePriv) next = next.filter(id => id !== row.deletePriv.id);
+          });
+        }
+      } else {
+        // Check all in this column
+        const idsToAdd = privs.map(p => p.id);
+        next = [...prev, ...idsToAdd];
+
+        // If checking WRITE or DELETE, also check READ for these rows
+        if (action === 'write' || action === 'delete') {
+          group.rows.forEach(row => {
+            if (row.readPriv) next.push(row.readPriv.id);
+          });
+        }
+      }
+      return uniqueIds(next);
+    });
+  };
+
+  const toggleSystemWide = (action) => {
+    if (!canEdit) return;
+
+    const allPrivs = groupedModules.flatMap(group => 
+      group.rows.map(row => 
+        action === 'read' ? row.readPriv : 
+        action === 'write' ? row.writePriv : 
+        row.deletePriv
+      )
+    ).filter(Boolean);
+
+    if (allPrivs.length === 0) return;
+
+    const allChecked = allPrivs.every(p => localPrivIds.includes(p.id));
+
+    setLocalPrivIds(prev => {
+      let next;
+      if (allChecked) {
+        const idsToRemove = new Set(allPrivs.map(p => p.id));
+        next = prev.filter(id => !idsToRemove.has(id));
+
+        if (action === 'read') {
+          groupedModules.forEach(group => {
+            group.rows.forEach(row => {
+              if (row.writePriv) next = next.filter(id => id !== row.writePriv.id);
+              if (row.deletePriv) next = next.filter(id => id !== row.deletePriv.id);
+            });
+          });
+        }
+      } else {
+        const idsToAdd = allPrivs.map(p => p.id);
+        next = [...prev, ...idsToAdd];
+
+        if (action === 'write' || action === 'delete') {
+          groupedModules.forEach(group => {
+            group.rows.forEach(row => {
+              if (row.readPriv) next.push(row.readPriv.id);
+            });
+          });
+        }
+      }
+      return uniqueIds(next);
+    });
+  };
+
+  const getSystemWideState = (action) => {
+    const allPrivs = groupedModules.flatMap(group => 
+      group.rows.map(row => 
+        action === 'read' ? row.readPriv : 
+        action === 'write' ? row.writePriv : 
+        row.deletePriv
+      )
+    ).filter(Boolean);
+    
+    if (allPrivs.length === 0) return { checked: false, indeterminate: false };
+    
+    const checkedCount = allPrivs.filter(p => localPrivIds.includes(p.id)).length;
+    return {
+      checked: checkedCount === allPrivs.length,
+      indeterminate: checkedCount > 0 && checkedCount < allPrivs.length
+    };
+  };
+
+  const globalRead = getSystemWideState('read');
+  const globalWrite = getSystemWideState('write');
+  const globalDelete = getSystemWideState('delete');
+
   const renderGroup = (group) => {
     const isCollapsed = collapsedGroups[group.id];
+
+    // Calculate header checkbox states
+    const getColumnState = (action) => {
+      const privs = group.rows.map(row => 
+        action === 'read' ? row.readPriv : 
+        action === 'write' ? row.writePriv : 
+        row.deletePriv
+      ).filter(Boolean);
+      
+      if (privs.length === 0) return { checked: false, indeterminate: false };
+      
+      const checkedCount = privs.filter(p => localPrivIds.includes(p.id)).length;
+      return {
+        checked: checkedCount === privs.length,
+        indeterminate: checkedCount > 0 && checkedCount < privs.length
+      };
+    };
+
+    const readState = getColumnState('read');
+    const writeState = getColumnState('write');
+    const deleteState = getColumnState('delete');
 
     return (
       <Card key={group.id} className="overflow-hidden border-[#E6D8C9] bg-white shadow-sm hover:shadow-md transition-shadow">
@@ -419,9 +542,48 @@ const PrivilegesPage = () => {
               <thead className="bg-[#FBF9F6] text-[10px] uppercase tracking-[0.15em] text-gray-500">
                 <tr className="border-b border-[#EDE2D6]">
                   <th className="px-6 py-4 font-black">Page / Module Hierarchy</th>
-                  <th className="w-24 px-4 py-4 text-center font-black">Read</th>
-                  <th className="w-24 px-4 py-4 text-center font-black">Write</th>
-                  <th className="w-24 px-4 py-4 text-center font-black">Delete</th>
+                  <th className="w-24 px-4 py-4 text-center font-black text-[9px]">
+                    <div className="flex flex-col items-center gap-2">
+                      <span>READ ALL</span>
+                      <PrivilegeCheckbox 
+                        checked={readState.checked}
+                        indeterminate={readState.indeterminate}
+                        disabled={!canEdit}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleColumn(group, 'read');
+                        }}
+                      />
+                    </div>
+                  </th>
+                  <th className="w-24 px-4 py-4 text-center font-black text-[9px]">
+                    <div className="flex flex-col items-center gap-2">
+                      <span>WRITE ALL</span>
+                      <PrivilegeCheckbox 
+                        checked={writeState.checked}
+                        indeterminate={writeState.indeterminate}
+                        disabled={!canEdit}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleColumn(group, 'write');
+                        }}
+                      />
+                    </div>
+                  </th>
+                  <th className="w-24 px-4 py-4 text-center font-black text-[9px]">
+                    <div className="flex flex-col items-center gap-2">
+                      <span>DELETE ALL</span>
+                      <PrivilegeCheckbox 
+                        checked={deleteState.checked}
+                        indeterminate={deleteState.indeterminate}
+                        disabled={!canEdit}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleColumn(group, 'delete');
+                        }}
+                      />
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -486,13 +648,6 @@ const PrivilegesPage = () => {
 
           {canEdit && (
             <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-500">
-              <Button
-                onClick={() => setSelectedRoleId('')}
-                variant="ghost"
-                className="h-10 rounded-xl px-6 text-sm font-black text-gray-500 hover:bg-gray-100"
-              >
-                Reset
-              </Button>
               <Button
                 onClick={handleSave}
                 disabled={mutation.isPending}

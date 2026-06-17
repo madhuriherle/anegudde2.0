@@ -291,7 +291,15 @@ const ModuleManagementPage = () => {
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
+            <form
+              onSubmit={handleSave}
+              className="p-6 space-y-4"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                  e.preventDefault();
+                }
+              }}
+            >
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-text-light uppercase tracking-widest">Module Name</label>
                 <input 
@@ -300,7 +308,7 @@ const ModuleManagementPage = () => {
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
                   className="w-full px-4 py-3 rounded-xl border-border-temple/20 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
-                  placeholder="e.g., Canteen Management"
+                  placeholder="e.g., Mahaprasad Management"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">

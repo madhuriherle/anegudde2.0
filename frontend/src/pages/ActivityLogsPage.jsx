@@ -112,7 +112,7 @@ const ActivityLogsPage = () => {
     if (lowerEndpoint.includes('/daily-usage/')) return 'Stock';
     if (lowerEndpoint.includes('/wastages/')) return 'Stock';
     if (lowerEndpoint.includes('/stock-adjustments/')) return 'Stock';
-    if (lowerEndpoint.includes('/menu-items/')) return 'Canteen';
+    if (lowerEndpoint.includes('/menu-items/')) return 'Mahaprasad';
     if (lowerEndpoint.includes('/dashboard/')) return 'Dashboard';
     if (lowerEndpoint.includes('/reports/')) return 'Reports';
     if (lowerEndpoint.includes('/settings/')) return 'Settings';
@@ -142,7 +142,7 @@ const ActivityLogsPage = () => {
     if (endpoint.includes('/auth/login')) sentence = `logged into the system`;
     else if (endpoint.includes('/auth/logout')) sentence = `logged out of the system`;
     else if (endpoint.includes('/dashboard/')) {
-      if (endpoint.includes('canteen_summary')) sentence = `viewed the canteen performance summary`;
+      if (endpoint.includes('canteen_summary')) sentence = `viewed the mahaprasad performance summary`;
       else if (endpoint.includes('today')) sentence = `viewed today's overall activity summary`;
       else if (endpoint.includes('stock_trend')) sentence = `viewed the stock usage trends`;
       else if (endpoint.includes('low_stock')) sentence = `checked for low stock alerts`;
@@ -152,7 +152,7 @@ const ActivityLogsPage = () => {
       sentence = `${verb} donation types list`;
     }
     else if (endpoint.includes('/menu-items/')) {
-      sentence = `${verb} canteen menu item: ${meta.dish_name || 'record'}`;
+      sentence = `${verb} mahaprasad menu item: ${meta.dish_name || 'record'}`;
     }
     else if (endpoint.includes('/donations/')) {
       if (endpoint.includes('devotee')) sentence = `${verb} devotee ${meta.devotee_name || 'record'}`;

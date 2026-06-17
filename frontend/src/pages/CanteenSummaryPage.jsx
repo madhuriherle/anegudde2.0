@@ -258,7 +258,7 @@ const CanteenSummaryPage = () => {
         }
       `}</style>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
-        <h2 className="page-title">Canteen Summary Report</h2>
+        <h2 className="page-title">Mahaprasad Summary Report</h2>
         <div className="flex items-center gap-2">
           <PrinterSelectDropdown
             context="REPORT_CANTEEN"
@@ -317,7 +317,7 @@ const CanteenSummaryPage = () => {
         <div className="canteen-summary-print-header p-6 text-center border-b border-border-temple/40 print:pb-2">
           <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ (ಅನ್ನದಾನ)</h1>
           <p className="text-sm font-bold text-text-main mt-1">
-            CANTEEN SUMMARY REPORT FOR DATE : <span className="font-extrabold">{formatDate(selectedDate)}</span>
+            MAHAPRASAD SUMMARY REPORT FOR DATE : <span className="font-extrabold">{formatDate(selectedDate)}</span>
           </p>
         </div>
 
@@ -563,7 +563,7 @@ const CanteenSummaryPage = () => {
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ (ಅನ್ನದಾನ)</h1>
           <div className="text-md font-bold uppercase tracking-widest mt-1">
-            CANTEEN SUMMARY REPORT : <span className="font-black underline">{formatDate(selectedDate)}</span>
+            MAHAPRASAD SUMMARY REPORT : <span className="font-black underline">{formatDate(selectedDate)}</span>
           </div>
         </div>
 

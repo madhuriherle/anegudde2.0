@@ -34,27 +34,23 @@ const normalizeReceiptPrefix = (value) => {
 };
 
 const getDonationScopeModules = (modules = []) => {
-  const mainMenu = modules.find((module) =>
-    String(module.name || '').trim().toLowerCase() === 'main menu'
-  );
-
-  if (!mainMenu) {
-    return modules.map((module) => ({
+  let options = [];
+  (modules || []).forEach((module) => {
+    options.push({
       value: module.id,
       label: module.name,
-    }));
-  }
-
-  return [
-    {
-      value: mainMenu.id,
-      label: mainMenu.name,
-    },
-    ...(mainMenu.submodules || []).map((module) => ({
-      value: module.id,
-      label: `${'\u00A0\u00A0'}${module.name}`,
-    })),
-  ];
+    });
+    // If this is Main Menu, also include its direct children
+    if (module.name === "Main Menu" && module.submodules) {
+      module.submodules.forEach(sm => {
+        options.push({
+          value: sm.id,
+          label: `\u00A0\u00A0${sm.name}`,
+        });
+      });
+    }
+  });
+  return options;
 };
 
 const DonationTypesPage = () => {
@@ -296,7 +292,15 @@ const DonationTypesPage = () => {
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4 pb-0">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-6 pt-4 pb-0"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+              }
+            }}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
                 <Label className="text-text-main font-bold">Donation Type *</Label>
@@ -332,7 +336,7 @@ const DonationTypesPage = () => {
                 )}
               />
               <p className="text-[11px] text-text-main mt-1 px-1">
-                Leave empty for Global / Main Menu access. Select Canteen Module to show only in Canteen donations.
+                Leave empty for Global / Main Menu access. Select Mahaprasad Module to show only in Mahaprasad donations.
               </p>
             </div>
 

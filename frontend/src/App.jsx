@@ -69,7 +69,7 @@ function App() {
         <Route path="/purchases/returns" element={<ProtectedRoute requiredPermission="purchase_returns.read"><PurchaseReturnsPage /></ProtectedRoute>} />
         <Route path="/daily-usage" element={<ProtectedRoute requiredPermission="consumptions.read"><UsageEntriesPage /></ProtectedRoute>} />
         <Route path="/donations" element={<ProtectedRoute requiredPermission="donations.read"><DonationsPage /></ProtectedRoute>} />
-        <Route path="/wastages" element={<ProtectedRoute requiredPermission="wastages.read"><WastagesPage /></ProtectedRoute>} />
+        <Route path="/wastages" element={<ProtectedRoute requiredPermission="consumptions.read"><WastagesPage /></ProtectedRoute>} />
         
         <Route path="/reports/tokens" element={<ProtectedRoute requiredPermission="reports.tokens.read"><TokenReportPage /></ProtectedRoute>} />
         <Route path="/reports/tokens/:date" element={<ProtectedRoute requiredPermission="reports.tokens.read"><TokenDetailLedgerPage /></ProtectedRoute>} />
@@ -83,7 +83,7 @@ function App() {
         <Route path="/users/roles" element={<ProtectedRoute requiredPermission="users.privileges.read"><RolesPage /></ProtectedRoute>} />
         <Route path="/users/privileges" element={<ProtectedRoute requiredPermission="users.privileges.read"><PrivilegesPage /></ProtectedRoute>} />
         <Route path="/users/activity" element={<ProtectedRoute requiredPermission="activity_logs.read"><ActivityLogsPage /></ProtectedRoute>} />
-        <Route path="/devotees" element={<ProtectedRoute requiredPermission="devotees.read"><DevoteesPage /></ProtectedRoute>} />
+        <Route path="/devotees" element={<ProtectedRoute requiredPermission="donations.read"><DevoteesPage /></ProtectedRoute>} />
 
         <Route path="/items/categories" element={<ProtectedRoute requiredPermission="item_categories.read"><ItemCategoriesPage /></ProtectedRoute>} />
         <Route path="/settings/units" element={<ProtectedRoute requiredPermission="units.read"><UnitsPage /></ProtectedRoute>} />
@@ -94,7 +94,7 @@ function App() {
         <Route path="/settings/temple" element={<ProtectedRoute requiredPermission={["settings.temple_identity.read", "settings.management.read", "settings.read"]}><TempleIdentitySettingsPage /></ProtectedRoute>} />
         <Route path="/settings/receipt" element={<ProtectedRoute requiredPermission={["settings.receipt_settings.read", "settings.management.read", "settings.read"]}><ReceiptSettingsPage /></ProtectedRoute>} />
         <Route path="/settings/cleanup" element={<ProtectedRoute requiredPermission={["settings.data_cleanup.read", "settings.management.read", "settings.read"]}><DataCleanupPage /></ProtectedRoute>} />
-        <Route path="/settings/printers" element={<ProtectedRoute requiredPermission={["settings.management.read", "settings.read"]}><PrinterSettingsSettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/printers" element={<ProtectedRoute requiredPermission="settings.printers.read"><PrinterSettingsSettingsPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute requiredPermission="profile.read"><ProfilePage /></ProtectedRoute>} />
       </Route>
 

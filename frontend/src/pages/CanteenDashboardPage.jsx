@@ -75,7 +75,7 @@ const DashboardPage = () => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-2">
         <div>
-          <h1 className="text-2xl font-normal text-text-main tracking-tight font-temple text-left">Canteen Dashboard</h1>
+          <h1 className="text-2xl font-normal text-text-main tracking-tight font-temple text-left">Mahaprasad Dashboard</h1>
         </div>
       </div>
 

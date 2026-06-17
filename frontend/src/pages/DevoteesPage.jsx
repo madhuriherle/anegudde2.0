@@ -62,12 +62,18 @@ const DevoteesPage = () => {
       cell: (info) => <span className="text-text-main">{info.getValue()}</span>
     },
     {
-      accessorKey: 'address',
+      id: 'address',
       header: 'Address',
-      cell: (info) =>
-        <span className="block max-w-[460px] break-words text-text-normal line-clamp-1" title={info.getValue() || '-'}>
-          {info.getValue() || '-'}
-        </span>
+      cell: (info) => {
+        const row = info.row.original;
+        const parts = [row.address, row.city, row.state, row.pincode].filter(Boolean);
+        const full = parts.join(', ') || '-';
+        return (
+          <span className="block max-w-[460px] break-words text-text-normal line-clamp-1" title={full}>
+            {full}
+          </span>
+        );
+      }
     },
     {
       id: 'actions',
@@ -78,7 +84,7 @@ const DevoteesPage = () => {
           <button onClick={() => handleViewProfile(info.row.original)} className="action-btn-view">
             Profile
           </button>
-          <button onClick={() => handleViewHistory(info.row.original)} className="action-btn-edit !bg-amber-600 !hover:bg-amber-700 !text-white !px-4">
+          <button onClick={() => handleViewHistory(info.row.original)} className="action-btn-edit !px-4">
             History
           </button>
         </div>
@@ -125,57 +131,60 @@ const DevoteesPage = () => {
 
       {/* 1. PROFILE DIALOG (CLEAN LIST STYLE LIKE VENDOR) */}
       <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
-        <DialogContent className="max-w-lg border-border-temple">
-          <DialogHeader className="border-b border-border-temple/40 pb-4">
-            <DialogTitle className="text-xl text-secondary">Devotee Profile</DialogTitle>
+        <DialogContent className="max-w-xl !flex !flex-col !p-0 border-border-temple shadow-2xl bg-white overflow-hidden">
+          <DialogHeader className="!m-0 border-b border-border-temple/40 !px-8 !py-6 shrink-0 bg-[#F3E8D4]">
+            <DialogTitle className="text-xl text-text-main font-temple">Devotee Profile</DialogTitle>
+            <DialogDescription className="sr-only">Detailed profile information for the selected devotee.</DialogDescription>
           </DialogHeader>
 
-          {detailsLoading ? (
-            <div className="py-12 flex justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : devoteeDetails ? (
-            <div className="py-8 px-2 space-y-6">
-               <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
-                  <div className="font-bold text-secondary">Devotee Name</div>
-                  <div className="text-text-main font-bold text-center">:</div>
-                  <div className="text-text-main font-medium">{devoteeDetails.devotee_name}</div>
-               </div>
+          <div className="flex-1 px-8 py-8 overflow-y-auto custom-scrollbar">
+            {detailsLoading ? (
+              <div className="py-12 flex justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : devoteeDetails ? (
+              <div className="space-y-6">
+                 <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
+                    <div className="font-bold text-secondary">Devotee Name</div>
+                    <div className="text-text-main font-bold text-center">:</div>
+                    <div className="text-text-main font-medium">{devoteeDetails.devotee_name}</div>
+                 </div>
 
-               <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
-                  <div className="font-bold text-secondary">Phone Number</div>
-                  <div className="text-text-main font-bold text-center">:</div>
-                  <div className="text-text-main font-medium">{devoteeDetails.phone_number}</div>
-               </div>
+                 <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
+                    <div className="font-bold text-secondary">Phone Number</div>
+                    <div className="text-text-main font-bold text-center">:</div>
+                    <div className="text-text-main font-medium">{devoteeDetails.phone_number}</div>
+                 </div>
 
-               <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
-                  <div className="font-bold text-secondary">Email Address</div>
-                  <div className="text-text-main font-bold text-center">:</div>
-                  <div className="text-text-main font-medium">{devoteeDetails.email || '-'}</div>
-               </div>
+                 <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
+                    <div className="font-bold text-secondary">Email Address</div>
+                    <div className="text-text-main font-bold text-center">:</div>
+                    <div className="text-text-main font-medium">{devoteeDetails.email || '-'}</div>
+                 </div>
 
-               <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
-                  <div className="font-bold text-secondary">Last Transaction</div>
-                  <div className="text-text-main font-bold text-center">:</div>
-                  <div className="text-text-main font-medium">{formatDate(devoteeDetails.updated_at)}</div>
-               </div>
+                 <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
+                    <div className="font-bold text-secondary">Last Transaction</div>
+                    <div className="text-text-main font-bold text-center">:</div>
+                    <div className="text-text-main font-medium">{formatDate(devoteeDetails.updated_at)}</div>
+                 </div>
 
-               <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
-                  <div className="font-bold text-secondary pt-0.5">Address</div>
-                  <div className="text-text-main font-bold text-center pt-0.5">:</div>
-                  <div className="text-text-main font-medium leading-relaxed">
-                    {[
-                        devoteeDetails.address,
-                        devoteeDetails.city,
-                        devoteeDetails.state,
-                        devoteeDetails.pincode
-                    ].filter(Boolean).join(', ') || '-'}
-                  </div>
-               </div>
-            </div>
-          ) : null}
+                 <div className="grid grid-cols-[140px_20px_1fr] text-[15px]">
+                    <div className="font-bold text-secondary pt-0.5">Address</div>
+                    <div className="text-text-main font-bold text-center pt-0.5">:</div>
+                    <div className="text-text-main font-medium leading-relaxed">
+                      {[
+                          devoteeDetails.address,
+                          devoteeDetails.city,
+                          devoteeDetails.state,
+                          devoteeDetails.pincode
+                      ].filter(Boolean).join(', ') || '-'}
+                    </div>
+                 </div>
+              </div>
+            ) : null}
+          </div>
 
-          <DialogFooter className="bg-[#F3E8D4] border-t border-border-temple/40 !px-6 !py-4">
+          <DialogFooter className="!px-6 !py-4 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
             <Button onClick={() => setProfileOpen(false)} className="bg-primary text-white font-bold h-10 px-10 hover:bg-primary-dark shadow-md">
               Close
             </Button>
@@ -185,24 +194,27 @@ const DevoteesPage = () => {
 
       {/* 2. HISTORY DIALOG (WIDE TABLE STYLE) */}
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-h-[85vh] max-w-7xl overflow-y-auto border-border-temple">
-          <DialogHeader className="border-b border-border-temple/40 pb-4 mb-4">
-            <DialogTitle className="text-xl text-secondary">Donation History</DialogTitle>
-            {devoteeDetails && (
-                <DialogDescription className="font-bold text-text-main mt-1">
-                    Showing records for: <span className="text-primary">{devoteeDetails.devotee_name}</span>
-                </DialogDescription>
-            )}
+        <DialogContent className="max-h-[90vh] max-w-7xl !flex !flex-col !p-0 overflow-hidden border-border-temple shadow-2xl bg-white">
+          <DialogHeader className="!m-0 border-b border-border-temple/40 !px-8 !py-6 shrink-0 bg-[#F3E8D4]">
+            <DialogTitle className="text-xl text-text-main font-temple">Donation History</DialogTitle>
+            <DialogDescription className="font-bold text-text-main mt-1">
+                {devoteeDetails ? (
+                    <>Showing records for: <span className="text-primary">{devoteeDetails.devotee_name}</span></>
+                ) : (
+                    "Loading records..."
+                )}
+            </DialogDescription>
           </DialogHeader>
 
-          {detailsLoading ? (
-            <div className="py-20 flex justify-center">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            </div>
-          ) : devoteeDetails ? (
-            <div className="space-y-4">
-                <div className="overflow-hidden rounded-2xl border border-border-temple/60 shadow-sm bg-white">
-                  <table className="w-full min-w-[900px] table-fixed text-left text-sm">
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            {detailsLoading ? (
+              <div className="h-full flex items-center justify-center py-20">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              </div>
+            ) : devoteeDetails ? (
+              <div className="min-h-full">
+                  <div className="overflow-x-auto rounded-2xl border border-border-temple/60 shadow-sm bg-white">
+                    <table className="w-full min-w-[1000px] table-fixed text-left text-sm">
                     <colgroup>
                       <col className="w-[10%]" />
                       <col className="w-[12%]" />
@@ -294,7 +306,7 @@ const DevoteesPage = () => {
                     ) :
 
                     <tr>
-                          <td colSpan={6} className="px-6 py-20 text-center text-text-light font-bold italic">
+                          <td colSpan={7} className="px-6 py-20 text-center text-text-light font-bold italic">
                             <div className="flex flex-col items-center gap-2">
                                 <AlertCircle size={32} className="text-gray-200" />
                                 <span>No history found.</span>
@@ -307,8 +319,9 @@ const DevoteesPage = () => {
                 </div>
             </div>
           ) : null}
+          </div>
 
-          <DialogFooter className="bg-[#F3E8D4] border-t border-border-temple/40 !px-6 !py-4">
+          <DialogFooter className="!px-6 !py-4 !m-0 border-t border-border-temple/40 flex justify-end shrink-0 bg-[#F3E8D4]">
             <Button onClick={() => setHistoryOpen(false)} className="bg-primary text-white font-bold h-10 px-10 hover:bg-primary-dark shadow-md">
               Close
             </Button>

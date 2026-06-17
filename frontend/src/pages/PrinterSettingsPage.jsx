@@ -4,7 +4,7 @@ import { Printer, Plus, Trash2, Save, Check, Monitor, XCircle, RefreshCw, AlertC
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
 import { usePermission } from '../hooks/usePermission';
-import { usePrinterConfig, CONTEXT_LABELS, CONTEXTS } from '../hooks/usePrinterConfig';
+import { usePrinterConfig, usePrinterContexts, getOrCreateMachineId } from '../hooks/usePrinterConfig';
 import { usePrinterAgent } from '../hooks/usePrinterAgent';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -14,8 +14,13 @@ const PrinterSettingsPage = () => {
   const queryClient = useQueryClient();
   const { showError, showSuccess } = useNotification();
   const { hasPermission } = usePermission();
-  const canWrite = hasPermission('settings.management.write');
-  const { machineId } = usePrinterConfig(CONTEXTS[0]);
+  const canWrite = hasPermission('settings.printers.write');
+  const machineId = getOrCreateMachineId();
+  
+  const { data: contextList, isLoading: contextsLoading } = usePrinterContexts();
+  const contexts = contextList || [];
+  const assignableContexts = contexts.filter(c => c.code !== 'TOKEN');
+
   const {
     availablePrinters,
     printerDetails,
@@ -26,8 +31,12 @@ const PrinterSettingsPage = () => {
     refreshPrinters,
   } = usePrinterAgent();
 
+  const [showManual, setShowManual] = useState(false);
   const [newEntries, setNewEntries] = useState({});
   const [editing, setEditing] = useState({});
+  const [showAddCustom, setShowAddCustom] = useState(false);
+  const [customTask, setCustomTask] = useState({ code: '', label: '' });
+  const [selectedTasks, setSelectedTasks] = useState({}); // { printerName: [code1, code2] }
 
   const { data, isLoading } = useQuery({
     queryKey: ['printer-configs'],
@@ -47,7 +56,8 @@ const PrinterSettingsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['printer-configs'] });
-      CONTEXTS.forEach(c => queryClient.invalidateQueries({ queryKey: ['printer-config', c] }));
+      queryClient.invalidateQueries({ queryKey: ['printer-contexts'] });
+      contexts.forEach(c => queryClient.invalidateQueries({ queryKey: ['printer-config', c.code] }));
     },
   });
 
@@ -57,6 +67,7 @@ const PrinterSettingsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['printer-configs'] });
+      queryClient.invalidateQueries({ queryKey: ['printer-contexts'] });
     },
   });
 
@@ -68,10 +79,51 @@ const PrinterSettingsPage = () => {
       if (!nameOverride) {
         setNewEntries((prev) => ({ ...prev, [context]: '' }));
       }
-      showSuccess(`Printer saved for ${CONTEXT_LABELS[context]}`);
+      const label = contexts.find(c => c.code === context)?.label || context;
+      showSuccess(`Printer saved for ${label}`);
     } catch {
       showError('Failed to save printer config');
     }
+  };
+
+  const handleBatchAssign = async (printerName) => {
+    const codes = selectedTasks[printerName] || [];
+    if (codes.length === 0) {
+      showError("Please select at least one task");
+      return;
+    }
+
+    try {
+      await Promise.all(codes.map(code => 
+        upsertMutation.mutateAsync({ 
+          context: code, 
+          machine_id: machineId, 
+          printer_name: printerName 
+        })
+      ));
+      showSuccess(`Printer assigned to ${codes.length} tasks`);
+      setSelectedTasks(prev => ({ ...prev, [printerName]: [] }));
+    } catch {
+      showError('Failed to save some assignments');
+    }
+  };
+
+  const toggleTaskSelection = (printerName, code) => {
+    setSelectedTasks(prev => {
+      const current = prev[printerName] || [];
+      const next = current.includes(code) 
+        ? current.filter(c => c !== code) 
+        : [...current, code];
+      return { ...prev, [printerName]: next };
+    });
+  };
+
+  const handleAddCustom = async () => {
+    if (!customTask.code || !customTask.label) return;
+    // We just need to trigger a save to make it appear in the list
+    // But wait, the list is derived from DB contexts or standard ones.
+    // So we need to assign a printer to it to make it "stick" in the DB.
+    showAddCustom(false);
   };
 
   const handleDelete = async (id) => {
@@ -91,7 +143,7 @@ const PrinterSettingsPage = () => {
 
   return (
     <div className="max-w-6xl space-y-6">
-      {/* Printer Agent Status Card */}
+      {/* ... (Agent card remains same) */}
       <Card className="border-border-temple shadow-sm overflow-hidden">
         <div className="bg-[#F8F4EE] px-6 py-4 border-b border-border-temple/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -125,22 +177,35 @@ const PrinterSettingsPage = () => {
         </div>
         
         <CardContent className="p-6">
-          {!isAgentRunning && !agentChecking ? (
-            <div className="flex items-start gap-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
+          {(!isAgentRunning && !agentChecking && !showManual) ? (
+            <div className="flex flex-col md:flex-row items-start gap-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
               <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-amber-900">Printer Agent Not Found</p>
-                <p className="text-sm text-amber-800 leading-relaxed">
-                  To automatically detect printers and print directly without browser dialogs, please ensure the <span className="font-bold">Printer Agent</span> is running on this computer.
-                </p>
+              <div className="space-y-3 flex-1">
+                <div>
+                  <p className="text-sm font-bold text-amber-900">Browser Security Blocked Connection</p>
+                  <p className="text-sm text-amber-800 leading-relaxed">
+                    Modern browsers block websites on <span className="font-mono">HTTP</span> from talking to your local PC. 
+                    Your Printer Agent is running, but the browser won't let the website see it.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
+                    onClick={() => setShowManual(true)}
+                  >
+                    Use Manual Setup
+                  </Button>
+                </div>
               </div>
             </div>
-          ) : agentChecking ? (
+          ) : (agentChecking && !showManual) ? (
             <div className="flex items-center gap-3 py-4 text-text-light">
               <Loader2 className="h-5 w-5 animate-spin" />
               <span className="text-sm font-medium">Scanning for printers...</span>
             </div>
-          ) : (
+          ) : isAgentRunning ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h4 className="text-sm font-bold text-secondary uppercase tracking-wider">Printers on this PC</h4>
@@ -183,24 +248,47 @@ const PrinterSettingsPage = () => {
                         </div>
                         <p className="text-sm font-bold text-text-main truncate mb-1" title={name}>{name}</p>
                         <p className="text-[11px] font-medium text-text-light mb-3 truncate" title={statusText}>{statusText}</p>
-                        <div className="grid grid-cols-2 gap-2 mt-auto">
+                        
+                        <div className="mt-auto space-y-2">
+                          <div className="relative">
+                            <div className="max-h-32 overflow-y-auto border border-border-temple/40 rounded bg-gray-50/50 p-1.5 custom-scrollbar">
+                              <label className="flex items-center gap-2 px-1 py-0.5 hover:bg-primary/5 rounded cursor-pointer mb-1 border-b border-border-temple/20 pb-1">
+                                <input 
+                                  type="checkbox" 
+                                  className="h-3 w-3 accent-primary"
+                                  checked={selectedTasks[name]?.length === assignableContexts.length && assignableContexts.length > 0}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedTasks(prev => ({ ...prev, [name]: assignableContexts.map(c => c.code) }));
+                                    } else {
+                                      setSelectedTasks(prev => ({ ...prev, [name]: [] }));
+                                    }
+                                  }}
+                                />
+                                <span className="text-[10px] font-bold text-primary">SELECT ALL REPORTS</span>
+                              </label>
+                              {assignableContexts.map((ctx) => (
+                                <label key={ctx.code} className="flex items-center gap-2 px-1 py-0.5 hover:bg-primary/5 rounded cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    className="h-3 w-3 accent-primary"
+                                    checked={(selectedTasks[name] || []).includes(ctx.code)}
+                                    onChange={() => toggleTaskSelection(name, ctx.code)}
+                                  />
+                                  <span className="text-[10px] font-medium text-text-main truncate">{ctx.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={!isOnline}
-                            className="h-7 text-[10px] font-bold px-0 py-0"
-                            onClick={() => handleAddOrUpdate('TOKEN', name)}
+                            disabled={!isOnline || !canWrite || (selectedTasks[name] || []).length === 0}
+                            className="h-7 text-[10px] font-bold w-full bg-primary/5 hover:bg-primary/10 text-primary hover:text-primary border-primary/20 shadow-none hover:shadow-none translate-y-0 hover:translate-y-0"
+                            onClick={() => handleBatchAssign(name)}
                           >
-                            SET TOKEN
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!isOnline}
-                            className="h-7 text-[10px] font-bold px-0 py-0"
-                            onClick={() => handleAddOrUpdate('DONATION_RECEIPT', name)}
-                          >
-                            SET DONATION
+                            ASSIGN TO {(selectedTasks[name] || []).length || ""} TASKS
                           </Button>
                         </div>
                       </div>
@@ -211,25 +299,106 @@ const PrinterSettingsPage = () => {
                 )}
               </div>
             </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="p-3 bg-amber-50 rounded-full text-amber-600 mb-3">
+                <Monitor className="h-6 w-6" />
+              </div>
+              <p className="text-sm font-bold text-secondary">Manual Entry Mode Enabled</p>
+              <p className="text-xs text-text-light max-w-sm mt-1">
+                Type your printer names manually in the table below. The app will use these names to talk to your Printer Agent.
+              </p>
+              <button 
+                onClick={() => setShowManual(false)}
+                className="mt-4 text-xs font-bold text-primary hover:underline"
+              >
+                Try automatic detection again
+              </button>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Card className="border-border-temple shadow-sm">
         <CardContent className="p-6">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-              <Monitor className="h-5 w-5" />
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+                <Monitor className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-secondary">
+                  Saved Configurations
+                </h3>
+                <p className="text-sm font-medium text-text-light">
+                  Machine ID: <span className="font-mono font-bold text-text-main">{machineId}</span>
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-secondary">
-                Saved Configurations
-              </h3>
-              <p className="text-sm font-medium text-text-light">
-                Machine ID: <span className="font-mono font-bold text-text-main">{machineId}</span>
-              </p>
-            </div>
+            {canWrite && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddCustom(!showAddCustom)}
+                className="flex items-center gap-2 border-primary/20 text-primary bg-primary/5"
+              >
+                <Plus className="h-4 w-4" />
+                Add Custom Task
+              </Button>
+            )}
           </div>
+
+          {showAddCustom && (
+            <div className="mb-6 p-4 rounded-xl border border-dashed border-primary/30 bg-primary/5 space-y-4">
+              <p className="text-xs font-bold text-primary uppercase">New Custom Printing Task</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-text-light uppercase px-1">Task Code (No spaces)</label>
+                  <Input 
+                    placeholder="e.g. CUSTOM_REPORT"
+                    value={customTask.code}
+                    onChange={(e) => setCustomTask({...customTask, code: e.target.value.toUpperCase().replace(/\s+/g, '_')})}
+                    className="h-10 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-text-light uppercase px-1">Display Label</label>
+                  <Input 
+                    placeholder="e.g. My Custom Report"
+                    value={customTask.label}
+                    onChange={(e) => setCustomTask({...customTask, label: e.target.value})}
+                    className="h-10 text-sm"
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <Button 
+                    className="h-10 flex-1"
+                    disabled={!customTask.code || !customTask.label}
+                    onClick={() => {
+                      // To make it appear in the list, we must at least give it an empty assignment
+                      // Or we can just add it to the local state and let the user assign a printer
+                      const newCtx = { code: customTask.code, label: customTask.label };
+                      // Since the list comes from backend, we should probably just store it in DB
+                      // But the backend combines standard + DB contexts.
+                      // So assigning empty name works.
+                      handleAddOrUpdate(customTask.code, " ");
+                      setCustomTask({ code: '', label: '' });
+                      setShowAddCustom(false);
+                    }}
+                  >
+                    Create Task
+                  </Button>
+                  <Button 
+                    variant="ghost"
+                    className="h-10 px-3"
+                    onClick={() => setShowAddCustom(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="overflow-hidden rounded-xl border border-border-temple/60">
             <div className="grid grid-cols-[1fr_1.2fr_auto] gap-4 border-b border-border-temple/60 bg-[#F8F4EE] px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-[#8B4513]">
@@ -238,7 +407,8 @@ const PrinterSettingsPage = () => {
               <span className="w-24 text-center">Actions</span>
             </div>
 
-            {CONTEXTS.map((context) => {
+            {contexts.map((ctx) => {
+              const context = ctx.code;
               const key = `${machineId}:${context}`;
               const existing = existingMap[key];
               const isSaving = upsertMutation.isPending;
@@ -248,9 +418,12 @@ const PrinterSettingsPage = () => {
                   key={context}
                   className="grid grid-cols-[1fr_1.2fr_auto] gap-4 items-center border-b border-[#F3E8DE] px-5 py-3 last:border-b-0"
                 >
-                  <span className="text-sm font-bold text-text-main">
-                    {CONTEXT_LABELS[context]}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-text-main">
+                      {ctx.label}
+                    </span>
+                    <span className="text-[10px] font-mono text-text-light">{context}</span>
+                  </div>
 
                   <div className="flex items-center gap-2">
                     <Input
@@ -268,7 +441,7 @@ const PrinterSettingsPage = () => {
                     {(newEntries[context]?.trim() || existing?.printer_name) && (
                       <button
                         onClick={() => handleAddOrUpdate(context)}
-                        disabled={!canWrite || isSaving || !newEntries[context]?.trim()}
+                        disabled={!canWrite || isSaving || (!newEntries[context]?.trim() && existing?.printer_name === newEntries[context])}
                         className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-temple/60 bg-white text-primary hover:bg-primary/5 disabled:opacity-40 transition-all"
                         title="Save"
                       >
@@ -296,7 +469,7 @@ const PrinterSettingsPage = () => {
           </div>
 
           <p className="mt-4 text-xs text-text-light/70">
-            Assign a printer name for each task on this computer. The app will remember and use it automatically when printing.
+            Assign a printer name for each task on this computer. You can also add custom tasks if you are integrating new reports.
           </p>
         </CardContent>
       </Card>

@@ -365,7 +365,16 @@ const VendorsPage = () => {
             <DialogTitle>{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</DialogTitle>
             <DialogDescription className="sr-only">Vendor form</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col overflow-hidden" autoComplete="off">
+          <form 
+            onSubmit={handleSubmit(onSubmit)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+              }
+            }}
+            className="flex flex-col overflow-hidden" 
+            autoComplete="off"
+          >
             <div className="bg-white space-y-4 px-6 pt-4 pb-6 overflow-y-auto max-h-[60vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                 <div>

@@ -360,6 +360,44 @@ def upload_logo_legacy(
 
 # ─── Printer Config Endpoints ────────────────────────────────────────────────
 
+STANDARD_PRINTER_CONTEXTS = [
+    {"code": "DONATION_RECEIPT", "label": "Donation Receipt"},
+    {"code": "TOKEN", "label": "Token Receipt"},
+    {"code": "REPORT_STOCK", "label": "Stock Summary Report"},
+    {"code": "REPORT_CANTEEN", "label": "Canteen Summary Report"},
+    {"code": "REPORT_MANPOWER", "label": "Manpower Report"},
+    {"code": "REPORT_DONATION", "label": "Donation Report"},
+    {"code": "REPORT_TOKEN", "label": "Token Issued Report"},
+    {"code": "REPORT_PURCHASE", "label": "Purchase Report"},
+]
+
+@router.get("/printer-contexts")
+def get_printer_contexts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_any_settings_read_access(current_user)
+    
+    # Get all distinct contexts currently in use in the DB
+    db_contexts = db.query(PrinterConfig.context).distinct().all()
+    db_codes = {c[0] for c in db_contexts}
+    
+    # Combine standard ones with any extra ones found in DB
+    results = []
+    seen_codes = set()
+    
+    for ctx in STANDARD_PRINTER_CONTEXTS:
+        results.append(ctx)
+        seen_codes.add(ctx["code"])
+        
+    for code in db_codes:
+        if code not in seen_codes:
+            # For custom codes, use the code as label or format it
+            results.append({"code": code, "label": code.replace("_", " ").title()})
+            seen_codes.add(code)
+            
+    return results
+
 @router.get("/printer-configs", response_model=PrinterConfigListOut)
 def list_printer_configs(
     machine_id: str | None = None,
