@@ -39,6 +39,40 @@ const MainLayout = () => {
     ...(user?.privileges || []),
   ].join('|');
 
+  const normalized = (value) => (value || '').toLowerCase().trim();
+
+  const routeMatchesPath = (route, path) => {
+    if (!route) return false;
+    if (route === '/') return path === '/';
+    return path === route || path.startsWith(`${route}/`);
+  };
+
+  const moduleContainsPath = (module, path) => {
+    if (!module) return false;
+    if (routeMatchesPath(module.route, path)) return true;
+    return (module.submodules || []).some((child) => moduleContainsPath(child, path));
+  };
+
+  const findModuleById = (modules, id) => {
+    for (const module of modules || []) {
+      if (module.id === id) return module;
+      const found = findModuleById(module.submodules || [], id);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const mainRoot = menuData.find((module) => normalized(module.name) === 'main menu');
+  const mainChildren = mainRoot?.submodules || [];
+  const mainMenuSectionNames = new Set(['home', 'users', 'master settings']);
+  const isRoomRoot = (module) => {
+    const name = normalized(module?.name);
+    return Boolean(module && !module.route && !mainMenuSectionNames.has(name));
+  };
+  const routeOwnedRoom = mainChildren.find(
+    (module) => isRoomRoot(module) && moduleContainsPath(module, location.pathname)
+  );
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -77,35 +111,23 @@ const MainLayout = () => {
 
   useEffect(() => {
     const path = location.pathname;
-    const canteenPaths = [
-    '/canteen',
-    '/purchases',
-    '/daily-usage',
-    '/wastages',
-    '/donations',
-    '/items',
-      '/vendors',
-      '/items/categories',
-      '/items/menu-items',
-      '/reports'];
 
-    if (
+    const isSettings = 
       path === '/settings' ||
       path.startsWith('/settings/temple') ||
       path.startsWith('/settings/receipt') ||
       path.startsWith('/settings/cleanup') ||
       path.startsWith('/settings/printers') ||
-      path.startsWith('/settings/donation-types')
-    ) {
+      path.startsWith('/settings/donation-types');
+
+    if (isSettings) {
       setActiveModule('main');
-    } else if (canteenPaths.some((p) => path.startsWith(p))) {
-      const canteenRoot = findModuleByName(menuData, 'Canteen Module');
-      setActiveModule(canteenRoot?.id || 'main');
-    } else if (path === '/') {
-      const firstNonMainRoot = menuData.find((module) => module.name !== 'Main Menu');
-      setActiveModule(canAccessMain ? 'main' : firstNonMainRoot?.id || 'main');
+    } else if (routeOwnedRoom) {
+      setActiveModule(routeOwnedRoom.id);
+    } else if (path === '/' || path.startsWith('/users') || path === '/office') {
+      setActiveModule('main');
     }
-  }, [location.pathname, canAccessMain, menuData]);
+  }, [location.pathname, menuData, routeOwnedRoom]);
 
   useEffect(() => {
     if (location.pathname === '/' && !canAccessMain) {
@@ -122,17 +144,6 @@ const MainLayout = () => {
     navigate('/login');
   };
 
-  const mainRoot = menuData.find(m => m.name === 'Main Menu');
-
-  const findModuleById = (modules, id) => {
-    for (const module of modules || []) {
-      if (module.id === id) return module;
-      const found = findModuleById(module.submodules || [], id);
-      if (found) return found;
-    }
-    return null;
-  };
-
   const findModuleByName = (modules, name) => {
     for (const module of modules || []) {
       if (module.name === name) return module;
@@ -142,9 +153,12 @@ const MainLayout = () => {
     return null;
   };
 
-  const activeRoot = activeModule === 'main' ?
-    (mainRoot || menuData[0]) :
-    (findModuleById(menuData, activeModule) || mainRoot || menuData[0]);
+  const activeRoot = (activeModule !== 'main') ? 
+    (findModuleById(menuData, activeModule) || mainRoot || menuData[0]) : 
+    (mainRoot || menuData[0]);
+
+  const effectiveRoot = routeOwnedRoom || activeRoot;
+  const isInsideRoom = effectiveRoot && mainRoot && effectiveRoot.id !== mainRoot.id && isRoomRoot(effectiveRoot);
 
   const findFirstRoute = (items = []) => {
     for (const item of items) {
@@ -155,13 +169,12 @@ const MainLayout = () => {
     return null;
   };
 
-  let currentMenuItems = activeRoot?.submodules || [];
+  let currentMenuItems = effectiveRoot?.submodules || [];
   // Special case: if the root has no submodules but has a route, it might be the only item
-  if (currentMenuItems.length === 0 && activeRoot?.route && !mainRoot) {
-    currentMenuItems = [activeRoot];
+  if (currentMenuItems.length === 0 && effectiveRoot?.route && effectiveRoot !== mainRoot) {
+    currentMenuItems = [effectiveRoot];
   }
 
-  const normalized = (value) => (value || '').toLowerCase().trim();
   const duplicateSystemSettingNames = new Set(['temple identity', 'receipt settings', 'data cleanup']);
   const hasSystemSettingsParent = currentMenuItems.some((item) => normalized(item.name) === 'system settings');
   const visibleMenuItems = currentMenuItems.filter((item) => {
@@ -175,7 +188,7 @@ const MainLayout = () => {
     const hasChildren = item.submodules && item.submodules.length > 0;
     const isExpanded = expandedMenus[item.id];
     const isActive = item.route && location.pathname === item.route;
-    const opensRoom = activeModule === 'main' && canAccessMain && item.name === 'Canteen Module' && hasChildren;
+    const opensRoom = activeModule === 'main' && canAccessMain && isRoomRoot(item) && hasChildren;
     const canExpandChildren = hasChildren && !opensRoom;
 
     const content =
@@ -202,7 +215,7 @@ const MainLayout = () => {
         }
       }}>
       
-        {item.icon && <DynamicIcon name={item.icon} className={cn("w-5 h-5", isActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />}
+        {item.icon && item.name !== 'Devotees' && <DynamicIcon name={item.icon} className={cn("w-5 h-5", isActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />}
         <span className="flex-1">{item.name}</span>
         {canExpandChildren && (
           <button
@@ -249,10 +262,10 @@ const MainLayout = () => {
       <nav className="flex-1 overflow-y-auto no-scrollbar py-4 px-3 space-y-1">
         <div className="pb-2 px-3">
           <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] font-serif">
-            {activeRoot?.name || 'Main Menu'}
+            {effectiveRoot?.name === 'Canteen Module' ? 'Mahaprasad Module' : effectiveRoot?.name || 'Main Menu'}
           </span>
         </div>
-        {activeModule !== 'main' && canAccessMain && (
+        {isInsideRoom && canAccessMain && (
           <div
             className="group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white"
             onClick={() => {
@@ -266,7 +279,7 @@ const MainLayout = () => {
           </div>
         )}
         {visibleMenuItems.map((item) => renderMenuItem(item))}
-        {activeModule !== 'main' && canAccessMain && (
+        {isInsideRoom && canAccessMain && (
           <div
             className="group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white"
             onClick={() => {
