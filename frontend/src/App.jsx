@@ -29,7 +29,6 @@ import ReceiptSettingsPage from './pages/ReceiptSettingsPage';
 import DataCleanupPage from './pages/DataCleanupPage';
 import PrinterSettingsSettingsPage from './pages/PrinterSettingsSettingsPage';
 import ProfilePage from './pages/ProfilePage';
-import ModuleManagementPage from './pages/ModuleManagementPage';
 import { StockSummaryPage } from './pages/StockSummaryPage';
 import TokenReportPage from './pages/TokenReportPage';
 import DonationReportPage from './pages/DonationReportPage';
@@ -89,7 +88,6 @@ function App() {
         <Route path="/settings/units" element={<ProtectedRoute requiredPermission="units.read"><UnitsPage /></ProtectedRoute>} />
         <Route path="/items/menu-items" element={<ProtectedRoute requiredPermission="menu_items.read"><MenuItemsPage /></ProtectedRoute>} />
         <Route path="/settings/donation-types" element={<ProtectedRoute requiredPermission="donation_types.read"><DonationTypesPage /></ProtectedRoute>} />
-        <Route path="/settings/modules" element={<ProtectedRoute requiredPermission="users.modules.read" requiredRank={1}><ModuleManagementPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute requiredPermission={["settings.management.read", "settings.temple_identity.read", "settings.receipt_settings.read", "settings.data_cleanup.read", "settings.read"]}><SettingsPage /></ProtectedRoute>} />
         <Route path="/settings/temple" element={<ProtectedRoute requiredPermission={["settings.temple_identity.read", "settings.management.read", "settings.read"]}><TempleIdentitySettingsPage /></ProtectedRoute>} />
         <Route path="/settings/receipt" element={<ProtectedRoute requiredPermission={["settings.receipt_settings.read", "settings.management.read", "settings.read"]}><ReceiptSettingsPage /></ProtectedRoute>} />
