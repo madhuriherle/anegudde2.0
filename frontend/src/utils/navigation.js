@@ -35,6 +35,7 @@ export const mainPermissions = [
   'users.management.read',
   'users.privileges.read',
   'users.modules.read',
+  'roles.read',
   'activity_logs.read',
   'settings.management.read',
   'settings.printers.read',

@@ -80,7 +80,7 @@ function App() {
         <Route path="/reports/manpower" element={<ProtectedRoute requiredPermission="reports.manpower.read"><ManpowerReportPage /></ProtectedRoute>} />
         
         <Route path="/users" element={<ProtectedRoute requiredPermission={["users.management.read", "users.read"]}><UsersPage /></ProtectedRoute>} />
-        <Route path="/users/roles" element={<ProtectedRoute requiredPermission="users.privileges.read"><RolesPage /></ProtectedRoute>} />
+        <Route path="/users/roles" element={<ProtectedRoute requiredPermission="roles.read"><RolesPage /></ProtectedRoute>} />
         <Route path="/users/privileges" element={<ProtectedRoute requiredPermission="users.privileges.read"><PrivilegesPage /></ProtectedRoute>} />
         <Route path="/users/activity" element={<ProtectedRoute requiredPermission="activity_logs.read"><ActivityLogsPage /></ProtectedRoute>} />
         <Route path="/devotees" element={<ProtectedRoute requiredPermission="donations.read"><DevoteesPage /></ProtectedRoute>} />

@@ -37,8 +37,8 @@ const RolesPage = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
   const { hasPermission } = usePermission();
-  const canWrite = hasPermission('users.privileges.write');
-  const canDelete = hasPermission('users.privileges.write'); // Reusing write permission for role CRUD
+  const canWrite = hasPermission('roles.write');
+  const canDelete = hasPermission('roles.delete');
 
   const [open, setOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
