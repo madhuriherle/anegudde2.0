@@ -190,7 +190,7 @@ class PrintingService {
     required String userCode,
   }) async {
     const double width = 450;
-    final double height = userCode.isEmpty ? 390 : 430;
+    final double height = userCode.isEmpty ? 345 : 380;
     const double scale = 3;
 
     final recorder = ui.PictureRecorder();
