@@ -31,20 +31,6 @@ def list_roles(
     return query.order_by(Role.rank_level).all()
 
 
-    """
-    List all active roles. Super admin sees all, others see only weaker roles.
-    """
-    my_rank = current_user.role.rank_level if current_user.role else 99
-
-    query = db.query(Role).filter(Role.is_deleted == False, Role.status == 1)
-
-    # If not developer (rank 1), only show roles with higher rank (weaker)
-    if my_rank > 1:
-        query = query.filter(Role.rank_level > my_rank)
-
-    return query.order_by(Role.rank_level).all()
-
-
 @router.post("/create_role", response_model=RoleOut)
 def create_role(
     payload: RoleCreate,
@@ -147,9 +133,42 @@ def list_privileges(db: Session = Depends(get_db), _: User = Depends(PermissionC
 def get_role_privileges(
     role_id: int,
     db: Session = Depends(get_db),
-    target_rank = role.rank_level if role else 99
+    current_user: User = Depends(AnyPermissionChecker([
+        "users.privileges.read",
+        "roles.read",
+    ])),
+):
+    role = db.query(Role).filter(Role.id == role_id, Role.is_deleted == False).first()
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
 
-    # Can only modify weaker roles (higher rank number), never same or stronger role
+    my_rank = current_user.role.rank_level if current_user.role else 99
+    if role.rank_level <= my_rank and not current_user.role.is_all_access:
+        raise HTTPException(status_code=403, detail="Cannot view privileges of same or higher role")
+
+    privilege_ids = [
+        rp.privilege_id
+        for rp in db.query(RolePrivilege).filter(
+            RolePrivilege.role_id == role_id, RolePrivilege.status == 1
+        ).all()
+    ]
+    return privilege_ids
+
+
+@router.put("/update_role_privileges/{role_id}")
+def update_role_privileges(
+    role_id: int,
+    payload: RolePrivilegeUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("users.privileges.write")),
+):
+    role = db.query(Role).filter(Role.id == role_id, Role.is_deleted == False).first()
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+
+    my_rank = current_user.role.rank_level if current_user.role else 99
+    target_rank = role.rank_level
     if target_rank <= my_rank:
         raise HTTPException(status_code=403, detail="Cannot modify privileges of same or higher role")
 
@@ -175,10 +194,8 @@ def get_role_privileges(
             detail=f"Selected role rank cannot access: {', '.join(blocked_privileges)}",
         )
 
-    # Remove existing privileges
     db.query(RolePrivilege).filter(RolePrivilege.role_id == role_id).delete()
 
-    # Add new privileges
     for priv_id in payload.privilege_ids:
         db.add(RolePrivilege(
             role_id=role_id,

@@ -24,8 +24,13 @@ def upgrade() -> None:
         "purchase_entries", "consumption_entries", "wastage_entries",
         "donation_entries", "purchase_return_entries",
     ]
+    conn = op.get_bind()
     for table in tables:
-        op.create_index(op.f(f"ix_{table}_is_deleted"), table, ["is_deleted"], unique=False)
+        conn.execute(
+            sa.text(
+                f"CREATE INDEX IF NOT EXISTS ix_{table}_is_deleted ON {table} (is_deleted)"
+            )
+        )
 
 
 def downgrade() -> None:
