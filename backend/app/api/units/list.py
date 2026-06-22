@@ -9,7 +9,7 @@ router = APIRouter()
 @router.get("/list_units", response_model=list[UnitOut])
 def list_units(
     db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("units.read")),
+    _: User = Depends(get_current_user),
     q: str | None = Query(None),
     status: int | None = Query(1),
     search_field: str | None = Query(None),
