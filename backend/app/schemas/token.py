@@ -6,6 +6,7 @@ from .base import UTCBaseModel
 class UserMinimal(UTCBaseModel):
     id: int
     full_name: str
+    user_code: Optional[str] = None
 
 class TokenDetailCreate(BaseModel):
     token_count: int

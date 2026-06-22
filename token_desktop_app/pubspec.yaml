@@ -100,8 +100,8 @@ flutter:
   fonts:
     - family: KannadaFont
       fonts:
-        - asset: assets/fonts/BalooTamma2-Regular.ttf
-        - asset: assets/fonts/BalooTamma2-Bold.ttf
+        - asset: assets/fonts/NotoSansKannada-Regular.ttf
+        - asset: assets/fonts/NotoSansKannada-Bold.ttf
           weight: 700
   #
   # For details regarding fonts from package dependencies,
