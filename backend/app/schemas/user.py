@@ -19,12 +19,26 @@ class RoleCreate(BaseModel):
     is_all_access: bool = False
     module_id: int | None = None
 
+    @field_validator("module_id", mode="before")
+    @classmethod
+    def coerce_zero_module(cls, v):
+        if v == 0 or v == "0":
+            return None
+        return v
+
 class RoleUpdate(BaseModel):
     role_name: str | None = None
     rank_level: int | None = None
     is_all_access: bool | None = None
     module_id: int | None = None
     status: int | None = None
+
+    @field_validator("module_id", mode="before")
+    @classmethod
+    def coerce_zero_module(cls, v):
+        if v == 0 or v == "0":
+            return None
+        return v
 
 class PrivilegeOut(BaseModel):
     id: int
