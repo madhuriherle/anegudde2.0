@@ -254,7 +254,7 @@ const DonationsPage = () => {
     reValidateMode: 'onChange',
     defaultValues: {
       donation_date: toDateInputValue(new Date()),
-      donation_type: 0,
+      donation_type: activeDonationTypes[0]?.id || 0,
       donation_mode: 'ITEM',
       total_gross_amount: '',
       amount_donation_type: 'CUSTOM',
@@ -299,7 +299,7 @@ const DonationsPage = () => {
   const resetDonationForm = () => {
     reset({
       donation_date: toDateInputValue(new Date()),
-      donation_type: 0,
+      donation_type: activeDonationTypes[0]?.id || 0,
       donation_mode: 'ITEM',
       total_gross_amount: '',
       amount_donation_type: 'CUSTOM',
@@ -334,6 +334,15 @@ const DonationsPage = () => {
       setDonationPrefixInput('');
     }
   }, [donationTypePrefixById, watchedDonationType]);
+
+  // Auto-select the first active donation type for new donations once they are loaded
+  useEffect(() => {
+    if (open && !editingDonation && activeDonationTypes.length > 0 && !watchedDonationType) {
+      const firstTypeId = Number(activeDonationTypes[0].id);
+      setValue('donation_type', firstTypeId);
+      setDonationPrefixInput(donationTypePrefixById.get(firstTypeId) || '');
+    }
+  }, [open, editingDonation, activeDonationTypes, watchedDonationType, setValue, donationTypePrefixById]);
 
   useEffect(() => {
     if (watchedDonationMode === 'AMOUNT' && watchedAmountDonationType === 'SPECIFIC' && watchedAmountMasterId) {
@@ -438,7 +447,7 @@ const DonationsPage = () => {
       
       setOpen(false);
       setEditingDonation(null);
-      reset();
+      resetDonationForm();
     },
     onError: (err) => {
       showError(err.response?.data?.detail || 'Failed to save donation');

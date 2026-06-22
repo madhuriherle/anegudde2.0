@@ -40,8 +40,8 @@ const getDonationScopeModules = (modules = []) => {
       value: module.id,
       label: module.name,
     });
-    // If this is Main Menu, also include its direct children
-    if (module.name === "Main Menu" && module.submodules) {
+    // If this is the root module, also include its direct children
+    if (module.parent_id === null && module.submodules) {
       module.submodules.forEach(sm => {
         options.push({
           value: sm.id,

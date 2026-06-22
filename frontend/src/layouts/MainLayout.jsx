@@ -90,6 +90,20 @@ const MainLayout = () => {
       '/items/menu-items',
       '/reports'];
 
+    const findCanteenModule = (modules) => {
+      for (const mod of modules || []) {
+        if (mod.submodules?.length) {
+          const hasCanteenChild = mod.submodules.some(
+            (child) => child.route && canteenPaths.some((p) => child.route.startsWith(p))
+          );
+          if (hasCanteenChild) return mod;
+          const found = findCanteenModule(mod.submodules);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
     if (
       path === '/settings' ||
       path.startsWith('/settings/temple') ||
@@ -100,11 +114,11 @@ const MainLayout = () => {
     ) {
       setActiveModule('main');
     } else if (canteenPaths.some((p) => path.startsWith(p))) {
-      const canteenRoot = findModuleByName(menuData, 'Canteen Module');
+      const canteenRoot = findCanteenModule(menuData);
       setActiveModule(canteenRoot?.id || 'main');
     } else if (path === '/') {
-      const firstNonMainRoot = menuData.find((module) => module.name !== 'Main Menu');
-      setActiveModule(canAccessMain ? 'main' : firstNonMainRoot?.id || 'main');
+      const firstChildModule = menuData.find((module) => module.parent_id !== null);
+      setActiveModule(canAccessMain ? 'main' : firstChildModule?.id || 'main');
     }
   }, [location.pathname, canAccessMain, menuData]);
 
@@ -142,21 +156,12 @@ const MainLayout = () => {
     }
   };
 
-  const mainRoot = menuData.find(m => m.name === 'Main Menu');
+  const mainRoot = menuData.find(m => m.parent_id === null);
 
   const findModuleById = (modules, id) => {
     for (const module of modules || []) {
       if (module.id === id) return module;
       const found = findModuleById(module.submodules || [], id);
-      if (found) return found;
-    }
-    return null;
-  };
-
-  const findModuleByName = (modules, name) => {
-    for (const module of modules || []) {
-      if (module.name === name) return module;
-      const found = findModuleByName(module.submodules || [], name);
       if (found) return found;
     }
     return null;
@@ -181,13 +186,11 @@ const MainLayout = () => {
     currentMenuItems = [activeRoot];
   }
 
-  const normalized = (value) => (value || '').toLowerCase().trim();
-  const duplicateSystemSettingNames = new Set(['temple identity', 'receipt settings', 'data cleanup']);
-  const hasSystemSettingsParent = currentMenuItems.some((item) => normalized(item.name) === 'system settings');
+  const settingsChildRoutes = new Set(['/settings/temple', '/settings/receipt', '/settings/cleanup']);
+  const hasSystemSettingsParent = currentMenuItems.some((item) => item.route === '/settings');
   const visibleMenuItems = currentMenuItems.filter((item) => {
-    const name = normalized(item.name);
-    if (name === 'profile') return false;
-    if (hasSystemSettingsParent && duplicateSystemSettingNames.has(name)) return false;
+    if (item.route === '/profile') return false;
+    if (hasSystemSettingsParent && settingsChildRoutes.has(item.route)) return false;
     return true;
   });
 
@@ -195,7 +198,8 @@ const MainLayout = () => {
     const hasChildren = item.submodules && item.submodules.length > 0;
     const isExpanded = expandedMenus[item.id];
     const isActive = item.route && location.pathname === item.route;
-    const opensRoom = activeModule === 'main' && canAccessMain && item.name === 'Canteen Module' && hasChildren;
+    const opensRoom = activeModule === 'main' && canAccessMain && hasChildren && !item.route &&
+      item.submodules?.some((child) => child.route === '/canteen');
     const canExpandChildren = hasChildren && !opensRoom;
 
     const content =
@@ -222,7 +226,7 @@ const MainLayout = () => {
         }
       }}>
       
-        {item.icon && item.name !== 'Devotees' && <DynamicIcon name={item.icon} className={cn("w-5 h-5", isActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />}
+        {item.icon && item.route !== '/devotees' && <DynamicIcon name={item.icon} className={cn("w-5 h-5", isActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />}
         <span className="flex-1">{item.name}</span>
         {canExpandChildren && (
           <button
@@ -269,7 +273,7 @@ const MainLayout = () => {
       <nav className="flex-1 overflow-y-auto no-scrollbar py-4 px-3 space-y-1">
         <div className="pb-2 px-3">
           <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] font-serif">
-            {activeRoot?.name === 'Canteen Module' ? 'Mahaprasad Module' : activeRoot?.name || 'Main Menu'}
+            {activeRoot?.submodules?.some((c) => c.route === '/canteen') ? 'Mahaprasad Module' : activeRoot?.name || 'Main Menu'}
           </span>
         </div>
         {activeModule !== 'main' && canAccessMain && (

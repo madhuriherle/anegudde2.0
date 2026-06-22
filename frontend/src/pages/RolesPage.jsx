@@ -69,8 +69,8 @@ const RolesPage = () => {
     let flat = [];
     (modules || []).forEach(m => {
       flat.push({ id: m.id, name: m.name, depth: 0 });
-      // If this is Main Menu, also include its direct children (Canteen, Office, etc.)
-      if (m.name === "Main Menu" && m.submodules) {
+      // If this is the root module, also include its direct children
+      if (m.parent_id == null && m.submodules) {
         m.submodules.forEach(sm => {
           flat.push({ id: sm.id, name: sm.name, depth: 1 });
         });

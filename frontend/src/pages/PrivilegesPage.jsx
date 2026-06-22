@@ -197,8 +197,8 @@ const PrivilegesPage = () => {
     () => {
       let rawRoots = menuRoots || [];
       
-      // If the only root is "Main Menu", flatten it so its children become the rooms
-      if (rawRoots.length === 1 && rawRoots[0].name === "Main Menu") {
+      // If the only root is the root module, flatten it so its children become the rooms
+      if (rawRoots.length === 1 && rawRoots[0].parent_id == null) {
         rawRoots = rawRoots[0].submodules || [];
       }
 
