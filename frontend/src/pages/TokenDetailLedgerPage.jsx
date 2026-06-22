@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -91,10 +91,11 @@ const TimeSelect = ({ value, onChange }) => {
 
 const TokenDetailLedgerPage = () => {
   const navigate = useNavigate();
+  const { date: routeDate } = useParams();
   const [page, setPage] = useState(1);
 
   // Date state
-  const [selectedDate, setSelectedDate] = useState(getLocalDateInputValue());
+  const [selectedDate, setSelectedDate] = useState(routeDate || getLocalDateInputValue());
   const [fromTime, setFromTime] = useState('00:00');
   const [toTime, setToTime] = useState('23:59');
 

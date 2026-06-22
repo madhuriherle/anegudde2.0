@@ -33,20 +33,26 @@ class AuthProvider with ChangeNotifier {
   Future<void> checkAuth() async {
     _isLoading = true;
     notifyListeners();
-    
+
     final token = await _apiService.token;
     if (token != null) {
-      try {
-        await fetchProfile();
-        _isAuthenticated = _userProfile != null;
-      } catch (e) {
-        _isAuthenticated = false;
+      final sameDay = await _apiService.isSameDay();
+      if (!sameDay) {
+        _sessionExpiredMessage = 'Session expired for the day. Please login again.';
         await logout();
+      } else {
+        try {
+          await fetchProfile();
+          _isAuthenticated = _userProfile != null;
+        } catch (e) {
+          _isAuthenticated = false;
+          await logout();
+        }
       }
     } else {
       _isAuthenticated = false;
     }
-    
+
     _isLoading = false;
     notifyListeners();
   }

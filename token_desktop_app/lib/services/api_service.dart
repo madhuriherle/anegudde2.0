@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -129,6 +130,17 @@ class ApiService {
     return prefs.getString('jwt_token');
   }
 
+  Future<String?> get loginDate async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('login_date');
+  }
+
+  Future<bool> isSameDay() async {
+    final stored = await loginDate;
+    if (stored == null) return false;
+    return stored == DateFormat('yyyy-MM-dd').format(DateTime.now());
+  }
+
   Future<Map<String, String>> _headers() async {
     final t = await token;
     return {
@@ -159,6 +171,8 @@ class ApiService {
         final data = json.decode(response.body);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt_token', data['access_token']);
+        await prefs.setString(
+            'login_date', DateFormat('yyyy-MM-dd').format(DateTime.now()));
         return true;
       }
       return false;
@@ -169,8 +183,18 @@ class ApiService {
   }
 
   Future<void> logout() async {
+    try {
+      print('Attempting logout call to backend...');
+      await http.post(
+        _buildUri('/auth/logout'),
+        headers: await _headers(),
+      );
+    } catch (e) {
+      print('Logout API call failed: $e');
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
+    await prefs.remove('login_date');
   }
 
   Future<dynamic> get(String endpoint) async {

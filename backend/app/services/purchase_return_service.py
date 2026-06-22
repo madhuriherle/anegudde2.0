@@ -12,7 +12,7 @@ def list_purchase_returns(db: Session, page: int = 1, page_size: int = 20, q: st
         joinedload(PurchaseReturnEntry.user),
         joinedload(PurchaseReturnEntry.purchase_entry)
     )
-    query = query.filter(PurchaseReturnEntry.status == 1)
+    query = query.filter(PurchaseReturnEntry.is_deleted == False, PurchaseReturnEntry.status == 1)
     
     if vendor_id:
         query = query.filter(PurchaseReturnEntry.vendor_id == vendor_id)
@@ -155,6 +155,7 @@ def create_purchase_return(payload, db: Session, current_user: User):
 def get_vendor_bills(vendor_id: int, db: Session):
     return db.query(PurchaseEntry).filter(
         PurchaseEntry.vendor_id == vendor_id,
+        PurchaseEntry.is_deleted == False,
         PurchaseEntry.status == 1
     ).order_by(PurchaseEntry.purchase_date.desc()).all()
 
@@ -274,4 +275,9 @@ def delete_purchase_return(return_id: int, db: Session, current_user: User):
     entry.status = 0
     entry.updated_at = now
     entry.updated_by = current_user.id
+    
+    entry.is_deleted = True
+    entry.deleted_at = now
+    entry.deleted_by_id = current_user.id
+    
     db.commit()

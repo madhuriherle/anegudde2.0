@@ -19,25 +19,10 @@ def fix():
         if mod_mgmt:
             mod_mgmt.status = 0
         
-        # 3. Ensure Printer Settings is under System Settings
-        sys_settings = db.query(Module).filter(Module.name == 'System Settings').first()
-        if sys_settings:
-            printer_mod = db.query(Module).filter(Module.name == 'Printer Settings').first()
-            if not printer_mod:
-                printer_mod = Module(
-                    name='Printer Settings',
-                    route='/settings/printers',
-                    parent_id=sys_settings.id,
-                    display_order=4
-                )
-                db.add(printer_mod)
-                db.commit()
-                db.refresh(printer_mod)
-            elif printer_mod.status == 0:
-                printer_mod.status = 1
-                printer_mod.parent_id = sys_settings.id
-            else:
-                printer_mod.parent_id = sys_settings.id
+        # 3. Disable Printer Settings module
+        printer_mod = db.query(Module).filter(Module.name == 'Printer Settings').first()
+        if printer_mod:
+            printer_mod.status = 0
             
             # Check privilege 'settings.printers.read'
             priv = db.query(Privilege).filter(Privilege.privilege_name == 'settings.printers.read').first()

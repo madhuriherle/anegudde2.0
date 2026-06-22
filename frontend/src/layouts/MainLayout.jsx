@@ -8,7 +8,8 @@ import {
   User,
   LogOut,
   ArrowLeft,
-  Home } from
+  Home,
+  Download } from
 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Avatar from '@radix-ui/react-avatar';
@@ -120,6 +121,25 @@ const MainLayout = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const downloadFile = async (endpoint, filename) => {
+    try {
+      const response = await api.get(endpoint, { responseType: 'blob' });
+      const disposition = response.headers?.['content-disposition'] || '';
+      const match = disposition.match(/filename="?([^"]+)"?/i);
+      const downloadName = match?.[1] || filename;
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', downloadName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(`Failed to download ${filename}:`, error);
+    }
   };
 
   const mainRoot = menuData.find(m => m.name === 'Main Menu');
@@ -330,6 +350,41 @@ const MainLayout = () => {
             <span className="hidden sm:block text-base font-medium text-gray-700 mr-2">
               {user?.full_name}
             </span>
+
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button
+                  className="p-2 text-gray-500 hover:text-primary hover:bg-gray-100 rounded-lg transition-all"
+                  title="Downloads"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  className="z-50 min-w-[230px] bg-white rounded-lg shadow-xl border border-gray-200 p-1 animate-in fade-in zoom-in duration-200"
+                  align="end"
+                  sideOffset={8}>
+                  
+                  <DropdownMenu.Item
+                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50 outline-none cursor-pointer"
+                    onClick={() => downloadFile('/downloads/manual', 'User_Manual.pdf')}>
+                    
+                    <Icons.BookOpen className="w-4 h-4" />
+                    User Manual
+                  </DropdownMenu.Item>
+                  {user?.role_rank_level === 1 && (
+                    <DropdownMenu.Item
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50 outline-none cursor-pointer"
+                      onClick={() => downloadFile('/downloads/token-app', 'TokenApp_Setup.exe')}>
+                      
+                      <Icons.MonitorDown className="w-4 h-4" />
+                      Token App Installer
+                    </DropdownMenu.Item>
+                  )}
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
 
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>

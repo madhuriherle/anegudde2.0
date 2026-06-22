@@ -12,7 +12,7 @@ def create_wastage(
     payload: WastageEntryCreate, 
     request: Request,
     db: Session = Depends(get_db), 
-    current_user: User = Depends(PermissionChecker("consumptions.write"))
+    current_user: User = Depends(PermissionChecker("daily_usage.write"))
 ):
     # Ensure user_id in payload is the current user or handled by service
     # If the schema requires user_id, we can set it here if missing or just trust the payload

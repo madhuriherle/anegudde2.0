@@ -11,7 +11,7 @@ def remove_consumption(
     consumption_id: int,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("consumptions.delete"))
+    current_user: User = Depends(PermissionChecker("daily_usage.delete"))
 ):
     # Fetch details before deletion for snapshot
     entry = db.query(ConsumptionEntry).filter(ConsumptionEntry.id == consumption_id).first()

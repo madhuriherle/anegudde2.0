@@ -12,7 +12,7 @@ export const canteenPermissions = [
   'dashboard.read',
   'purchases.read',
   'purchase_returns.read',
-  'consumptions.read',
+  'daily_usage.read',
   'donations.read',
   'vendors.read',
   'items.read',
@@ -37,14 +37,13 @@ export const mainPermissions = [
   'users.modules.read',
   'roles.read',
   'activity_logs.read',
-  'settings.management.read',
   'settings.printers.read',
   'settings.temple_identity.read',
   'settings.receipt_settings.read',
   'settings.data_cleanup.read',
+  'recycle_bin.read',
   'units.read',
   'donation_types.read',
-  'profile.read',
 ];
 
 export const hasCanteenAccess = (user) => hasAnyPermission(user, canteenPermissions);
@@ -60,7 +59,7 @@ export const getDefaultPath = (user) => {
   if (hasPermission(user, 'dashboard.read')) return '/canteen';
   if (hasPermission(user, 'purchases.read')) return '/purchases';
   if (hasPermission(user, 'purchase_returns.read')) return '/purchases/returns';
-  if (hasPermission(user, 'consumptions.read')) return '/daily-usage';
+  if (hasPermission(user, 'daily_usage.read')) return '/daily-usage';
   if (hasPermission(user, 'donations.read')) return '/donations';
   if (hasPermission(user, 'vendors.read')) return '/vendors';
   if (hasPermission(user, 'items.read')) return '/items/rawitem';
@@ -69,7 +68,13 @@ export const getDefaultPath = (user) => {
   if (hasPermission(user, 'reports.stock_summary.read')) return '/reports/stock-summary';
   if (hasPermission(user, 'reports.purchases.read')) return '/reports/purchases';
   if (hasPermission(user, 'users.management.read')) return '/users';
-  if (hasPermission(user, 'settings.management.read')) return '/settings';
+  if (hasAnyPermission(user, [
+    'settings.temple_identity.read',
+    'settings.receipt_settings.read',
+    'settings.printers.read',
+    'recycle_bin.read',
+    'settings.data_cleanup.read',
+  ])) return '/settings';
   if (hasPermission(user, 'donation_types.read')) return '/settings/donation-types';
   if (hasPermission(user, 'profile.read')) return '/profile';
 

@@ -9,6 +9,7 @@ from app.db.models import (
     ConsumptionEntry,
     ConsumptionItem,
     DailyStockSummary,
+    Devotee,
     DonationEntry,
     DonationItem,
     ItemPrice,
@@ -75,6 +76,7 @@ OPERATIONAL_CLEANUP_GROUPS = {
         MonthlyStockSummary,
     ],
     "donation_records": [
+        Devotee,
         DonationItem,
         DonationEntry,
     ],
@@ -374,10 +376,8 @@ STANDARD_PRINTER_CONTEXTS = [
 @router.get("/printer-contexts")
 def get_printer_contexts(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(PermissionChecker("settings.printers.read")),
 ):
-    _ensure_any_settings_read_access(current_user)
-    
     # Get all distinct contexts currently in use in the DB
     db_contexts = db.query(PrinterConfig.context).distinct().all()
     db_codes = {c[0] for c in db_contexts}
@@ -403,9 +403,8 @@ def list_printer_configs(
     machine_id: str | None = None,
     context: str | None = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(PermissionChecker("settings.printers.read")),
 ):
-    _ensure_any_settings_read_access(current_user)
     q = db.query(PrinterConfig)
     if machine_id:
         q = q.filter(PrinterConfig.machine_id == machine_id)
@@ -420,9 +419,8 @@ def get_printer_config(
     context: str,
     machine_id: str | None = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(PermissionChecker("settings.printers.read")),
 ):
-    _ensure_any_settings_read_access(current_user)
     q = db.query(PrinterConfig).filter(PrinterConfig.context == context)
     if machine_id:
         q = q.filter(PrinterConfig.machine_id == machine_id)
@@ -435,7 +433,7 @@ def get_printer_config(
 def upsert_printer_config(
     config_in: PrinterConfigCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.management.write")),
+    current_user: User = Depends(PermissionChecker("settings.printers.write")),
 ):
     q = db.query(PrinterConfig).filter(PrinterConfig.context == config_in.context)
     if config_in.machine_id:
@@ -468,7 +466,7 @@ def upsert_printer_config(
 def delete_printer_config(
     config_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("settings.management.write")),
+    current_user: User = Depends(PermissionChecker("settings.printers.write")),
 ):
     config = db.query(PrinterConfig).filter(PrinterConfig.id == config_id).first()
     if not config:

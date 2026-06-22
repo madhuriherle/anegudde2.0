@@ -12,7 +12,7 @@ def create_consumption(
     payload: ConsumptionEntryCreate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("consumptions.write"))
+    current_user: User = Depends(PermissionChecker("daily_usage.write"))
 ):
     entry = create_consumption_service(payload, db, current_user)
     

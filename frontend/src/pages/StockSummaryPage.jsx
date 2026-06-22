@@ -1,12 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Filter,
-  Printer } from
-'lucide-react';
+import { Filter } from 'lucide-react';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
-import { Button } from '../components/ui/Button';
+import { PrinterSelectDropdown } from '../components/PrinterSelectDropdown';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Card, CardContent } from '../components/ui/Card';
@@ -160,12 +157,11 @@ export const StockSummaryPage = () => {
         <div>
           <h2 className="page-title">Stock Summary Report</h2>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handlePrint} className="text-text-main">
-            <Printer className="w-4 h-4 mr-2" />
-            Print
-          </Button>
-        </div>
+        <PrinterSelectDropdown
+          context="REPORT_STOCK"
+          onPrint={handlePrint}
+          buttonLabel="Print"
+        />
       </div>
 
       <Card className="border-border-temple print:hidden">
@@ -241,30 +237,30 @@ export const StockSummaryPage = () => {
                 <thead className="bg-[#FFF4E6] border-b border-border-temple">
                   <tr className="text-text-main font-bold uppercase">
                     <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
-                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Rate</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words hidden sm:table-cell">Rate</th>
                     <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Opening Stock</th>
                     <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Added</th>
                     <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Used</th>
-                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Usage Value</th>
-                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Purchase Ret.</th>
-                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Adjust</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words hidden sm:table-cell">Usage Value</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words hidden sm:table-cell">Purchase Ret.</th>
+                    <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words hidden sm:table-cell">Stock Adjust</th>
                     <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Closing Stock</th>
-                    <th className="px-3 py-2 text-left whitespace-normal break-words">Closing Value</th>
+                    <th className="px-3 py-2 text-left whitespace-normal break-words hidden sm:table-cell">Closing Value</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-temple/10">
                   {filteredRows.map((row) => (
                     <tr key={row.item_id} className="hover:bg-bg-temple/10 transition-colors">
                       <td className="px-3 py-2 border-r border-border-temple/10 font-medium text-text-main whitespace-normal break-words">{row.item_name}</td>
-                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main">{formatCurrency(row.rate)}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main hidden sm:table-cell">{formatCurrency(row.rate)}</td>
                       <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.opening_balance).toFixed(3)} {row.unit}</td>
                       <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.purchase_qty).toFixed(3)} {row.unit}</td>
                       <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.issue_qty).toFixed(3)} {row.unit}</td>
-                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-nowrap">{formatCurrency(row.issue_value)}</td>
-                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
-                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-nowrap hidden sm:table-cell">{formatCurrency(row.issue_value)}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
                       <td className="px-3 py-2 border-r border-border-temple/10 font-bold text-text-main whitespace-normal break-words">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
-                      <td className="px-3 py-2 text-text-main whitespace-nowrap">{formatCurrency(row.closing_value)}</td>
+                      <td className="px-3 py-2 text-text-main whitespace-nowrap hidden sm:table-cell">{formatCurrency(row.closing_value)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -298,30 +294,30 @@ export const StockSummaryPage = () => {
                       <thead className="bg-[#FFF4E6] border-b border-border-temple">
                         <tr className="text-text-main font-bold uppercase">
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
-                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Rate</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words hidden sm:table-cell">Rate</th>
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Opening Stock</th>
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Added</th>
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Used</th>
-                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Usage Value</th>
-                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Purchase Ret.</th>
-                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Stock Adjust</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words hidden sm:table-cell">Usage Value</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words hidden sm:table-cell">Purchase Ret.</th>
+                          <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words hidden sm:table-cell">Stock Adjust</th>
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Closing Stock</th>
-                          <th className="px-3 py-2 text-left whitespace-normal break-words">Closing Value</th>
+                          <th className="px-3 py-2 text-left whitespace-normal break-words hidden sm:table-cell">Closing Value</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border-temple/10">
                         {rows.map((row) => (
                           <tr key={row.item_id} className="hover:bg-bg-temple/10 transition-colors">
                             <td className="px-3 py-2 border-r border-border-temple/10 font-medium text-text-main whitespace-normal break-words">{row.item_name}</td>
-                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main">{formatCurrency(row.rate)}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main hidden sm:table-cell">{formatCurrency(row.rate)}</td>
                             <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.opening_balance).toFixed(3)} {row.unit}</td>
                             <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.purchase_qty).toFixed(3)} {row.unit}</td>
                             <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.issue_qty).toFixed(3)} {row.unit}</td>
-                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-nowrap">{formatCurrency(row.issue_value)}</td>
-                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
-                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-nowrap hidden sm:table-cell">{formatCurrency(row.issue_value)}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
                             <td className="px-3 py-2 border-r border-border-temple/10 font-bold text-text-main whitespace-normal break-words">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
-                            <td className="px-3 py-2 text-text-main whitespace-nowrap">{formatCurrency(row.closing_value)}</td>
+                            <td className="px-3 py-2 text-text-main whitespace-nowrap hidden sm:table-cell">{formatCurrency(row.closing_value)}</td>
                           </tr>
                         ))}
                       </tbody>

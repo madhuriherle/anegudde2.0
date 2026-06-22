@@ -61,9 +61,6 @@ const formSchema = z.object({
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items', index, 'quantity'], message: 'Quantity is required' });
       }
     });
-    if (!data.total_gross_amount || Number(data.total_gross_amount) <= 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['total_gross_amount'], message: 'Total gross amount is required' });
-    }
   }
   if (data.donation_mode === 'AMOUNT') {
     if (!data.total_gross_amount || Number(data.total_gross_amount) <= 0) {
@@ -1006,17 +1003,6 @@ const DonationsPage = () => {
                       </button>
                     </div>
                   </div>
-                  {watchedDonationMode === 'ITEM' && <div className="space-y-1.5">
-                    <Label className="text-text-main font-bold">Amount *</Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      {...register('total_gross_amount')}
-                      className="h-12 text-base text-text-main"
-                      placeholder="Enter amount"
-                    />
-                    {errors.total_gross_amount && <p className="text-xs text-error font-medium">{errors.total_gross_amount.message}</p>}
-                  </div>}
                 </div>
               </div>
 

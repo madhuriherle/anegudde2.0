@@ -2,6 +2,10 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy import exc
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlalchemy import exc
+from sqlalchemy.orm import Session
 from app.api.deps import get_db, PermissionChecker
 from app.db.models import DonationEntry, DonationType, User
 
@@ -21,26 +25,9 @@ def delete_donation_type(
 
     request.state.audit_meta = {"donation_type_name": row.type_name}
 
-    has_donations = (
-        db.query(DonationEntry.id)
-        .filter(DonationEntry.donation_type == donation_type_id)
-        .first()
-    )
-    if has_donations:
-        row.status = 0
-        row.updated_at = datetime.now(timezone.utc)
-        row.updated_by = current_user.id
-        db.commit()
-        return None
-
-    try:
-        db.delete(row)
-        db.commit()
-    except exc.IntegrityError:
-        db.rollback()
-        row.status = 0
-        row.updated_at = datetime.now(timezone.utc)
-        row.updated_by = current_user.id
-        db.commit()
+    row.is_deleted = True
+    row.deleted_at = datetime.now(timezone.utc)
+    row.deleted_by_id = current_user.id
+    db.commit()
 
     return None

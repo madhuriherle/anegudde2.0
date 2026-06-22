@@ -13,14 +13,15 @@ def delete_menu_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("menu_items.delete"))
 ):
-    db_item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
-    if not db_item:
+    row = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+    if not row:
         raise HTTPException(status_code=404, detail="Menu item not found")
-
-    request.state.audit_meta = {"item_name": db_item.dish_name}
-
-    db_item.status = 0
-    db_item.updated_at = datetime.now(timezone.utc)
-    db_item.updated_by = current_user.id
+    
+    request.state.audit_meta = {"dish_name": row.dish_name}
+    
+    from datetime import datetime, timezone
+    row.is_deleted = True
+    row.deleted_at = datetime.now(timezone.utc)
+    row.deleted_by_id = current_user.id
     db.commit()
     return None

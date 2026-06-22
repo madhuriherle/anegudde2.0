@@ -10,7 +10,7 @@ from app.services.item_service import get_item_last_price
 
 def list_consumptions(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
     import re
-    query = db.query(ConsumptionEntry).options(joinedload(ConsumptionEntry.items), joinedload(ConsumptionEntry.user))
+    query = db.query(ConsumptionEntry).filter(ConsumptionEntry.is_deleted == False).options(joinedload(ConsumptionEntry.items), joinedload(ConsumptionEntry.user))
     if status is not None: query = query.filter(ConsumptionEntry.status == status)
     
     # Smart Search: Extract dates from q if present
@@ -249,6 +249,9 @@ def delete_consumption(consumption_id: int, db: Session, current_user: User) -> 
     entry.status = 0
     entry.updated_at = now
     entry.updated_by = current_user.id
+    entry.is_deleted = True
+    entry.deleted_at = now
+    entry.deleted_by_id = current_user.id
 
     # Mark associated ledger entries as inactive
     db.execute(

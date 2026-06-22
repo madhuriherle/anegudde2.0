@@ -36,6 +36,8 @@ from app.api.modules import router as modules_router
 from app.api.settings import router as settings_router
 from app.api.audit import router as audit_router
 from app.api.debug import router as system_router
+from app.api.downloads import router as downloads_router
+from app.api.trash import router as trash_router
 from app.middleware.exception_handlers import register_exception_handlers
 from app.middleware.activity_audit import ActivityAuditMiddleware
 from app.utils.tasks import run_daily_snapshot_task, run_monthly_summary_task, audit_stock_integrity
@@ -172,3 +174,5 @@ app.include_router(modules_router)
 app.include_router(settings_router)
 app.include_router(audit_router)
 app.include_router(system_router)
+app.include_router(downloads_router)
+app.include_router(trash_router)

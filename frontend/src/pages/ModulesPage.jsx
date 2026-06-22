@@ -142,15 +142,15 @@ const ModulesPage = () => {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-bg-temple/20 border-b border-border-temple/10 text-[10px] uppercase tracking-[0.2em] font-black text-text-light/80">
-                      <th className="px-10 py-5">Item Information</th>
-                      <th className="px-10 py-5 text-center">Volume Recorded</th>
-                      <th className="px-10 py-5 text-right">Estimated Value</th>
+                      <th className="px-6 py-3">Item Information</th>
+                      <th className="px-6 py-3 text-center">Volume Recorded</th>
+                      <th className="px-6 py-3 text-right">Estimated Value</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-temple/10">
                     {isLoading ?
                     <tr>
-                        <td colSpan={3} className="px-10 py-24 text-center">
+                        <td colSpan={3} className="px-6 py-16 text-center">
                           <div className="flex flex-col items-center gap-4">
                             <Loader2 className="w-10 h-10 animate-spin text-primary" />
                             <span className="text-xs font-black text-text-light animate-pulse uppercase tracking-[0.3em]">Compiling Data...</span>
@@ -160,26 +160,24 @@ const ModulesPage = () => {
                     canteenStats?.wastage_items?.length > 0 ?
                     canteenStats.wastage_items.map((item, idx) =>
                     <tr key={idx} className="hover:bg-bg-temple/10 transition-all duration-200 group">
-                          <td className="px-10 py-6">
-                            <div className="flex items-center gap-4">
-                              <div className="w-2 h-2 rounded-full bg-primary/40 group-hover:scale-150 transition-transform"></div>
-                              <span className="text-base font-bold text-secondary group-hover:text-primary transition-colors">
+                          <td className="px-6 py-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-1.5 h-1.5 rounded-full bg-primary/40 group-hover:scale-150 transition-transform"></div>
+                              <span className="text-sm font-bold text-secondary group-hover:text-primary transition-colors">
                                 {item.item_name}
                               </span>
                             </div>
                           </td>
-                          <td className="px-10 py-6 text-center">
-                            <div className="inline-flex items-baseline gap-1.5 px-4 py-1.5 rounded-full bg-gray-50 border border-gray-100 group-hover:border-primary/20 group-hover:bg-white transition-all">
-                              <span className="text-base font-black text-secondary">
-                                {Number(item.quantity).toFixed(3)}
-                              </span>
-                              <span className="text-[10px] text-text-light uppercase font-black tracking-wider">
-                                {item.unit_name}
-                              </span>
-                            </div>
+                          <td className="px-6 py-2 text-center">
+                            <span className="text-sm font-black text-secondary">
+                              {Number(item.quantity).toFixed(3)}
+                            </span>
+                            <span className="text-[10px] text-text-light uppercase font-black tracking-wider ml-1">
+                              {item.unit_name}
+                            </span>
                           </td>
-                          <td className="px-10 py-6 text-right">
-                            <span className="text-base font-black text-red-600 font-temple">
+                          <td className="px-6 py-2 text-right">
+                            <span className="text-sm font-black text-red-600 font-temple">
                               {formatCurrency(item.amount)}
                             </span>
                           </td>
@@ -187,7 +185,7 @@ const ModulesPage = () => {
                     ) :
 
                     <tr>
-                        <td colSpan={3} className="px-10 py-32 text-center">
+                        <td colSpan={3} className="px-6 py-16 text-center">
                           <div className="flex flex-col items-center gap-4 opacity-40">
                             <UtensilsCrossed size={64} className="text-text-light" />
                             <p className="text-xs font-black text-text-light uppercase tracking-[0.4em]">Zero Wastage Recorded Today</p>

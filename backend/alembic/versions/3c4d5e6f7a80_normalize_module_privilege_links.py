@@ -25,8 +25,8 @@ MODULES = [
     ("purchase", "Purchase", "canteen", None, "ShoppingCart", 2),
     ("purchases", "Purchase Entry", "purchase", "/purchases", None, 1),
     ("purchase_returns", "Purchase Returns", "purchase", "/purchases/returns", None, 2),
-    ("consumptions", "Daily Usage Entry", "canteen", "/daily-usage", "Package", 3),
-    ("wastages", "Wastages", "canteen", "/wastages", "Trash2", 4),
+    ("daily_usage", "Daily Usage Entry", "canteen", "/daily-usage", "Package", 3),
+    # ("wastages", "Wastages", "canteen", "/wastages", "Trash2", 4),  # merged into daily_usage
     ("donations", "Donations", "canteen", "/donations", "Heart", 5),
     ("donations.amount_config", "Donation Amount Configuration", "donations", None, "Settings", 1),
     ("vendors", "Vendors", "canteen", "/vendors", "Users", 6),
@@ -55,8 +55,8 @@ MODULES = [
     ("reports.donations", "Donation Report", "reports_group", "/reports/donations", None, 4),
     ("reports.tokens", "Token Issued Report", "reports_group", "/reports/tokens", None, 5),
     ("reports.purchases", "Purchase Report", "reports_group", "/reports/purchases", None, 6),
-    ("reports.consumptions", "Consumption Report", "reports_group", None, None, 7),
-    ("reports.wastages", "Wastage Report", "reports_group", None, None, 8),
+    # ("reports.consumptions", "Consumption Report", "reports_group", None, None, 7),  # no UI
+    # ("reports.wastages", "Wastage Report", "reports_group", None, None, 8),  # no UI
     ("tokens", "Token Generation", "reports.tokens", None, None, 1),
 ]
 
@@ -66,8 +66,8 @@ PRIVILEGE_ACTIONS = {
     "dashboard": ("read",),
     "purchases": ("read", "write", "delete"),
     "purchase_returns": ("read", "write", "delete"),
-    "consumptions": ("read", "write", "delete"),
-    "wastages": ("read",),
+    "daily_usage": ("read", "write", "delete"),
+    # "wastages": ("read",),  # merged into daily_usage
     "donations": ("read", "write", "delete"),
     "donations.amount_config": ("read", "write", "delete"),
     "devotees": ("read", "write", "delete"),
@@ -95,9 +95,9 @@ PRIVILEGE_ACTIONS = {
     "reports.donations": ("read",),
     "reports.tokens": ("read",),
     "reports.purchases": ("read",),
-    "reports.consumptions": ("read",),
-    "reports.wastages": ("read",),
-    "tokens": ("read", "write", "delete"),
+    # "reports.consumptions": ("read",),  # no UI
+    # "reports.wastages": ("read",),  # no UI
+    "tokens": ("read", "write"),
 }
 
 
@@ -106,7 +106,7 @@ PREFIX_MODULE_KEY = {
     "dashboard": "dashboard",
     "purchases": "purchases",
     "purchase_returns": "purchase_returns",
-    "consumptions": "consumptions",
+    "daily_usage": "daily_usage",
     "wastages": "wastages",
     "donations": "donations",
     "donations.amount_config": "donations.amount_config",
@@ -135,8 +135,8 @@ PREFIX_MODULE_KEY = {
     "reports.donations": "reports.donations",
     "reports.tokens": "reports.tokens",
     "reports.purchases": "reports.purchases",
-    "reports.consumptions": "reports.consumptions",
-    "reports.wastages": "reports.wastages",
+    # "reports.consumptions": "reports.consumptions",
+    # "reports.wastages": "reports.wastages",
     "tokens": "tokens",
 }
 

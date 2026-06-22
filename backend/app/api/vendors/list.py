@@ -22,7 +22,7 @@ def list_vendors(
     sort_by: str = Query("id"),
     sort_order: str = Query("desc"),
 ):
-    query = db.query(Vendor)
+    query = db.query(Vendor).filter(Vendor.is_deleted == False)
     
     if status is not None:
         query = query.filter(Vendor.status == status)

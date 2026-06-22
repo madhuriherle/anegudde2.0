@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, PermissionChecker
-from app.db.models import User
+from app.db.models import User, DonationAmountMaster
 from app.schemas.donation import DonationAmountMasterCreate, DonationAmountMasterOut, DonationAmountMasterUpdate
 from app.services import donation_service
 
@@ -40,8 +40,12 @@ def update_amount_option(
 @router.delete("/delete_amount_option/{amount_id}")
 def delete_amount_option(
     amount_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("donations.amount_config.delete")),
 ):
+    row = db.query(DonationAmountMaster).filter(DonationAmountMaster.id == amount_id).first()
+    if row:
+        request.state.audit_meta = {"title": row.title, "amount": str(row.amount)}
     donation_service.delete_amount_master(amount_id, db, current_user)
-    return {"message": "Amount option disabled"}
+    return {"message": "Amount option deleted"}

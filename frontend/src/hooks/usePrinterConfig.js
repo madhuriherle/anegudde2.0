@@ -30,10 +30,15 @@ export function usePrinterContexts() {
   return useQuery({
     queryKey: ['printer-contexts'],
     queryFn: async () => {
-      const res = await api.get('/settings/printer-contexts');
-      return res.data; // Array of {code, label}
+      try {
+        const res = await api.get('/settings/printer-contexts');
+        return res.data; // Array of {code, label}
+      } catch (err) {
+        return [];
+      }
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: false,
   });
 }
 
@@ -46,12 +51,17 @@ export function usePrinterConfig(context) {
   const { data: config, isLoading } = useQuery({
     queryKey: ['printer-config', context, machineId],
     queryFn: async () => {
-      const res = await api.get('/settings/printer-config', {
-        params: { context, machine_id: machineId },
-      });
-      return res.data;
+      try {
+        const res = await api.get('/settings/printer-config', {
+          params: { context, machine_id: machineId },
+        });
+        return res.data;
+      } catch (err) {
+        return null;
+      }
     },
     enabled: !!context,
+    retry: false,
   });
 
   useEffect(() => {

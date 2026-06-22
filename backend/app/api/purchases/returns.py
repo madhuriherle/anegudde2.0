@@ -100,7 +100,8 @@ def get_bill_items(purchase_id: int, db: Session = Depends(get_db), _: User = De
             "item_name": i.item.item_name,
             "quantity": i.quantity,
             "price": i.price,
-            "unit_name": i.item.unit.unit_name if i.item.unit else ""
+            "unit_name": i.item.unit.unit_name if i.item.unit else "",
+            "returned_quantity": float(i.returned_quantity)
         }
         for i in items
     ]

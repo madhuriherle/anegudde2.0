@@ -54,7 +54,7 @@ def decrypt_password(encrypted_password: str) -> str:
     except Exception:
         return "Decryption Failed"
 
-def create_access_token(subject: str, session_id: str | None = None, security_stamp: str | None = None, expires_minutes: int | None = None) -> str:
+def create_access_token(subject: str, session_id: str | None = None, security_stamp: str | None = None, client_type: str | None = None, expires_minutes: int | None = None) -> str:
     secret_key = os.getenv("SECRET_KEY", "change_me")
     algorithm = os.getenv("ALGORITHM", "HS256")
     payload: dict[str, Any] = {"sub": subject}
@@ -69,5 +69,7 @@ def create_access_token(subject: str, session_id: str | None = None, security_st
         payload["sid"] = session_id
     if security_stamp:
         payload["ss"] = security_stamp
+    if client_type:
+        payload["ct"] = client_type
     return jwt.encode(payload, secret_key, algorithm=algorithm)
 

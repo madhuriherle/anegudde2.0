@@ -40,7 +40,7 @@ def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = Non
         joinedload(DonationEntry.user),
         joinedload(DonationEntry.donation_amount_master),
         joinedload(DonationEntry.devotee)
-    ).filter(DonationEntry.status == 1)
+    ).filter(DonationEntry.is_deleted == False, DonationEntry.status == 1)
 
     if donation_type_id:
         query = query.filter(DonationEntry.donation_type == donation_type_id)
@@ -77,7 +77,7 @@ def list_donations(db: Session, page: int = 1, page_size: int = 20, q: str = Non
 from app.utils.date_utils import get_today_ist
 
 def list_amount_masters(db: Session, active_only: bool = False):
-    query = db.query(DonationAmountMaster)
+    query = db.query(DonationAmountMaster).filter(DonationAmountMaster.is_deleted == False)
     if active_only:
         query = query.filter(DonationAmountMaster.status == 1)
     return query.order_by(DonationAmountMaster.id.desc()).all()
@@ -131,9 +131,9 @@ def delete_amount_master(amount_id: int, db: Session, current_user: User) -> Non
     row = db.query(DonationAmountMaster).filter(DonationAmountMaster.id == amount_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Amount option not found")
-    row.status = 0
-    row.updated_at = datetime.now(timezone.utc)
-    row.updated_by = current_user.id
+    row.is_deleted = True
+    row.deleted_at = datetime.now(timezone.utc)
+    row.deleted_by_id = current_user.id
     db.commit()
 
 def _validate_amount_selection(payload: DonationEntryCreate, db: Session) -> None:
@@ -412,9 +412,14 @@ def delete_donation(donation_id: int, db: Session, current_user: User) -> None:
     db.query(StockLedger).filter(
         StockLedger.ref_table == "donation_entries",
         StockLedger.ref_id == donation_id
-    ).delete()
+    ).update({StockLedger.status: 0}, synchronize_session=False)
 
     entry.status = 0
     entry.updated_at = now
     entry.updated_by = current_user.id
+    
+    entry.is_deleted = True
+    entry.deleted_at = now
+    entry.deleted_by_id = current_user.id
+    
     db.commit()

@@ -25,7 +25,7 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
             if user_info is None:
                 return response
 
-            user_id, session_id = user_info
+            user_id, session_id, client_type = user_info
 
             action = f"{request.method} {request.url.path}"
             
@@ -65,6 +65,7 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
                     db,
                     user_id=user_id,
                     session_id=session_id,
+                    client_type=client_type,
                     method=request.method,
                     endpoint=request.url.path,
                     action=action,
@@ -110,7 +111,7 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
         return template or request.url.path
 
     @staticmethod
-    def _get_user_info_from_token(token: str | None) -> tuple[int, str | None] | None:
+    def _get_user_info_from_token(token: str | None) -> tuple[int, str | None, str | None] | None:
         if not token:
             return None
 
@@ -121,6 +122,7 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
             payload = jwt.decode(token, secret_key, algorithms=[algorithm], options={"verify_exp": False})
             username = payload.get("sub")
             session_id = payload.get("sid")
+            client_type = payload.get("ct")
             if not username:
                 return None
         except JWTError:
@@ -128,9 +130,9 @@ class ActivityAuditMiddleware(BaseHTTPMiddleware):
 
         db = SessionLocal()
         try:
-            user = db.query(User).filter(User.username == username, User.status == 1).first()
+            user = db.query(User).filter(User.username == username, User.status == 1, User.is_deleted == False).first()
             if not user:
                 return None
-            return user.id, session_id
+            return user.id, session_id, client_type
         finally:
             db.close()

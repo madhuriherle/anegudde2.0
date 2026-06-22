@@ -114,8 +114,8 @@ def upgrade() -> None:
             ('Super Admin', 1, TRUE, 1, NOW(), NOW()),
             ('Temple Trustee', 2, FALSE, 1, NOW(), NOW()),
             ('Admin', 3, FALSE, 1, NOW(), NOW()),
-            ('Canteen Manager', 4, FALSE, 1, NOW(), NOW()),
-            ('Canteen Supervisor', 5, FALSE, 1, NOW(), NOW())
+            ('Manager', 4, FALSE, 1, NOW(), NOW()),
+            ('Supervisor', 5, FALSE, 1, NOW(), NOW())
         ON CONFLICT (role_name) DO UPDATE 
         SET rank_level = EXCLUDED.rank_level, is_all_access = EXCLUDED.is_all_access, status = EXCLUDED.status, updated_at = NOW();
     """)
@@ -160,8 +160,8 @@ def upgrade() -> None:
             updated_at = NOW();
         
         INSERT INTO users (username, full_name, user_code, password, password_ref, role_id, status, created_at, updated_at)
-        SELECT 'manager', 'Canteen Manager', 'CM', '{password_hash}', '{password_ref}', id, 1, NOW(), NOW()
-        FROM roles WHERE role_name = 'Canteen Manager'
+        SELECT 'manager', 'Manager', 'CM', '{password_hash}', '{password_ref}', id, 1, NOW(), NOW()
+        FROM roles WHERE role_name = 'Manager'
         ON CONFLICT (username) DO UPDATE SET
             user_code = EXCLUDED.user_code,
             password = EXCLUDED.password,
@@ -170,8 +170,8 @@ def upgrade() -> None:
             updated_at = NOW();
         
         INSERT INTO users (username, full_name, user_code, password, password_ref, role_id, status, created_at, updated_at)
-        SELECT 'supervisor', 'Canteen Supervisor', 'CS', '{password_hash}', '{password_ref}', id, 1, NOW(), NOW()
-        FROM roles WHERE role_name = 'Canteen Supervisor'
+        SELECT 'supervisor', 'Supervisor', 'CS', '{password_hash}', '{password_ref}', id, 1, NOW(), NOW()
+        FROM roles WHERE role_name = 'Supervisor'
         ON CONFLICT (username) DO UPDATE SET
             user_code = EXCLUDED.user_code,
             password = EXCLUDED.password,

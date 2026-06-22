@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Printer } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
-import { Button } from '../components/ui/Button';
+import { PrinterSelectDropdown } from '../components/PrinterSelectDropdown';
 
 import { Label } from '../components/ui/Label';
 import { Card, CardContent } from '../components/ui/Card';
@@ -180,12 +180,11 @@ const ManpowerReportPage = () => {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <h2 className="page-title">{selectedMonth === 'ALL' ? 'Yearly' : 'Monthly'} Manpower Report</h2>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handlePrint} className="text-text-main">
-            <Printer className="w-4 h-4 mr-2" />
-            Print
-          </Button>
-        </div>
+        <PrinterSelectDropdown
+          context="REPORT_MANPOWER"
+          onPrint={handlePrint}
+          buttonLabel="Print"
+        />
       </div>
 
       <Card className="border-border-temple print:hidden">

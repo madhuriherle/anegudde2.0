@@ -17,7 +17,7 @@ def update_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("users.management.write"))
 ):
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 

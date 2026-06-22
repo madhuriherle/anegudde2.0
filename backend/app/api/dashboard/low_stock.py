@@ -17,6 +17,7 @@ def low_stock(
     rows = (
         db.query(Item)
         .filter(
+            Item.is_deleted == False,
             Item.min_stock_level.isnot(None), 
             cast(Item.current_stock, Numeric) < Item.min_stock_level
         )

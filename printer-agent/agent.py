@@ -11,6 +11,10 @@ import sys
 import tempfile
 import base64
 import urllib.parse
+import zipfile
+import subprocess
+import shutil
+import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 try:
@@ -23,6 +27,8 @@ except ImportError:
 
 PORT = 5623
 AGENT_NAME = 'opencode-printer-agent'
+AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
+VERSION = '1.1.0'
 
 PRINTER_STATUS_FLAGS = (
     (0x00000080, 'Offline'),
@@ -169,9 +175,12 @@ class PrinterAgentHandler(BaseHTTPRequestHandler):
             self._send_json({
                 'status': 'ok',
                 'agent': AGENT_NAME,
-                'version': '1.0.0',
+                'version': VERSION,
                 'win32_available': HAS_WIN32,
             })
+
+        elif path == '/api/version':
+            self._send_json({'version': VERSION})
 
         elif path == '/api/printers':
             if not HAS_WIN32:
@@ -286,6 +295,67 @@ class PrinterAgentHandler(BaseHTTPRequestHandler):
                     os.remove(tmp_path)
                 except Exception:
                     pass
+
+        elif path == '/api/update':
+            body = self._read_body()
+            if not body:
+                self._send_json({'error': 'Empty body — send the ZIP file as raw bytes'}, 400)
+                return
+
+            tmp_zip = os.path.join(tempfile.gettempdir(), 'agent_update.zip')
+            update_dir = os.path.join(tempfile.gettempdir(), 'agent_update')
+            try:
+                with open(tmp_zip, 'wb') as f:
+                    f.write(body)
+
+                if os.path.exists(update_dir):
+                    shutil.rmtree(update_dir)
+                os.makedirs(update_dir, exist_ok=True)
+
+                with zipfile.ZipFile(tmp_zip, 'r') as zf:
+                    zf.extractall(update_dir)
+
+                extracted = os.listdir(update_dir)
+                source = update_dir
+                if len(extracted) == 1 and os.path.isdir(os.path.join(update_dir, extracted[0])):
+                    source = os.path.join(update_dir, extracted[0])
+
+                batch_path = os.path.join(tempfile.gettempdir(), 'update_agent.bat')
+                with open(batch_path, 'w', newline='\r\n') as f:
+                    f.write(f'''@echo off
+title Printer Agent - Updating...
+echo Waiting for agent to stop...
+timeout /t 3 /nobreak >nul
+echo Copying new files...
+xcopy /y /e /q "{source}" "{AGENT_DIR}" >nul 2>&1
+echo Cleaning up...
+rmdir /s /q "{update_dir}" >nul 2>&1
+del /f /q "{tmp_zip}" >nul 2>&1
+echo Restarting agent...
+wscript.exe "{os.path.join(AGENT_DIR, 'run_hidden.vbs')}"
+exit
+''')
+
+                subprocess.Popen(
+                    ['cmd.exe', '/c', batch_path],
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+
+                self._send_json({'status': 'ok', 'message': 'Update applied — agent is restarting'})
+
+                threading.Thread(target=lambda: (time.sleep(0.5), os._exit(0)), daemon=True).start()
+
+            except Exception as e:
+                for p in [tmp_zip, update_dir]:
+                    try:
+                        if os.path.isfile(p):
+                            os.remove(p)
+                        elif os.path.isdir(p):
+                            shutil.rmtree(p)
+                    except Exception:
+                        pass
+                self._send_json({'error': f'Update failed: {e}'}, 500)
+
         else:
             self._send_json({'error': 'Not found'}, 404)
 

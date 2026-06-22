@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.db.models import (
-    Item, Vendor, ItemCategory, MenuItem, Unit, 
+    Item, Vendor, ItemCategory, MenuItem, Unit, Devotee, DonationEntry,
     PurchaseEntry, PurchaseItem, 
     ConsumptionItem, WastageItem, StockLedger
 )
@@ -59,6 +59,13 @@ def check_entity_usage(entity_type: str, entity_id: int, db: Session) -> dict:
         if menu_count > 0:
             has_usage = True
             details.append(f"Linked to {menu_count} menu items/dishes")
+
+    elif entity_type == "devotee":
+        # Check donations
+        donation_count = db.query(DonationEntry).filter(DonationEntry.devotee_id == entity_id, DonationEntry.status == 1, DonationEntry.is_deleted == False).count()
+        if donation_count > 0:
+            has_usage = True
+            details.append(f"Linked to {donation_count} donation/seva records")
 
     return {
         "has_usage": has_usage,

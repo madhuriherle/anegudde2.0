@@ -22,19 +22,21 @@ def list_donation_types(
     module_id: int = Query(None)
 ):
     offset = (page - 1) * page_size
-    query = db.query(DonationType).filter(DonationType.status != -1)
-    
+    query = db.query(DonationType).filter(DonationType.is_deleted == False)
+
     if q:
         query = query.filter(DonationType.type_name.ilike(f"%{q}%"))
-        
+
     if status is not None:
         query = query.filter(DonationType.status == status)
-        
+
     if module_id is not None:
+        # Show types with no module assigned (global/full access)
+        # OR types specifically assigned to this exact module
         query = query.filter(
             or_(
-                ~DonationType.modules.any(),
-                DonationType.modules.any(id=module_id),
+                ~DonationType.modules.any(),           # no module = global, shown everywhere
+                DonationType.modules.any(id=module_id) # assigned to this specific module only
             )
         )
 

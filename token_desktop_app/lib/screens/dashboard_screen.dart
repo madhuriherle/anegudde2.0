@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -153,6 +154,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Future<void> _openDesktopManual() async {
+    try {
+      final bytes = await rootBundle.load('assets/manuals/DESKTOP_APP_MANUAL.pdf');
+      final file = File(
+        '${Directory.systemTemp.path}${Platform.pathSeparator}AVT_Desktop_App_Manual.pdf',
+      );
+      await file.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+
+      if (Platform.isWindows) {
+        await Process.run('cmd', ['/c', 'start', '', file.path], runInShell: true);
+      } else {
+        await Process.run('open', [file.path]);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to open manual: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _refreshTimer?.cancel();
@@ -256,6 +281,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             builder: (context) => const ProfileScreen(),
                           ),
                         );
+                      } else if (value == 'manual') {
+                        _openDesktopManual();
                       } else if (value == 'logout') {
                         _showLogoutConfirmation(context, authProvider);
                       }
@@ -273,6 +300,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             SizedBox(width: 12),
                             Text(
                               'Profile',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF4A3728),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'manual',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.menu_book,
+                              size: 18,
+                              color: Color(0xFF4A3728),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Desktop App Manual',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF4A3728),
@@ -751,6 +798,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
       }
+    } else {
+      await _showErrorAlert('Unauthorized or failed to generate token. Please check your permissions.');
     }
 
     _refocusCountInput();
@@ -761,12 +810,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       barrierDismissible: true,
       builder: (BuildContext context) {
-        Future.delayed(const Duration(seconds: 1), () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          }
-        });
-
         return Shortcuts(
           shortcuts: <ShortcutActivator, Intent>{
             const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
@@ -836,6 +879,103 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4A3728),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Okay',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    _refocusCountInput();
+  }
+
+  
+  Future<void> _showErrorAlert(String message) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Shortcuts(
+          shortcuts: <ShortcutActivator, Intent>{
+            const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
+            const SingleActivator(LogicalKeyboardKey.numpadEnter): const ActivateIntent(),
+          },
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                  return null;
+                },
+              ),
+            },
+            child: Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: const Color(0xFFFFF1F1),
+              child: Container(
+                width: 360,
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFEE2E2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.error_outline_rounded,
+                        color: Color(0xFFDC2626),
+                        size: 30,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Access Denied',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF7F1D1D),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Color(0xFF4A3728),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: 140,
+                      height: 40,
+                      child: ElevatedButton(
+                        autofocus: true,
+                        onPressed: () {
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF8B1E1E),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),

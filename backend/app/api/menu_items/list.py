@@ -13,7 +13,7 @@ def list_menu_items(
     status: int | None = Query(None),
     q: str | None = Query(None)
 ):
-    query = db.query(MenuItem).options(joinedload(MenuItem.unit))
+    query = db.query(MenuItem).filter(MenuItem.is_deleted == False).options(joinedload(MenuItem.unit))
     if status is not None:
         query = query.filter(MenuItem.status == status)
     if q:

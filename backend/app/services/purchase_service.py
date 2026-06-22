@@ -11,7 +11,7 @@ from app.schemas.purchase import PurchaseEntryCreate, PurchaseEntryUpdate
 
 def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None, from_date: str = None, to_date: str = None):
     import re
-    query = db.query(PurchaseEntry).options(
+    query = db.query(PurchaseEntry).filter(PurchaseEntry.is_deleted == False).options(
         joinedload(PurchaseEntry.items), 
         joinedload(PurchaseEntry.vendor), 
         joinedload(PurchaseEntry.user),
@@ -181,10 +181,15 @@ def delete_purchase(purchase_id: int, db: Session, current_user: User) -> None:
     if not entry:
         raise HTTPException(status_code=404, detail="Not found")
     
-    # Soft Delete: Toggle status and save who deleted it
+    # Soft Delete: Toggle status, is_deleted, and audit metadata
+    now = datetime.now(timezone.utc)
     entry.status = 0
-    entry.updated_at = datetime.now(timezone.utc)
+    entry.updated_at = now
     entry.updated_by = current_user.id
+    
+    entry.is_deleted = True
+    entry.deleted_at = now
+    entry.deleted_by_id = current_user.id
     
     # We should also reverse the stock impact since the transaction is 'gone'
     for item in entry.items:

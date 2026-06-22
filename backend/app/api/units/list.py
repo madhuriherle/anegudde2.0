@@ -14,7 +14,7 @@ def list_units(
     status: int | None = Query(1),
     search_field: str | None = Query(None),
 ):
-    query = db.query(Unit)
+    query = db.query(Unit).filter(Unit.is_deleted == False)
     if status is not None:
         query = query.filter(Unit.status == status)
     if q:

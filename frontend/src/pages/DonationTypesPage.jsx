@@ -77,8 +77,10 @@ const DonationTypesPage = () => {
     }
   });
 
+  const GLOBAL_OPTION = { value: 'global', label: '🌐 Global (All Modules)' };
+
   const moduleOptions = useMemo(() => {
-    return getDonationScopeModules(moduleTree || []);
+    return [GLOBAL_OPTION, ...getDonationScopeModules(moduleTree || [])];
   }, [moduleTree]);
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm({
@@ -320,23 +322,48 @@ const DonationTypesPage = () => {
               <Controller
                 name="module_ids"
                 control={control}
-                render={({ field: { value, onChange, onBlur } }) => (
-                  <Select
-                    isMulti
-                    options={moduleOptions}
-                    value={moduleOptions.filter(opt => (value || []).includes(opt.value))}
-                    onChange={(selected) => onChange(selected ? selected.map(s => s.value) : [])}
-                    onBlur={onBlur}
-                    styles={customSelectStyles}
-                    placeholder="Select where this donation type should appear..."
-                    className="react-select-container"
-                    classNamePrefix="react-select"
-                    closeMenuOnSelect={false}
-                  />
-                )}
+                render={({ field: { value, onChange, onBlur } }) => {
+                  const selectedIds = value || [];
+                  const selectedOpts = selectedIds.length === 0
+                    ? [GLOBAL_OPTION]
+                    : moduleOptions.filter(o => selectedIds.includes(o.value));
+                  return (
+                    <Select
+                      isMulti
+                      options={moduleOptions}
+                      value={selectedOpts}
+                      onChange={(selected) => {
+                        if (!selected || selected.length === 0) {
+                          onChange([]);
+                          return;
+                        }
+
+                        const selectedValues = selected.map(o => o.value);
+                        const hadGlobal = selectedIds.length === 0;
+                        const hasGlobalNow = selectedValues.includes('global');
+
+                        if (hasGlobalNow && !hadGlobal) {
+                          // User selected Global explicitly, clear others
+                          onChange([]);
+                        } else if (hadGlobal && selectedValues.length > 1) {
+                          // Had Global, but user selected a specific module -> deselect Global
+                          onChange(selectedValues.filter(v => v !== 'global'));
+                        } else {
+                          onChange(selectedValues.filter(v => v !== 'global'));
+                        }
+                      }}
+                      onBlur={onBlur}
+                      styles={customSelectStyles}
+                      placeholder="Select module scope..."
+                      className="react-select-container"
+                      classNamePrefix="react-select"
+                      closeMenuOnSelect={false}
+                    />
+                  );
+                }}
               />
               <p className="text-[11px] text-text-main mt-1 px-1">
-                Leave empty for Global / Main Menu access. Select Mahaprasad Module to show only in Mahaprasad donations.
+                Select <strong>Global</strong> to show in all modules. Selecting specific modules restricts it to those modules only (e.g. selecting <strong>Canteen</strong> shows it only in Canteen).
               </p>
             </div>
 

@@ -15,7 +15,7 @@ def delete_user(
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
     
-    target_user = db.query(User).filter(User.id == user_id).first()
+    target_user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -32,22 +32,9 @@ def delete_user(
     if target_rank <= my_rank:
         raise HTTPException(status_code=403, detail="Unauthorized to delete superior or equal rank users")
 
-    # --- SAFETY BLOCK: Last Admin Protection ---
-    from app.db.models import Role
-    admin_role = db.query(Role).filter(Role.role_name == "Admin").first()
-    if admin_role and target_user.role_id == admin_role.id:
-        active_admins = db.query(User).filter(
-            User.role_id == admin_role.id, 
-            User.status == 1,
-            User.id != user_id
-        ).count()
-        if active_admins == 0:
-            raise HTTPException(
-                status_code=400, 
-                detail="System requires at least one active Administrator. You cannot delete the last Admin."
-            )
-    # -------------------------------------------
-    
-    target_user.status = 0
+    from datetime import datetime, timezone
+    target_user.is_deleted = True
+    target_user.deleted_at = datetime.now(timezone.utc)
+    target_user.deleted_by_id = current_user.id
     db.commit()
     return None

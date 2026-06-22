@@ -24,6 +24,7 @@ def purchases_report(
     rows = (
         db.query(period.label("period"), func.coalesce(func.sum(PurchaseEntry.total_amount), 0).label("total_amount"), func.count(PurchaseEntry.id).label("total_count"))
         .filter(
+            PurchaseEntry.is_deleted == False,
             PurchaseEntry.purchase_date >= from_date, 
             PurchaseEntry.purchase_date <= to_date
         )
@@ -48,6 +49,7 @@ def purchase_details(
             joinedload(PurchaseEntry.items).joinedload(PurchaseItem.item)
         )
         .filter(
+            PurchaseEntry.is_deleted == False,
             PurchaseEntry.purchase_date >= from_date,
             PurchaseEntry.purchase_date <= to_date
         )

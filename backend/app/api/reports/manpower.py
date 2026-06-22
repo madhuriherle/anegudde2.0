@@ -48,6 +48,7 @@ def manpower_summary_report(
                 func.sum(ConsumptionEntry.total_cleaning_persons).label("total_cleaning"),
             )
             .filter(
+                ConsumptionEntry.is_deleted == False,
                 ConsumptionEntry.usage_date >= from_date,
                 ConsumptionEntry.usage_date <= to_date,
                 ConsumptionEntry.status == 1

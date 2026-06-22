@@ -188,7 +188,10 @@ const PrivilegesPage = () => {
   const selectedRoleRank = selectedRole?.rank_level ?? 99;
   const isAllAccessRole = Boolean(selectedRole?.is_all_access);
   const isProtectedRole = selectedRole ? selectedRoleRank <= myRank : false;
-  const canEdit = selectedRoleId && !isProtectedRole && !isAllAccessRole;
+  const canManagePrivileges = Boolean(
+    user?.is_all_access || user?.privileges?.includes('users.privileges.write')
+  );
+  const canEdit = canManagePrivileges && selectedRoleId && !isProtectedRole && !isAllAccessRole;
 
   const groupedModules = useMemo(
     () => {
@@ -617,6 +620,7 @@ const PrivilegesPage = () => {
                             <RowBadge tone="neutral">{row.type}</RowBadge>
                             {row.path && <RowBadge>{row.path}</RowBadge>}
                             {row.minRankLevel && <RowBadge tone="rank">Rank {row.minRankLevel}+</RowBadge>}
+                            {row.label === 'Token Generation' && <RowBadge tone="dependency">Desktop App Only</RowBadge>}
                           </div>
                         </div>
                       </div>
@@ -718,6 +722,10 @@ const PrivilegesPage = () => {
                 {isAllAccessRole ? (
                   <span className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-md border border-amber-100 italic">
                     All access enabled. Every gate is open.
+                  </span>
+                ) : !canManagePrivileges ? (
+                  <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-md border border-amber-100">
+                    Read only: You are not authorized to update privileges.
                   </span>
                 ) : isProtectedRole ? (
                   <span className="text-xs font-bold text-error bg-error/5 px-3 py-1 rounded-md border border-error/10">

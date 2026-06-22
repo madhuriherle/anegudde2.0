@@ -9,7 +9,7 @@ from sqlalchemy import func, or_
 def get_devotee_by_phone(phone: str, db: Session) -> Devotee:
     return (
         db.query(Devotee)
-        .filter(Devotee.phone_number == phone.strip(), Devotee.status == 1)
+        .filter(Devotee.phone_number == phone.strip(), Devotee.status == 1, Devotee.is_deleted == False)
         .order_by(Devotee.updated_at.desc(), Devotee.id.desc())
         .first()
     )
@@ -21,6 +21,7 @@ def get_matching_devotee(payload: DevoteeCreate, db: Session) -> Devotee:
             Devotee.phone_number == payload.phone_number.strip(),
             func.lower(Devotee.devotee_name) == payload.devotee_name.strip().lower(),
             Devotee.status == 1,
+            Devotee.is_deleted == False,
         )
         .order_by(Devotee.updated_at.desc(), Devotee.id.desc())
         .first()
@@ -38,7 +39,7 @@ def get_devotee_details(devotee_id: int, db: Session) -> Devotee:
             joinedload(Devotee.donations).joinedload(DonationEntry.donation_type_master),
             joinedload(Devotee.donations).joinedload(DonationEntry.donation_amount_master),
         )
-        .filter(Devotee.id == devotee_id, Devotee.status == 1)
+        .filter(Devotee.id == devotee_id, Devotee.status == 1, Devotee.is_deleted == False)
         .first()
     )
     if devotee:
@@ -50,7 +51,7 @@ def get_devotee_details(devotee_id: int, db: Session) -> Devotee:
     return devotee
 
 def list_devotees(db: Session, page: int = 1, page_size: int = 20, q: str = None):
-    query = db.query(Devotee).filter(Devotee.status == 1)
+    query = db.query(Devotee).filter(Devotee.status == 1, Devotee.is_deleted == False)
 
     if q:
         like = f"%{q.strip()}%"

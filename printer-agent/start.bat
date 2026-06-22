@@ -6,6 +6,6 @@ python "%~dp0agent.py"
 if %errorlevel% neq 0 (
     echo.
     echo Failed to start. Make sure Python is installed and pywin32 is available.
-    echo Install with: pip install pywin32
+    echo Use the offline Printer Agent package provided by the administrator.
     pause
 )

@@ -119,6 +119,12 @@ class Role(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
 
     privileges = relationship("RolePrivilege", back_populates="role", cascade="all, delete-orphan")
     module = relationship("Module")
@@ -177,6 +183,12 @@ class User(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    deleted_by = relationship("User", remote_side="User.id", foreign_keys=[deleted_by_id])
+    
     role = relationship("Role", foreign_keys=[role_id])
 
 class RolePrivilege(Base):
@@ -216,6 +228,12 @@ class Vendor(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
 
 class Unit(Base):
     __tablename__ = "units"
@@ -227,6 +245,12 @@ class Unit(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
 
 class ItemType(Base):
     __tablename__ = "item_types"
@@ -249,6 +273,12 @@ class DonationType(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
 
     modules = relationship("Module", secondary="donation_type_modules", backref="donation_types")
 
@@ -268,6 +298,12 @@ class DonationAmountMaster(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
 
 class MenuItem(Base):
     __tablename__ = "menu_items"
@@ -279,6 +315,12 @@ class MenuItem(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
 
     # Relationships
     unit = relationship("Unit", foreign_keys=[unit_id])
@@ -295,6 +337,12 @@ class ItemCategory(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
     item_type = relationship("ItemType", foreign_keys=[type_id])
 
 class Item(Base):
@@ -314,6 +362,12 @@ class Item(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
     category = relationship("ItemCategory", foreign_keys=[category_id])
     unit = relationship("Unit", foreign_keys=[unit_id])
     serial_numbers = relationship("ItemSerialNumber", back_populates="item", cascade="all, delete-orphan")
@@ -363,6 +417,12 @@ class PurchaseEntry(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
+    
     vendor = relationship("Vendor", foreign_keys=[vendor_id])
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("PurchaseItem", back_populates="purchase_entry", cascade="all, delete-orphan")
@@ -421,6 +481,12 @@ class ConsumptionEntry(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
+    
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("ConsumptionItem", back_populates="consumption_entry", cascade="all, delete-orphan")
     wastage_items = relationship("WastageItem", back_populates="consumption_entry", cascade="all, delete-orphan")
@@ -457,6 +523,12 @@ class WastageEntry(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
+    
     user = relationship("User", foreign_keys=[user_id])
     items = relationship("WastageItem", back_populates="wastage_entry", cascade="all, delete-orphan")
     consumption_entry = relationship("ConsumptionEntry", back_populates="wastages")
@@ -533,6 +605,12 @@ class Devotee(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    deleted_by = relationship("User", remote_side="User.id", foreign_keys=[deleted_by_id])
+
     donations = relationship("DonationEntry", back_populates="devotee")
 
 class DonationEntry(Base):
@@ -566,6 +644,11 @@ class DonationEntry(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
 
     user = relationship("User", foreign_keys=[user_id])
     donation_type_master = relationship("DonationType", foreign_keys=[donation_type])
@@ -605,6 +688,7 @@ class LoginHistory(Base):
     user_agent = Column(Text, nullable=True)
     session_token = Column(Text, nullable=True)
     session_id = Column(String(64), nullable=True)
+    client_type = Column(String(20), nullable=True)
     logged_out_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
@@ -629,6 +713,7 @@ class ActivityLog(Base):
     route_template = Column(String(255), nullable=True)
     duration_ms = Column(Integer, nullable=True)
     error_code = Column(String(64), nullable=True)
+    client_type = Column(String(20), nullable=True)
     meta = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
@@ -725,7 +810,12 @@ class PurchaseReturnEntry(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-
+    
+    is_deleted = Column(Boolean, nullable=False, default=False, server_default=text("false"), index=True)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
+    
     vendor = relationship("Vendor")
     purchase_entry = relationship("PurchaseEntry")
     user = relationship("User", foreign_keys=[user_id])

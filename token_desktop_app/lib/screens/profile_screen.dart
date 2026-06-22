@@ -53,9 +53,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         content: Text(
           message,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 14,
-            color: Colors.brown.withOpacity(0.7),
+            color: Color(0xFF6E5643),
             height: 1.4,
           ),
         ),
@@ -63,7 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             style: TextButton.styleFrom(
-              foregroundColor: Colors.brown.withOpacity(0.5),
+              foregroundColor: const Color(0xFF8C715C),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('No', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -146,7 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
-          child: Container(color: Colors.brown.withOpacity(0.1), height: 1.0),
+          child: Container(color: const Color(0xFFEFE8E1), height: 1.0),
         ),
       ),
       body: SingleChildScrollView(
@@ -231,9 +231,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 4),
                     Text(
                       '@${user?['username'] ?? 'username'}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
-                        color: Colors.brown.withOpacity(0.5),
+                        color: Color(0xFF8C715C),
                       ),
                     ),
                   ],
@@ -242,7 +242,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: const Color(0xFFE8F5E9),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
@@ -302,7 +302,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.brown.withOpacity(0.04),
+                  color: const Color(0xFFFDF8F3),
+                  border: Border.all(color: const Color(0xFFEFE8E1)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -313,19 +314,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: const Color(0xFF8B4513),
                     ),
                     const SizedBox(width: 12),
-                    Text(
+                    const Text(
                       'Change Password',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.brown.withOpacity(0.8),
+                        color: Color(0xFF8B4513),
                       ),
                     ),
                     const Spacer(),
                     Icon(
                       _showPasswordSection ? Icons.expand_less : Icons.chevron_right,
                       size: 20,
-                      color: Colors.brown.withOpacity(0.4),
+                      color: const Color(0xFF8C715C),
                     ),
                   ],
                 ),
@@ -350,7 +351,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: Colors.brown.withOpacity(0.4)),
+        Icon(icon, size: 18, color: const Color(0xFF8C715C)),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -358,9 +359,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 11,
-                  color: Colors.brown.withOpacity(0.5),
+                  color: Color(0xFF7E6652),
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
                 ),
@@ -438,11 +439,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Aa + 1 + @ — Must include uppercase, lowercase, number, and symbol (min 6 chars)',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.brown.withOpacity(0.5),
+                  color: Color(0xFF7E6652),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -466,11 +467,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
+              const Text(
                 'Changing your password will require you to log in again on all devices.',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.brown.withOpacity(0.4),
+                  color: Color(0xFF7E6652),
                   fontStyle: FontStyle.italic,
                 ),
                 textAlign: TextAlign.center,
@@ -492,23 +493,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
+      style: const TextStyle(color: Color(0xFF4A3728)),
       validator: validator ?? (value) => value == null || value.isEmpty ? '$label is required' : null,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.brown.withOpacity(0.7)),
+        labelStyle: const TextStyle(color: Color(0xFF7E6652)),
+        floatingLabelStyle: const TextStyle(color: Color(0xFF8B4513), fontWeight: FontWeight.bold),
         filled: true,
-        fillColor: const Color(0xFFFDF8F3),
+        fillColor: const Color(0xFFFFFDFB),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.brown.withOpacity(0.2)),
+          borderSide: const BorderSide(color: Color(0xFFD7CCC8)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.brown.withOpacity(0.1)),
+          borderSide: const BorderSide(color: Color(0xFFE0D4C9)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF8B4513)),
+          borderSide: const BorderSide(color: Color(0xFF8B4513), width: 1.5),
         ),
         suffixIcon: IconButton(
           icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility, color: Colors.brown),

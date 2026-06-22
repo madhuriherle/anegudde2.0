@@ -44,7 +44,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         .options(
             joinedload(User.role).joinedload(Role.privileges).joinedload(RolePrivilege.privilege)
         )
-        .filter(User.username == username)
+        .filter(User.username == username, User.is_deleted == False)
         .first()
     )
     

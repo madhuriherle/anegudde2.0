@@ -13,7 +13,7 @@ from app.utils.audit import log_activity_event
 
 def login_user(payload: LoginRequest, db: Session) -> Token:
     print(f"DEBUG: Login attempt for username: '{payload.username}'")
-    user = db.query(User).filter(User.username == payload.username).first()
+    user = db.query(User).filter(User.username == payload.username, User.is_deleted == False).first()
     now = datetime.now(timezone.utc)
 
     if not user or not verify_password(payload.password, user.password) or user.status != 1:
@@ -24,6 +24,7 @@ def login_user(payload: LoginRequest, db: Session) -> Token:
                 login_status="FAILED",
                 failure_reason="Invalid credentials",
                 logged_in_at=now,
+                client_type=payload.client_type,
                 created_at=now,
             )
         )
@@ -31,6 +32,7 @@ def login_user(payload: LoginRequest, db: Session) -> Token:
         log_activity_event(
             db,
             user_id=user.id if user else None,
+            client_type=payload.client_type,
             method="POST",
             endpoint="/api/auth/login",
             action=f"FAILED Login attempt: {payload.username}",
@@ -53,6 +55,7 @@ def login_user(payload: LoginRequest, db: Session) -> Token:
         subject=user.username, 
         session_id=session_id,
         security_stamp=user.security_stamp,
+        client_type=payload.client_type,
         expires_minutes=expires_minutes
     )
 
@@ -64,6 +67,7 @@ def login_user(payload: LoginRequest, db: Session) -> Token:
             logged_in_at=now,
             session_token=token,
             session_id=session_id,
+            client_type=payload.client_type,
             created_at=now,
         )
     )
@@ -72,6 +76,7 @@ def login_user(payload: LoginRequest, db: Session) -> Token:
         db,
         user_id=user.id,
         session_id=session_id,
+        client_type=payload.client_type,
         method="POST",
         endpoint="/api/auth/login",
         action="SUCCESS Login",

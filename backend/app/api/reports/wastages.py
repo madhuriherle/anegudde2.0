@@ -25,6 +25,7 @@ def wastages_report(
     rows = (
         db.query(period.label("period"), func.count(WastageEntry.id).label("total_amount"), func.count(WastageEntry.id).label("total_count"))
         .filter(
+            WastageEntry.is_deleted == False,
             WastageEntry.wastage_date >= from_date, 
             WastageEntry.wastage_date <= to_date
         )

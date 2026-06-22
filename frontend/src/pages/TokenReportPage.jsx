@@ -174,13 +174,6 @@ const TokenReportPage = () => {
             Token Issued Report
           </h2>
         </div>
-        <div className="flex items-center gap-2">
-          <PrinterSelectDropdown
-            context="REPORT_TOKEN"
-            onPrint={handlePrint}
-            buttonLabel="Print"
-          />
-        </div>
       </div>
 
       <Card className="border-border-temple shadow-sm print:hidden">

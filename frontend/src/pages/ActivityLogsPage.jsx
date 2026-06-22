@@ -12,14 +12,18 @@ import { Button } from '../components/ui/Button';
 import { Label } from '../components/ui/Label';
 import { DataTable } from '../components/ui/DataTable';
 import { cn } from '../utils/cn';
+import { usePermission } from '../hooks/usePermission';
 import { safeFormatDate, safeFormatTime } from '../utils/date';
 import { format, startOfToday, endOfToday, startOfYesterday, endOfYesterday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from 'date-fns';
 
 const ActivityLogsPage = () => {
+  const { hasPermission } = usePermission();
+  const canListUsers = hasPermission('users.management.read');
   const [page, setPage] = useState(1);
   const [username, setUsername] = useState('');
   const [status, setStatus] = useState('');
   const [activityType, setActivityType] = useState('important');
+  const [clientType, setClientType] = useState('');
   const [pageSize, setPageSize] = useState(50);
   const [dateRangeType, setDateRangeType] = useState('today'); // 'today', 'yesterday', 'this_week', 'this_month', 'custom'
   const [customStartDate, setCustomStartDate] = useState('');
@@ -47,7 +51,8 @@ const ActivityLogsPage = () => {
 
   const { data: usersData } = useQuery({
     queryKey: ['active-users'],
-    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data
+    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
+    enabled: canListUsers,
   });
 
   const users = usersData?.items || [];
@@ -66,7 +71,7 @@ const ActivityLogsPage = () => {
   });
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['activity-logs', page, pageSize, username, status, activityType, dates, showNavigation],
+    queryKey: ['activity-logs', page, pageSize, username, status, activityType, clientType, dates, showNavigation],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -74,6 +79,7 @@ const ActivityLogsPage = () => {
       });
       if (username) params.append('username', username);
       if (status) params.append('status', status);
+      if (clientType) params.append('client_type', clientType);
       
       // Handle activity type filter
       const finalType = showNavigation ? 'all' : activityType;
@@ -380,6 +386,19 @@ const ActivityLogsPage = () => {
                 <option value="">All Status</option>
                 <option value="SUCCESS">Success Only</option>
                 <option value="FAILED">Failed Only</option>
+              </select>
+            </div>
+
+            <div className="w-full sm:w-36 space-y-1.5">
+              <Label className="text-xs font-bold uppercase text-text-main/60">Client</Label>
+              <select
+                value={clientType}
+                onChange={(e) => { setClientType(e.target.value); setPage(1); }}
+                className="w-full h-10 px-3 py-2 bg-white border border-border-temple/40 rounded-md text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">All Clients</option>
+                <option value="web">Web</option>
+                <option value="desktop">Desktop App</option>
               </select>
             </div>
 

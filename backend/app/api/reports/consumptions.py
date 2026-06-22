@@ -24,6 +24,7 @@ def consumptions_report(
     rows = (
         db.query(period.label("period"), func.coalesce(func.sum(ConsumptionEntry.people_served), 0).label("total_amount"), func.count(ConsumptionEntry.id).label("total_count"))
         .filter(
+            ConsumptionEntry.is_deleted == False,
             ConsumptionEntry.usage_date >= from_date, 
             ConsumptionEntry.usage_date <= to_date
         )
@@ -50,6 +51,7 @@ def cooked_remained_totals(
             func.count(ConsumptionEntry.id).label("entry_count"),
         )
         .filter(
+            ConsumptionEntry.is_deleted == False,
             ConsumptionEntry.usage_date >= from_date, 
             ConsumptionEntry.usage_date <= to_date
         )

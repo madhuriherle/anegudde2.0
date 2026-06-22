@@ -18,7 +18,6 @@ import PrivilegesPage from './pages/PrivilegesPage';
 import ActivityLogsPage from './pages/ActivityLogsPage';
 import DevoteesPage from './pages/DevoteesPage';
 import ItemCategoriesPage from './pages/ItemCategoriesPage';
-import UnitsPage from './pages/UnitsPage';
 import MenuItemsPage from './pages/MenuItemsPage';
 import WastagesPage from './pages/WastagesPage';
 import DonationsPage from './pages/DonationsPage';
@@ -29,6 +28,7 @@ import ReceiptSettingsPage from './pages/ReceiptSettingsPage';
 import DataCleanupPage from './pages/DataCleanupPage';
 import PrinterSettingsSettingsPage from './pages/PrinterSettingsSettingsPage';
 import ProfilePage from './pages/ProfilePage';
+import RecycleBinPage from './pages/RecycleBinPage';
 import { StockSummaryPage } from './pages/StockSummaryPage';
 import TokenReportPage from './pages/TokenReportPage';
 import DonationReportPage from './pages/DonationReportPage';
@@ -66,9 +66,9 @@ function App() {
         <Route path="/items/rawitem/:id/history" element={<ProtectedRoute requiredPermission="items.read"><ItemHistoryPage /></ProtectedRoute>} />
         <Route path="/purchases" element={<ProtectedRoute requiredPermission="purchases.read"><PurchasesPage /></ProtectedRoute>} />
         <Route path="/purchases/returns" element={<ProtectedRoute requiredPermission="purchase_returns.read"><PurchaseReturnsPage /></ProtectedRoute>} />
-        <Route path="/daily-usage" element={<ProtectedRoute requiredPermission="consumptions.read"><UsageEntriesPage /></ProtectedRoute>} />
+        <Route path="/daily-usage" element={<ProtectedRoute requiredPermission="daily_usage.read"><UsageEntriesPage /></ProtectedRoute>} />
         <Route path="/donations" element={<ProtectedRoute requiredPermission="donations.read"><DonationsPage /></ProtectedRoute>} />
-        <Route path="/wastages" element={<ProtectedRoute requiredPermission="consumptions.read"><WastagesPage /></ProtectedRoute>} />
+        <Route path="/wastages" element={<ProtectedRoute requiredPermission="daily_usage.read"><WastagesPage /></ProtectedRoute>} />
         
         <Route path="/reports/tokens" element={<ProtectedRoute requiredPermission="reports.tokens.read"><TokenReportPage /></ProtectedRoute>} />
         <Route path="/reports/tokens/:date" element={<ProtectedRoute requiredPermission="reports.tokens.read"><TokenDetailLedgerPage /></ProtectedRoute>} />
@@ -78,21 +78,21 @@ function App() {
         <Route path="/reports/canteen-summary" element={<ProtectedRoute requiredPermission="reports.canteen_summary.read"><CanteenSummaryPage /></ProtectedRoute>} />
         <Route path="/reports/manpower" element={<ProtectedRoute requiredPermission="reports.manpower.read"><ManpowerReportPage /></ProtectedRoute>} />
         
-        <Route path="/users" element={<ProtectedRoute requiredPermission={["users.management.read", "users.read"]}><UsersPage /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute requiredPermission="users.management.read"><UsersPage /></ProtectedRoute>} />
         <Route path="/users/roles" element={<ProtectedRoute requiredPermission="roles.read"><RolesPage /></ProtectedRoute>} />
         <Route path="/users/privileges" element={<ProtectedRoute requiredPermission="users.privileges.read"><PrivilegesPage /></ProtectedRoute>} />
         <Route path="/users/activity" element={<ProtectedRoute requiredPermission="activity_logs.read"><ActivityLogsPage /></ProtectedRoute>} />
         <Route path="/devotees" element={<ProtectedRoute requiredPermission="donations.read"><DevoteesPage /></ProtectedRoute>} />
 
         <Route path="/items/categories" element={<ProtectedRoute requiredPermission="item_categories.read"><ItemCategoriesPage /></ProtectedRoute>} />
-        <Route path="/settings/units" element={<ProtectedRoute requiredPermission="units.read"><UnitsPage /></ProtectedRoute>} />
         <Route path="/items/menu-items" element={<ProtectedRoute requiredPermission="menu_items.read"><MenuItemsPage /></ProtectedRoute>} />
         <Route path="/settings/donation-types" element={<ProtectedRoute requiredPermission="donation_types.read"><DonationTypesPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute requiredPermission={["settings.management.read", "settings.temple_identity.read", "settings.receipt_settings.read", "settings.data_cleanup.read", "settings.read"]}><SettingsPage /></ProtectedRoute>} />
-        <Route path="/settings/temple" element={<ProtectedRoute requiredPermission={["settings.temple_identity.read", "settings.management.read", "settings.read"]}><TempleIdentitySettingsPage /></ProtectedRoute>} />
-        <Route path="/settings/receipt" element={<ProtectedRoute requiredPermission={["settings.receipt_settings.read", "settings.management.read", "settings.read"]}><ReceiptSettingsPage /></ProtectedRoute>} />
-        <Route path="/settings/cleanup" element={<ProtectedRoute requiredPermission={["settings.data_cleanup.read", "settings.management.read", "settings.read"]}><DataCleanupPage /></ProtectedRoute>} />
-        <Route path="/settings/printers" element={<ProtectedRoute requiredPermission="settings.printers.read"><PrinterSettingsSettingsPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute requiredPermission={["settings.temple_identity.read", "settings.receipt_settings.read", "recycle_bin.read", "settings.data_cleanup.read"]}><SettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/temple" element={<ProtectedRoute requiredPermission="settings.temple_identity.read"><TempleIdentitySettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/receipt" element={<ProtectedRoute requiredPermission="settings.receipt_settings.read"><ReceiptSettingsPage /></ProtectedRoute>} />
+        <Route path="/settings/cleanup" element={<ProtectedRoute requiredPermission="settings.data_cleanup.read"><DataCleanupPage /></ProtectedRoute>} />
+        {/* <Route path="/settings/printers" element={<ProtectedRoute requiredPermission="settings.printers.read"><PrinterSettingsSettingsPage /></ProtectedRoute>} /> */}
+        <Route path="/settings/recycle-bin" element={<ProtectedRoute requiredPermission="recycle_bin.read"><RecycleBinPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute requiredPermission="profile.read"><ProfilePage /></ProtectedRoute>} />
       </Route>
 

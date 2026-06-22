@@ -88,7 +88,7 @@ const RolesPage = () => {
     resolver: zodResolver(roleSchema),
     defaultValues: {
       role_name: '',
-      rank_level: 99,
+      rank_level: undefined,
       is_all_access: false,
       module_id: null,
       status: 1
@@ -132,7 +132,7 @@ const RolesPage = () => {
         status: roleData.status
       });
     } else {
-      reset({ role_name: '', rank_level: 99, is_all_access: false, module_id: '', status: 1 });
+      reset({ role_name: '', rank_level: undefined, is_all_access: false, module_id: '', status: 1 });
     }
     setOpen(true);
   };
@@ -152,8 +152,12 @@ const RolesPage = () => {
     setViewingRole(null);
   };
 
-  const onSubmit = (data) => {
-    // If module_id is empty string (from select), make it null
+  const onSubmit = async (data) => {
+    const confirmed = await showConfirm(
+      editingRole ? 'Confirm Update' : 'Confirm Save',
+      `Are you sure you want to ${editingRole ? 'update' : 'save'} this role?`
+    );
+    if (!confirmed) return;
     const payload = {
         ...data,
         module_id: data.module_id === "" || data.module_id === "null" ? null : Number(data.module_id)

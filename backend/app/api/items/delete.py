@@ -25,5 +25,5 @@ def delete_item(
         "item_id": item.id
     }
     
-    delete_item_service(item_id, db)
+    delete_item_service(item_id, db, current_user.id)
     return None

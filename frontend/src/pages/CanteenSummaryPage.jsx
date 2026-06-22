@@ -470,7 +470,7 @@ const CanteenSummaryPage = () => {
         {reportData?.footer &&
         <div className="p-4 border-t border-border-temple">
               <div className="grid items-start gap-3 md:grid-cols-3">
-                <div className="overflow-hidden rounded-md border border-border-temple shadow-sm bg-white">
+                <div className="overflow-x-auto rounded-md border border-border-temple shadow-sm bg-white">
                   <table className="w-full table-auto text-sm border-collapse">
                     <thead className="bg-[#FAF7F2] border-b border-border-temple">
                       <tr className="text-text-main font-normal uppercase">
@@ -504,7 +504,7 @@ const CanteenSummaryPage = () => {
                   </table>
                 </div>
 
-                <div className="overflow-hidden rounded-md border border-border-temple shadow-sm bg-white">
+                <div className="overflow-x-auto rounded-md border border-border-temple shadow-sm bg-white">
                   <table className="w-full table-auto text-sm border-collapse">
                     <thead className="bg-[#FAF7F2] border-b border-border-temple">
                       <tr className="text-text-main font-normal uppercase">
@@ -531,7 +531,7 @@ const CanteenSummaryPage = () => {
                   </table>
                 </div>
 
-                <div className="overflow-hidden rounded-md border border-border-temple shadow-sm bg-white">
+                <div className="overflow-x-auto rounded-md border border-border-temple shadow-sm bg-white">
                   <table className="w-full table-auto text-sm border-collapse">
                     <thead className="bg-[#FAF7F2] border-b border-border-temple">
                       <tr className="text-text-main font-normal uppercase">

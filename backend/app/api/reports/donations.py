@@ -34,6 +34,7 @@ def donations_report(
             func.count(DonationEntry.id).label("total_count")
         )
         .filter(
+            DonationEntry.is_deleted == False,
             DonationEntry.donation_date >= from_date, 
             DonationEntry.donation_date <= to_date,
             DonationEntry.status == 1
@@ -73,6 +74,7 @@ def detailed_donations_report(
         joinedload(DonationEntry.items).joinedload(DonationItem.item).joinedload(Item.unit),
         joinedload(DonationEntry.user)
     ).filter(
+        DonationEntry.is_deleted == False,
         DonationEntry.status == 1,
         DonationEntry.donation_type == 2
     )

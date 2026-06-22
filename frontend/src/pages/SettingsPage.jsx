@@ -30,6 +30,7 @@ import {
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
 import { usePermission } from '../hooks/usePermission';
+import { useAuth } from '../context/AuthContext';
 import { cn } from '../utils/cn';
 import PrinterSettingsPage from './PrinterSettingsPage';
 import { Button } from '../components/ui/Button';
@@ -153,7 +154,7 @@ const cleanupGroups = [
   {
     id: 'donation_records',
     title: 'Donation Records',
-    description: 'Donation receipts and donated item lines. Donation types stay protected.',
+    description: 'Devotees, donation receipts and donated item lines. Donation types stay protected.',
   },
   {
     id: 'system_logs',
@@ -218,6 +219,7 @@ const normalizeSettings = (settingsData) => {
 
 const SettingsPage = ({ section = null }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showConfirm, showError, showSuccess } = useNotification();
   const { hasPermission } = usePermission();
@@ -227,6 +229,11 @@ const SettingsPage = ({ section = null }) => {
   const [pendingLogoFile, setPendingLogoFile] = useState(null);
   const [pendingLogoPreview, setPendingLogoPreview] = useState('');
   const activeSection = section;
+  const canReadTempleIdentity = hasPermission('settings.temple_identity.read');
+  const canReadReceiptSettings = hasPermission('settings.receipt_settings.read');
+  const canReadPrinterSettings = hasPermission('settings.printers.read');
+  const canReadRecycleBin = hasPermission('recycle_bin.read');
+  const canReadDataCleanup = hasPermission('settings.data_cleanup.read');
   const canWrite =
     activeSection === 'temple'
       ? hasPermission('settings.temple_identity.write')
@@ -240,7 +247,7 @@ const SettingsPage = ({ section = null }) => {
   const settingsReadEndpoint = activeSection === 'temple'
     ? '/settings/temple-identity'
     : activeSection === 'receipt'
-      ? '/settings/get_current_settings'
+      ? '/settings/receipt-settings'
       : activeSection === 'cleanup'
         ? '/settings/data-cleanup'
         : activeSection === 'printers'
@@ -250,6 +257,7 @@ const SettingsPage = ({ section = null }) => {
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ['system-settings', activeSection || 'root'],
     queryFn: async () => (await api.get(settingsReadEndpoint)).data,
+    enabled: Boolean(activeSection),
   });
 
   const {
@@ -480,31 +488,41 @@ const SettingsPage = ({ section = null }) => {
   const sampleReceiptDisplayNumber = `ADRNO: ${sampleReceiptNumber}`;
 
   const settingsCards = [
-    {
+    ...(canReadTempleIdentity ? [{
       id: 'temple',
       title: 'Temple Identity',
       description: 'Manage name, address, and contact info for receipts and reports.',
       icon: Building2,
       action: 'Configure',
       path: '/settings/temple',
-    },
-    {
+    }] : []),
+    ...(canReadReceiptSettings ? [{
       id: 'receipt',
       title: 'Receipt Settings',
       description: 'Configure receipt ID format and numbering.',
       icon: ReceiptText,
       action: 'Configure',
       path: '/settings/receipt',
-    },
-    {
+    }] : []),
+    /*
+    ...(canReadPrinterSettings ? [{
       id: 'printers',
       title: 'Printer Settings',
       description: 'Manage printer assignments per task for each computer.',
       icon: Printer,
       action: 'Configure',
       path: '/settings/printers',
-    },
-    {
+    }] : []),
+    */
+    ...(canReadRecycleBin ? [{
+      id: 'recycle-bin',
+      title: 'Recycle Bin',
+      description: 'View, restore, or permanently delete soft-deleted records.',
+      icon: Trash2,
+      action: 'Open',
+      path: '/settings/recycle-bin',
+    }] : []),
+    ...(canReadDataCleanup ? [{
       id: 'cleanup',
       title: 'Data Cleanup',
       description: 'Clear operational history while keeping master setup data protected.',
@@ -512,7 +530,7 @@ const SettingsPage = ({ section = null }) => {
       action: 'Open',
       danger: true,
       path: '/settings/cleanup',
-    },
+    }] : []),
   ];
 
   const pageTitle =
@@ -1129,9 +1147,11 @@ const SettingsPage = ({ section = null }) => {
         </form>
       )}
 
+      {/*
       {activeSection === 'printers' && (
         <PrinterSettingsPage />
       )}
+      */}
 
       {activeSection === 'cleanup' && (
         <div className="max-w-6xl space-y-6">

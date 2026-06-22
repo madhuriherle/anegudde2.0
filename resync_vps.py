@@ -60,6 +60,21 @@ remote_cleanup_cmd = (
 )
 run_command(ssh, remote_cleanup_cmd)
 
+print("--- Uploading Rename Roles Script ---")
+sftp.put(os.path.join(local_base, "rename_roles.py"), f"{remote_base}/rename_roles.py")
+print("--- Renaming Roles ---")
+run_command(ssh, f"cd {remote_base} && backend/.venv/bin/python rename_roles.py")
+
+print("--- Uploading Reassign User Records Script ---")
+sftp.put(os.path.join(local_base, "reassign_user_records.py"), f"{remote_base}/reassign_user_records.py")
+print("--- Reassigning User Records ---")
+run_command(ssh, f"cd {remote_base} && backend/.venv/bin/python reassign_user_records.py")
+
+print("--- Uploading Sidebar Fixes Script ---")
+sftp.put(os.path.join(local_base, "fix_sidebar.py"), f"{remote_base}/fix_sidebar.py")
+print("--- Applying Sidebar Fixes ---")
+run_command(ssh, f"cd {remote_base} && backend/.venv/bin/python fix_sidebar.py")
+
 print("--- Rebuilding and Restarting ---")
 run_command(ssh, f"cd {remote_base}/backend && .venv/bin/alembic upgrade head")
 run_command(ssh, f"cd {remote_base}/frontend && npm run build")

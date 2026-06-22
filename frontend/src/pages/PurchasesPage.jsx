@@ -772,7 +772,7 @@ const PurchasesPage = () => {
 
               <div className="space-y-2">
                 <h4 className="text-base font-bold text-primary uppercase tracking-wider">Items Purchased</h4>
-                <div className="rounded-lg border border-border-temple overflow-hidden">
+                <div className="rounded-lg border border-border-temple overflow-x-auto">
                   <table className="w-full text-base text-left">
                     <thead className="bg-bg-temple border-b border-border-temple">
                       <tr>
@@ -820,7 +820,7 @@ const PurchasesPage = () => {
                   <div className="h-16 w-[2px] rounded bg-[#D9C8AF]" />
                 </div>
 
-                <div className="rounded-lg border border-border-temple bg-white overflow-hidden h-[72vh] min-h-[620px] w-full xl:w-[calc(100%-var(--summary-width))] xl:pl-3">
+                <div className="rounded-lg border border-border-temple bg-white overflow-hidden h-[72vh] min-h-[300px] sm:min-h-[620px] w-full xl:w-[calc(100%-var(--summary-width))] xl:pl-3">
                   <div className="px-4 py-2 border-b border-border-temple bg-bg-temple/40 flex items-center justify-between">
                     <span className="text-base font-bold text-primary uppercase tracking-wider">Uploaded Bill Preview</span>
                     <button
@@ -1018,7 +1018,7 @@ const PurchasesPage = () => {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between pt-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between pt-4 gap-4">
                   <Button type="button" size="sm" variant="outline" onClick={() => append({ item_id: '', quantity: '0', price: '0', search_id: '' })} className="h-10 text-base font-bold border-primary text-primary hover:bg-primary hover:text-white transition-colors">
                     <Plus className="h-3 w-3 mr-1" /> Add Item
                   </Button>

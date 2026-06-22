@@ -21,35 +21,35 @@ def today_summary(
 
     purchase_amount = (
         db.query(func.coalesce(func.sum(PurchaseEntry.total_amount), 0))
-        .filter(PurchaseEntry.purchase_date == today)
+        .filter(PurchaseEntry.is_deleted == False, PurchaseEntry.purchase_date == today)
         .scalar()
         or Decimal("0")
     )
     
     consumption_entries = (
         db.query(func.count(ConsumptionEntry.id))
-        .filter(ConsumptionEntry.usage_date == today)
+        .filter(ConsumptionEntry.is_deleted == False, ConsumptionEntry.usage_date == today)
         .scalar() 
         or 0
     )
     consumption_value = (
         db.query(func.coalesce(func.sum(ConsumptionItem.line_total), 0))
         .join(ConsumptionEntry)
-        .filter(ConsumptionEntry.usage_date == today)
+        .filter(ConsumptionEntry.is_deleted == False, ConsumptionEntry.usage_date == today)
         .scalar()
         or Decimal("0")
     )
     
     wastage_entries = (
         db.query(func.count(WastageEntry.id))
-        .filter(WastageEntry.wastage_date == today)
+        .filter(WastageEntry.is_deleted == False, WastageEntry.wastage_date == today)
         .scalar() 
         or 0
     )
     wastage_value = (
         db.query(func.coalesce(func.sum(WastageItem.approx_amount), 0))
         .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
-        .filter(WastageEntry.wastage_date == today)
+        .filter(WastageEntry.is_deleted == False, WastageEntry.wastage_date == today)
         .scalar()
         or Decimal("0")
     )
@@ -74,7 +74,7 @@ def today_summary(
         .join(PurchaseItem, PurchaseItem.item_id == Item.id)
         .join(PurchaseEntry, PurchaseEntry.id == PurchaseItem.purchase_entry_id)
         .join(Unit, Item.unit_id == Unit.id)
-        .filter(PurchaseEntry.purchase_date == today)
+        .filter(PurchaseEntry.is_deleted == False, PurchaseEntry.purchase_date == today)
         .group_by(Item.item_name, Unit.unit_name)
         .all()
     )
@@ -93,7 +93,7 @@ def today_summary(
         .join(ConsumptionItem, ConsumptionItem.item_id == Item.id)
         .join(ConsumptionEntry, ConsumptionEntry.id == ConsumptionItem.consumption_entry_id)
         .join(Unit, Item.unit_id == Unit.id)
-        .filter(ConsumptionEntry.usage_date == today)
+        .filter(ConsumptionEntry.is_deleted == False, ConsumptionEntry.usage_date == today)
         .group_by(Item.item_name, Unit.unit_name)
         .all()
     )
@@ -112,7 +112,7 @@ def today_summary(
         .join(WastageItem, WastageItem.menu_item_id == MenuItem.id)
         .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
         .join(Unit, MenuItem.unit_id == Unit.id)
-        .filter(WastageEntry.wastage_date == today)
+        .filter(WastageEntry.is_deleted == False, WastageEntry.wastage_date == today)
         .group_by(MenuItem.dish_name, Unit.unit_name)
         .all()
     )
@@ -178,6 +178,7 @@ def get_weekly_menu_wastage(
         .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
         .join(Unit, MenuItem.unit_id == Unit.id)
         .filter(
+            WastageEntry.is_deleted == False,
             WastageEntry.status == 1,
             WastageEntry.wastage_date >= from_date,
             WastageEntry.wastage_date <= today,

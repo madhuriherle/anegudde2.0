@@ -100,6 +100,8 @@ def get_user_menu(
             for p in module.privileges
             if p.status == 1 and p.privilege_name.endswith(".read")
         }
+        if module.name == "Devotees":
+            module_privs.add("donations.read")
 
         if is_all_access:
             should_be_visible = bool(visible_submodules or module.route or module.parent_id is None)

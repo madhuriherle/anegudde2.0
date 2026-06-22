@@ -18,6 +18,7 @@ def recent_activity(
     purchases = (
         db.query(PurchaseEntry, Vendor.vendor_name)
         .join(Vendor)
+        .filter(PurchaseEntry.is_deleted == False)
         .order_by(PurchaseEntry.created_at.desc())
         .limit(10)
         .all()
@@ -27,6 +28,7 @@ def recent_activity(
 
     consumptions = (
         db.query(ConsumptionEntry)
+        .filter(ConsumptionEntry.is_deleted == False)
         .order_by(ConsumptionEntry.created_at.desc())
         .limit(10)
         .all()
@@ -36,6 +38,7 @@ def recent_activity(
 
     wastages = (
         db.query(WastageEntry)
+        .filter(WastageEntry.is_deleted == False)
         .order_by(WastageEntry.created_at.desc())
         .limit(10)
         .all()

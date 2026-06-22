@@ -67,7 +67,7 @@ def get_canteen_summary_stats(
     wastage_total = (
         db.query(func.coalesce(func.sum(WastageItem.approx_amount), 0))
         .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
-        .filter(WastageEntry.wastage_date == today, WastageEntry.status == 1)
+        .filter(WastageEntry.is_deleted == False, WastageEntry.wastage_date == today, WastageEntry.status == 1)
         .scalar()
         or Decimal("0")
     )
@@ -84,7 +84,7 @@ def get_canteen_summary_stats(
         .join(WastageItem, WastageItem.menu_item_id == MenuItem.id)
         .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
         .join(Unit, MenuItem.unit_id == Unit.id)
-        .filter(WastageEntry.wastage_date == today, WastageEntry.status == 1)
+        .filter(WastageEntry.is_deleted == False, WastageEntry.wastage_date == today, WastageEntry.status == 1)
         .group_by(MenuItem.dish_name, Unit.unit_name)
         .all()
     )
@@ -107,7 +107,7 @@ def get_canteen_summary_stats(
         total_items = (
             db.query(func.count(DonationItem.id))
             .join(DonationEntry, DonationEntry.id == DonationItem.donation_entry_id)
-            .filter(DonationEntry.donation_date == today, DonationEntry.donation_type == donation_type.id, DonationEntry.status == 1)
+            .filter(DonationEntry.is_deleted == False, DonationEntry.donation_date == today, DonationEntry.donation_type == donation_type.id, DonationEntry.status == 1)
             .scalar()
             or 0
         )
@@ -117,7 +117,7 @@ def get_canteen_summary_stats(
             db.query(func.coalesce(func.sum(DonationItem.quantity * Item.default_price), 0))
             .join(DonationEntry, DonationEntry.id == DonationItem.donation_entry_id)
             .join(Item, Item.id == DonationItem.item_id)
-            .filter(DonationEntry.donation_date == today, DonationEntry.donation_type == donation_type.id, DonationEntry.status == 1)
+            .filter(DonationEntry.is_deleted == False, DonationEntry.donation_date == today, DonationEntry.donation_type == donation_type.id, DonationEntry.status == 1)
             .scalar()
             or Decimal("0")
         )

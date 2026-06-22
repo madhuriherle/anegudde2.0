@@ -57,7 +57,7 @@ def detailed_stock_summary_report(
 ):
     try:
         # 1. Fetch all items with their units
-        items = db.query(Item).join(Unit).filter(Item.status == 1).all()
+        items = db.query(Item).join(Unit).filter(Item.is_deleted == False, Item.status == 1).all()
         
         # 2. Calculate Opening Balances for each item as of from_date
         ob_stats = (
@@ -155,6 +155,7 @@ def detailed_stock_summary_report(
                 func.coalesce(func.sum(ConsumptionEntry.regular_cleaning_persons + ConsumptionEntry.additional_cleaning_persons), 0).label("cleaning"),
             )
             .filter(
+                ConsumptionEntry.is_deleted == False,
                 ConsumptionEntry.usage_date >= from_date,
                 ConsumptionEntry.usage_date <= to_date
             )
@@ -200,7 +201,7 @@ def canteen_summary_report(
         from_date = date_value
         to_date = date_value
 
-        items = db.query(Item).join(Unit).filter(Item.status == 1).all()
+        items = db.query(Item).join(Unit).filter(Item.is_deleted == False, Item.status == 1).all()
 
         ob_stats = (
             db.query(
@@ -294,7 +295,7 @@ def canteen_summary_report(
                 func.coalesce(func.sum(ConsumptionEntry.total_serving_persons), 0).label("total_serving"),
                 func.coalesce(func.sum(ConsumptionEntry.times_cooked), 0).label("times_cooked"),
             )
-            .filter(ConsumptionEntry.usage_date == date_value, ConsumptionEntry.status == 1)
+            .filter(ConsumptionEntry.is_deleted == False, ConsumptionEntry.usage_date == date_value, ConsumptionEntry.status == 1)
             .first()
         )
 
@@ -321,6 +322,7 @@ def canteen_summary_report(
             .join(Unit, Unit.id == Item.unit_id)
             .join(ConsumptionEntry, ConsumptionEntry.id == ConsumptionItem.consumption_entry_id)
             .filter(
+                ConsumptionEntry.is_deleted == False,
                 ConsumptionEntry.usage_date == date_value,
                 ConsumptionEntry.status == 1,
                 ConsumptionItem.qty_returned > 0
@@ -350,6 +352,7 @@ def canteen_summary_report(
             )
             .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
             .filter(
+                WastageEntry.is_deleted == False,
                 WastageEntry.wastage_date == date_value,
                 WastageEntry.status == 1,
                 WastageItem.menu_item_id.isnot(None)

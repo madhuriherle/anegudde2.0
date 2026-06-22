@@ -7,7 +7,7 @@ from app.schemas.wastage import WastageEntryCreate, WastageEntryUpdate
 from decimal import Decimal
 
 def list_wastages(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
-    query = db.query(WastageEntry).options(
+    query = db.query(WastageEntry).filter(WastageEntry.is_deleted == False).options(
         joinedload(WastageEntry.items).joinedload(WastageItem.menu_item), 
         joinedload(WastageEntry.items).joinedload(WastageItem.item).joinedload(Item.unit),
         joinedload(WastageEntry.user)
@@ -136,6 +136,8 @@ def get_wastage_full(wastage_id: int, db: Session) -> WastageEntry:
 
 def delete_wastage(wastage_id: int, db: Session, current_user: User) -> None:
     entry = get_wastage(wastage_id, db)
+    now = datetime.now(timezone.utc)
+    
     # Restore stock for raw items
     wastage_items = db.query(WastageItem).filter(WastageItem.wastage_entry_id == wastage_id).all()
     for w_item in wastage_items:
@@ -144,9 +146,22 @@ def delete_wastage(wastage_id: int, db: Session, current_user: User) -> None:
             if item:
                 item.current_stock = Decimal(item.current_stock or 0) + Decimal(str(w_item.quantity))
     
-    db.query(WastageItem).filter(WastageItem.wastage_entry_id == wastage_id).delete()
-    db.query(StockLedger).filter(StockLedger.ref_table == "wastage_items", StockLedger.ref_id == wastage_id).delete()
-    db.delete(entry); db.commit()
+    # Soft delete the entry
+    entry.status = 0
+    entry.updated_at = now
+    entry.updated_by = current_user.id
+    
+    entry.is_deleted = True
+    entry.deleted_at = now
+    entry.deleted_by_id = current_user.id
+    
+    # Set associated ledger entries to inactive
+    db.query(StockLedger).filter(
+        StockLedger.ref_table == "wastage_items", 
+        StockLedger.ref_id == wastage_id
+    ).update({StockLedger.status: 0}, synchronize_session=False)
+    
+    db.commit()
 
 def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, current_user: User) -> WastageEntry:
     entry = get_wastage(wastage_id, db)

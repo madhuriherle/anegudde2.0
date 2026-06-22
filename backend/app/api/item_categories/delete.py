@@ -10,7 +10,7 @@ def delete_category(
     category_id: int,
     request: Request,
     db: Session = Depends(get_db),
-    _: User = Depends(PermissionChecker("item_categories.delete"))
+    current_user: User = Depends(PermissionChecker("item_categories.delete"))
 ):
     row = db.query(ItemCategory).filter(ItemCategory.id == category_id).first()
     if not row:
@@ -18,6 +18,9 @@ def delete_category(
     
     request.state.audit_meta = {"category_name": row.category_name}
 
-    row.status = 0
+    from datetime import datetime, timezone
+    row.is_deleted = True
+    row.deleted_at = datetime.now(timezone.utc)
+    row.deleted_by_id = current_user.id
     db.commit()
     return None

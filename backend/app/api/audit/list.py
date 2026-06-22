@@ -40,7 +40,7 @@ PAGE_ACTIVITY_CONFIG = {
         ),
     },
     "daily_usage": {
-        "permission": "consumptions.read",
+        "permission": "daily_usage.read",
         "label": "usage entry",
         "endpoints": (
             "/daily-usage/create_consumption",
@@ -453,6 +453,7 @@ def list_activity_logs(
     status: str | None = Query(None),
     activity_type: str | None = Query(None), # 'important', 'all', 'login', 'create', 'edit', 'delete', 'payment', 'stock'
     method: str | None = Query(None),
+    client_type: str | None = Query(None),
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
 ):
@@ -470,6 +471,9 @@ def list_activity_logs(
     if end_date:
         end_dt = datetime.combine(datetime.fromisoformat(end_date).date(), time.max)
         query = query.filter(ActivityLog.activity_at <= end_dt)
+
+    if client_type:
+        query = query.filter(ActivityLog.client_type == client_type)
 
     if method:
         query = query.filter(ActivityLog.method == method)

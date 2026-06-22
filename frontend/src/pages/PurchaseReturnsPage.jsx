@@ -572,7 +572,7 @@ const PurchaseReturnsPage = () => {
                       }
                       </div>
 
-                      <div className="rounded-xl border border-border-temple overflow-hidden shadow-sm">
+                      <div className="rounded-xl border border-border-temple overflow-x-auto shadow-sm">
                         <table className="w-full text-base">
                           <thead className="bg-bg-temple border-b border-border-temple">
                             <tr>
@@ -701,7 +701,7 @@ const PurchaseReturnsPage = () => {
                       <DetailItem className="text-base font-normal" labelClassName="font-normal" label="Vendor" value={viewingReturn.vendor?.vendor_name || 'N/A'} valueClassName="font-normal text-text-main" />
                     </div>
                     <div className="flex-1 overflow-auto bg-gray-50/30">
-                      <table className="min-w-[620px] w-full text-base text-left table-auto border-collapse">
+                      <table className="min-w-full sm:min-w-[620px] w-full text-base text-left table-auto border-collapse">
                         <thead className="bg-[#FAF7F2] border-b border-gray-200">
                           <tr>
                             <th className="px-6 py-3 font-normal text-text-main">Item</th>
@@ -743,7 +743,7 @@ const PurchaseReturnsPage = () => {
                       <DetailItem className="text-base font-normal" labelClassName="font-normal" label="Remarks" value={viewingReturn.remarks || 'None'} valueClassName="font-normal text-text-main" />
                     </div>
                     <div className="flex-1 overflow-auto bg-gray-50/30">
-                      <table className="min-w-[620px] w-full text-base text-left table-auto border-collapse">
+                      <table className="min-w-full sm:min-w-[620px] w-full text-base text-left table-auto border-collapse">
                         <thead className="bg-[#FAF7F2] border-b border-gray-200">
                           <tr>
                             <th className="px-6 py-3 font-normal text-text-main">Item</th>

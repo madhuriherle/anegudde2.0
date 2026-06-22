@@ -3,7 +3,7 @@ from decimal import Decimal
 import math
 
 from fastapi import HTTPException
-from sqlalchemy import String, case
+from sqlalchemy import String, case, func, Integer
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit, ItemType, ItemPrice, PurchaseEntry, Vendor, ItemSerialNumber
@@ -45,15 +45,22 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: i
         updated_by=current_user.id,
     )
     db.add(item)
-    db.flush() # Get item.id
+    db.flush()
 
-    # Use provided serial_no or fallback to item.id
-    target_serial = serial_no if serial_no else str(item.id)
+    if serial_no:
+        target_serial = serial_no
+    else:
+        max_serial = db.query(
+            func.max(ItemSerialNumber.serial_number.cast(Integer))
+        ).filter(
+            ItemSerialNumber.serial_number.op('~')('^\d+$')
+        ).scalar()
+        next_num = (max_serial or 0) + 1
+        target_serial = str(next_num).zfill(4)
     
-    # Check if serial exists
     s_exists = db.query(ItemSerialNumber).filter(ItemSerialNumber.serial_number == target_serial).first()
     if s_exists:
-            raise HTTPException(status_code=400, detail=f"Serial number {target_serial} already assigned to another item")
+        raise HTTPException(status_code=400, detail=f"Serial number {target_serial} already assigned to another item")
     
     new_s = ItemSerialNumber(item_id=item.id, serial_number=target_serial, status=1)
     db.add(new_s)
@@ -77,7 +84,7 @@ def list_items(
 ) -> dict:
     import re
     # Start with base query and joinedloads for efficiency
-    query = db.query(Item).options(
+    query = db.query(Item).filter(Item.is_deleted == False).options(
         joinedload(Item.category),
         joinedload(Item.unit),
         joinedload(Item.serial_numbers)
@@ -209,9 +216,12 @@ def update_item(item_id: int, payload: ItemUpdate, db: Session, current_user: Us
     return item
 
 
-def delete_item(item_id: int, db: Session) -> None:
+def delete_item(item_id: int, db: Session, user_id: int | None = None) -> None:
+    from datetime import datetime, timezone
     item = get_item(item_id, db)
-    item.status = 0
+    item.is_deleted = True
+    item.deleted_at = datetime.now(timezone.utc)
+    item.deleted_by_id = user_id
     db.commit()
 
 

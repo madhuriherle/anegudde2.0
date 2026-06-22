@@ -1,5 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNotification } from '../context/NotificationContext';
+import { usePermission } from '../hooks/usePermission';
+import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 
 import { Search, Users, X, Loader2, AlertCircle } from 'lucide-react';
 import api from '../api/axios';
@@ -21,6 +24,46 @@ const DevoteesPage = () => {
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  const { hasPermission } = usePermission();
+  const canDelete = hasPermission('donations.delete');
+  const queryClient = useQueryClient();
+  const { showConfirm, showError, showSuccess } = useNotification();
+
+  const [deleteWarningOpen, setDeleteWarningOpen] = useState(false);
+  const [devoteeToDelete, setDevoteeToDelete] = useState(null);
+  const [usageDetails, setUsageDetails] = useState([]);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => api.delete(`/donations/delete_devotee/${id}`),
+    onSuccess: () => {
+      showSuccess('Devotee deleted successfully');
+      setDeleteWarningOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['devotees'] });
+    },
+    onError: (err) => showError(err.response?.data?.detail || 'Delete failed')
+  });
+
+  const handleDeleteClick = async (devotee) => {
+    try {
+      const res = await api.get('/system/check_usage', {
+        params: { entity_type: 'devotee', entity_id: devotee.id }
+      });
+
+      if (res.data.has_usage) {
+        setUsageDetails(res.data.details);
+        setDevoteeToDelete(devotee);
+        setDeleteWarningOpen(true);
+      } else {
+        const confirmed = await showConfirm('Delete Devotee', `Are you sure you want to delete "${devotee.devotee_name}"?`);
+        if (confirmed) {
+          deleteMutation.mutate(devotee.id);
+        }
+      }
+    } catch {
+      showError('Failed to check devotee usage');
+    }
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['devotees', searchTerm, page, pageSize],
@@ -78,7 +121,7 @@ const DevoteesPage = () => {
     {
       id: 'actions',
       header: () => <div className="text-center">Actions</div>,
-      size: 200,
+      size: 260,
       cell: (info) =>
         <div className="flex justify-center gap-2">
           <button onClick={() => handleViewProfile(info.row.original)} className="action-btn-view">
@@ -87,9 +130,14 @@ const DevoteesPage = () => {
           <button onClick={() => handleViewHistory(info.row.original)} className="action-btn-edit !px-4">
             History
           </button>
+          {canDelete && (
+            <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">
+              Delete
+            </button>
+          )}
         </div>
     }],
-    []);
+    [canDelete]);
 
   return (
     <div className="space-y-6">
@@ -328,6 +376,20 @@ const DevoteesPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeletionWarningDialog
+        open={deleteWarningOpen}
+        onOpenChange={setDeleteWarningOpen}
+        onConfirm={() => deleteMutation.mutate(devoteeToDelete?.id)}
+        isPending={deleteMutation.isPending}
+        title="Delete Devotee with History?"
+        description={`"${devoteeToDelete?.devotee_name}" has existing records in the system.`}
+        consequences={[
+          ...usageDetails,
+          "Historical donation and receipt records will remain intact in reports, but this devotee will be archived.",
+          "Soft-deleting this devotee prevents them from showing up in active lookup searches while keeping reports valid."
+        ]}
+      />
     </div>);
 };
 

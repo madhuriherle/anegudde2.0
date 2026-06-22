@@ -19,7 +19,7 @@ def list_categories(
     search_field: str | None = Query(None),
     type_id: int | None = Query(None),
 ):
-    query = db.query(ItemCategory)
+    query = db.query(ItemCategory).filter(ItemCategory.is_deleted == False)
     if status is not None:
         query = query.filter(ItemCategory.status == status)
     if type_id is not None:

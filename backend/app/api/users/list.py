@@ -24,7 +24,7 @@ def list_users(
     # Only allowed if current_user has users.read permission
 
     # 1. Base Query joined with Role (Already has access via User.role)
-    query = db.query(User).options(joinedload(User.role)).join(User.role)
+    query = db.query(User).filter(User.is_deleted == False).options(joinedload(User.role)).join(User.role)
 
     # 2. Hierarchical Filter: Only show users with a LOWER rank (higher numeric level)
     # A user can never see or modify someone of equal or higher rank.

@@ -13,7 +13,7 @@ def update_consumption_entry(
     payload: ConsumptionEntryUpdate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("consumptions.write"))
+    current_user: User = Depends(PermissionChecker("daily_usage.write"))
 ):
     entry = update_consumption(consumption_id, payload, db, current_user)
     

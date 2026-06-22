@@ -13,7 +13,7 @@ def modify_wastage(
     payload: WastageEntryUpdate, 
     request: Request,
     db: Session = Depends(get_db), 
-    current_user: User = Depends(PermissionChecker("consumptions.write"))
+    current_user: User = Depends(PermissionChecker("daily_usage.write"))
 ):
     entry = update_wastage(wastage_id, payload, db, current_user)
     

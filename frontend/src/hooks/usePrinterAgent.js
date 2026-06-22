@@ -2,6 +2,26 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 const AGENT_URL = 'http://127.0.0.1:5623';
 
+function parseVersion(v) {
+  return (v || '0.0.0').split('.').map(Number);
+}
+
+function isNewer(latest, current) {
+  const l = parseVersion(latest);
+  const c = parseVersion(current);
+  for (let i = 0; i < Math.max(l.length, c.length); i++) {
+    if ((l[i] || 0) > (c[i] || 0)) return true;
+    if ((l[i] || 0) < (c[i] || 0)) return false;
+  }
+  return false;
+}
+
+async function fetchJson(url, signal) {
+  const res = await fetch(url, { signal, cache: 'no-store', mode: 'cors' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 export function usePrinterAgent() {
   const [availablePrinters, setAvailablePrinters] = useState([]);
   const [printerDetails, setPrinterDetails] = useState([]);
@@ -9,9 +29,20 @@ export function usePrinterAgent() {
   const [defaultPrinter, setDefaultPrinter] = useState('');
   const [isAgentRunning, setIsAgentRunning] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [agentVersion, setAgentVersion] = useState(null);
+  const [latestVersion, setLatestVersion] = useState(null);
+  const [updating, setUpdating] = useState(false);
   const mountedRef = useRef(true);
+  const isHttps = window.location.protocol === 'https:';
+
+  const updateAvailable = agentVersion && latestVersion && isNewer(latestVersion, agentVersion);
 
   const refreshPrinters = useCallback(async () => {
+    // Browser blocks http://localhost from HTTPS pages — skip on HTTPS
+    if (isHttps) {
+      if (mountedRef.current) setChecking(false);
+      return;
+    }
     setChecking(true);
     try {
       const controller = new AbortController();
@@ -51,22 +82,86 @@ export function usePrinterAgent() {
     } finally {
       if (mountedRef.current) setChecking(false);
     }
+  }, [isHttps]);
+
+  const checkHealth = useCallback(async () => {
+    if (isHttps) return; // skip on HTTPS
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const data = await fetchJson(`${AGENT_URL}/api/health`, controller.signal);
+      clearTimeout(timeout);
+      if (mountedRef.current) {
+        setAgentVersion(data.version || null);
+      }
+    } catch {
+      if (mountedRef.current) {
+        setAgentVersion(null);
+      }
+    }
+  }, []);
+
+  const checkLatestVersion = useCallback(async () => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const data = await fetchJson(`${window.location.origin}/api/downloads/printer-agent-version`, controller.signal);
+      clearTimeout(timeout);
+      if (mountedRef.current) {
+        setLatestVersion(data.version || null);
+      }
+    } catch {
+      if (mountedRef.current) {
+        setLatestVersion(null);
+      }
+    }
   }, []);
 
   useEffect(() => {
     mountedRef.current = true;
     let cancelled = false;
 
-    const check = async () => {
+    const init = async () => {
       if (!cancelled) await refreshPrinters();
+      if (!cancelled) await checkHealth();
+      if (!cancelled) await checkLatestVersion();
     };
 
-    check();
+    init();
+
+    const interval = setInterval(async () => {
+      if (cancelled) return;
+      await checkHealth();
+      await checkLatestVersion();
+    }, 60000);
+
     return () => {
       cancelled = true;
       mountedRef.current = false;
+      clearInterval(interval);
     };
-  }, [refreshPrinters]);
+  }, [refreshPrinters, checkHealth, checkLatestVersion]);
+
+  const triggerUpdate = useCallback(async () => {
+    setUpdating(true);
+    try {
+      const zipRes = await fetch(`${window.location.origin}/api/downloads/printer-agent`, {
+        cache: 'no-store',
+      });
+      if (!zipRes.ok) throw new Error('Failed to download agent update from server');
+      const blob = await zipRes.blob();
+
+      const updateRes = await fetch(`${AGENT_URL}/api/update`, {
+        method: 'POST',
+        body: blob,
+      });
+      const result = await updateRes.json();
+      if (result.status !== 'ok') throw new Error(result.error || 'Update failed');
+      return result;
+    } finally {
+      if (mountedRef.current) setUpdating(false);
+    }
+  }, []);
 
   const printViaAgent = useCallback(async (printerName, pdfUrl) => {
     const response = await fetch(pdfUrl);
@@ -103,7 +198,12 @@ export function usePrinterAgent() {
     defaultPrinter,
     isAgentRunning,
     checking,
+    agentVersion,
+    latestVersion,
+    updateAvailable,
+    updating,
     refreshPrinters,
     printViaAgent,
+    triggerUpdate,
   };
 }

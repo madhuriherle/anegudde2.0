@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Printer, Plus, Trash2, Save, Check, Monitor, XCircle, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
+import { Printer, Plus, Trash2, Save, Check, Monitor, XCircle, RefreshCw, AlertCircle, Loader2, Download } from 'lucide-react';
 import api from '../api/axios';
 import { useNotification } from '../context/NotificationContext';
 import { usePermission } from '../hooks/usePermission';
@@ -12,7 +12,7 @@ import { Card, CardContent } from '../components/ui/Card';
 
 const PrinterSettingsPage = () => {
   const queryClient = useQueryClient();
-  const { showError, showSuccess } = useNotification();
+  const { showError, showSuccess, showConfirm } = useNotification();
   const { hasPermission } = usePermission();
   const canWrite = hasPermission('settings.printers.write');
   const machineId = getOrCreateMachineId();
@@ -28,7 +28,12 @@ const PrinterSettingsPage = () => {
     isAgentRunning,
     checking: agentChecking,
     defaultPrinter,
+    updateAvailable,
+    updating,
+    agentVersion,
+    latestVersion,
     refreshPrinters,
+    triggerUpdate,
   } = usePrinterAgent();
 
   const [showManual, setShowManual] = useState(false);
@@ -74,6 +79,11 @@ const PrinterSettingsPage = () => {
   const handleAddOrUpdate = async (context, nameOverride) => {
     const name = nameOverride || newEntries[context]?.trim();
     if (!name) return;
+    const confirmed = await showConfirm(
+      'Confirm Save',
+      'Are you sure you want to save this printer assignment?'
+    );
+    if (!confirmed) return;
     try {
       await upsertMutation.mutateAsync({ context, machine_id: machineId, printer_name: name });
       if (!nameOverride) {
@@ -92,7 +102,11 @@ const PrinterSettingsPage = () => {
       showError("Please select at least one task");
       return;
     }
-
+    const confirmed = await showConfirm(
+      'Confirm Batch Assign',
+      `Are you sure you want to assign this printer to ${codes.length} tasks?`
+    );
+    if (!confirmed) return;
     try {
       await Promise.all(codes.map(code => 
         upsertMutation.mutateAsync({ 
@@ -127,6 +141,11 @@ const PrinterSettingsPage = () => {
   };
 
   const handleDelete = async (id) => {
+    const confirmed = await showConfirm(
+      'Confirm Delete',
+      'Are you sure you want to delete this printer configuration?'
+    );
+    if (!confirmed) return;
     try {
       await deleteMutation.mutateAsync(id);
       showSuccess('Printer config deleted');
@@ -141,9 +160,48 @@ const PrinterSettingsPage = () => {
     existingMap[key] = c;
   });
 
+  const downloadAgentZip = async () => {
+    try {
+      const res = await api.get('/downloads/printer-agent', { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Anegudde_PrinterAgent.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      showError('Failed to download. Please try again.');
+    }
+  };
+
   return (
     <div className="max-w-6xl space-y-6">
-      {/* ... (Agent card remains same) */}
+      {updateAvailable && (
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200">
+          <Download className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-bold text-blue-900">Agent Update Available</p>
+            <p className="text-xs text-blue-800 leading-relaxed mt-0.5">
+              Version {latestVersion} is available (you have v{agentVersion}). Click below to update the Printer Agent on this computer.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={triggerUpdate}
+            disabled={updating}
+            className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {updating ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            {updating ? 'Updating...' : 'Update Now'}
+          </button>
+        </div>
+      )}
       <Card className="border-border-temple shadow-sm overflow-hidden">
         <div className="bg-[#F8F4EE] px-6 py-4 border-b border-border-temple/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -178,28 +236,98 @@ const PrinterSettingsPage = () => {
         
         <CardContent className="p-6">
           {(!isAgentRunning && !agentChecking && !showManual) ? (
-            <div className="flex flex-col md:flex-row items-start gap-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
-              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-3 flex-1">
-                <div>
-                  <p className="text-sm font-bold text-amber-900">Browser Security Blocked Connection</p>
-                  <p className="text-sm text-amber-800 leading-relaxed">
-                    Modern browsers block websites on <span className="font-mono">HTTP</span> from talking to your local PC. 
-                    Your Printer Agent is running, but the browser won't let the website see it.
+            window.location.protocol === 'https:' ? (
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200">
+                <AlertCircle className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-blue-900">Live Printer Detection Unavailable on Remote Access</p>
+                  <p className="text-xs text-blue-800 leading-relaxed mt-0.5">
+                    Due to browser security, live printer detection only works when accessing the app via the <strong>local network</strong> (e.g. <span className="font-mono">http://192.168.x.x</span>). 
+                    You can still assign printers manually below, or download and install the Printer Agent on each computer.
                   </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
-                    onClick={() => setShowManual(true)}
+                  <button
+                    type="button"
+                    onClick={downloadAgentZip}
+                    className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-bold hover:bg-blue-200 transition-colors border border-blue-200"
                   >
-                    Use Manual Setup
-                  </Button>
+                    <Download className="h-3.5 w-3.5" />
+                    Download Printer Agent Setup
+                  </button>
                 </div>
               </div>
+            ) : (
+            <div className="space-y-4">
+              {/* Main warning banner */}
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
+                <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-amber-900">Printer Agent Not Running on This Computer</p>
+                  <p className="text-xs text-amber-800 leading-relaxed mt-0.5">
+                    The Printer Agent is a small background program that must be running on <strong>this computer</strong> to detect local printers. Run it once and it will auto-start every login.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step by step guide */}
+              <div className="rounded-xl border border-border-temple/60 bg-white overflow-hidden">
+                <div className="bg-[#F8F4EE] px-5 py-3 border-b border-border-temple/40">
+                  <p className="text-xs font-bold text-secondary uppercase tracking-wider">How to set it up (one-time, takes 30 seconds)</p>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">1</div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-text-main">Download the Printer Agent</p>
+                      <p className="text-xs text-text-light mt-0.5 mb-2">Download the setup package directly from this page — no need to find any folder.</p>
+                      <button
+                        type="button"
+                        onClick={downloadAgentZip}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors border border-primary/20"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download Anegudde_PrinterAgent.zip
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">2</div>
+                    <div>
+                      <p className="text-sm font-bold text-text-main">Extract &amp; Run the installer</p>
+                      <p className="text-xs text-text-light mt-0.5">Extract the ZIP anywhere, open the <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-[11px]">PrinterAgent</span> folder, then double-click <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-[11px]">install_background.bat</span> — it auto-installs, registers to start on every login, and launches immediately.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">3</div>
+                    <div>
+                      <p className="text-sm font-bold text-text-main">Click Refresh here</p>
+                      <p className="text-xs text-text-light mt-0.5">After the installer completes, click the <strong>Refresh now</strong> button below. Your printers will appear automatically.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-5 pb-4 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={refreshPrinters}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-colors"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    I've started it — Refresh now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowManual(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border-temple/60 bg-white text-xs font-bold text-text-main hover:bg-gray-50 transition-colors"
+                  >
+                    Type printer names manually instead
+                  </button>
+                </div>
+
+              </div>
             </div>
+            )
           ) : (agentChecking && !showManual) ? (
             <div className="flex items-center gap-3 py-4 text-text-light">
               <Loader2 className="h-5 w-5 animate-spin" />

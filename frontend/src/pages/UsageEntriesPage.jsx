@@ -47,7 +47,7 @@ const formSchema = z.object({
   raw_wastage_items: z.array(z.object({
     serial_id: z.string().optional().default(''),
     item_id: z.coerce.number().min(1, 'Item is required'),
-    operation: z.enum(['add', 'deduct']).default('add'),
+    operation: z.enum(['add', 'deduct']).default('deduct'),
     quantity: z.coerce.number().positive('Qty must be greater than 0')
   })).default([])
 }).superRefine((data, ctx) => {
@@ -74,11 +74,11 @@ const UsageEntriesPage = () => {
   const queryClient = useQueryClient();
   const { showConfirm, showError, showSuccess } = useNotification();
   const { hasPermission } = usePermission();
-  const canWrite = hasPermission('consumptions.write');
-  const canDelete = hasPermission('consumptions.delete');
-  const canReadUsage = hasPermission('consumptions.read');
-  const canWriteUsage = hasPermission('consumptions.write');
-  const canReadActivityLogs = hasPermission('consumptions.read');
+  const canWrite = hasPermission('daily_usage.write');
+  const canDelete = hasPermission('daily_usage.delete');
+  const canReadUsage = hasPermission('daily_usage.read');
+  const canWriteUsage = hasPermission('daily_usage.write');
+  const canReadActivityLogs = hasPermission('daily_usage.read');
 
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -1123,7 +1123,14 @@ const UsageEntriesPage = () => {
                                 <Select
                                   {...selectField}
                                   disabled={!canWriteUsage}
-                                  className="h-10 text-base bg-white">
+                                  className="h-10 text-base bg-white"
+                                  onChange={(e) => {
+                                    selectField.onChange(e);
+                                    const newId = Number(e.target.value);
+                                    const item = activeItems.find(i => i.id === newId);
+                                    const serial = item?.serial_numbers?.[0]?.serial_number || '';
+                                    setValue(`raw_wastage_items.${index}.serial_id`, serial);
+                                  }}>
                                   <option value={0} disabled hidden>Select Item</option>
                                   {activeItems.map((i) =>
                                     <option key={i.id} value={i.id}>{i.item_name}</option>
@@ -1209,7 +1216,7 @@ const UsageEntriesPage = () => {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => appendRawWastage({ serial_id: '', item_id: 0, operation: 'add', quantity: 0 })}
+                            onClick={() => appendRawWastage({ serial_id: '', item_id: 0, operation: 'deduct', quantity: 0 })}
                             className="h-10 px-3 text-sm bg-primary-main/20 text-primary-main hover:bg-primary-main/30 border border-primary-main/30 font-bold">
                             
                           <Plus className="w-4 h-4 mr-1" />

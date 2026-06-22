@@ -12,7 +12,7 @@ def delete_vendor(
     vendor_id: int, 
     request: Request,
     db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("vendors.delete"))
+    current_user: User = Depends(PermissionChecker("vendors.delete"))
 ):
     vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
     if not vendor:
@@ -24,6 +24,9 @@ def delete_vendor(
         "vendor_code": vendor.vendor_code
     }
     
-    vendor.status = 0
+    from datetime import datetime, timezone
+    vendor.is_deleted = True
+    vendor.deleted_at = datetime.now(timezone.utc)
+    vendor.deleted_by_id = current_user.id
     db.commit()
     return None
