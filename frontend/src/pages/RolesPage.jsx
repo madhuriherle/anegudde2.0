@@ -28,7 +28,10 @@ const roleSchema = z.object({
   role_name: z.string().min(2, 'Role name must be at least 2 characters'),
   rank_level: z.coerce.number().min(1, 'Rank level must be at least 1'),
   is_all_access: z.boolean().default(false),
-  module_id: z.coerce.number().nullable().optional(),
+  module_id: z.preprocess(
+    (val) => (val === "" || val === "null" || val == null ? null : Number(val)),
+    z.number().nullable().optional()
+  ),
   status: z.coerce.number().default(1)
 });
 
@@ -160,7 +163,7 @@ const RolesPage = () => {
     if (!confirmed) return;
     const payload = {
         ...data,
-        module_id: data.module_id === "" || data.module_id === "null" ? null : Number(data.module_id)
+        module_id: data.module_id == null ? null : data.module_id,
     };
     mutation.mutate(payload);
   };
