@@ -48,6 +48,7 @@ def list_roles(
 @router.post("/create_role", response_model=RoleOut)
 def create_role(
     payload: RoleCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("roles.write"))
 ):
@@ -70,6 +71,7 @@ def create_role(
     db.add(new_role)
     db.commit()
     db.refresh(new_role)
+    request.state.audit_meta = {"role_name": new_role.role_name}
     return new_role
 
 
@@ -77,6 +79,7 @@ def create_role(
 def update_role(
     role_id: int,
     payload: RoleUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("roles.write"))
 ):
@@ -101,6 +104,7 @@ def update_role(
     role.updated_by = current_user.id
     db.commit()
     db.refresh(role)
+    request.state.audit_meta = {"role_name": role.role_name}
     return role
 
 
@@ -143,24 +147,6 @@ def list_privileges(db: Session = Depends(get_db), _: User = Depends(PermissionC
 def get_role_privileges(
     role_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(PermissionChecker("users.privileges.read"))
-):
-    privs = db.query(RolePrivilege).filter(RolePrivilege.role_id == role_id, RolePrivilege.status == 1).all()
-    return [p.privilege_id for p in privs]
-
-
-@router.put("/update_role_privileges/{role_id}")
-def update_role_privileges(
-    role_id: int,
-    payload: RolePrivilegeUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("users.privileges.write"))
-):
-    role = db.query(Role).filter(Role.id == role_id).first()
-    if not role:
-        raise HTTPException(status_code=404, detail="Role not found")
-
-    my_rank = current_user.role.rank_level if current_user.role else 99
     target_rank = role.rank_level if role else 99
 
     # Can only modify weaker roles (higher rank number), never same or stronger role
@@ -203,4 +189,5 @@ def update_role_privileges(
         ))
 
     db.commit()
+    request.state.audit_meta = {"role_name": role.role_name}
     return {"message": "Privileges updated successfully"}

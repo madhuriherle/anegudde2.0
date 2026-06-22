@@ -24,7 +24,8 @@ def update_user(
     # Audit meta
     request.state.audit_meta = {
         "target_full_name": user.full_name,
-        "target_username": user.username
+        "target_username": user.username,
+        "password_updated": False
     }
 
     # Hierarchical Check: my rank must be strictly better than target rank
@@ -83,6 +84,7 @@ def update_user(
         user.password = hash_password(payload.password)
         user.password_ref = encrypt_password(payload.password) # Refresh encrypted reference
         needs_reauth = True
+        request.state.audit_meta["password_updated"] = True
 
     if needs_reauth:
         user.security_stamp = str(uuid.uuid4())

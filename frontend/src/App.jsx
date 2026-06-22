@@ -91,7 +91,7 @@ function App() {
         <Route path="/settings/temple" element={<ProtectedRoute requiredPermission="settings.temple_identity.read"><TempleIdentitySettingsPage /></ProtectedRoute>} />
         <Route path="/settings/receipt" element={<ProtectedRoute requiredPermission="settings.receipt_settings.read"><ReceiptSettingsPage /></ProtectedRoute>} />
         <Route path="/settings/cleanup" element={<ProtectedRoute requiredPermission="settings.data_cleanup.read"><DataCleanupPage /></ProtectedRoute>} />
-        {/* <Route path="/settings/printers" element={<ProtectedRoute requiredPermission="settings.printers.read"><PrinterSettingsSettingsPage /></ProtectedRoute>} /> */}
+        <Route path="/settings/printers" element={<ProtectedRoute requiredPermission="settings.printers.read"><PrinterSettingsSettingsPage /></ProtectedRoute>} />
         <Route path="/settings/recycle-bin" element={<ProtectedRoute requiredPermission="recycle_bin.read"><RecycleBinPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute requiredPermission="profile.read"><ProfilePage /></ProtectedRoute>} />
       </Route>

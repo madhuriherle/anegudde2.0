@@ -788,7 +788,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _countController.clear();
 
       try {
-        await PrintingService.printToken(response, printerName: _selectedPrinterName.isNotEmpty ? _selectedPrinterName : null);
+        await PrintingService.printToken(
+          response,
+          printerName: _selectedPrinterName.isNotEmpty ? _selectedPrinterName : null,
+        );
         await _showSuccessPopup(context, response);
       } catch (e) {
         print('Printing error: $e');

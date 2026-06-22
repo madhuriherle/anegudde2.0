@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
@@ -358,23 +359,21 @@ class PrintingService {
       ),
     );
 
-    const cardWidth = 66 * PdfPageFormat.mm;
-    final cardHeight = userCode.isEmpty
-        ? 58 * PdfPageFormat.mm
-        : 64 * PdfPageFormat.mm;
-    const pageWidth =
-        80 * PdfPageFormat.mm; // Standard 80mm width for thermal printers
+    // Set page format to 80x80 (square/portrait) to prevent printer driver or layout
+    // engine from auto-rotating the document 90 degrees sideways.
+    const pageWidth = 80 * PdfPageFormat.mm;
+    const pageHeight = 80 * PdfPageFormat.mm;
+    const cardWidth = 72 * PdfPageFormat.mm;
 
     doc.addPage(
       pw.Page(
-        // Fixed custom portrait page to avoid landscape auto-rotation by drivers
-        pageFormat: PdfPageFormat(
+        pageFormat: const PdfPageFormat(
           pageWidth,
-          cardHeight,
-          marginTop: 1 * PdfPageFormat.mm,
-          marginBottom: 1 * PdfPageFormat.mm,
-          marginLeft: 3 * PdfPageFormat.mm,
-          marginRight: 3 * PdfPageFormat.mm,
+          pageHeight,
+          marginTop: 2 * PdfPageFormat.mm,
+          marginBottom: 2 * PdfPageFormat.mm,
+          marginLeft: 4 * PdfPageFormat.mm,
+          marginRight: 4 * PdfPageFormat.mm,
         ),
         orientation: pw.PageOrientation.portrait,
         build: (pw.Context context) {
