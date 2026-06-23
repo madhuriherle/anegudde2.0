@@ -46,5 +46,6 @@ class PasswordChangeRequest(BaseModel):
 class ProfileUpdateRequest(BaseModel):
     username: str
     full_name: str
+    user_code: str | None = None
     email: str | None = None
     phone: str | None = None

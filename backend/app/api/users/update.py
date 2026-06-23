@@ -25,7 +25,17 @@ def update_user(
     request.state.audit_meta = {
         "target_full_name": user.full_name,
         "target_username": user.username,
-        "password_updated": False
+        "password_updated": False,
+        "snapshot": {
+            "id": user.id,
+            "full_name": user.full_name,
+            "username": user.username,
+            "role_id": user.role_id,
+            "user_code": user.user_code,
+            "email": user.email,
+            "phone": user.phone,
+            "status": user.status,
+        }
     }
 
     # Hierarchical Check: my rank must be strictly better than target rank

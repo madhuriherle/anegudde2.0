@@ -21,7 +21,12 @@ def delete_vendor(
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
         "vendor_name": vendor.vendor_name,
-        "vendor_code": vendor.vendor_code
+        "vendor_code": vendor.vendor_code,
+        "snapshot": {
+            "id": vendor.id,
+            "vendor_name": vendor.vendor_name,
+            "vendor_code": vendor.vendor_code,
+        }
     }
     
     from datetime import datetime, timezone

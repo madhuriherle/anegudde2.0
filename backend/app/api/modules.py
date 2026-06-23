@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session, selectinload
 from typing import List
 
@@ -11,6 +11,7 @@ router = APIRouter(prefix="/modules", tags=["modules"])
 @router.post("/", response_model=ModuleOut)
 def create_module(
     *,
+    request: Request,
     db: Session = Depends(get_db),
     module_in: ModuleCreate,
     current_user: User = Depends(get_current_user)
@@ -29,6 +30,18 @@ def create_module(
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+    request.state.audit_meta = {
+        "module_name": db_obj.name,
+        "snapshot": {
+            "id": db_obj.id,
+            "name": db_obj.name,
+            "route": db_obj.route,
+            "icon": db_obj.icon,
+            "parent_id": db_obj.parent_id,
+            "display_order": db_obj.display_order,
+            "status": db_obj.status,
+        }
+    }
     return db_obj
 
 @router.get("/menu", response_model=List[ModuleOut])
@@ -72,9 +85,19 @@ def get_user_menu(
         # Otherwise fetch all top-level roots
         roots = query.filter(Module.parent_id == None).order_by(Module.display_order).all()
     
+    # Modules hidden from the sidebar menu (rank-1-gated features)
+    HIDDEN_FROM_MENU = {
+        "settings.data_cleanup": "/settings/cleanup",
+        "recycle_bin": "/settings/recycle-bin",
+    }
+
     def build_tree(module):
         # Rank-based module restriction check
         if module.min_rank_level is not None and my_rank > module.min_rank_level:
+            return None
+
+        # Hide rank-1-gated features from the menu for non-rank-1 users
+        if module.route in HIDDEN_FROM_MENU.values() and my_rank != 1:
             return None
 
         has_active_children = any(sm.status == 1 for sm in module.submodules)
@@ -177,7 +200,18 @@ def get_privilege_tree(
         "Devotees",
         "Wastages",
         "Reports",  # Hide the generic grouping headers
+        "Data Cleanup",
+        "Recycle Bin",
         # We keep "Canteen Module", "Master Settings", "Users" as they serve as the "Rooms" for filtering
+    }
+
+    # Privileges hidden from the privilege tree (rank-1-gated features)
+    HIDDEN_PRIVILEGES = {
+        "recycle_bin.read",
+        "recycle_bin.write",
+        "recycle_bin.delete",
+        "settings.data_cleanup.read",
+        "settings.data_cleanup.write",
     }
 
     modules = (
@@ -204,7 +238,7 @@ def get_privilege_tree(
             pass
         
         active_privileges = sorted(
-            [privilege for privilege in module.privileges if privilege.status == 1],
+            [privilege for privilege in module.privileges if privilege.status == 1 and privilege.privilege_name not in HIDDEN_PRIVILEGES],
             key=lambda privilege: privilege.privilege_name
         )
 
@@ -305,6 +339,7 @@ def get_module(
 @router.put("/{module_id}", response_model=ModuleOut)
 def update_module(
     *,
+    request: Request,
     db: Session = Depends(get_db),
     module_id: int,
     module_in: ModuleUpdate,
@@ -320,6 +355,19 @@ def update_module(
     if not db_obj:
         raise HTTPException(status_code=404, detail="Module not found")
     
+    request.state.audit_meta = {
+        "module_name": db_obj.name,
+        "snapshot": {
+            "id": db_obj.id,
+            "name": db_obj.name,
+            "route": db_obj.route,
+            "icon": db_obj.icon,
+            "parent_id": db_obj.parent_id,
+            "display_order": db_obj.display_order,
+            "status": db_obj.status,
+        }
+    }
+    
     update_data = module_in.model_dump(exclude_unset=True)
     for field in update_data:
         setattr(db_obj, field, update_data[field])
@@ -332,6 +380,7 @@ def update_module(
 @router.delete("/{module_id}")
 def delete_module(
     *,
+    request: Request,
     db: Session = Depends(get_db),
     module_id: int,
     current_user: User = Depends(get_current_user)
@@ -349,6 +398,18 @@ def delete_module(
     if db_obj.submodules:
         raise HTTPException(status_code=400, detail="Cannot delete module with submodules")
     
+    request.state.audit_meta = {
+        "module_name": db_obj.name,
+        "snapshot": {
+            "id": db_obj.id,
+            "name": db_obj.name,
+            "route": db_obj.route,
+            "icon": db_obj.icon,
+            "parent_id": db_obj.parent_id,
+            "status": db_obj.status,
+        }
+    }
+    
     db.delete(db_obj)
     db.commit()
     return {"status": "success"}
@@ -356,6 +417,7 @@ def delete_module(
 @router.post("/{module_id}/link-privileges")
 def link_privileges(
     *,
+    request: Request,
     db: Session = Depends(get_db),
     module_id: int,
     privilege_ids: List[int],
@@ -370,6 +432,15 @@ def link_privileges(
     module = db.query(Module).filter(Module.id == module_id).first()
     if not module:
         raise HTTPException(status_code=404, detail="Module not found")
+    
+    request.state.audit_meta = {
+        "module_name": module.name,
+        "snapshot": {
+            "id": module.id,
+            "name": module.name,
+            "privilege_ids": privilege_ids,
+        }
+    }
     
     db.query(Privilege).filter(Privilege.id.in_(privilege_ids)).update(
         {Privilege.module_id: module_id}, synchronize_session=False

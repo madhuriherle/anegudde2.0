@@ -31,7 +31,10 @@ def update_category(
     row.updated_by = current_user.id
     
     # Attach snapshot metadata
-    request.state.audit_meta = {"category_name": row.category_name}
+    request.state.audit_meta = {
+        "category_name": row.category_name,
+        "snapshot": {"id": row.id, "category_name": row.category_name, "type_id": row.type_id}
+    }
     
     db.commit()
     db.refresh(row)

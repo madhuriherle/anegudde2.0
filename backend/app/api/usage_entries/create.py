@@ -18,7 +18,8 @@ def create_consumption(
     
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
-        "usage_date": entry.usage_date.isoformat() if entry.usage_date else None
+        "usage_date": entry.usage_date.isoformat() if entry.usage_date else None,
+        "snapshot": {"id": entry.id, "usage_date": entry.usage_date.isoformat() if entry.usage_date else None}
     }
     
     return entry

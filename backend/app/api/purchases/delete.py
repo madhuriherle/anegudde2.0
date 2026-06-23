@@ -18,7 +18,14 @@ def remove_purchase(
     if entry:
         request.state.audit_meta = {
             "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
-            "bill_no": entry.bill_no
+            "bill_no": entry.bill_no,
+            "snapshot": {
+                "id": entry.id,
+                "bill_no": entry.bill_no,
+                "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
+                "purchase_date": entry.purchase_date.isoformat() if entry.purchase_date else None,
+                "total_amount": str(entry.total_amount) if entry.total_amount else None,
+            }
         }
     
     delete_purchase(purchase_id, db, current_user)

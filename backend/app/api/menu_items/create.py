@@ -40,6 +40,9 @@ def create_menu_item(
     db.refresh(db_item)
 
     # Attach snapshot metadata
-    request.state.audit_meta = {"dish_name": db_item.dish_name}
+    request.state.audit_meta = {
+        "dish_name": db_item.dish_name,
+        "snapshot": {"id": db_item.id, "dish_name": db_item.dish_name}
+    }
 
     return db_item

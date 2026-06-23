@@ -48,7 +48,8 @@ def create_donation_type(
     
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
-        "type_name": row.type_name
+        "type_name": row.type_name,
+        "snapshot": {"id": row.id, "type_name": row.type_name, "receipt_prefix": row.receipt_prefix, "is_item_donation": row.is_item_donation}
     }
     
     return row

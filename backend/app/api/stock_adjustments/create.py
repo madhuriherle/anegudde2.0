@@ -24,7 +24,8 @@ def sync_for_consumption(
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
         "consumption_id": consumption_id,
-        "usage_date": consumption.usage_date.isoformat() if consumption.usage_date else None
+        "usage_date": consumption.usage_date.isoformat() if consumption.usage_date else None,
+        "snapshot": {"consumption_id": consumption_id, "usage_date": consumption.usage_date.isoformat() if consumption.usage_date else None}
     }
 
     now = datetime.now(timezone.utc)

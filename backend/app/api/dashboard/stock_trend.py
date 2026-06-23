@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 import logging
@@ -86,7 +86,7 @@ def stock_trend(
     return trend
 
 @router.post("/backfill_stock_trend")
-def backfill_trend(db: Session = Depends(get_db), _: User = Depends(PermissionChecker("dashboard.read"))):
+def backfill_trend(request: Request, db: Session = Depends(get_db), _: User = Depends(PermissionChecker("dashboard.read"))):
     from app.utils.tasks import generate_daily_stock_summary
     from datetime import date, timedelta
     
@@ -98,7 +98,10 @@ def backfill_trend(db: Session = Depends(get_db), _: User = Depends(PermissionCh
         for i in range(31):
             target_date = start_date + timedelta(days=i)
             generate_daily_stock_summary(target_date)
-            
+        
+        request.state.audit_meta = {
+            "snapshot": {"action": "backfill_stock_trend", "days": 31, "start_date": str(start_date)}
+        }
         return {"message": "Trend data backfilled successfully"}
     except Exception as e:
         logger.error(f"Backfill failed: {str(e)}")

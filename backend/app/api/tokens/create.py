@@ -18,7 +18,8 @@ def create_tokens(
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
         "receipt_display_number": entry.receipt_display_number,
-        "token_count": entry.token_count
+        "token_count": entry.token_count,
+        "snapshot": {"id": entry.id, "receipt_display_number": entry.receipt_display_number, "token_count": entry.token_count}
     }
     
     return entry

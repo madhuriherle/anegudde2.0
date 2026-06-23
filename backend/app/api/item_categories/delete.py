@@ -16,7 +16,10 @@ def delete_category(
     if not row:
         raise HTTPException(status_code=404, detail="Category not found")
     
-    request.state.audit_meta = {"category_name": row.category_name}
+    request.state.audit_meta = {
+        "category_name": row.category_name,
+        "snapshot": {"id": row.id, "category_name": row.category_name}
+    }
 
     from datetime import datetime, timezone
     row.is_deleted = True

@@ -39,7 +39,8 @@ def update_menu_item(
     
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
-        "dish_name": db_item.dish_name
+        "dish_name": db_item.dish_name,
+        "snapshot": {"id": db_item.id, "dish_name": db_item.dish_name}
     }
     
     return db_item

@@ -25,7 +25,8 @@ def change_password(
     current_user.password_ref = encrypt_password(payload.new_password)
     current_user.security_stamp = str(uuid.uuid4())
     request.state.audit_meta = {
-        "password_updated": True
+        "password_updated": True,
+        "snapshot": {"username": current_user.username, "full_name": current_user.full_name}
     }
     db.commit()
     return {"message": "Password updated successfully"}

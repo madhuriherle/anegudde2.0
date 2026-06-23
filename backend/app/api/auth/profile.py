@@ -61,6 +61,8 @@ def update_profile(
     current_user.full_name = full_name
     current_user.email = email
     current_user.phone = phone
+    if payload.user_code is not None:
+        current_user.user_code = payload.user_code.upper().strip() if payload.user_code.strip() else None
 
     current_user.security_stamp = str(uuid.uuid4())
     current_user.updated_at = datetime.now(timezone.utc)
@@ -68,7 +70,12 @@ def update_profile(
     
     # Attach audit metadata
     request.state.audit_meta = {
-        "actor_name": current_user.full_name or current_user.username
+        "actor_name": current_user.full_name or current_user.username,
+        "snapshot": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "full_name": current_user.full_name,
+        }
     }
     
     db.commit()

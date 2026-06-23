@@ -17,7 +17,10 @@ def delete_menu_item(
     if not row:
         raise HTTPException(status_code=404, detail="Menu item not found")
     
-    request.state.audit_meta = {"dish_name": row.dish_name}
+    request.state.audit_meta = {
+        "dish_name": row.dish_name,
+        "snapshot": {"id": row.id, "dish_name": row.dish_name}
+    }
     
     from datetime import datetime, timezone
     row.is_deleted = True

@@ -48,7 +48,8 @@ def create_category(
     
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
-        "category_name": row.category_name
+        "category_name": row.category_name,
+        "snapshot": {"id": row.id, "category_name": row.category_name, "type_id": row.type_id}
     }
     
     return row

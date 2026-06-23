@@ -32,7 +32,13 @@ def create_return(
     request.state.audit_meta = {
         "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
         "bill_no": entry.purchase_entry.bill_no if entry.purchase_entry else None,
-        "return_date": entry.return_date.isoformat() if entry.return_date else None
+        "return_date": entry.return_date.isoformat() if entry.return_date else None,
+        "snapshot": {
+            "id": entry.id,
+            "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
+            "bill_no": entry.purchase_entry.bill_no if entry.purchase_entry else None,
+            "return_date": entry.return_date.isoformat() if entry.return_date else None,
+        }
     }
     
     return entry
@@ -52,7 +58,13 @@ def update_return(
     request.state.audit_meta = {
         "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
         "bill_no": entry.purchase_entry.bill_no if entry.purchase_entry else None,
-        "return_date": entry.return_date.isoformat() if entry.return_date else None
+        "return_date": entry.return_date.isoformat() if entry.return_date else None,
+        "snapshot": {
+            "id": entry.id,
+            "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
+            "bill_no": entry.purchase_entry.bill_no if entry.purchase_entry else None,
+            "return_date": entry.return_date.isoformat() if entry.return_date else None,
+        }
     }
     
     return entry
@@ -76,7 +88,13 @@ def delete_return(
         request.state.audit_meta = {
             "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
             "bill_no": entry.purchase_entry.bill_no if entry.purchase_entry else None,
-            "return_date": entry.return_date.isoformat() if entry.return_date else None
+            "return_date": entry.return_date.isoformat() if entry.return_date else None,
+            "snapshot": {
+                "id": entry.id,
+                "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
+                "bill_no": entry.purchase_entry.bill_no if entry.purchase_entry else None,
+                "return_date": entry.return_date.isoformat() if entry.return_date else None,
+            }
         }
 
     purchase_return_service.delete_purchase_return(return_id, db, current_user)

@@ -18,7 +18,7 @@ def consumptions_report(
     to_date: date = Query(...), 
     group_by: str = Query("day"), 
     db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("reports.consumptions.read"))
+    _: User = Depends(PermissionChecker("daily_usage.read"))
 ):
     period = period_expr(group_by, ConsumptionEntry.usage_date)
     rows = (
@@ -40,7 +40,7 @@ def cooked_remained_totals(
     from_date: date = Query(...), 
     to_date: date = Query(...), 
     db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("reports.consumptions.read"))
+    _: User = Depends(PermissionChecker("daily_usage.read"))
 ):
     row = (
         db.query(
@@ -73,7 +73,7 @@ def raw_stock_movement(
     from_date: date = Query(...), 
     to_date: date = Query(...), 
     db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("reports.consumptions.read"))
+    _: User = Depends(PermissionChecker("daily_usage.read"))
 ):
     issue_qty = (
         db.query(func.coalesce(func.sum(StockLedger.qty_out), 0))

@@ -53,7 +53,16 @@ def create_user(
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
         "target_full_name": new_user.full_name,
-        "target_username": new_user.username
+        "target_username": new_user.username,
+        "snapshot": {
+            "id": new_user.id,
+            "full_name": new_user.full_name,
+            "username": new_user.username,
+            "role_id": new_user.role_id,
+            "user_code": new_user.user_code,
+            "email": new_user.email,
+            "phone": new_user.phone,
+        }
     }
     
     return new_user

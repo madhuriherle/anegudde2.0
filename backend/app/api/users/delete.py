@@ -22,7 +22,17 @@ def delete_user(
     # Snapshot metadata for audit logging
     request.state.audit_meta = {
         "target_full_name": target_user.full_name,
-        "target_username": target_user.username
+        "target_username": target_user.username,
+        "snapshot": {
+            "id": target_user.id,
+            "full_name": target_user.full_name,
+            "username": target_user.username,
+            "role_id": target_user.role_id,
+            "user_code": target_user.user_code,
+            "email": target_user.email,
+            "phone": target_user.phone,
+            "status": target_user.status,
+        }
     }
         
     # Hierarchical Check: my rank must be strictly better than target rank

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
@@ -141,6 +141,8 @@ def get_trash_items(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("recycle_bin.read"))
 ):
+    if not (current_user.role and current_user.role.rank_level == 1):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super Admin access required.")
     trash_items = []
     for type_key, (model_cls, name_col, display_label) in models_map.items():
         query = db.query(model_cls).filter(model_cls.is_deleted == True)
@@ -181,10 +183,13 @@ def get_trash_items(
 
 @router.post("/restore")
 def restore_trash_item(
+    request: Request,
     payload: TrashActionPayload,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("recycle_bin.write"))
 ):
+    if not (current_user.role and current_user.role.rank_level == 1):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super Admin access required.")
     model_info = models_map.get(payload.type)
     if not model_info:
         raise HTTPException(
@@ -192,7 +197,7 @@ def restore_trash_item(
             detail=f"Invalid type: {payload.type}"
         )
 
-    model_cls, _, display_label = model_info
+    model_cls, name_col, display_label = model_info
     
     # Eager load items for transactions to apply stock updates
     query = db.query(model_cls).filter(model_cls.id == payload.id, model_cls.is_deleted == True)
@@ -206,6 +211,15 @@ def restore_trash_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"{display_label} not found in Recycle Bin."
         )
+
+    request.state.audit_meta = {
+        "snapshot": {
+            "type": payload.type,
+            "type_label": display_label,
+            "record_id": payload.id,
+            "record_name": str(getattr(row, name_col, row.id)),
+        }
+    }
 
     # Re-apply transaction state and stock adjustments if it is a transaction
     if payload.type == "purchase":
@@ -278,10 +292,13 @@ def restore_trash_item(
 
 @router.post("/delete_permanent")
 def permanently_delete_item(
+    request: Request,
     payload: TrashActionPayload,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("recycle_bin.delete"))
 ):
+    if not (current_user.role and current_user.role.rank_level == 1):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super Admin access required.")
     model_info = models_map.get(payload.type)
     if not model_info:
         raise HTTPException(
@@ -289,7 +306,7 @@ def permanently_delete_item(
             detail=f"Invalid type: {payload.type}"
         )
 
-    model_cls, _, display_label = model_info
+    model_cls, name_col, display_label = model_info
     row = (
         db.query(model_cls)
         .filter(model_cls.id == payload.id, model_cls.is_deleted == True)
@@ -300,6 +317,16 @@ def permanently_delete_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"{display_label} not found in Recycle Bin."
         )
+
+    request.state.audit_meta = {
+        "snapshot": {
+            "type": payload.type,
+            "type_label": display_label,
+            "record_id": payload.id,
+            "record_name": str(getattr(row, name_col, row.id)),
+            "force": payload.force,
+        }
+    }
 
     if payload.force:
         resolve_references_for_force_delete(db, payload.type, payload.id)
@@ -331,10 +358,13 @@ def permanently_delete_item(
 
 @router.post("/empty")
 def empty_trash(
+    request: Request,
     force: bool = Query(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("recycle_bin.delete"))
 ):
+    if not (current_user.role and current_user.role.rank_level == 1):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super Admin access required.")
     # Specific order to respect foreign key dependencies: Transactions first, then child setup, then parent setup tables
     delete_order = [
         ("purchase_return", PurchaseReturnEntry, "Purchase Return"),
@@ -408,6 +438,15 @@ def empty_trash(
 
     # Final commit for the main transaction
     db.commit()
+
+    request.state.audit_meta = {
+        "snapshot": {
+            "action": "empty_trash",
+            "force": force,
+            "succeeded_count": succeeded_count,
+            "failed_count": len(failed_items),
+        }
+    }
 
     return {
         "status": "success",

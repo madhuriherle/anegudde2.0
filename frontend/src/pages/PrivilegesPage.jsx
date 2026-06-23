@@ -341,10 +341,40 @@ const PrivilegesPage = () => {
         next = next.filter(
           (id) => id !== row.writePriv?.id && id !== row.deletePriv?.id
         );
+
+        // Find all descendants of this module row and uncheck them
+        const descendantIds = new Set();
+        groupedModules.forEach((group) => {
+          group.rows.forEach((r) => {
+            if (r.parentIds?.includes(row.key)) {
+              if (r.readPriv) descendantIds.add(r.readPriv.id);
+              if (r.writePriv) descendantIds.add(r.writePriv.id);
+              if (r.deletePriv) descendantIds.add(r.deletePriv.id);
+            }
+          });
+        });
+        next = next.filter((id) => !descendantIds.has(id));
       }
 
-      if ((action === 'write' || action === 'delete') && !hasPrivilege && row.readPriv) {
-        next.push(row.readPriv.id);
+      if (!hasPrivilege) {
+        // Checking a privilege (could be read, write, or delete)
+
+        // If checking WRITE or DELETE, also check READ for this row
+        if ((action === 'write' || action === 'delete') && row.readPriv) {
+          next.push(row.readPriv.id);
+        }
+
+        // Find all ancestor modules of this row and check their READ privilege
+        if (row.parentIds && row.parentIds.length > 0) {
+          row.parentIds.forEach((parentId) => {
+            groupedModules.forEach((group) => {
+              const parentRow = group.rows.find((r) => r.key === parentId);
+              if (parentRow && parentRow.readPriv) {
+                next.push(parentRow.readPriv.id);
+              }
+            });
+          });
+        }
       }
 
       return uniqueIds(next);
@@ -405,10 +435,23 @@ const PrivilegesPage = () => {
 
         // If unchecking READ, also uncheck WRITE and DELETE for these rows
         if (action === 'read') {
+          const descendantIds = new Set();
           group.rows.forEach(row => {
             if (row.writePriv) next = next.filter(id => id !== row.writePriv.id);
             if (row.deletePriv) next = next.filter(id => id !== row.deletePriv.id);
+
+            // Find all descendants of this module row and uncheck them
+            groupedModules.forEach((g) => {
+              g.rows.forEach((r) => {
+                if (r.parentIds?.includes(row.key)) {
+                  if (r.readPriv) descendantIds.add(r.readPriv.id);
+                  if (r.writePriv) descendantIds.add(r.writePriv.id);
+                  if (r.deletePriv) descendantIds.add(r.deletePriv.id);
+                }
+              });
+            });
           });
+          next = next.filter((id) => !descendantIds.has(id));
         }
       } else {
         // Check all in this column
@@ -421,6 +464,20 @@ const PrivilegesPage = () => {
             if (row.readPriv) next.push(row.readPriv.id);
           });
         }
+
+        // Also check parent READ privileges for all rows that are being checked
+        group.rows.forEach(row => {
+          if (row.parentIds && row.parentIds.length > 0) {
+            row.parentIds.forEach((parentId) => {
+              groupedModules.forEach((g) => {
+                const parentRow = g.rows.find((r) => r.key === parentId);
+                if (parentRow && parentRow.readPriv) {
+                  next.push(parentRow.readPriv.id);
+                }
+              });
+            });
+          }
+        });
       }
       return uniqueIds(next);
     });

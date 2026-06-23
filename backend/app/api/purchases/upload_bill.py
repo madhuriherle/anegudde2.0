@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, PermissionChecker
@@ -15,6 +15,7 @@ BASE_DIR = Path(__file__).resolve().parents[3]
 
 @router.post("/upload_bill/{purchase_id}")
 async def upload_purchase_bill(
+    request: Request,
     purchase_id: int,
     bill_file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -25,6 +26,15 @@ async def upload_purchase_bill(
         entry = db.query(PurchaseEntry).filter(PurchaseEntry.id == purchase_id).first()
         if not entry:
             raise HTTPException(status_code=404, detail="Purchase not found")
+
+        request.state.audit_meta = {
+            "snapshot": {
+                "purchase_id": purchase_id,
+                "bill_no": entry.bill_no,
+                "vendor_name": entry.vendor_name,
+                "new_filename": bill_file.filename,
+            }
+        }
 
         # Delete existing bills for this purchase first
         old_bills = db.query(PurchaseBill).filter(PurchaseBill.purchase_id == purchase_id).all()

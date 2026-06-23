@@ -16,7 +16,11 @@ def delete_unit(
     if not row:
         raise HTTPException(status_code=404, detail="Unit not found")
     
-    request.state.audit_meta = {"unit_name": row.unit_name, "unit_code": row.unit_code}
+    request.state.audit_meta = {
+        "unit_name": row.unit_name,
+        "unit_code": row.unit_code,
+        "snapshot": {"id": row.id, "unit_name": row.unit_name, "unit_code": row.unit_code}
+    }
     
     from datetime import datetime, timezone
     row.is_deleted = True

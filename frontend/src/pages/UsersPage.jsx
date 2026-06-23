@@ -57,6 +57,24 @@ const userSchema = z.object({
   path: ["confirm_password"],
 });
 
+const passwordResetSchema = z.object({
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirm_password: z.string()
+}).refine((data) => {
+  if (data.password && !passwordRule.test(data.password)) {
+    return false;
+  }
+  return true;
+}, {
+  message: PASSWORD_RULE_MESSAGE,
+  path: ["password"],
+}).refine((data) => {
+  return data.password === data.confirm_password;
+}, {
+  message: "Passwords don't match",
+  path: ["confirm_password"],
+});
+
 
 
 const UsersPage = () => {
@@ -76,6 +94,8 @@ const UsersPage = () => {
 
   const [open, setOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [passwordResetOpen, setPasswordResetOpen] = useState(false);
+  const [passwordResetUser, setPasswordResetUser] = useState(null);
 
   // Fetch Data
   const { data: users, isLoading } = useQuery({
@@ -100,6 +120,17 @@ const UsersPage = () => {
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm({
     resolver: zodResolver(userSchema),
     mode: 'onChange'
+  });
+
+  const {
+    register: registerPasswordReset,
+    handleSubmit: handleSubmitPasswordReset,
+    reset: resetPasswordReset,
+    formState: { errors: passwordResetErrors }
+  } = useForm({
+    resolver: zodResolver(passwordResetSchema),
+    mode: 'onChange',
+    defaultValues: { password: '', confirm_password: '' }
   });
 
   const mutation = useMutation({
@@ -169,6 +200,36 @@ const UsersPage = () => {
     setViewingUser(null);
   };
 
+  const handleOpenPasswordReset = (userData) => {
+    setPasswordResetUser(userData);
+    resetPasswordReset({ password: '', confirm_password: '' });
+    setPasswordResetOpen(true);
+  };
+
+  const handleClosePasswordReset = () => {
+    setPasswordResetOpen(false);
+    setPasswordResetUser(null);
+  };
+
+  const onSubmitPasswordReset = async (data) => {
+    const confirmed = await showConfirm(
+      "Confirm Password Reset",
+      `Are you sure you want to reset the password for user "${passwordResetUser?.username}"?`
+    );
+
+    if (confirmed) {
+      mutation.mutate({
+        id: passwordResetUser?.id,
+        password: data.password,
+        isEditMode: true
+      }, {
+        onSuccess: () => {
+          handleClosePasswordReset();
+        }
+      });
+    }
+  };
+
   const onSubmit = async (data) => {
     if (!editingUser && !data.password) {
       showError('Password is required');
@@ -181,7 +242,12 @@ const UsersPage = () => {
     );
 
     if (confirmed) {
-      mutation.mutate({ ...data, id: editingUser?.id, isEditMode: Boolean(editingUser) });
+      const payload = { ...data };
+      if (editingUser) {
+        delete payload.password;
+        delete payload.confirm_password;
+      }
+      mutation.mutate({ ...payload, id: editingUser?.id, isEditMode: Boolean(editingUser) });
     }
   };
 
@@ -227,6 +293,14 @@ const UsersPage = () => {
     <div className="flex items-center justify-center gap-2 px-4">
           <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
           {canWrite && <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>}
+          {canWrite && (
+            <button
+              onClick={() => handleOpenPasswordReset(info.row.original)}
+              className="px-3 py-1.5 rounded-md text-sm font-semibold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-700 hover:text-white transition-colors"
+            >
+              Password
+            </button>
+          )}
           {canDelete && <button
         onClick={async () => {
           const confirmed = await showConfirm('Delete User', `Are you sure you want to delete user "${info.row.original.username}"?`);
@@ -411,19 +485,23 @@ const UsersPage = () => {
                 {errors.role_id && <p className="text-xs text-red-500">{errors.role_id.message}</p>}
               </div>
 
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <Label className="text-text-main">{editingUser ? "Password" : "Password *"}</Label>
-                  {!editingUser && <span className="text-[10px] text-gray-400 font-medium">Aa + 1 + @</span>}
-                </div>
-                <Input {...register('password')} type="password" className="text-text-main" />
-                {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-text-main">{editingUser ? "Confirm Password" : "Confirm Password *"}</Label>
-                <Input {...register('confirm_password')} type="password" className="text-text-main" />
-                {errors.confirm_password && <p className="text-xs text-red-500">{errors.confirm_password.message}</p>}
-              </div>
+              {!editingUser && (
+                <>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-text-main">Password *</Label>
+                      <span className="text-[10px] text-gray-400 font-medium">Aa + 1 + @</span>
+                    </div>
+                    <Input {...register('password')} type="password" className="text-text-main" />
+                    {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-text-main">Confirm Password *</Label>
+                    <Input {...register('confirm_password')} type="password" className="text-text-main" />
+                    {errors.confirm_password && <p className="text-xs text-red-500">{errors.confirm_password.message}</p>}
+                  </div>
+                </>
+              )}
             </div>
             <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 bg-[#F3E8D4]">
               <Button type="button" variant="ghost" onClick={handleClose} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
@@ -434,6 +512,61 @@ const UsersPage = () => {
                 disabled={mutation.isPending}
                 className="w-28 h-10 bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
                 {mutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={passwordResetOpen} onOpenChange={(val) => {
+        if (!val && !mutation.isPending) {
+          handleClosePasswordReset();
+        }
+      }}>
+        <DialogContent
+          className="max-w-md border-border-temple"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}>
+          
+          <DialogHeader className="border-b border-border-temple/40 pb-4">
+            <DialogTitle className="text-text-main">
+              Reset Password for {passwordResetUser?.full_name}
+            </DialogTitle>
+          </DialogHeader>
+          <form 
+            onSubmit={handleSubmitPasswordReset(onSubmitPasswordReset)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+              }
+            }}
+            className="space-y-4 pt-4 pb-0"
+          >
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <Label className="text-text-main">New Password *</Label>
+                  <span className="text-[10px] text-gray-400 font-medium">Aa + 1 + @</span>
+                </div>
+                <Input {...registerPasswordReset('password')} type="password" className="text-text-main" />
+                {passwordResetErrors.password && <p className="text-xs text-red-500">{passwordResetErrors.password.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-text-main">Confirm New Password *</Label>
+                <Input {...registerPasswordReset('confirm_password')} type="password" className="text-text-main" />
+                {passwordResetErrors.confirm_password && <p className="text-xs text-red-500">{passwordResetErrors.confirm_password.message}</p>}
+              </div>
+            </div>
+            <DialogFooter className="gap-3 px-6 py-4 border-t border-border-temple/40 bg-[#F3E8D4]">
+              <Button type="button" variant="ghost" onClick={handleClosePasswordReset} className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={mutation.isPending}
+                className="w-28 h-10 bg-primary hover:bg-primary/90 text-white font-bold border-none shadow-lg">
+                {mutation.isPending ? 'Resetting...' : 'Reset'}
               </Button>
             </DialogFooter>
           </form>

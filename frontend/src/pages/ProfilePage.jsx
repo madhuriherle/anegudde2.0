@@ -20,9 +20,9 @@ const ProfilePage = () => {
   const [profileForm, setProfileForm] = useState({
     username: '',
     full_name: '',
+    user_code: '',
     email: '',
-    phone: '',
-    user_code: ''
+    phone: ''
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -39,9 +39,9 @@ const ProfilePage = () => {
     setProfileForm({
       username: user?.username || '',
       full_name: user?.full_name || '',
+      user_code: user?.user_code || '',
       email: user?.email || '',
-      phone: user?.phone || '',
-      user_code: user?.user_code || ''
+      phone: user?.phone || ''
     });
   }, [user]);
 
@@ -77,6 +77,7 @@ const ProfilePage = () => {
       await api.put('/auth/update_profile', {
         username: profileForm.username,
         full_name: profileForm.full_name,
+        user_code: profileForm.user_code || null,
         email: profileForm.email || null,
         phone: profileForm.phone || null
       });
@@ -171,7 +172,7 @@ const ProfilePage = () => {
 
                 <div className="space-y-1.5">
                   <Label className="text-text-main font-bold">User Code</Label>
-                  <Input value={profileForm.user_code} disabled className="bg-bg-temple/40 font-mono text-secondary font-bold" />
+                  <Input value={profileForm.user_code} onChange={updateProfileField('user_code')} className="text-text-main" placeholder="e.g. CM" />
                 </div>
 
                 <div className="space-y-1.5">

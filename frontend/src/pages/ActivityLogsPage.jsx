@@ -184,11 +184,37 @@ const ActivityLogsPage = () => {
       const receipt = meta.receipt_display_number ? ` ${meta.receipt_display_number}` : '';
       sentence = `${verb} token receipt ${receipt}`;
     }
+    else if (endpoint.includes('/users/')) {
+      const roleName = meta.role_name ? `'${meta.role_name}'` : '';
+      const userName = meta.target_full_name ? `'${meta.target_full_name}'` : '';
+      if (endpoint.includes('/create_role')) sentence = `created role ${roleName}`;
+      else if (endpoint.includes('/update_role_privileges')) sentence = `updated role privileges for ${roleName}`;
+      else if (endpoint.includes('/update_role')) sentence = `updated role ${roleName}`;
+      else if (endpoint.includes('/delete_role')) sentence = `deleted role ${roleName}`;
+      else if (endpoint.includes('/create_user')) sentence = `created user ${userName}`;
+      else if (endpoint.includes('/update_user')) {
+        if (meta.password_updated) {
+          sentence = `reset password for user ${userName}`;
+        } else {
+          sentence = `updated user ${userName}`;
+        }
+      }
+      else if (endpoint.includes('/delete_user')) sentence = `deleted user ${userName}`;
+      else {
+        const rawPath = cleanPath(endpoint);
+        const parts = rawPath.split('/');
+        let lastPart = parts.reverse().find(p => !/^\d+$/.test(p)) || '';
+        lastPart = lastPart.replace(/^(create_|update_|delete_|list_)/, '');
+        const target = lastPart.replace(/_/g, ' ').replace(/-/g, ' ') || 'system';
+        sentence = `${verb} ${target}`;
+      }
+    }
     else {
       const rawPath = cleanPath(endpoint);
       const parts = rawPath.split('/');
-      const lastPart = parts.reverse().find(p => !/^\d+$/.test(p));
-      const target = lastPart?.replace(/_/g, ' ').replace(/-/g, ' ') || 'system';
+      let lastPart = parts.reverse().find(p => !/^\d+$/.test(p)) || '';
+      lastPart = lastPart.replace(/^(create_|update_|delete_|list_)/, '');
+      const target = lastPart.replace(/_/g, ' ').replace(/-/g, ' ') || 'system';
       sentence = `${verb} ${target}`;
     }
 

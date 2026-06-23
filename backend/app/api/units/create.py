@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import Unit, User
@@ -7,6 +7,7 @@ from app.schemas.unit import UnitCreate, UnitOut
 router = APIRouter()
 @router.post("/create_unit", response_model=UnitOut, status_code=status.HTTP_201_CREATED)
 def create_unit(
+    request: Request,
     payload: UnitCreate, 
     db: Session = Depends(get_db), 
     current_user: User = Depends(PermissionChecker("units.write"))
@@ -20,4 +21,9 @@ def create_unit(
     now = datetime.now(timezone.utc)
     row = Unit(**data, created_at=now, updated_at=now, created_by=current_user.id, updated_by=current_user.id)
     db.add(row); db.commit(); db.refresh(row)
+    request.state.audit_meta = {
+        "unit_name": row.unit_name,
+        "unit_code": row.unit_code,
+        "snapshot": {"id": row.id, "unit_name": row.unit_name, "unit_code": row.unit_code}
+    }
     return row

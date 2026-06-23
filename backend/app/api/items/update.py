@@ -23,7 +23,14 @@ def update_item(
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
         "item_name": entry.item_name,
-        "item_id": entry.id
+        "item_id": entry.id,
+        "snapshot": {
+            "id": entry.id,
+            "item_name": entry.item_name,
+            "category_id": entry.category_id,
+            "unit_id": entry.unit_id,
+            "current_stock": str(entry.current_stock) if entry.current_stock else None,
+        }
     }
     
     return entry

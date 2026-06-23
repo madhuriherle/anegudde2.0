@@ -57,7 +57,16 @@ def create_role(
     db.add(new_role)
     db.commit()
     db.refresh(new_role)
-    request.state.audit_meta = {"role_name": new_role.role_name}
+    request.state.audit_meta = {
+        "role_name": new_role.role_name,
+        "snapshot": {
+            "id": new_role.id,
+            "role_name": new_role.role_name,
+            "rank_level": new_role.rank_level,
+            "module_id": new_role.module_id,
+            "is_all_access": new_role.is_all_access,
+        }
+    }
     return new_role
 
 
@@ -90,8 +99,18 @@ def update_role(
     role.updated_by = current_user.id
     db.commit()
     db.refresh(role)
-    request.state.audit_meta = {"role_name": role.role_name}
+    request.state.audit_meta = {
+        "role_name": role.role_name,
+        "snapshot": {
+            "id": role.id,
+            "role_name": role.role_name,
+            "rank_level": role.rank_level,
+            "module_id": role.module_id,
+            "is_all_access": role.is_all_access,
+        }
+    }
     return role
+
 
 
 @router.delete("/delete_role/{role_id}")
@@ -114,7 +133,16 @@ def delete_role(
     if user_count > 0:
         raise HTTPException(status_code=400, detail=f"Cannot delete role. It is assigned to {user_count} active users.")
 
-    request.state.audit_meta = {"role_name": role.role_name}
+    request.state.audit_meta = {
+        "role_name": role.role_name,
+        "snapshot": {
+            "id": role.id,
+            "role_name": role.role_name,
+            "rank_level": role.rank_level,
+            "module_id": role.module_id,
+            "is_all_access": role.is_all_access,
+        }
+    }
 
     from datetime import datetime, timezone
     role.is_deleted = True
@@ -124,9 +152,17 @@ def delete_role(
     return {"message": "Role deleted successfully"}
 
 
+HIDDEN_PRIVILEGES = {
+    "recycle_bin.read",
+    "recycle_bin.write",
+    "recycle_bin.delete",
+    "settings.data_cleanup.read",
+    "settings.data_cleanup.write",
+}
+
 @router.get("/list_privileges", response_model=list[PrivilegeOut])
 def list_privileges(db: Session = Depends(get_db), _: User = Depends(PermissionChecker("users.privileges.read"))):
-    return db.query(Privilege).filter(Privilege.status == 1).all()
+    return db.query(Privilege).filter(Privilege.status == 1, Privilege.privilege_name.notin_(HIDDEN_PRIVILEGES)).all()
 
 
 @router.get("/get_role_privileges/{role_id}", response_model=list[int])
@@ -206,5 +242,12 @@ def update_role_privileges(
         ))
 
     db.commit()
-    request.state.audit_meta = {"role_name": role.role_name}
+    request.state.audit_meta = {
+        "role_name": role.role_name,
+        "snapshot": {
+            "id": role.id,
+            "role_name": role.role_name,
+            "rank_level": role.rank_level,
+        }
+    }
     return {"message": "Privileges updated successfully"}

@@ -18,7 +18,7 @@ def wastages_report(
     to_date: date = Query(...),
     group_by: str = Query("day"),
     db: Session = Depends(get_db),
-    _: User = Depends(PermissionChecker("reports.consumptions.read"))
+    _: User = Depends(PermissionChecker("daily_usage.read"))
 ):
 
     period = period_expr(group_by, WastageEntry.wastage_date)

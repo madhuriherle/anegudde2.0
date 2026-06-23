@@ -22,7 +22,14 @@ def delete_item(
     # Attach snapshot metadata for audit logging before deletion
     request.state.audit_meta = {
         "item_name": item.item_name,
-        "item_id": item.id
+        "item_id": item.id,
+        "snapshot": {
+            "id": item.id,
+            "item_name": item.item_name,
+            "category_id": item.category_id,
+            "unit_id": item.unit_id,
+            "current_stock": str(item.current_stock) if item.current_stock else None,
+        }
     }
     
     delete_item_service(item_id, db, current_user.id)

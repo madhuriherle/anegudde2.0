@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, PermissionChecker
@@ -12,6 +12,7 @@ router = APIRouter()
 
 @router.post("/create_item_type", response_model=ItemTypeOut, status_code=status.HTTP_201_CREATED)
 def create_item_type(
+    request: Request,
     payload: ItemTypeCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("item_types.write")),
@@ -33,4 +34,7 @@ def create_item_type(
     db.add(row)
     db.commit()
     db.refresh(row)
+    request.state.audit_meta = {
+        "snapshot": {"id": row.id, "type_name": row.type_name}
+    }
     return row

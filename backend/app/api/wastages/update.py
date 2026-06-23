@@ -19,7 +19,8 @@ def modify_wastage(
     
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
-        "wastage_date": entry.wastage_date.isoformat() if entry.wastage_date else None
+        "wastage_date": entry.wastage_date.isoformat() if entry.wastage_date else None,
+        "snapshot": {"id": entry.id, "wastage_date": entry.wastage_date.isoformat() if entry.wastage_date else None}
     }
     
     return entry

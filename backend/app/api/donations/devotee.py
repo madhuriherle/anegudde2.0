@@ -53,7 +53,12 @@ def delete_devotee(
 
     request.state.audit_meta = {
         "devotee_name": devotee.devotee_name,
-        "phone_number": devotee.phone_number
+        "phone_number": devotee.phone_number,
+        "snapshot": {
+            "id": devotee.id,
+            "devotee_name": devotee.devotee_name,
+            "phone_number": devotee.phone_number,
+        }
     }
 
     from datetime import datetime, timezone

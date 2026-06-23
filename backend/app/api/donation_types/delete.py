@@ -23,7 +23,10 @@ def delete_donation_type(
     if not row:
         raise HTTPException(status_code=404, detail="Donation type not found")
 
-    request.state.audit_meta = {"donation_type_name": row.type_name}
+    request.state.audit_meta = {
+        "donation_type_name": row.type_name,
+        "snapshot": {"id": row.id, "type_name": row.type_name}
+    }
 
     row.is_deleted = True
     row.deleted_at = datetime.now(timezone.utc)

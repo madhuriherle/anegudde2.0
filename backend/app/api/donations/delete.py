@@ -18,7 +18,12 @@ def delete_donation(
     if entry:
         request.state.audit_meta = {
             "devotee_name": entry.devotee_name,
-            "receipt_display_number": entry.receipt_display_number
+            "receipt_display_number": entry.receipt_display_number,
+            "snapshot": {
+                "id": entry.id,
+                "devotee_name": entry.devotee_name,
+                "receipt_display_number": entry.receipt_display_number,
+            }
         }
     
     donation_service.delete_donation(donation_id, db, current_user)

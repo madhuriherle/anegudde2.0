@@ -1,7 +1,7 @@
 import shutil
 import os
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_db, get_current_user, PermissionChecker
 from app.db.models import (
@@ -177,6 +177,8 @@ def get_data_cleanup_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.data_cleanup.read")),
 ):
+    if not (current_user.role and current_user.role.rank_level == 1):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super Admin access required.")
     return _data_cleanup_settings_response(_get_settings_or_404(db))
 
 
@@ -196,12 +198,21 @@ def _ensure_all_access(current_user: User) -> None:
 
 @router.put("/update", response_model=SystemSettingsOut)
 def update_settings(
+    request: Request,
     settings_in: SystemSettingsUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.management.write"))
 ):
     settings = _get_settings_or_404(db)
-        
+    
+    request.state.audit_meta = {
+        "snapshot": {
+            "id": settings.id,
+            "temple_name": settings.temple_name,
+            "financial_year_id": settings.financial_year_id,
+        }
+    }
+    
     for field, value in settings_in.model_dump().items():
         setattr(settings, field, value)
         
@@ -214,11 +225,20 @@ def update_settings(
 
 @router.put("/update_temple_identity_settings", response_model=SystemSettingsOut)
 def update_temple_identity_settings(
+    request: Request,
     settings_in: TempleIdentitySettingsUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.temple_identity.write"))
 ):
     settings = _get_settings_or_404(db)
+    request.state.audit_meta = {
+        "snapshot": {
+            "id": settings.id,
+            "temple_name": settings.temple_name,
+            "temple_address": getattr(settings, 'temple_address', None),
+            "temple_phone": getattr(settings, 'temple_phone', None),
+        }
+    }
     for field, value in settings_in.model_dump().items():
         setattr(settings, field, value)
 
@@ -230,20 +250,29 @@ def update_temple_identity_settings(
 
 @router.put("/temple-identity", response_model=SystemSettingsOut)
 def update_temple_identity_settings_alias(
+    request: Request,
     settings_in: TempleIdentitySettingsUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.temple_identity.write"))
 ):
-    return update_temple_identity_settings(settings_in, db, current_user)
+    return update_temple_identity_settings(request, settings_in, db, current_user)
 
 
 @router.put("/update_receipt_settings", response_model=SystemSettingsOut)
 def update_receipt_settings(
+    request: Request,
     settings_in: ReceiptSettingsUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.receipt_settings.write"))
 ):
     settings = _get_settings_or_404(db)
+    request.state.audit_meta = {
+        "snapshot": {
+            "id": settings.id,
+            "receipt_prefix": getattr(settings, 'receipt_prefix', None),
+            "receipt_footer": getattr(settings, 'receipt_footer', None),
+        }
+    }
     for field, value in settings_in.model_dump().items():
         setattr(settings, field, value)
 
@@ -255,19 +284,23 @@ def update_receipt_settings(
 
 @router.put("/receipt", response_model=SystemSettingsOut)
 def update_receipt_settings_alias(
+    request: Request,
     settings_in: ReceiptSettingsUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.receipt_settings.write"))
 ):
-    return update_receipt_settings(settings_in, db, current_user)
+    return update_receipt_settings(request, settings_in, db, current_user)
 
 
 @router.post("/clear_operational_data")
 def cleanup_operational_data(
+    request: Request,
     cleanup_in: OperationalCleanupRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.data_cleanup.write")),
 ):
+    if not (current_user.role and current_user.role.rank_level == 1):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super Admin access required.")
     if cleanup_in.confirmation_phrase != "CLEAR DATA":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -299,6 +332,11 @@ def cleanup_operational_data(
             detail=f"Cleanup failed: {str(exc)}",
         ) from exc
 
+    request.state.audit_meta = {
+        "action": "clear_operational_data",
+        "snapshot": {"groups": cleanup_in.groups, "deleted_counts": deleted_counts}
+    }
+
     return {
         "message": "Operational data cleared successfully",
         "deleted_counts": deleted_counts,
@@ -321,14 +359,18 @@ def cleanup_operational_data(
 
 @router.post("/cleanup-operational-data")
 def cleanup_operational_data_alias(
+    request: Request,
     cleanup_in: OperationalCleanupRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.data_cleanup.write")),
 ):
-    return cleanup_operational_data(cleanup_in, db, current_user)
+    if not (current_user.role and current_user.role.rank_level == 1):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super Admin access required.")
+    return cleanup_operational_data(request, cleanup_in, db, current_user)
 
 @router.post("/upload_temple_logo")
 def upload_logo(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.temple_identity.write"))
@@ -345,19 +387,25 @@ def upload_logo(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    old_logo = settings.temple_logo
     settings.temple_logo = f"/{file_path}"
     db.commit()
+
+    request.state.audit_meta = {
+        "snapshot": {"old_logo": old_logo, "new_logo": settings.temple_logo, "filename": file.filename}
+    }
 
     return {"logo_url": settings.temple_logo}
 
 
 @router.post("/upload-logo")
 def upload_logo_legacy(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.temple_identity.write"))
 ):
-    return upload_logo(file, db, current_user)
+    return upload_logo(request, file, db, current_user)
 
 
 # ─── Printer Config Endpoints ────────────────────────────────────────────────
@@ -431,6 +479,7 @@ def get_printer_config(
 
 @router.put("/printer-config", response_model=PrinterConfigOut)
 def upsert_printer_config(
+    request: Request,
     config_in: PrinterConfigCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.printers.write")),
@@ -459,11 +508,21 @@ def upsert_printer_config(
 
     db.commit()
     db.refresh(existing)
+    request.state.audit_meta = {
+        "snapshot": {
+            "id": existing.id,
+            "context": existing.context,
+            "printer_name": existing.printer_name,
+            "machine_id": existing.machine_id,
+            "is_default": existing.is_default,
+        }
+    }
     return existing
 
 
 @router.delete("/printer-config/{config_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_printer_config(
+    request: Request,
     config_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("settings.printers.write")),
@@ -471,5 +530,13 @@ def delete_printer_config(
     config = db.query(PrinterConfig).filter(PrinterConfig.id == config_id).first()
     if not config:
         raise HTTPException(status_code=404, detail="Printer config not found")
+    request.state.audit_meta = {
+        "snapshot": {
+            "id": config.id,
+            "context": config.context,
+            "printer_name": config.printer_name,
+            "machine_id": config.machine_id,
+        }
+    }
     db.delete(config)
     db.commit()

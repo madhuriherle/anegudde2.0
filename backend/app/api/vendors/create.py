@@ -53,7 +53,14 @@ def create_vendor(
     # Attach snapshot metadata for audit logging
     request.state.audit_meta = {
         "vendor_name": vendor.vendor_name,
-        "vendor_code": vendor.vendor_code
+        "vendor_code": vendor.vendor_code,
+        "snapshot": {
+            "id": vendor.id,
+            "vendor_name": vendor.vendor_name,
+            "vendor_code": vendor.vendor_code,
+            "opening_balance": str(vendor.opening_balance) if vendor.opening_balance else None,
+            "contact_person": vendor.contact_person,
+        }
     }
     
     return vendor

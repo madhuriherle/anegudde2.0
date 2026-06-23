@@ -232,8 +232,8 @@ const SettingsPage = ({ section = null }) => {
   const canReadTempleIdentity = hasPermission('settings.temple_identity.read');
   const canReadReceiptSettings = hasPermission('settings.receipt_settings.read');
   const canReadPrinterSettings = hasPermission('settings.printers.read');
-  const canReadRecycleBin = hasPermission('recycle_bin.read');
-  const canReadDataCleanup = hasPermission('settings.data_cleanup.read');
+  const canReadRecycleBin = (user?.role_rank_level ?? 99) === 1 && hasPermission('recycle_bin.read');
+  const canReadDataCleanup = (user?.role_rank_level ?? 99) === 1 && hasPermission('settings.data_cleanup.read');
   const canWrite =
     activeSection === 'temple'
       ? hasPermission('settings.temple_identity.write')

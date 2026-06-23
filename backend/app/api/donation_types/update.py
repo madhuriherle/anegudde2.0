@@ -36,7 +36,10 @@ def update_donation_type(
     if not row:
         raise HTTPException(status_code=404, detail="Donation type not found")
 
-    request.state.audit_meta = {"type_name": row.type_name}
+    request.state.audit_meta = {
+        "type_name": row.type_name,
+        "snapshot": {"id": row.id, "type_name": row.type_name, "receipt_prefix": row.receipt_prefix}
+    }
 
     data = payload.model_dump(exclude_unset=True)
     if "type_name" in data and data["type_name"] is not None:

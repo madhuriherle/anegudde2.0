@@ -17,7 +17,8 @@ def remove_consumption(
     entry = db.query(ConsumptionEntry).filter(ConsumptionEntry.id == consumption_id).first()
     if entry:
         request.state.audit_meta = {
-            "usage_date": entry.usage_date.isoformat() if entry.usage_date else None
+            "usage_date": entry.usage_date.isoformat() if entry.usage_date else None,
+            "snapshot": {"id": entry.id, "usage_date": entry.usage_date.isoformat() if entry.usage_date else None}
         }
 
     delete_consumption(consumption_id, db, current_user)
