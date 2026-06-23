@@ -716,7 +716,7 @@ const UsageEntriesPage = () => {
       
 
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="w-[1840px] max-w-[96vw] max-h-[94vh] !flex !flex-col overflow-hidden border-border-temple !p-0 shadow-2xl">
+        <DialogContent className="w-[1400px] max-w-[96vw] max-h-[94vh] !flex !flex-col overflow-hidden border-border-temple !p-0 shadow-2xl">
           <DialogHeader className="border-b border-border-temple/40 px-6 py-4 m-0 shrink-0 bg-[#F3E8D4]">
             <DialogTitle className="text-text-main font-temple">Consumption Summary</DialogTitle>
             <DialogDescription className="sr-only">Consumption details</DialogDescription>
@@ -895,11 +895,11 @@ const UsageEntriesPage = () => {
         }
       }}>
         <DialogContent
-          className="w-[1760px] max-w-[94vw] max-h-[96vh] overflow-hidden p-0"
+          className="w-[1400px] max-w-[94vw] max-h-[96vh] overflow-hidden p-0 flex flex-col"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}>
           
-          <DialogHeader className="m-0">
+          <DialogHeader className="m-0 shrink-0">
             <DialogTitle className="text-xl font-bold font-temple">{editingConsumption ? 'Edit Consumption Entry' : 'Add Consumption Entry'}</DialogTitle>
             <DialogDescription className="sr-only">Create consumption and wastage entry</DialogDescription>
           </DialogHeader>
@@ -911,8 +911,9 @@ const UsageEntriesPage = () => {
                 e.preventDefault();
               }
             }}
+            className="flex flex-col flex-1 overflow-hidden"
           >
-            <div className="bg-white px-6 pt-4 max-h-[calc(96vh-150px)] overflow-y-auto space-y-4">
+            <div className="bg-white px-6 pt-4 flex-1 overflow-y-auto space-y-4 custom-scrollbar">
               <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-12 gap-4 items-start min-h-[56vh]">
               {canReadUsage && (
                 <div className="temple-form-section min-w-0 2xl:col-span-4">
