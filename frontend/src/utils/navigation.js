@@ -37,7 +37,6 @@ export const mainPermissions = [
   'users.modules.read',
   'roles.read',
   'activity_logs.read',
-  'settings.printers.read',
   'settings.temple_identity.read',
   'settings.receipt_settings.read',
   'settings.data_cleanup.read',
@@ -71,7 +70,6 @@ export const getDefaultPath = (user) => {
   if (hasAnyPermission(user, [
     'settings.temple_identity.read',
     'settings.receipt_settings.read',
-    'settings.printers.read',
     'recycle_bin.read',
     'settings.data_cleanup.read',
   ])) return '/settings';

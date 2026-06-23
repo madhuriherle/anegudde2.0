@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import DonationAmountMaster, DonationEntry, DonationItem, Item, StockLedger, User, Devotee, DonationType
 from app.schemas.donation import DonationAmountMasterCreate, DonationAmountMasterUpdate, DonationEntryCreate
+from app.utils.stock_ledger_utils import compute_current_value
 from app.services import devotee_service
 from app.schemas.devotee import DevoteeCreate
 from app.services.receipt_sequence_service import next_donation_receipt
@@ -238,7 +239,7 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
             value_in=0,
             value_out=0,
             balance=item.current_stock,
-            current_value=0,
+            current_value=compute_current_value(db, item.id, Decimal("0"), Decimal("0")),
             created_at=now,
             updated_at=now,
             created_by=current_user.id,
@@ -367,7 +368,7 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
             value_in=0,
             value_out=0,
             balance=item.current_stock,
-            current_value=0,
+            current_value=compute_current_value(db, item.id, Decimal("0"), Decimal("0")),
             created_at=now,
             updated_at=now,
             created_by=current_user.id,

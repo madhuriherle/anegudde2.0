@@ -123,7 +123,7 @@ const ModulesPage = () => {
                   <UtensilsCrossed className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-bold text-secondary font-temple tracking-wide">Wastage Analysis</CardTitle>
+                  <CardTitle className="text-xl font-bold text-secondary font-temple tracking-wide">MAHAPRASADAM WASTAGE ANALYSIS</CardTitle>
                 </div>
               </div>
               

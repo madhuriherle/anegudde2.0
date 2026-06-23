@@ -21,6 +21,7 @@ import {
   DialogDescription
 } from '../components/ui/Dialog';
 import { Select } from '../components/ui/Select';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Label } from '../components/ui/Label';
 import { DetailItem } from '../components/ui/DetailItem';
 import { formatDate, safeFormatTime, safeFormatDate } from '../utils/date';
@@ -183,7 +184,21 @@ const PurchasesPage = () => {
     queryKey: ['items-list'],
     queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data
   });
-  const items = useMemo(() => itemsData?.items || [], [itemsData]);
+  const items = useMemo(() => {
+    const list = itemsData?.items || [];
+    return [...list].sort((a, b) => {
+      const codeA = (a.serial_numbers || []).find((s) => Number(s?.status ?? 1) === 1)?.serial_number || '';
+      const codeB = (b.serial_numbers || []).find((s) => Number(s?.status ?? 1) === 1)?.serial_number || '';
+      const numA = parseInt(codeA, 10);
+      const numB = parseInt(codeB, 10);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      if (!isNaN(numA)) return -1;
+      if (!isNaN(numB)) return 1;
+      return codeA.localeCompare(codeB, undefined, { numeric: true });
+    });
+  }, [itemsData]);
 
   const serialToItemIdMap = useMemo(() => {
     const map = new Map();
@@ -785,9 +800,9 @@ const PurchasesPage = () => {
                     <tbody className="divide-y divide-border-temple/40">
                       {viewingPurchase?.items?.map((item, idx) => (
                         <tr key={idx} className="bg-white">
-                          <td className="px-4 py-2 text-text-main">{toDisplayCase(items?.find((i) => i.id === item.item_id)?.item_name)}</td>
+                          <td className="px-4 py-2 text-text-main">{toDisplayCase(items?.find((i) => i.id == item.item_id)?.item_name)}</td>
                           <td className="px-4 py-2 text-text-main text-right">
-                            {formatQuantityWithUnit(item.quantity, items?.find((i) => i.id === item.item_id)?.unit)}
+                            {formatQuantityWithUnit(item.quantity, items?.find((i) => i.id == item.item_id)?.unit)}
                           </td>
                           <td className="px-4 py-2 text-text-main text-right">{formatCurrency(item.price)}</td>
                           <td className="px-4 py-2 text-text-main text-right font-medium">{formatCurrency(item.line_total)}</td>
@@ -955,20 +970,23 @@ const PurchasesPage = () => {
                           name={`items.${index}.item_id`}
                           control={control}
                           render={({ field: itemField }) => (
-                            <Select
-                              {...itemField}
-                              className="w-full h-10 text-base text-text-main"
+                            <SearchableSelect
+                              ref={itemField.ref}
+                              value={itemField.value}
                               onChange={(val) => {
-                                itemField.onChange(val);
-                                const itemId = Number(val.target.value);
+                                const itemId = Number(val);
+                                itemField.onChange(itemId);
                                 setValue(`items.${index}.search_id`, itemCodeByItemIdMap.get(itemId) || '');
                               }}
-                            >
-                              <option value="" disabled hidden>Select Item</option>
-                              {items?.filter((i) => i.status === 1 || Number(watchedItems?.[index]?.item_id) === Number(i.id)).map((i) => (
-                                <option key={i.id} value={i.id}>{toDisplayCase(i.item_name)}</option>
-                              ))}
-                            </Select>
+                              options={(items || [])
+                                .filter((i) => i.status === 1 || Number(watchedItems?.[index]?.item_id) === Number(i.id))
+                                .map((i) => ({
+                                  value: i.id,
+                                  label: toDisplayCase(i.item_name)
+                                }))}
+                              placeholder="Search & Select Item..."
+                              className="text-base"
+                            />
                           )}
                         />
                         {errors.items?.[index]?.item_id && <p className="text-[10px] text-red-500 font-bold">Required</p>}

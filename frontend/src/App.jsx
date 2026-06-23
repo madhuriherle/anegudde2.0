@@ -26,7 +26,6 @@ import SettingsPage from './pages/SettingsPage';
 import TempleIdentitySettingsPage from './pages/TempleIdentitySettingsPage';
 import ReceiptSettingsPage from './pages/ReceiptSettingsPage';
 import DataCleanupPage from './pages/DataCleanupPage';
-import PrinterSettingsSettingsPage from './pages/PrinterSettingsSettingsPage';
 import ProfilePage from './pages/ProfilePage';
 import RecycleBinPage from './pages/RecycleBinPage';
 import { StockSummaryPage } from './pages/StockSummaryPage';
@@ -91,7 +90,6 @@ function App() {
         <Route path="/settings/temple" element={<ProtectedRoute requiredPermission="settings.temple_identity.read"><TempleIdentitySettingsPage /></ProtectedRoute>} />
         <Route path="/settings/receipt" element={<ProtectedRoute requiredPermission="settings.receipt_settings.read"><ReceiptSettingsPage /></ProtectedRoute>} />
         <Route path="/settings/cleanup" element={<ProtectedRoute requiredPermission="settings.data_cleanup.read" requiredRank={1}><DataCleanupPage /></ProtectedRoute>} />
-        <Route path="/settings/printers" element={<ProtectedRoute requiredPermission="settings.printers.read"><PrinterSettingsSettingsPage /></ProtectedRoute>} />
         <Route path="/settings/recycle-bin" element={<ProtectedRoute requiredPermission="recycle_bin.read" requiredRank={1}><RecycleBinPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute requiredPermission="profile.read"><ProfilePage /></ProtectedRoute>} />
       </Route>

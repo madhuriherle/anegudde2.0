@@ -7,6 +7,7 @@ from sqlalchemy import String, case, func, Integer
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import Item, User, StockLedger, PurchaseItem, ConsumptionItem, WastageItem, ItemCategory, Unit, ItemType, ItemPrice, PurchaseEntry, Vendor, ItemSerialNumber
+from app.utils.stock_ledger_utils import compute_current_value
 from app.schemas.item import ItemCreate, ItemUpdate
 
 
@@ -84,7 +85,7 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: i
             value_in=Decimal(str(opening_stock)) * unit_cost,
             value_out=0,
             balance=Decimal(str(opening_stock)),
-            current_value=Decimal(str(opening_stock)) * unit_cost,
+            current_value=compute_current_value(db, item.id, Decimal(str(opening_stock)) * unit_cost, Decimal("0")),
             created_at=now,
             updated_at=now,
             created_by=current_user.id,

@@ -4,6 +4,7 @@ import math
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import Item, PurchaseEntry, PurchaseItem, PurchaseReturnEntry, PurchaseReturnItem, StockLedger, User, Vendor
+from app.utils.stock_ledger_utils import compute_current_value
 
 def list_purchase_returns(db: Session, page: int = 1, page_size: int = 20, q: str = None, vendor_id: int = None):
     query = db.query(PurchaseReturnEntry).options(
@@ -141,7 +142,7 @@ def create_purchase_return(payload, db: Session, current_user: User):
                 value_in=0,
                 value_out=line_total,
                 balance=item.current_stock,
-                current_value=item.current_stock * it.price,
+                current_value=compute_current_value(db, item.id, Decimal("0"), line_total),
                 created_at=now,
                 updated_at=now,
                 created_by=current_user.id,
@@ -249,7 +250,7 @@ def update_purchase_return(return_id: int, payload, db: Session, current_user: U
                 value_in=0,
                 value_out=line_total,
                 balance=item.current_stock,
-                current_value=item.current_stock * it.price,
+                current_value=compute_current_value(db, item.id, Decimal("0"), line_total),
                 status=1,
                 created_at=now,
                 updated_at=now,

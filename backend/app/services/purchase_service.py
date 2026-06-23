@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import Item, PurchaseEntry, PurchaseItem, StockLedger, User, Vendor, ItemPrice
+from app.utils.stock_ledger_utils import compute_current_value
 from app.schemas.purchase import PurchaseEntryCreate, PurchaseEntryUpdate
 
 def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None, from_date: str = None, to_date: str = None):
@@ -149,7 +150,7 @@ def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: Use
                 value_in=line_total, 
                 value_out=0, 
                 balance=Decimal(item.current_stock), 
-                current_value=Decimal(item.current_stock) * it.price,
+                current_value=compute_current_value(db, item.id, line_total, Decimal("0")),
                 created_at=now, 
                 updated_at=now, 
                 created_by=current_user.id, 
@@ -304,7 +305,7 @@ def update_purchase(purchase_id: int, payload: PurchaseEntryUpdate, db: Session,
                 value_in=line_total,
                 value_out=0,
                 balance=Decimal(item.current_stock),
-                current_value=Decimal(item.current_stock) * it.price,
+                current_value=compute_current_value(db, item.id, line_total, Decimal("0")),
                 created_at=now,
                 updated_at=now,
                 created_by=current_user.id,

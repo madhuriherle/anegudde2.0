@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import Item, StockAdjustment, StockLedger, User, ConsumptionEntry
+from app.utils.stock_ledger_utils import compute_current_value
 from app.schemas.stock_adjustment import StockAdjustmentCreate
 from typing import List
 
@@ -95,7 +96,7 @@ def sync_for_consumption(
             value_in=(actual_qty * unit_cost) if actual_qty > 0 else 0,
             value_out=(abs(actual_qty) * unit_cost) if actual_qty < 0 else 0,
             balance=Decimal(item.current_stock),
-            current_value=Decimal(item.current_stock) * unit_cost,
+            current_value=compute_current_value(db, item.id, (actual_qty if actual_qty > 0 else 0) * unit_cost, (abs(actual_qty) if actual_qty < 0 else 0) * unit_cost),
             created_at=now,
             updated_at=now,
             created_by=current_user.id,

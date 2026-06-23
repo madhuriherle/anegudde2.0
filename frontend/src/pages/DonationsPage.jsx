@@ -16,6 +16,7 @@ import { DataTable } from '../components/ui/DataTable';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/Dialog';
 import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { DetailItem } from '../components/ui/DetailItem';
 import { ReceiptViewerDialog } from '../components/ui/ReceiptViewerDialog';
 import { formatDate } from '../utils/date';
@@ -180,7 +181,21 @@ const DonationsPage = () => {
     () => Array.isArray(itemsData) ? itemsData : itemsData?.items || [],
     [itemsData]
   );
-  const activeItems = useMemo(() => (items || []).filter((i) => i.status === 1), [items]);
+  const activeItems = useMemo(() => {
+    const list = (items || []).filter((i) => i.status === 1);
+    return [...list].sort((a, b) => {
+      const codeA = (a.serial_numbers || []).find((s) => Number(s?.status ?? 1) === 1)?.serial_number || '';
+      const codeB = (b.serial_numbers || []).find((s) => Number(s?.status ?? 1) === 1)?.serial_number || '';
+      const numA = parseInt(codeA, 10);
+      const numB = parseInt(codeB, 10);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      if (!isNaN(numA)) return -1;
+      if (!isNaN(numB)) return 1;
+      return codeA.localeCompare(codeB, undefined, { numeric: true });
+    });
+  }, [items]);
   const donationTypes = useMemo(() => donationTypesData?.items || [], [donationTypesData]);
   const activeDonationTypes = useMemo(() => (
     donationTypes.filter((type) => {
@@ -1024,8 +1039,8 @@ const DonationsPage = () => {
                   <h4 className="text-lg font-bold text-secondary font-temple">Donated Items</h4>
                 </div>
 
-                <div className="rounded-xl border border-border-temple/40 bg-white shadow-sm overflow-hidden">
-                  <div className="grid grid-cols-[120px_1fr_150px_80px] gap-4 items-center bg-bg-temple/60 px-6 py-4 border-b border-border-temple/40">
+                <div className="rounded-xl border border-border-temple/40 bg-white shadow-sm">
+                  <div className="grid grid-cols-[120px_1fr_150px_80px] gap-4 items-center bg-bg-temple/60 px-6 py-4 border-b border-border-temple/40 rounded-t-xl">
                     <div className="text-sm font-bold uppercase tracking-wider text-text-main">Item Code</div>
                     <div className="text-sm font-bold uppercase tracking-wider text-text-main">Item Name *</div>
                     <div className="text-sm font-bold uppercase tracking-wider text-text-main text-center">Quantity *</div>
@@ -1033,7 +1048,7 @@ const DonationsPage = () => {
                   </div>
                   <div className="divide-y divide-border-temple/20">
                     {fields.map((field, index) =>
-                      <div key={field.id} className="grid grid-cols-[120px_1fr_150px_80px] gap-4 items-start px-6 py-5 hover:bg-bg-temple/10 transition-colors">
+                      <div key={field.id} className="grid grid-cols-[120px_1fr_150px_80px] gap-4 items-start px-6 py-5 hover:bg-bg-temple/10 transition-colors last:rounded-b-xl">
                         <Input
                           type="text"
                           className="h-11 text-base text-center text-text-main"
@@ -1059,22 +1074,26 @@ const DonationsPage = () => {
                             name={`items.${index}.item_id`}
                             control={control}
                             render={({ field: selectField }) =>
-                              <Select
-                                {...selectField}
-                                className="h-11 text-base"
-                                onChange={(e) => {
-                                  const itemId = Number(e.target.value);
-                                  selectField.onChange(e);
+                              <SearchableSelect
+                                ref={selectField.ref}
+                                value={selectField.value}
+                                onChange={(val) => {
+                                  const itemId = Number(val);
+                                  selectField.onChange(itemId);
                                   const code = itemCodeByItemIdMap.get(itemId);
                                   if (code) {
                                     setValue(`items.${index}.search_id`, code);
+                                  } else {
+                                    setValue(`items.${index}.search_id`, '');
                                   }
-                                }}>
-                                <option value={0} disabled>Select Item</option>
-                                {activeItems.map((i) =>
-                                  <option key={i.id} value={i.id}>{i.item_name}</option>
-                                )}
-                              </Select>
+                                }}
+                                options={activeItems.map((i) => ({
+                                  value: i.id,
+                                  label: i.item_name
+                                }))}
+                                placeholder="Search & Select Item..."
+                                className="text-base"
+                              />
                             } />
                           {errors.items?.[index]?.item_id && <p className="text-[10px] text-error font-bold">Required</p>}
                         </div>

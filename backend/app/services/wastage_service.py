@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import MenuItem, User, WastageEntry, WastageItem, Item, StockLedger
 from app.schemas.wastage import WastageEntryCreate, WastageEntryUpdate
+from app.utils.stock_ledger_utils import compute_current_value
 from decimal import Decimal
 
 def list_wastages(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
@@ -119,7 +120,7 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
                     value_in=0,
                     value_out=qty * unit_cost,
                     balance=Decimal(item.current_stock),
-                    current_value=Decimal(item.current_stock) * unit_cost,
+                    current_value=compute_current_value(db, item.id, Decimal("0"), qty * unit_cost),
                     created_at=now,
                     updated_at=now,
                     created_by=current_user.id,
@@ -259,7 +260,7 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
                     value_in=0,
                     value_out=qty * unit_cost,
                     balance=Decimal(item.current_stock),
-                    current_value=Decimal(item.current_stock) * unit_cost,
+                    current_value=compute_current_value(db, item.id, Decimal("0"), qty * unit_cost),
                     created_at=now,
                     updated_at=now,
                     created_by=current_user.id,

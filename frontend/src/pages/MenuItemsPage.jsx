@@ -180,12 +180,12 @@ const MenuItemsPage = () => {
   const columns = useMemo(() => [
     {
       accessorKey: 'dish_name',
-      header: () => <div className="text-primary font-bold uppercase tracking-wider text-xs">Dish Name</div>,
+      header: () => <div className="text-white font-bold uppercase tracking-wider text-xs">Dish Name</div>,
       cell: (info) => <span className="text-text-main font-medium">{info.getValue()}</span>
     },
     {
       accessorKey: 'unit_id',
-      header: () => <div className="text-primary font-bold uppercase tracking-wider text-xs">Unit</div>,
+      header: () => <div className="text-white font-bold uppercase tracking-wider text-xs">Unit</div>,
       size: 150,
       cell: (info) => {
         const rowUnit = info.row.original?.unit;
@@ -198,7 +198,7 @@ const MenuItemsPage = () => {
     },
     {
       accessorKey: 'default_approx_amount',
-      header: () => <div className="text-primary font-bold uppercase tracking-wider text-xs">Approx. Amt</div>,
+      header: () => <div className="text-white font-bold uppercase tracking-wider text-xs">Approx. Amt</div>,
       size: 120,
       cell: (info) => {
         const val = info.getValue();
@@ -207,7 +207,7 @@ const MenuItemsPage = () => {
     },
     {
       accessorKey: 'status',
-      header: () => <div className="text-primary font-bold uppercase tracking-wider text-xs">Status</div>,
+      header: () => <div className="text-white font-bold uppercase tracking-wider text-xs">Status</div>,
       size: 120,
       cell: (info) => (
         <InlineStatusSelect
@@ -225,7 +225,7 @@ const MenuItemsPage = () => {
     },
     {
       id: 'actions',
-      header: () => <div className="text-center text-primary font-bold uppercase tracking-wider text-xs">Actions</div>,
+      header: () => <div className="text-center text-white font-bold uppercase tracking-wider text-xs">Actions</div>,
       size: 150,
       cell: (info) => (
         <div className="flex items-center justify-center gap-2">

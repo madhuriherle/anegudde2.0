@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.db.models import ConsumptionEntry, ConsumptionItem, Item, StockLedger, User, WastageEntry, WastageItem
 from app.schemas.consumption import ConsumptionEntryCreate, ConsumptionEntryUpdate
 from app.services.item_service import get_item_last_price
+from app.utils.stock_ledger_utils import compute_current_value
 
 def list_consumptions(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
     import re
@@ -91,6 +92,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
             StockLedger.item_id.in_(item_ids),
             StockLedger.status == 1,
             StockLedger.txn_date <= payload.usage_date,
+            StockLedger.txn_type != 8,
         )
         .group_by(StockLedger.item_id)
         .all()
@@ -175,7 +177,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
                 value_in=0,
                 value_out=(it.quantity_used * unit_cost),
                 balance=issue_balance,
-                current_value=issue_balance * unit_cost,
+                current_value=compute_current_value(db, item.id, Decimal("0"), it.quantity_used * unit_cost),
                 created_at=now, 
                 updated_at=now, 
                 created_by=current_user.id, 
@@ -194,7 +196,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
                     value_in=(it.qty_returned * unit_cost),
                     value_out=0,
                     balance=return_balance,
-                    current_value=return_balance * unit_cost,
+                    current_value=compute_current_value(db, item.id, it.qty_returned * unit_cost, it.quantity_used * unit_cost),
                     created_at=now,
                     updated_at=now,
                     created_by=current_user.id,
@@ -322,6 +324,7 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
             StockLedger.item_id.in_(item_ids),
             StockLedger.status == 1,
             StockLedger.txn_date <= payload.usage_date,
+            StockLedger.txn_type != 8,
         )
         .group_by(StockLedger.item_id)
         .all()
@@ -386,7 +389,7 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
                 value_in=0,
                 value_out=(it.quantity_used * unit_cost),
                 balance=issue_balance,
-                current_value=issue_balance * unit_cost,
+                current_value=compute_current_value(db, item.id, Decimal("0"), it.quantity_used * unit_cost),
                 created_at=now,
                 updated_at=now,
                 created_by=current_user.id,
@@ -405,7 +408,7 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
                     value_in=(it.qty_returned * unit_cost),
                     value_out=0,
                     balance=return_balance,
-                    current_value=return_balance * unit_cost,
+                    current_value=compute_current_value(db, item.id, it.qty_returned * unit_cost, it.quantity_used * unit_cost),
                     created_at=now,
                     updated_at=now,
                     created_by=current_user.id,

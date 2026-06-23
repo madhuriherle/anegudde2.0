@@ -32,7 +32,6 @@ import { useNotification } from '../context/NotificationContext';
 import { usePermission } from '../hooks/usePermission';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../utils/cn';
-import PrinterSettingsPage from './PrinterSettingsPage';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent } from '../components/ui/Card';

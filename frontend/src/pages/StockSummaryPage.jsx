@@ -26,6 +26,21 @@ export const StockSummaryPage = () => {
     }
   });
 
+  const { data: itemsData } = useQuery({
+    queryKey: ['items-list-all-stock-summary'],
+    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data
+  });
+
+  const itemCodeMap = useMemo(() => {
+    const map = {};
+    (itemsData?.items || []).forEach((item) => {
+      const serial = item?.serial_numbers?.[0]?.serial_number;
+      const name = item.item_name;
+      if (serial) map[name] = parseInt(serial, 10);
+    });
+    return map;
+  }, [itemsData]);
+
   const handlePrint = () => {
     if (!reportData || !reportData.rows || reportData.rows.length === 0) {
       showError('No data available to print');
@@ -59,17 +74,13 @@ export const StockSummaryPage = () => {
 
   const orderedRows = useMemo(() => {
     const rows = reportData?.rows ?? [];
-    const priority = ['ಅಕ್ಕಿ', 'ಬೆಲ್ಲ', 'ತೊಗರಿ ಬೇಳೆ', 'ಗೋಧಿ ಕಡಿ', 'ಒಣಮೆಣಸು', 'ಹುಣಸೆ ಹಣ್ಣು', 'ತುಪ್ಪ'];
-    const rank = (name) => {
-      const idx = priority.findIndex((p) => String(name || '').startsWith(p));
-      return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
-    };
     return [...rows].sort((a, b) => {
-      const diff = rank(a.item_name) - rank(b.item_name);
-      if (diff !== 0) return diff;
+      const codeA = itemCodeMap[a.item_name] ?? 999;
+      const codeB = itemCodeMap[b.item_name] ?? 999;
+      if (codeA !== codeB) return codeA - codeB;
       return String(a.item_name || '').localeCompare(String(b.item_name || ''));
     });
-  }, [reportData]);
+  }, [reportData, itemCodeMap]);
 
   const categoryOptions = useMemo(() => {
     const set = new Set();

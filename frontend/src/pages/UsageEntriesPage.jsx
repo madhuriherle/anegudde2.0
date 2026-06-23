@@ -14,11 +14,12 @@ import { DataTable } from '../components/ui/DataTable';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/Dialog';
 import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { formatQuantityWithUnit } from '../utils/quantity';
 import { cn } from '../utils/cn';
-import { Plus, Trash2, Clock, History, X } from 'lucide-react';
+import { Plus, Trash2, Clock, History, X, Search } from 'lucide-react';
 
 import { usePermission } from '../hooks/usePermission';
 
@@ -93,6 +94,14 @@ const UsageEntriesPage = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const activityDrawerRef = useRef(null);
+
+  const [usageSearchQuery, setUsageSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (!open) {
+      setUsageSearchQuery('');
+    }
+  }, [open]);
 
   const { data: consumptionsData, isLoading: consumptionsLoading } = useQuery({
     queryKey: ['consumptions', customDate, page, pageSize],
@@ -191,7 +200,21 @@ const UsageEntriesPage = () => {
     () => Array.isArray(menuItemsData) ? menuItemsData : menuItemsData?.items || [],
     [menuItemsData]
   );
-  const activeItems = useMemo(() => (items || []).filter((i) => i.status === 1), [items]);
+  const activeItems = useMemo(() => {
+    const list = (items || []).filter((i) => i.status === 1);
+    return [...list].sort((a, b) => {
+      const codeA = (a.serial_numbers || []).find((s) => Number(s?.status ?? 1) === 1)?.serial_number || '';
+      const codeB = (b.serial_numbers || []).find((s) => Number(s?.status ?? 1) === 1)?.serial_number || '';
+      const numA = parseInt(codeA, 10);
+      const numB = parseInt(codeB, 10);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      if (!isNaN(numA)) return -1;
+      if (!isNaN(numB)) return 1;
+      return codeA.localeCompare(codeB, undefined, { numeric: true });
+    });
+  }, [items]);
   const activeMenuItems = useMemo(() => menuItems.filter((m) => m.status === 1), [menuItems]);
 
   const serialToItemIdMap = useMemo(() => {
@@ -572,8 +595,8 @@ const UsageEntriesPage = () => {
   return (
     <div className="space-y-6 relative">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="page-title">Daily Usage Entry</h2>
-        {canWrite && <Button onClick={openNew} className="text-text-main">Add Usage Entry</Button>}
+        <h2 className="page-title">Daily Consumption Entry</h2>
+        {canWrite && <Button onClick={openNew} className="text-text-main">Add Consumption Entry</Button>}
       </div>
 
       <Card className="border-border-temple">
@@ -695,8 +718,8 @@ const UsageEntriesPage = () => {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="w-[1840px] max-w-[96vw] max-h-[94vh] !flex !flex-col overflow-hidden border-border-temple !p-0 shadow-2xl">
           <DialogHeader className="border-b border-border-temple/40 px-6 py-4 m-0 shrink-0 bg-[#F3E8D4]">
-            <DialogTitle className="text-text-main font-temple">Usage Summary</DialogTitle>
-            <DialogDescription className="sr-only">Usage details</DialogDescription>
+            <DialogTitle className="text-text-main font-temple">Consumption Summary</DialogTitle>
+            <DialogDescription className="sr-only">Consumption details</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-8 custom-scrollbar bg-white">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
@@ -705,7 +728,7 @@ const UsageEntriesPage = () => {
                   <span className="text-lg font-bold text-primary">Daily Service Details</span>
                 </div>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-4 text-base text-text-main">
-                  <div className="font-semibold">Usage Date</div><div className="text-right whitespace-nowrap">{formatDate(viewingConsumption?.usage_date)}</div>
+                  <div className="font-semibold">Consumption Date</div><div className="text-right whitespace-nowrap">{formatDate(viewingConsumption?.usage_date)}</div>
                   <div className="font-semibold">Regular Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cooking_persons || 0)}</div>
                   <div className="font-semibold">Additional Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
                   <div className="font-semibold">Total Cooking Persons</div><div className="text-right">{Number(viewingConsumption?.regular_cooking_persons || 0) + Number(viewingConsumption?.additional_cooking_persons || 0)}</div>
@@ -773,13 +796,13 @@ const UsageEntriesPage = () => {
                               <tr key={item.id} className="hover:bg-bg-temple/5 transition-colors">
                                 <td className="px-4 py-3 text-text-main">
                                   <span className="text-base font-medium">
-                                    {item.item?.item_name || items?.find((it) => it.id === item.item_id)?.item_name || `Unknown Item (${item.item_id})`}
+                                    {item.item?.item_name || items?.find((it) => it.id == item.item_id)?.item_name || `Unknown Item (${item.item_id})`}
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 text-right text-text-main font-semibold">
                                   {formatQuantityWithUnit(
                                     item.quantity_used || 0,
-                                    item.item?.unit || items?.find((it) => it.id === item.item_id)?.unit
+                                    item.item?.unit || items?.find((it) => it.id == item.item_id)?.unit
                                   )}
                                 </td>
                               </tr>
@@ -877,7 +900,7 @@ const UsageEntriesPage = () => {
           onEscapeKeyDown={(e) => e.preventDefault()}>
           
           <DialogHeader className="m-0">
-            <DialogTitle className="text-xl font-bold font-temple">{editingConsumption ? 'Edit Usage Entry' : 'Add Usage Entry'}</DialogTitle>
+            <DialogTitle className="text-xl font-bold font-temple">{editingConsumption ? 'Edit Consumption Entry' : 'Add Consumption Entry'}</DialogTitle>
             <DialogDescription className="sr-only">Create consumption and wastage entry</DialogDescription>
           </DialogHeader>
 
@@ -1003,13 +1026,35 @@ const UsageEntriesPage = () => {
 
               {canReadUsage && (
                 <div className="temple-form-section min-w-0 2xl:col-span-4">
-                  <h4 className="temple-section-header mt-0 text-lg tracking-wider">Item Usage</h4>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <h4 className="temple-section-header !m-0 text-lg tracking-wider">Item Usage</h4>
+                    {/* Search Input for Item Usage */}
+                    <div className="relative w-full sm:w-64">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-light" />
+                      <Input
+                        type="text"
+                        placeholder="Search raw items..."
+                        value={usageSearchQuery}
+                        onChange={(e) => setUsageSearchQuery(e.target.value)}
+                        className="pl-9 h-9 text-sm bg-white"
+                      />
+                    </div>
+                  </div>
                   <div className="grid grid-cols-[1fr_100px] gap-3 mb-1 px-1 border-b border-border-temple/10 pb-1">
                     <div></div>
                     <div className="text-base font-bold text-text-main text-center">Used</div>
                   </div>
                   <div className="max-h-[480px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-                    {(items || []).filter((i) => i.status === 1).map((item) => {
+                    {activeItems
+                      .filter((i) => {
+                        if (!usageSearchQuery) return true;
+                        const query = usageSearchQuery.toLowerCase().trim();
+                        return (
+                          (i.item_name || '').toLowerCase().includes(query) ||
+                          (i.serial_numbers || []).some((s) => (s?.serial_number || '').toLowerCase().includes(query))
+                        );
+                      })
+                      .map((item) => {
                         const itemError = errors.raw_items?.[item.id];
                         return (
                           <div key={item.id} className="grid grid-cols-[1fr_100px] gap-3 items-center min-h-[32px]">
@@ -1135,22 +1180,24 @@ const UsageEntriesPage = () => {
                               name={`raw_wastage_items.${index}.item_id`}
                               control={control}
                               render={({ field: selectField }) =>
-                                <Select
-                                  {...selectField}
-                                  disabled={!canWriteUsage}
-                                  className="h-10 text-base bg-white"
-                                  onChange={(e) => {
-                                    selectField.onChange(e);
-                                    const newId = Number(e.target.value);
+                                <SearchableSelect
+                                  ref={selectField.ref}
+                                  value={selectField.value}
+                                  isDisabled={!canWriteUsage}
+                                  className="text-base"
+                                  onChange={(val) => {
+                                    const newId = Number(val);
+                                    selectField.onChange(newId);
                                     const item = activeItems.find(i => i.id === newId);
                                     const serial = item?.serial_numbers?.[0]?.serial_number || '';
                                     setValue(`raw_wastage_items.${index}.serial_id`, serial);
-                                  }}>
-                                  <option value={0} disabled hidden>Select Item</option>
-                                  {activeItems.map((i) =>
-                                    <option key={i.id} value={i.id}>{i.item_name}</option>
-                                  )}
-                                </Select>
+                                  }}
+                                  options={activeItems.map((i) => ({
+                                    value: i.id,
+                                    label: i.item_name
+                                  }))}
+                                  placeholder="Search & Select Item..."
+                                />
                               }
                             />
                           </div>

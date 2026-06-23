@@ -56,7 +56,8 @@ remote_cleanup_cmd = (
     f"cd {remote_base} && rm -f check_*.py db_add_profile_module.py db_add_profile_module_v2.py "
     "list_databases.py list_db_users.py fix_today_receipts.py fix_today_receipts_v2.py "
     "fix_today_receipts_v3.py fix_units_module.py fix.sql debug_supervisor.py "
-    "debug_supervisor_v2.py test_bcrypt.py test_db_conn_3.py test.db find_hidden_endpoints.py"
+    "debug_supervisor_v2.py test_bcrypt.py test_db_conn_3.py test.db find_hidden_endpoints.py "
+    "fix_printer_privileges.py delete_printer_db.py"
 )
 run_command(ssh, remote_cleanup_cmd)
 
@@ -74,6 +75,8 @@ print("--- Uploading Sidebar Fixes Script ---")
 sftp.put(os.path.join(local_base, "fix_sidebar.py"), f"{remote_base}/fix_sidebar.py")
 print("--- Applying Sidebar Fixes ---")
 run_command(ssh, f"cd {remote_base} && backend/.venv/bin/python fix_sidebar.py")
+
+
 
 print("--- Rebuilding and Restarting ---")
 run_command(ssh, f"cd {remote_base}/backend && .venv/bin/alembic upgrade head")

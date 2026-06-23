@@ -65,11 +65,29 @@ def detailed_stock_summary_report(
                 StockLedger.item_id,
                 func.coalesce(func.sum(StockLedger.qty_in - StockLedger.qty_out), 0).label("net_before")
             )
-            .filter(StockLedger.txn_date < from_date, StockLedger.status == 1)
+            .filter(StockLedger.txn_date < from_date, StockLedger.status == 1, StockLedger.txn_type != 8)
             .group_by(StockLedger.item_id)
             .all()
         )
         ob_map = {r.item_id: Decimal(str(r.net_before)) for r in ob_stats}
+
+        # 2b. Get latest current_value from ledger up to to_date (actual cost basis)
+        latest_ids_query = (
+            db.query(func.max(StockLedger.id))
+            .filter(
+                StockLedger.txn_date <= to_date,
+                StockLedger.status == 1,
+                StockLedger.txn_type != 8
+            )
+            .group_by(StockLedger.item_id)
+        )
+        value_rows = db.query(
+            StockLedger.item_id,
+            StockLedger.current_value
+        ).filter(
+            StockLedger.id.in_(latest_ids_query)
+        ).all()
+        value_map = {r.item_id: Decimal(str(r.current_value or 0)) for r in value_rows}
 
         # 3. Calculate Period stats for each item
         period_stats = (
@@ -86,7 +104,6 @@ def detailed_stock_summary_report(
                             (StockLedger.ref_table == "stock_adjustments", StockLedger.qty_in - StockLedger.qty_out),
                             (StockLedger.txn_type == 4, StockLedger.qty_in - StockLedger.qty_out),
                             (StockLedger.txn_type == 7, StockLedger.qty_in - StockLedger.qty_out),
-                            (StockLedger.txn_type == 8, StockLedger.qty_in - StockLedger.qty_out),
                             else_=0
                         )
                     ),
@@ -98,7 +115,8 @@ def detailed_stock_summary_report(
             .filter(
                 StockLedger.txn_date >= from_date,
                 StockLedger.txn_date <= to_date,
-                StockLedger.status == 1
+                StockLedger.status == 1,
+                StockLedger.txn_type != 8
             )
             .group_by(StockLedger.item_id)
             .all()
@@ -128,7 +146,7 @@ def detailed_stock_summary_report(
             closing = ob + total_in - total_out
             
             rate = item.default_price or Decimal("0")
-            closing_val = closing * rate
+            closing_val = value_map.get(item.id, Decimal("0"))
 
             rows.append(DetailedStockSummaryRow(
                 item_id=item.id,
@@ -209,11 +227,28 @@ def canteen_summary_report(
                 StockLedger.item_id,
                 func.coalesce(func.sum(StockLedger.qty_in - StockLedger.qty_out), 0).label("net_before")
             )
-            .filter(StockLedger.txn_date < from_date, StockLedger.status == 1)
+            .filter(StockLedger.txn_date < from_date, StockLedger.status == 1, StockLedger.txn_type != 8)
             .group_by(StockLedger.item_id)
             .all()
         )
         ob_map = {r.item_id: Decimal(str(r.net_before)) for r in ob_stats}
+
+        latest_ids_query = (
+            db.query(func.max(StockLedger.id))
+            .filter(
+                StockLedger.txn_date <= to_date,
+                StockLedger.status == 1,
+                StockLedger.txn_type != 8
+            )
+            .group_by(StockLedger.item_id)
+        )
+        value_rows = db.query(
+            StockLedger.item_id,
+            StockLedger.current_value
+        ).filter(
+            StockLedger.id.in_(latest_ids_query)
+        ).all()
+        value_map = {r.item_id: Decimal(str(r.current_value or 0)) for r in value_rows}
 
         period_stats = (
             db.query(
@@ -229,7 +264,6 @@ def canteen_summary_report(
                             (StockLedger.ref_table == "stock_adjustments", StockLedger.qty_in - StockLedger.qty_out),
                             (StockLedger.txn_type == 4, StockLedger.qty_in - StockLedger.qty_out),
                             (StockLedger.txn_type == 7, StockLedger.qty_in - StockLedger.qty_out),
-                            (StockLedger.txn_type == 8, StockLedger.qty_in - StockLedger.qty_out),
                             else_=0
                         )
                     ),
@@ -241,7 +275,8 @@ def canteen_summary_report(
             .filter(
                 StockLedger.txn_date >= from_date,
                 StockLedger.txn_date <= to_date,
-                StockLedger.status == 1
+                StockLedger.status == 1,
+                StockLedger.txn_type != 8
             )
             .group_by(StockLedger.item_id)
             .all()
@@ -266,7 +301,7 @@ def canteen_summary_report(
             total_out = Decimal(str(p.total_qty_out)) if p else Decimal("0")
             closing = ob + total_in - total_out
             rate = item.default_price or Decimal("0")
-            closing_val = closing * rate
+            closing_val = value_map.get(item.id, Decimal("0"))
 
             rows.append(DetailedStockSummaryRow(
                 item_id=item.id,

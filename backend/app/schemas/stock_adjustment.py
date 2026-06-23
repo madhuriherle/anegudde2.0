@@ -12,6 +12,11 @@ class StockAdjustmentBase(BaseModel):
 class StockAdjustmentCreate(StockAdjustmentBase):
     pass
 
+class StandaloneStockAdjustmentCreate(BaseModel):
+    item_id: int
+    adjusted_qty: Decimal
+    reason: str | None = None
+
 class StockAdjustmentOut(StockAdjustmentBase):
     id: int
     user_id: int

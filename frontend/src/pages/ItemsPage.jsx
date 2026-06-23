@@ -30,6 +30,7 @@ import { formatQuantityWithUnit } from '../utils/quantity';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 import { cn } from '../utils/cn';
 import { usePermission } from '../hooks/usePermission';
+import { useAuth } from '../context/AuthContext';
 
 const itemSchema = z.object({
   item_name: z.string().min(1, 'Name is required'),
@@ -51,8 +52,10 @@ const ItemsPage = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showConfirm } = useNotification();
   const { hasPermission } = usePermission();
+  const { user } = useAuth();
   const canWrite = hasPermission('items.write');
   const canDelete = hasPermission('items.delete');
+  const canAdjustStock = user?.role_rank_level === 1 || user?.role_rank_level === 3;
 
   const [open, setOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -65,9 +68,15 @@ const ItemsPage = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [usageDetails, setUsageDetails] = useState([]);
 
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustingItem, setAdjustingItem] = useState(null);
+  const [adjustMode, setAdjustMode] = useState('add');
+  const [adjustQty, setAdjustQty] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
+
   // Filter States
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize] = useState(200);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
@@ -79,7 +88,7 @@ const ItemsPage = () => {
         page,
         page_size: pageSize,
         q: search,
-        sort_by: 'item_name',
+        sort_by: 'id',
         sort_order: 'asc'
       };
       if (selectedCategory) params.category_id = Number(selectedCategory);
@@ -94,6 +103,22 @@ const ItemsPage = () => {
       const aStatus = Number(a?.status ?? 0);
       const bStatus = Number(b?.status ?? 0);
       if (aStatus !== bStatus) return bStatus - aStatus; // Active first
+
+      const codeA = a?.serial_numbers?.[0]?.serial_number || '';
+      const codeB = b?.serial_numbers?.[0]?.serial_number || '';
+      const numA = parseInt(codeA, 10);
+      const numB = parseInt(codeB, 10);
+
+      if (!isNaN(numA) && !isNaN(numB)) {
+        if (numA !== numB) return numA - numB;
+      } else if (!isNaN(numA)) {
+        return -1;
+      } else if (!isNaN(numB)) {
+        return 1;
+      } else if (codeA !== codeB) {
+        return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+      }
+
       return String(a?.item_name || '').localeCompare(String(b?.item_name || ''), undefined, { sensitivity: 'base' });
     });
   }, [itemsData]);
@@ -187,6 +212,20 @@ const ItemsPage = () => {
     onError: (err) => showError(err.response?.data?.detail || 'Status update failed')
   });
 
+  const stockAdjustMutation = useMutation({
+    mutationFn: async ({ item_id, adjusted_qty, reason }) =>
+      api.post('/stock-adjustments/adjust', { item_id, adjusted_qty, reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      showSuccess('Stock adjusted successfully');
+      setAdjustOpen(false);
+      setAdjustingItem(null);
+      setAdjustQty('');
+      setAdjustReason('');
+    },
+    onError: (err) => showError(err.response?.data?.detail || 'Stock adjustment failed')
+  });
+
   const handleOpen = (item = null) => {
     setEditingItem(item);
     if (item) {
@@ -229,6 +268,35 @@ const ItemsPage = () => {
   const handlePriceHistory = (item) => {
     setPriceHistoryItem(item);
     setPriceHistoryOpen(true);
+  };
+
+  const handleStockAdjustOpen = (item) => {
+    setAdjustingItem(item);
+    setAdjustMode('add');
+    setAdjustQty('');
+    setAdjustReason('');
+    setAdjustOpen(true);
+  };
+
+  const handleStockAdjustSubmit = async () => {
+    const raw = parseFloat(adjustQty);
+    if (isNaN(raw) || raw <= 0) {
+      showError('Please enter a valid positive quantity');
+      return;
+    }
+    const signedQty = adjustMode === 'deduct' ? -raw : raw;
+    const label = adjustMode === 'deduct' ? 'deduct' : 'add';
+    const confirmed = await showConfirm(
+      'Confirm Stock Adjustment',
+      `Are you sure you want to ${label} ${raw} to stock for "${adjustingItem?.item_name}"?`
+    );
+    if (confirmed) {
+      stockAdjustMutation.mutate({
+        item_id: adjustingItem.id,
+        adjusted_qty: signedQty,
+        reason: adjustReason || null
+      });
+    }
   };
 
   const handleDeleteClick = async (item) => {
@@ -332,15 +400,16 @@ const ItemsPage = () => {
     id: 'actions',
     header: () => <div className="text-center">Actions</div>,
     cell: (info) =>
-    <div className="flex items-center justify-center gap-2">
-          <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
-          {canWrite && <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit">Edit</button>}
-          {canDelete && <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete">Delete</button>}
-          <button onClick={() => navigate(`/items/rawitem/${info.row.original.id}/history`)} className="action-btn-view bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200">History</button>
+    <div className="flex items-center justify-center gap-1.5 flex-nowrap">
+          {canAdjustStock && <button onClick={() => handleStockAdjustOpen(info.row.original)} className="action-btn-receipt text-xs px-2 py-1 whitespace-nowrap">Qty Adjust</button>}
+          <button onClick={() => handleView(info.row.original)} className="action-btn-view text-xs px-2 py-1 whitespace-nowrap">View</button>
+          {canWrite && <button onClick={() => handleOpen(info.row.original)} className="action-btn-edit text-xs px-2 py-1 whitespace-nowrap">Edit</button>}
+          {canDelete && <button onClick={() => handleDeleteClick(info.row.original)} className="action-btn-delete text-xs px-2 py-1 whitespace-nowrap">Delete</button>}
+          <button onClick={() => navigate(`/items/rawitem/${info.row.original.id}/history`)} className="action-btn-view bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 text-xs px-2 py-1 whitespace-nowrap">History</button>
         </div>
 
   }],
-  [navigate, statusMutation, showConfirm, canWrite, canDelete]);
+  [navigate, statusMutation, showConfirm, canWrite, canDelete, canAdjustStock, handleStockAdjustOpen]);
 
   return (
     <div className="space-y-6">
@@ -652,6 +721,90 @@ const ItemsPage = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Adjust Dialog */}
+      <Dialog open={adjustOpen} onOpenChange={(val) => {
+        if (!val && !stockAdjustMutation.isPending) {
+          setAdjustOpen(false);
+          setAdjustingItem(null);
+        }
+      }}>
+        <DialogContent className="max-w-lg !flex !flex-col !p-0 border-border-temple shadow-2xl bg-white overflow-hidden">
+          <DialogHeader className="!m-0 border-b border-border-temple/40 !px-8 !py-6 shrink-0 bg-[#F3E8D4]">
+            <DialogTitle className="text-xl text-text-main font-temple">Stock Adjustment</DialogTitle>
+            <DialogDescription className="sr-only">Adjust stock quantity for item</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 space-y-5 px-8 py-6">
+            <DetailItem label="Item" value={adjustingItem?.item_name} />
+            <DetailItem
+              label="Current Stock"
+              value={formatQuantityWithUnit(adjustingItem?.current_stock || 0, adjustingItem?.unit)} />
+
+            <div className="flex rounded-lg border border-border-temple/50 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setAdjustMode('add')}
+                className={cn(
+                  'flex-1 px-4 py-2.5 text-sm font-semibold transition-colors',
+                  adjustMode === 'add'
+                    ? 'bg-emerald-600 text-white shadow-inner'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                )}>
+                + Add Stock
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdjustMode('deduct')}
+                className={cn(
+                  'flex-1 px-4 py-2.5 text-sm font-semibold transition-colors',
+                  adjustMode === 'deduct'
+                    ? 'bg-rose-600 text-white shadow-inner'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                )}>
+                - Deduct Stock
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Quantity</Label>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={adjustQty}
+                onChange={(e) => setAdjustQty(e.target.value.replace(/^-/, ''))}
+                placeholder="e.g. 10"
+                className="text-text-main" />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-text-main">Reason</Label>
+              <textarea
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                placeholder="Optional reason for adjustment"
+                rows={3}
+                className="w-full rounded-lg border border-border-temple/50 bg-white px-4 py-3 text-sm text-text-main placeholder:text-text-light/60 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+            </div>
+          </div>
+
+          <DialogFooter className="!px-6 !py-4 !m-0 border-t border-border-temple/40 flex justify-end gap-3 shrink-0 bg-[#F3E8D4]">
+            <Button
+              onClick={() => { setAdjustOpen(false); setAdjustingItem(null); }}
+              variant="ghost"
+              className="w-28 h-10 bg-white border border-[#D9C8AF] text-text-main hover:bg-[#FAF7F2] font-bold"
+              disabled={stockAdjustMutation.isPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleStockAdjustSubmit}
+              disabled={stockAdjustMutation.isPending}
+              className="w-32 h-10 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg border-none">
+              {stockAdjustMutation.isPending ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>);

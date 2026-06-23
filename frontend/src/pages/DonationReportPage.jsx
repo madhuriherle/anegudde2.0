@@ -48,7 +48,17 @@ const DonationReportPage = () => {
     queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data
   });
 
-  const items = useMemo(() => itemsData?.items || [], [itemsData]);
+  const items = useMemo(() => {
+    const list = itemsData?.items || [];
+    return [...list].sort((a, b) => {
+      const codeA = a?.serial_numbers?.[0]?.serial_number || '';
+      const codeB = b?.serial_numbers?.[0]?.serial_number || '';
+      const numA = parseInt(codeA, 10);
+      const numB = parseInt(codeB, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return codeA.localeCompare(codeB);
+    });
+  }, [itemsData]);
 
   const handlePrint = () => {
     window.print();
