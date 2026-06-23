@@ -311,6 +311,7 @@ class MenuItem(Base):
     dish_name = Column(String(150), nullable=False)
     unit_id = Column(Integer, ForeignKey("units.id"), nullable=False, index=True)
     status = Column(Integer, nullable=False, server_default=text("1"), index=True) # 1: Active, 0: Disabled
+    default_approx_amount = Column(Numeric(12, 2), nullable=True, default=None)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
@@ -353,6 +354,7 @@ class Item(Base):
     category_id = Column(Integer, ForeignKey("item_categories.id"), nullable=True, index=True)
     unit_id = Column(Integer, ForeignKey("units.id"), nullable=False, index=True)
     opening_stock = Column(Numeric(15, 3), nullable=False, default=0)
+    opening_price = Column(Numeric(15, 3), nullable=True)
     current_stock = Column(Numeric(15, 3), nullable=False, default=0)
     default_price = Column(Numeric(15, 3), nullable=True)
     min_stock_level = Column(Numeric(15, 3), nullable=True)

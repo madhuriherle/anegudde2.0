@@ -79,6 +79,14 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
             updated_by=current_user.id
         )
         db.add(wastage_item)
+
+        # Sync the approx_amount back to the menu item as the new default
+        if it.approx_amount and Decimal(str(it.approx_amount)) > 0 and it.menu_item_id:
+            menu_item = db.query(MenuItem).filter(MenuItem.id == it.menu_item_id).first()
+            if menu_item:
+                menu_item.default_approx_amount = Decimal(str(it.approx_amount))
+                menu_item.updated_at = now
+                menu_item.updated_by = current_user.id
         
         # If it's a raw item wastage (should be handled by stock_adjustment_service now, 
         # but kept for legacy/compatibility if called directly with item_id)
@@ -214,6 +222,14 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
             updated_by=current_user.id
         )
         db.add(wastage_item)
+
+        # Sync the approx_amount back to the menu item as the new default
+        if it.approx_amount and Decimal(str(it.approx_amount)) > 0 and it.menu_item_id:
+            menu_item = db.query(MenuItem).filter(MenuItem.id == it.menu_item_id).first()
+            if menu_item:
+                menu_item.default_approx_amount = Decimal(str(it.approx_amount))
+                menu_item.updated_at = now
+                menu_item.updated_by = current_user.id
 
         if it.item_id:
             item = db.query(Item).filter(Item.id == it.item_id).first()

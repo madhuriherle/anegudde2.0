@@ -106,7 +106,7 @@ const WastagesPage = () => {
     header: 'Total Approx Amt',
     cell: (info) => {
       const items = info.row.original.items || [];
-      const total = items.reduce((sum, it) => sum + Number(it.approx_amount || 0), 0);
+      const total = items.reduce((sum, it) => sum + (Number(it.quantity || 0) * Number(it.approx_amount || 0)), 0);
       return (
         <span className="text-base text-text-main">
             {formatCurrency(total)}
@@ -168,9 +168,10 @@ const WastagesPage = () => {
               <table className="w-full text-sm text-left">
                 <thead className="bg-bg-temple text-text-main uppercase text-xs font-bold tracking-wider">
                   <tr>
-                    <th className="px-3 py-3 border-b border-border-temple">Dish Name</th>
+                    <th className="px-3 py-3 border-b border-border-temple">Dish/Item Name</th>
                     <th className="px-3 py-3 border-b border-border-temple">Quantity</th>
-                    <th className="px-3 py-3 border-b border-border-temple">Approx Amt</th>
+                    <th className="px-3 py-3 border-b border-border-temple">Rate</th>
+                    <th className="px-3 py-3 border-b border-border-temple">Total Amt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-temple/40">
@@ -182,8 +183,11 @@ const WastagesPage = () => {
                       <td className="px-3 py-3 text-left text-text-main">
                         {formatQuantityWithUnit(item.quantity, item.menu_item?.unit || item.item?.unit)}
                       </td>
-                      <td className="px-3 py-3 text-left text-text-main font-bold">
+                      <td className="px-3 py-3 text-left text-text-main">
                         {formatCurrency(Number(item.approx_amount || 0))}
+                      </td>
+                      <td className="px-3 py-3 text-left text-text-main font-bold">
+                        {formatCurrency(Number(item.quantity || 0) * Number(item.approx_amount || 0))}
                       </td>
                     </tr>
                   )}

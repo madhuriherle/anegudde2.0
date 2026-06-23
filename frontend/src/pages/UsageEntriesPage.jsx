@@ -208,7 +208,7 @@ const UsageEntriesPage = () => {
   const buildRawDefaults = () =>
   Object.fromEntries(activeItems.map((it) => [String(it.id), { quantity_used: 0 }]));
   const buildWastageDefaults = () =>
-  Object.fromEntries(activeMenuItems.map((it) => [String(it.id), { quantity: 0, approx_amount: 0 }]));
+  Object.fromEntries(activeMenuItems.map((it) => [String(it.id), { quantity: 0, approx_amount: it.default_approx_amount ?? 0 }]));
 
   const { register, handleSubmit, reset, setValue, control, watch, formState: { errors } } = useForm({
     resolver: zodResolver(formSchema),
@@ -789,10 +789,18 @@ const UsageEntriesPage = () => {
 
                   {viewTab === 'wastage' && (
                     <table className="w-full text-base text-left border-collapse">
+                      <thead className="bg-bg-temple/50 text-text-main uppercase text-xs font-bold tracking-wider">
+                        <tr>
+                          <th className="px-4 py-2 border-b border-border-temple/20">Dish/Item Name</th>
+                          <th className="px-4 py-2 border-b border-border-temple/20 text-right">Quantity</th>
+                          <th className="px-4 py-2 border-b border-border-temple/20 text-right">Rate</th>
+                          <th className="px-4 py-2 border-b border-border-temple/20 text-right">Total Amt</th>
+                        </tr>
+                      </thead>
                       <tbody className="divide-y divide-border-temple/10">
                         {viewingWastages.filter((w) => Number(w.quantity || 0) > 0).length === 0 ?
                           <tr>
-                            <td colSpan={3} className="px-4 py-3 text-text-main/60 text-center text-sm italic">No wastage recorded</td>
+                            <td colSpan={4} className="px-4 py-3 text-text-main/60 text-center text-sm italic">No wastage recorded</td>
                           </tr> :
                           viewingWastages.
                             filter((w) => Number(w.quantity || 0) > 0).
@@ -808,6 +816,9 @@ const UsageEntriesPage = () => {
                                 </td>
                                 <td className="px-4 py-3 text-right text-text-main">
                                   {w.approx_amount != null ? formatCurrency(Number(w.approx_amount || 0)) : '-'}
+                                </td>
+                                <td className="px-4 py-3 text-right text-text-main font-bold">
+                                  {w.approx_amount != null ? formatCurrency(Number(w.quantity || 0) * Number(w.approx_amount || 0)) : '-'}
                                 </td>
                               </tr>
                             )
@@ -1030,11 +1041,12 @@ const UsageEntriesPage = () => {
                     <div className="grid grid-cols-[1fr_80px_110px] gap-3 mb-1 px-1 border-b border-border-temple/10 pb-1">
                       <div></div>
                       <div className="text-base font-bold text-text-main text-center">Qty</div>
-                      <div className="text-base font-bold text-text-main text-center whitespace-nowrap">Approx.Amt</div>
+                      <div className="text-base font-bold text-text-main text-center whitespace-nowrap">Rate</div>
                     </div>
                     <div className="max-h-[350px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
                       <div className="space-y-2">
-                        {(menuItems || []).filter((m) => m.status === 1).map((menu) =>
+                        {(menuItems || []).filter((m) => m.status === 1).map((menu) => {
+                          return (
                           <div key={menu.id} className="grid grid-cols-[1fr_80px_110px] gap-3 items-center min-h-[32px]">
                             <div className="text-base font-medium text-text-main leading-6 pr-2">
                               {menu.dish_name}{menu.unit?.unit_code ? ` (${menu.unit.unit_code})` : ''}
@@ -1066,6 +1078,7 @@ const UsageEntriesPage = () => {
                               
                             </div>
                           </div>
+                          );}
                           )}
                       </div>
                     </div>

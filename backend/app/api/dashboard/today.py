@@ -47,7 +47,7 @@ def today_summary(
         or 0
     )
     wastage_value = (
-        db.query(func.coalesce(func.sum(WastageItem.approx_amount), 0))
+        db.query(func.coalesce(func.sum(WastageItem.quantity * WastageItem.approx_amount), 0))
         .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
         .filter(WastageEntry.is_deleted == False, WastageEntry.wastage_date == today)
         .scalar()
@@ -107,7 +107,7 @@ def today_summary(
             MenuItem.dish_name,
             Unit.unit_name,
             func.sum(WastageItem.quantity).label("quantity"),
-            func.sum(WastageItem.approx_amount).label("amount")
+            func.sum(WastageItem.quantity * WastageItem.approx_amount).label("amount")
         )
         .join(WastageItem, WastageItem.menu_item_id == MenuItem.id)
         .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
@@ -172,7 +172,7 @@ def get_weekly_menu_wastage(
             MenuItem.dish_name.label("menu_item_name"),
             Unit.unit_name.label("unit_name"),
             func.coalesce(func.sum(WastageItem.quantity), 0).label("quantity"),
-            func.coalesce(func.sum(WastageItem.approx_amount), 0).label("amount"),
+            func.coalesce(func.sum(WastageItem.quantity * WastageItem.approx_amount), 0).label("amount"),
         )
         .join(WastageItem, WastageItem.menu_item_id == MenuItem.id)
         .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
@@ -184,7 +184,7 @@ def get_weekly_menu_wastage(
             WastageEntry.wastage_date <= today,
         )
         .group_by(MenuItem.dish_name, Unit.unit_name)
-        .order_by(func.coalesce(func.sum(WastageItem.approx_amount), 0).desc())
+        .order_by(func.coalesce(func.sum(WastageItem.quantity * WastageItem.approx_amount), 0).desc())
         .limit(5)
         .all()
     )

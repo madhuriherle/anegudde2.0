@@ -18,6 +18,7 @@ import { cn } from '../utils/cn';
 import { getDefaultPath, hasMainAccess } from '../utils/navigation';
 import Footer from '../components/Footer';
 import api from '../api/axios';
+import { useNotification } from '../context/NotificationContext';
 
 const DynamicIcon = ({ name, ...props }) => {
   const IconComponent = Icons[name] || Icons.HelpCircle;
@@ -26,6 +27,7 @@ const DynamicIcon = ({ name, ...props }) => {
 
 const MainLayout = () => {
   const { user, logout } = useAuth();
+  const { showError } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -140,6 +142,18 @@ const MainLayout = () => {
   const downloadFile = async (endpoint, filename) => {
     try {
       const response = await api.get(endpoint, { responseType: 'blob' });
+      const contentType = response.headers?.['content-type'] || response.data?.type || '';
+      if (contentType.includes('application/json')) {
+        const message = await response.data.text();
+        let detail = message;
+        try {
+          const parsed = JSON.parse(message);
+          detail = parsed.detail || detail;
+        } catch {
+          // Keep the raw message when the body is not valid JSON.
+        }
+        throw new Error(detail || `Failed to download ${filename}`);
+      }
       const disposition = response.headers?.['content-disposition'] || '';
       const match = disposition.match(/filename="?([^"]+)"?/i);
       const downloadName = match?.[1] || filename;
@@ -153,6 +167,17 @@ const MainLayout = () => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(`Failed to download ${filename}:`, error);
+      if (error.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const parsed = JSON.parse(text);
+          showError(parsed.detail || `Failed to download ${filename}`);
+          return;
+        } catch {
+          // Fall through to the generic handler below.
+        }
+      }
+      showError(error.response?.data?.detail || error.message || `Failed to download ${filename}`);
     }
   };
 

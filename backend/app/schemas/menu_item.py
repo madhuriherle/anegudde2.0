@@ -7,6 +7,7 @@ class MenuItemBase(BaseModel):
     dish_name: str
     unit_id: int
     status: int = 1
+    default_approx_amount: float | None = None
 
 
 class MenuItemCreate(MenuItemBase):
@@ -17,6 +18,7 @@ class MenuItemUpdate(BaseModel):
     dish_name: str | None = None
     unit_id: int | None = None
     status: int | None = None
+    default_approx_amount: float | None = None
 
 
 class MenuItemOut(MenuItemBase):

@@ -20,6 +20,7 @@ class ItemBase(BaseModel):
     category_id: int | None = None
     unit_id: int
     opening_stock: Decimal = Decimal("0")
+    opening_price: Decimal | None = None
     current_stock: Decimal = Decimal("0")
     default_price: Decimal | None = None
     min_stock_level: Decimal | None = None

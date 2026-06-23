@@ -31,7 +31,7 @@ async def upload_purchase_bill(
             "snapshot": {
                 "purchase_id": purchase_id,
                 "bill_no": entry.bill_no,
-                "vendor_name": entry.vendor_name,
+                "vendor_name": entry.vendor.vendor_name if entry.vendor else None,
                 "new_filename": bill_file.filename,
             }
         }

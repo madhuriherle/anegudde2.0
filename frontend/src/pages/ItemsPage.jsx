@@ -496,6 +496,7 @@ const ItemsPage = () => {
               <DetailItem
                 label="Today Opening Stock"
                 value={formatQuantityWithUnit(todayOpeningByItemId.get(Number(viewingItem?.id)) ?? 0, viewingItem?.unit)} />
+              <DetailItem label="Opening Price (Rate)" value={formatCurrency(viewingItem?.opening_price || viewingItem?.default_price || 0)} />
               
               <DetailItem
                 label="Current Stock"
@@ -595,6 +596,39 @@ const ItemsPage = () => {
                   
                   {errors.unit_id && <p className="text-xs text-red-500">{errors.unit_id.message}</p>}
                 </div>
+
+                {!editingItem && (
+                  <>
+                    <div>
+                      <Label className="text-text-main">Opening Stock</Label>
+                      <Input
+                        type="text"
+                        {...register('opening_stock')}
+                        className="text-text-main"
+                        placeholder="e.g. 100"
+                        onFocus={(e) => {
+                          if (e.target.value === '0') {
+                            setValue('opening_stock', '');
+                          }
+                        }} />
+                      {errors.opening_stock && <p className="text-xs text-red-500">{errors.opening_stock.message}</p>}
+                    </div>
+                    <div>
+                      <Label className="text-text-main">Opening Price (Rate)</Label>
+                      <Input
+                        type="text"
+                        {...register('default_price')}
+                        className="text-text-main"
+                        placeholder="e.g. 50"
+                        onFocus={(e) => {
+                          if (e.target.value === '0') {
+                            setValue('default_price', '');
+                          }
+                        }} />
+                      {errors.default_price && <p className="text-xs text-red-500">{errors.default_price.message}</p>}
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <Label className="text-text-main">Minimum Stock Alert</Label>

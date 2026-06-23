@@ -343,12 +343,11 @@ def canteen_summary_report(
         # Fetch all active menu items
         menu_items = db.query(MenuItem).filter(MenuItem.status == 1).order_by(MenuItem.dish_name.asc()).all()
 
-        # Fetch actual wastage for the date
         wastage_data = (
             db.query(
                 WastageItem.menu_item_id,
                 func.coalesce(func.sum(WastageItem.quantity), 0).label("qty"),
-                func.coalesce(func.sum(WastageItem.approx_amount), 0).label("approx_amount"),
+                func.coalesce(func.sum(WastageItem.quantity * WastageItem.approx_amount), 0).label("approx_amount"),
             )
             .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
             .filter(

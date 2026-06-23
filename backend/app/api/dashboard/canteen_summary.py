@@ -65,7 +65,7 @@ def get_canteen_summary_stats(
 
     # Wastage Today Total
     wastage_total = (
-        db.query(func.coalesce(func.sum(WastageItem.approx_amount), 0))
+        db.query(func.coalesce(func.sum(WastageItem.quantity * WastageItem.approx_amount), 0))
         .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
         .filter(WastageEntry.is_deleted == False, WastageEntry.wastage_date == today, WastageEntry.status == 1)
         .scalar()
@@ -78,7 +78,7 @@ def get_canteen_summary_stats(
         db.query(
             MenuItem.dish_name,
             func.sum(WastageItem.quantity).label("quantity"),
-            func.sum(WastageItem.approx_amount).label("amount"),
+            func.sum(WastageItem.quantity * WastageItem.approx_amount).label("amount"),
             Unit.unit_name
         )
         .join(WastageItem, WastageItem.menu_item_id == MenuItem.id)

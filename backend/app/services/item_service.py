@@ -36,6 +36,8 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: i
     
     data = payload.model_dump()
     serial_no = data.pop("serial_number", None)
+    data["current_stock"] = data.get("opening_stock", Decimal("0"))
+    data["opening_price"] = data.get("default_price")
         
     item = Item(
         **data,
@@ -64,6 +66,40 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: i
     
     new_s = ItemSerialNumber(item_id=item.id, serial_number=target_serial, status=1)
     db.add(new_s)
+
+    opening_stock = data.get("opening_stock")
+    if opening_stock and Decimal(str(opening_stock)) > 0:
+        default_price = data.get("default_price")
+        unit_cost = Decimal(str(default_price)) if default_price else Decimal("0")
+        txn_date = now.date()
+        db.add(StockLedger(
+            item_id=item.id,
+            txn_date=txn_date,
+            txn_type=4,
+            ref_table="items",
+            ref_id=item.id,
+            qty_in=Decimal(str(opening_stock)),
+            qty_out=0,
+            unit_cost=unit_cost,
+            value_in=Decimal(str(opening_stock)) * unit_cost,
+            value_out=0,
+            balance=Decimal(str(opening_stock)),
+            current_value=Decimal(str(opening_stock)) * unit_cost,
+            created_at=now,
+            updated_at=now,
+            created_by=current_user.id,
+            updated_by=current_user.id,
+        ))
+
+    default_price = data.get("default_price")
+    if default_price and Decimal(str(default_price)) > 0:
+        db.add(ItemPrice(
+            item_id=item.id,
+            price=Decimal(str(default_price)),
+            purchase_entry_id=None,
+            created_at=now,
+            created_by=current_user.id,
+        ))
 
     db.commit()
     db.refresh(item)
