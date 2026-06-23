@@ -50,6 +50,7 @@ def generate_daily_stock_summary(summary_date: date):
                     (StockLedger.txn_type == 5, -StockLedger.qty_out), # Purchase Return
                     (StockLedger.txn_type == 6, StockLedger.qty_in),   # Consumption Return
                     (StockLedger.txn_type == 7, StockLedger.qty_in),   # Donation
+                    (StockLedger.txn_type == 8, StockLedger.qty_in - StockLedger.qty_out), # Opening Stock
                     else_=0
                 )).label("adjustment_qty")
             ).filter(

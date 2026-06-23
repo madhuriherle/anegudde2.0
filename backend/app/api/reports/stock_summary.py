@@ -86,6 +86,7 @@ def detailed_stock_summary_report(
                             (StockLedger.ref_table == "stock_adjustments", StockLedger.qty_in - StockLedger.qty_out),
                             (StockLedger.txn_type == 4, StockLedger.qty_in - StockLedger.qty_out),
                             (StockLedger.txn_type == 7, StockLedger.qty_in - StockLedger.qty_out),
+                            (StockLedger.txn_type == 8, StockLedger.qty_in - StockLedger.qty_out),
                             else_=0
                         )
                     ),
@@ -228,6 +229,7 @@ def canteen_summary_report(
                             (StockLedger.ref_table == "stock_adjustments", StockLedger.qty_in - StockLedger.qty_out),
                             (StockLedger.txn_type == 4, StockLedger.qty_in - StockLedger.qty_out),
                             (StockLedger.txn_type == 7, StockLedger.qty_in - StockLedger.qty_out),
+                            (StockLedger.txn_type == 8, StockLedger.qty_in - StockLedger.qty_out),
                             else_=0
                         )
                     ),

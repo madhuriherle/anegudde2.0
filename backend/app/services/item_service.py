@@ -75,7 +75,7 @@ def create_item(payload: ItemCreate, db: Session, current_user: User, type_id: i
         db.add(StockLedger(
             item_id=item.id,
             txn_date=txn_date,
-            txn_type=4,
+            txn_type=8,
             ref_table="items",
             ref_id=item.id,
             qty_in=Decimal(str(opening_stock)),
