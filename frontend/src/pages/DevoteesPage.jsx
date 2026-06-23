@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { formatDate } from '../utils/date';
-import { formatQuantityWithUnit } from '../utils/quantity';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 import { cn } from '../utils/cn';
 
 const DevoteesPage = () => {
@@ -334,7 +334,7 @@ const DevoteesPage = () => {
                                 <div className="space-y-1">
                                   {(donation.items || []).map((item) =>
                                     <div key={item.id} className="text-text-main">
-                                      {formatQuantityWithUnit(item.quantity, item.item?.unit)}
+                                      <QtyDisplay qty={item.quantity} unit={item.item?.unit} />
                                     </div>
                                   )}
                                 </div>

@@ -11,7 +11,12 @@ from app.utils.stock_ledger_utils import compute_current_value
 
 def list_consumptions(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
     import re
-    query = db.query(ConsumptionEntry).filter(ConsumptionEntry.is_deleted == False).options(joinedload(ConsumptionEntry.items), joinedload(ConsumptionEntry.user))
+    query = db.query(ConsumptionEntry).filter(ConsumptionEntry.is_deleted == False).options(
+        joinedload(ConsumptionEntry.items),
+        joinedload(ConsumptionEntry.user),
+        joinedload(ConsumptionEntry.wastages).joinedload(WastageEntry.items).joinedload(WastageItem.menu_item),
+        joinedload(ConsumptionEntry.wastages).joinedload(WastageEntry.items).joinedload(WastageItem.item)
+    )
     if status is not None: query = query.filter(ConsumptionEntry.status == status)
     
     # Smart Search: Extract dates from q if present
@@ -212,7 +217,9 @@ def get_consumption(consumption_id: int, db: Session) -> ConsumptionEntry:
 def get_consumption_full(consumption_id: int, db: Session) -> ConsumptionEntry:
     entry = db.query(ConsumptionEntry).options(
         joinedload(ConsumptionEntry.user),
-        joinedload(ConsumptionEntry.items)
+        joinedload(ConsumptionEntry.items),
+        joinedload(ConsumptionEntry.wastages).joinedload(WastageEntry.items).joinedload(WastageItem.menu_item),
+        joinedload(ConsumptionEntry.wastages).joinedload(WastageEntry.items).joinedload(WastageItem.item)
     ).filter(ConsumptionEntry.id == consumption_id).first()
     if not entry: raise HTTPException(status_code=404, detail="Not found")
     return entry

@@ -5,6 +5,7 @@ import api from '../api/axios';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../utils/currency';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 import { cn } from '../utils/cn';
 import { safeFormatTime } from '../utils/date';
 import { RefreshCw } from 'lucide-react';
@@ -223,7 +224,7 @@ const DashboardPage = () => {
                         </div>
                         <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                           <div className="text-sm font-normal text-text-main/80 whitespace-nowrap">
-                            {Number(item.quantity).toLocaleString()} {item.unit_name}
+                            <QtyDisplay qty={item.quantity} unit={{ unit_name: item.unit_name }} />
                           </div>
                           <div className="text-base font-normal text-[#8B1E1E]">
                             {formatCurrency(item.amount)}
@@ -261,7 +262,7 @@ const DashboardPage = () => {
                         </div>
                         <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                           <div className="text-sm font-normal text-text-main/80 whitespace-nowrap">
-                            {Number(item.quantity).toLocaleString()} {item.unit_name}
+                            <QtyDisplay qty={item.quantity} unit={{ unit_name: item.unit_name }} />
                           </div>
                           <div className="text-base font-normal text-[#8B1E1E]">
                             {formatCurrency(item.amount)}
@@ -299,7 +300,7 @@ const DashboardPage = () => {
                         </div>
                         <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                           <div className="text-sm font-normal text-text-main/80 whitespace-nowrap">
-                            {Number(item.quantity).toLocaleString()} {item.unit_name}
+                            <QtyDisplay qty={item.quantity} unit={{ unit_name: item.unit_name }} />
                           </div>
                           <div className="text-base font-normal text-[#8B1E1E]">
                             {formatCurrency(item.amount)}
@@ -347,7 +348,7 @@ const DashboardPage = () => {
                           </div>
                           <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                             <div className="text-sm text-text-main/70 font-normal whitespace-nowrap">
-                              {row.quantity.toFixed(3)} {row.unit_name}
+                              <QtyDisplay qty={row.quantity} digits={3} unit={{ unit_name: row.unit_name }} />
                             </div>
                             <div className="text-base font-normal text-[#8B1E1E]">
                               {formatCurrency(row.amount)}

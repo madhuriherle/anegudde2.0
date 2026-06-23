@@ -24,9 +24,9 @@ import {
 import { Select } from '../components/ui/Select';
 import { Label } from '../components/ui/Label';
 import { DetailItem } from '../components/ui/DetailItem';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 import { formatCurrency } from '../utils/currency';
-import { formatDate, safeFormatDate } from '../utils/date';
-import { formatQuantityWithUnit } from '../utils/quantity';
+import { formatDate, getTodayDateInput, safeFormatDate } from '../utils/date';
 import { DeletionWarningDialog } from '../components/ui/DeletionWarningDialog';
 import { cn } from '../utils/cn';
 import { usePermission } from '../hooks/usePermission';
@@ -145,7 +145,7 @@ const ItemsPage = () => {
     );
   }, [units]);
 
-  const todayDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayDate = useMemo(() => getTodayDateInput(), []);
   const { data: todaySummaryData } = useQuery({
     queryKey: ['canteen-summary', todayDate],
     queryFn: async () => {
@@ -362,7 +362,7 @@ const ItemsPage = () => {
       "font-normal",
       Number(i.getValue()) <= Number(i.row.original.min_stock_level) ? 'text-error' : 'text-text-main'
     )}>
-          {Number(i.getValue() || 0).toFixed(3)} {i.row.original.unit?.unit_code}
+          <QtyDisplay qty={i.getValue() || 0} digits={3} unit={i.row.original.unit} />
         </span>
 
   },
@@ -564,19 +564,19 @@ const ItemsPage = () => {
               <DetailItem label="Unit" value={`${viewingItem?.unit?.unit_name} (${viewingItem?.unit?.unit_code})`} />
               <DetailItem
                 label="Today Opening Stock"
-                value={formatQuantityWithUnit(todayOpeningByItemId.get(Number(viewingItem?.id)) ?? 0, viewingItem?.unit)} />
+                value={<QtyDisplay qty={todayOpeningByItemId.get(Number(viewingItem?.id)) ?? 0} unit={viewingItem?.unit} />} />
               <DetailItem label="Opening Price (Rate)" value={formatCurrency(viewingItem?.opening_price || viewingItem?.default_price || 0)} />
               
               <DetailItem
                 label="Current Stock"
-                value={formatQuantityWithUnit(viewingItem?.current_stock || 0, viewingItem?.unit)}
+                value={<QtyDisplay qty={viewingItem?.current_stock || 0} unit={viewingItem?.unit} />}
                 valueClassName={cn(
                   "font-bold",
                   Number(viewingItem?.current_stock) <= Number(viewingItem?.min_stock_level) ? 'text-error' : 'text-text-main'
                 )} />
               
               <DetailItem label="Current Rate" value={formatCurrency(viewingItem?.default_price || 0)} />
-              <DetailItem label="Min. Stock Alert" value={formatQuantityWithUnit(viewingItem?.min_stock_level || 0, viewingItem?.unit)} />
+              <DetailItem label="Min. Stock Alert" value={<QtyDisplay qty={viewingItem?.min_stock_level || 0} unit={viewingItem?.unit} />} />
             </div>
           </div>
 
@@ -741,7 +741,7 @@ const ItemsPage = () => {
             <DetailItem label="Item" value={adjustingItem?.item_name} />
             <DetailItem
               label="Current Stock"
-              value={formatQuantityWithUnit(adjustingItem?.current_stock || 0, adjustingItem?.unit)} />
+              value={<QtyDisplay qty={adjustingItem?.current_stock || 0} unit={adjustingItem?.unit} />} />
 
             <div className="flex rounded-lg border border-border-temple/50 overflow-hidden">
               <button

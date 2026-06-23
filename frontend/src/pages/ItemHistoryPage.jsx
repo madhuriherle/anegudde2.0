@@ -20,7 +20,7 @@ import { Card } from '../components/ui/Card';
 import { DataTable } from '../components/ui/DataTable';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
-import { formatQuantityWithUnit } from '../utils/quantity';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 
 const txnTypes = {
   1: {
@@ -116,7 +116,7 @@ const ItemHistoryPage = () => {
       const val = Number(info.getValue());
       return (
         <div className={`text-right font-medium text-sm ${val > 0 ? 'text-green-600' : 'text-text-main/20'}`}>
-            {val > 0 ? formatQuantityWithUnit(val, item?.unit) : '-'}
+            {val > 0 ? <QtyDisplay qty={val} unit={item?.unit} /> : '-'}
           </div>);
 
     }
@@ -131,7 +131,7 @@ const ItemHistoryPage = () => {
       }
       return (
         <div className={`text-right font-medium text-sm ${val > 0 ? 'text-red-600' : 'text-text-main/20'}`}>
-            {val > 0 ? formatQuantityWithUnit(val, item?.unit) : '-'}
+            {val > 0 ? <QtyDisplay qty={val} unit={item?.unit} /> : '-'}
           </div>);
 
     }
@@ -142,7 +142,7 @@ const ItemHistoryPage = () => {
     cell: (info) => {
       return (
         <div className="text-right text-primary-main text-sm">
-            {formatQuantityWithUnit(info.getValue(), item?.unit)}
+            <QtyDisplay qty={info.getValue()} unit={item?.unit} />
           </div>);
 
     }

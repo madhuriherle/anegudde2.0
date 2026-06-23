@@ -1,8 +1,10 @@
 import 'dart:ui';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
+import '../services/token_file_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,15 +18,23 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
-  void _showSettingsDialog() {
+  Future<void> _showSettingsDialog() async {
     final urlController = TextEditingController(text: ApiService().baseUrl);
+    final outputFolderController = TextEditingController(
+      text: await TokenFileService.getOutputFolder(),
+    );
+    if (!mounted) {
+      outputFolderController.dispose();
+      urlController.dispose();
+      return;
+    }
     final passwordController = TextEditingController();
     bool unlocked = false;
     bool testing = false;
     bool? testSuccess;
     String testResult = '';
 
-    showDialog(
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
@@ -58,7 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: const Color(0xFFD9C8AF).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.settings, color: Color(0xFF4A3728)),
+                      child: const Icon(
+                        Icons.settings,
+                        color: Color(0xFF4A3728),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     const Text(
@@ -129,20 +142,30 @@ class _LoginScreenState extends State<LoginScreen> {
                                 fillColor: Colors.grey[50],
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Color(0xFFD9C8AF)),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFD9C8AF),
+                                  ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Colors.grey[300]!),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[300]!,
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Color(0xFF4A3728), width: 2),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF4A3728),
+                                    width: 2,
+                                  ),
                                 ),
-                                prefixIcon: const Icon(Icons.lock_person_outlined),
+                                prefixIcon: const Icon(
+                                  Icons.lock_person_outlined,
+                                ),
                               ),
                               onSubmitted: (_) {
-                                if (passwordController.text == 'd-apps@settings') {
+                                if (passwordController.text ==
+                                    'd-apps@settings') {
                                   setDialogState(() => unlocked = true);
                                 }
                               },
@@ -153,12 +176,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               height: 56,
                               child: ElevatedButton(
                                 onPressed: () {
-                                  if (passwordController.text == 'd-apps@settings') {
+                                  if (passwordController.text ==
+                                      'd-apps@settings') {
                                     setDialogState(() => unlocked = true);
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Invalid Master Password'),
+                                        content: Text(
+                                          'Invalid Master Password',
+                                        ),
                                         backgroundColor: Colors.redAccent,
                                       ),
                                     );
@@ -193,12 +219,20 @@ class _LoginScreenState extends State<LoginScreen> {
                               decoration: BoxDecoration(
                                 color: testSuccess == true
                                     ? Colors.green.withOpacity(0.1)
-                                    : (testSuccess == null ? const Color(0xFFD9C8AF).withOpacity(0.1) : Colors.red.withOpacity(0.1)),
+                                    : (testSuccess == null
+                                          ? const Color(
+                                              0xFFD9C8AF,
+                                            ).withOpacity(0.1)
+                                          : Colors.red.withOpacity(0.1)),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: testSuccess == true
                                       ? Colors.green.withOpacity(0.3)
-                                      : (testSuccess == null ? const Color(0xFFD9C8AF).withOpacity(0.3) : Colors.red.withOpacity(0.3)),
+                                      : (testSuccess == null
+                                            ? const Color(
+                                                0xFFD9C8AF,
+                                              ).withOpacity(0.3)
+                                            : Colors.red.withOpacity(0.3)),
                                 ),
                               ),
                               child: Row(
@@ -206,19 +240,27 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Icon(
                                     testSuccess == true
                                         ? Icons.check_circle
-                                        : (testSuccess == null ? Icons.info_outline : Icons.error_outline),
+                                        : (testSuccess == null
+                                              ? Icons.info_outline
+                                              : Icons.error_outline),
                                     color: testSuccess == true
                                         ? Colors.green
-                                        : (testSuccess == null ? const Color(0xFF4A3728) : Colors.red),
+                                        : (testSuccess == null
+                                              ? const Color(0xFF4A3728)
+                                              : Colors.red),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
-                                      testResult.isEmpty ? 'Configure the backend server address below.' : testResult,
+                                      testResult.isEmpty
+                                          ? 'Configure the backend server address below.'
+                                          : testResult,
                                       style: TextStyle(
                                         color: testSuccess == true
                                             ? Colors.green[800]
-                                            : (testSuccess == null ? const Color(0xFF4A3728) : Colors.red[800]),
+                                            : (testSuccess == null
+                                                  ? const Color(0xFF4A3728)
+                                                  : Colors.red[800]),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -244,12 +286,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                     controller: urlController,
                                     style: const TextStyle(fontSize: 16),
                                     decoration: InputDecoration(
-                                      hintText: '187.127.173.27 or 192.168.1.7:2509',
+                                      hintText:
+                                          '187.127.173.27 or 192.168.1.7:2509',
                                       filled: true,
                                       fillColor: Colors.grey[50],
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
+                                        borderSide: BorderSide(
+                                          color: Colors.grey[300]!,
+                                        ),
                                       ),
                                       prefixIcon: const Icon(Icons.link),
                                     ),
@@ -272,7 +317,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                             testing = false;
                                             if (ok) {
                                               testSuccess = true;
-                                              testResult = 'Server is reachable';
+                                              testResult =
+                                                  'Server is reachable';
                                             } else {
                                               testSuccess = false;
                                               testResult = 'Server unreachable';
@@ -288,12 +334,21 @@ class _LoginScreenState extends State<LoginScreen> {
                                             color: Color(0xFF4A3728),
                                           ),
                                         )
-                                      : const Icon(Icons.network_check, size: 20),
+                                      : const Icon(
+                                          Icons.network_check,
+                                          size: 20,
+                                        ),
                                   label: const Text('TEST CONNECTION'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: const Color(0xFF4A3728),
-                                    side: const BorderSide(color: Color(0xFFD9C8AF), width: 1.5),
-                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                    side: const BorderSide(
+                                      color: Color(0xFFD9C8AF),
+                                      width: 1.5,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 18,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -301,7 +356,96 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 48),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Token File Save Folder',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF4A3728),
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: outputFolderController,
+                                    readOnly: true,
+                                    style: const TextStyle(fontSize: 16),
+                                    decoration: InputDecoration(
+                                      hintText: 'Default app folder',
+                                      filled: true,
+                                      fillColor: Colors.grey[50],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(
+                                          color: Colors.grey[300]!,
+                                        ),
+                                      ),
+                                      prefixIcon: const Icon(
+                                        Icons.folder_outlined,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final selectedPath = await FilePicker
+                                        .platform
+                                        .getDirectoryPath(
+                                          dialogTitle:
+                                              'Select token file save folder',
+                                          initialDirectory:
+                                              outputFolderController.text
+                                                  .trim()
+                                                  .isEmpty
+                                              ? null
+                                              : outputFolderController.text
+                                                    .trim(),
+                                        );
+                                    if (selectedPath == null) return;
+                                    setDialogState(() {
+                                      outputFolderController.text =
+                                          selectedPath;
+                                    });
+                                  },
+                                  icon: const Icon(
+                                    Icons.drive_folder_upload_outlined,
+                                    size: 20,
+                                  ),
+                                  label: const Text('BROWSE'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF4A3728),
+                                    side: const BorderSide(
+                                      color: Color(0xFFD9C8AF),
+                                      width: 1.5,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 18,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  tooltip: 'Clear folder',
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      outputFolderController.clear();
+                                    });
+                                  },
+                                  icon: const Icon(Icons.clear),
+                                  color: const Color(0xFF4A3728),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 40),
                             Row(
                               children: [
                                 Expanded(
@@ -309,7 +453,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     onPressed: () => Navigator.pop(context),
                                     style: OutlinedButton.styleFrom(
                                       minimumSize: const Size(0, 56),
-                                      side: const BorderSide(color: Color(0xFFD9C8AF), width: 2),
+                                      side: const BorderSide(
+                                        color: Color(0xFFD9C8AF),
+                                        width: 2,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -334,37 +481,54 @@ class _LoginScreenState extends State<LoginScreen> {
                                               testSuccess = null;
                                               testResult = '';
                                             });
-                                            final detected = await ApiService().detectBaseUrl(
-                                              urlController.text,
+                                            await TokenFileService.saveOutputFolder(
+                                              outputFolderController.text,
                                             );
+                                            final detected = await ApiService()
+                                                .detectBaseUrl(
+                                                  urlController.text,
+                                                );
                                             setDialogState(() {
                                               testing = false;
                                               if (detected != null) {
                                                 testSuccess = true;
-                                                testResult = 'Connected \u2192 ${detected.replaceFirst('http://', '')}';
+                                                testResult =
+                                                    'Connected \u2192 ${detected.replaceFirst('http://', '')}';
                                               } else {
                                                 testSuccess = false;
-                                                testResult = 'Connection Failed';
+                                                testResult =
+                                                    'Connection Failed';
                                               }
                                             });
                                             if (detected == null) {
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Connection failed. Please verify the URL.'),
-                                                    backgroundColor: Colors.redAccent,
+                                              if (!context.mounted) return;
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Connection failed. Please verify the URL.',
                                                   ),
-                                                );
-                                              }
+                                                  backgroundColor:
+                                                      Colors.redAccent,
+                                                ),
+                                              );
                                               return;
                                             }
-                                            await ApiService().updateBaseUrl(detected);
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Saved: ${detected.replaceFirst('http://', '')}')),
-                                              );
-                                              Navigator.pop(context);
-                                            }
+                                            await ApiService().updateBaseUrl(
+                                              detected,
+                                            );
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Saved: ${detected.replaceFirst('http://', '')}',
+                                                ),
+                                              ),
+                                            );
+                                            Navigator.pop(context);
                                           },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF4A3728),
@@ -396,25 +560,15 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+    urlController.dispose();
+    outputFolderController.dispose();
+    passwordController.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final msg = authProvider.sessionExpiredMessage;
-      if (msg != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-        authProvider.clearSessionMessage();
-      }
-    });
+    final sessionExpiredMessage = authProvider.sessionExpiredMessage;
 
     return Scaffold(
       body: Stack(
@@ -439,7 +593,7 @@ class _LoginScreenState extends State<LoginScreen> {
             right: 20,
             child: IconButton(
               icon: const Icon(Icons.settings, color: Colors.white70),
-              onPressed: _showSettingsDialog,
+              onPressed: () => _showSettingsDialog(),
             ),
           ),
           // Login Form
@@ -476,6 +630,75 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Color(0xFF4A3728), // Updated to match dashboard
                     ),
                   ),
+                  if (sessionExpiredMessage != null) ...[
+                    const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAF6F0),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFD9C8AF)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            height: 36,
+                            width: 36,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD9C8AF).withOpacity(0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.lock_clock,
+                              color: Color(0xFF4A3728),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Session expired',
+                                  style: TextStyle(
+                                    color: Color(0xFF4A3728),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  sessionExpiredMessage,
+                                  style: const TextStyle(
+                                    color: Color(0xFF7A5C3E),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minHeight: 32,
+                              minWidth: 32,
+                            ),
+                            icon: const Icon(
+                              Icons.close,
+                              size: 18,
+                              color: Color(0xFF7A5C3E),
+                            ),
+                            onPressed: authProvider.clearSessionMessage,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   TextField(
                     controller: _usernameController,

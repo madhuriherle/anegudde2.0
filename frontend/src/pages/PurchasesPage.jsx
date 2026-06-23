@@ -24,9 +24,9 @@ import { Select } from '../components/ui/Select';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Label } from '../components/ui/Label';
 import { DetailItem } from '../components/ui/DetailItem';
-import { formatDate, safeFormatTime, safeFormatDate } from '../utils/date';
+import { formatDate, getTodayDateInput, safeFormatTime, safeFormatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
-import { formatQuantityWithUnit } from '../utils/quantity';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 import { usePermission } from '../hooks/usePermission';
 import { toDisplayCase } from '../utils/text';
 
@@ -223,7 +223,7 @@ const PurchasesPage = () => {
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(purchaseSchema),
     defaultValues: {
-      purchase_date: new Date().toISOString().split('T')[0],
+      purchase_date: getTodayDateInput(),
       invoice_amount: '0',
       items: [{ item_id: '', quantity: '0', price: '0', search_id: '' }]
     }
@@ -398,7 +398,7 @@ const PurchasesPage = () => {
     } else {
       setEditingPurchase(null);
       reset({
-        purchase_date: new Date().toISOString().split('T')[0],
+        purchase_date: getTodayDateInput(),
         vendor_id: '',
         bill_no: '',
         invoice_amount: '0',
@@ -802,7 +802,7 @@ const PurchasesPage = () => {
                         <tr key={idx} className="bg-white">
                           <td className="px-4 py-2 text-text-main">{toDisplayCase(items?.find((i) => i.id == item.item_id)?.item_name)}</td>
                           <td className="px-4 py-2 text-text-main text-right">
-                            {formatQuantityWithUnit(item.quantity, items?.find((i) => i.id == item.item_id)?.unit)}
+                            <QtyDisplay qty={item.quantity} unit={items?.find((i) => i.id == item.item_id)?.unit} />
                           </td>
                           <td className="px-4 py-2 text-text-main text-right">{formatCurrency(item.price)}</td>
                           <td className="px-4 py-2 text-text-main text-right font-medium">{formatCurrency(item.line_total)}</td>

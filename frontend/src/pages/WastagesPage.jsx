@@ -18,7 +18,7 @@ import {
 import { DetailItem } from '../components/ui/DetailItem';
 import { formatDate } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
-import { formatQuantityWithUnit } from '../utils/quantity';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 
 const WastagesPage = () => {
   const { showError } = useNotification();
@@ -93,7 +93,7 @@ const WastagesPage = () => {
         <div className="space-y-1 py-1">
             {items.map((it, idx) =>
           <div key={idx} className="text-base text-text-main leading-relaxed min-h-[1.5rem] flex items-center gap-1.5 whitespace-nowrap">
-                <span>{formatQuantityWithUnit(it.quantity, it.menu_item?.unit || it.item?.unit)}</span>
+                <span><QtyDisplay qty={it.quantity} unit={it.menu_item?.unit || it.item?.unit} /></span>
                 <span>({formatCurrency(Number(it.approx_amount || 0))})</span>
               </div>
           )}
@@ -181,7 +181,7 @@ const WastagesPage = () => {
                         {item.menu_item?.dish_name || item.item?.item_name}
                       </td>
                       <td className="px-3 py-3 text-left text-text-main">
-                        {formatQuantityWithUnit(item.quantity, item.menu_item?.unit || item.item?.unit)}
+                        <QtyDisplay qty={item.quantity} unit={item.menu_item?.unit || item.item?.unit} />
                       </td>
                       <td className="px-3 py-3 text-left text-text-main">
                         {formatCurrency(Number(item.approx_amount || 0))}

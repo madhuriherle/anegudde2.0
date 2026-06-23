@@ -20,7 +20,7 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { DetailItem } from '../components/ui/DetailItem';
 import { ReceiptViewerDialog } from '../components/ui/ReceiptViewerDialog';
 import { formatDate } from '../utils/date';
-import { formatQuantityWithUnit } from '../utils/quantity';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 import { Plus, Trash2, Search, X, ReceiptText, Settings, Check } from 'lucide-react';
 
 import { usePermission } from '../hooks/usePermission';
@@ -799,7 +799,7 @@ const DonationsPage = () => {
                           <tr key={it.id} className="hover:bg-bg-temple/10 transition-colors">
                             <td className="px-0 py-4 text-text-main font-medium">{it.item?.item_name}</td>
                             <td className="px-0 py-4 text-text-main text-right font-medium">
-                              {formatQuantityWithUnit(it.quantity, it.item?.unit)}
+                              <QtyDisplay qty={it.quantity} unit={it.item?.unit} />
                             </td>
                           </tr>
                         )}

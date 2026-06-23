@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, Lock, User as UserIcon } from 'lucide-react';
+import { Clock, Loader2, Lock, X, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import api from '../api/axios';
@@ -19,7 +19,7 @@ const loginSchema = z.object({
 });
 
 const LoginPage = () => {
-  const { login, user, isLoading } = useAuth();
+  const { login, user, isLoading, sessionExpiredMessage, clearSessionExpired } = useAuth();
   const { showSuccess, showError } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
@@ -82,6 +82,29 @@ const LoginPage = () => {
 
       <div className="flex-1 flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
+          {sessionExpiredMessage && (
+            <div className="mb-4 rounded-lg border border-[#E7C58A] bg-[#FAF6F0] p-4 shadow-xl">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#C96A2B]/10 text-[#C96A2B]">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-serif text-base font-bold text-[#4A2E1F]">Session expired</p>
+                  <p className="mt-1 text-sm font-medium text-[#7A5C3E]">
+                    {sessionExpiredMessage}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearSessionExpired}
+                  className="rounded-full p-1 text-[#7A5C3E] hover:bg-[#E7C58A]/30"
+                  aria-label="Dismiss session expired message"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
           <Card className="border border-[#E7C58A] shadow-2xl bg-white">
             <CardHeader className="space-y-2 pb-6">
               <CardTitle className="text-2xl font-bold text-center text-[#4A2E1F] font-serif">

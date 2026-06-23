@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../api/axios';
 import { formatCurrency } from '../utils/currency';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { cn } from '../utils/cn';
 import { UtensilsCrossed, TrendingUp, Calendar, Hash, Loader2, Heart } from 'lucide-react';
@@ -169,12 +170,7 @@ const ModulesPage = () => {
                             </div>
                           </td>
                           <td className="px-6 py-2 text-center">
-                            <span className="text-sm font-black text-secondary">
-                              {Number(item.quantity).toFixed(3)}
-                            </span>
-                            <span className="text-[10px] text-text-light uppercase font-black tracking-wider ml-1">
-                              {item.unit_name}
-                            </span>
+                            <QtyDisplay qty={item.quantity} digits={3} unit={{ unit_name: item.unit_name }} />
                           </td>
                           <td className="px-6 py-2 text-right">
                             <span className="text-sm font-black text-red-600 font-temple">

@@ -43,6 +43,7 @@ export const AuthProvider = ({ children }) => {
         if (inactiveTime > TIMEOUT_LOGOUT_MS) {
           localStorage.removeItem('token');
           localStorage.removeItem('lastActivity');
+          localStorage.setItem('sessionExpiredMessage', 'Session expired due to inactivity. Please login again.');
           return null;
         }
       }
@@ -52,7 +53,28 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   const [timeoutCountdown, setTimeoutCountdown] = useState(COUNTDOWN_SECONDS);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState(() => {
+    try {
+      return localStorage.getItem('sessionExpiredMessage') || '';
+    } catch {
+      return '';
+    }
+  });
   const logoutRef = useRef(null);
+
+  const setSessionExpired = useCallback((message = 'Session expired. Please login again.') => {
+    try {
+      localStorage.setItem('sessionExpiredMessage', message);
+    } catch {}
+    setSessionExpiredMessage(message);
+  }, []);
+
+  const clearSessionExpired = useCallback(() => {
+    try {
+      localStorage.removeItem('sessionExpiredMessage');
+    } catch {}
+    setSessionExpiredMessage('');
+  }, []);
 
   const logout = useCallback(async () => {
     try {
@@ -86,6 +108,22 @@ export const AuthProvider = ({ children }) => {
     return () => clearTimeout(timer);
   }, [showTimeoutWarning, timeoutCountdown]);
 
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      try {
+        setSessionExpiredMessage(localStorage.getItem('sessionExpiredMessage') || 'Session expired. Please login again.');
+      } catch {
+        setSessionExpiredMessage('Session expired. Please login again.');
+      }
+      setToken(null);
+      setUser(null);
+      setShowTimeoutWarning(false);
+    };
+
+    window.addEventListener('session-expired', handleSessionExpired);
+    return () => window.removeEventListener('session-expired', handleSessionExpired);
+  }, []);
+
   const dismissTimeoutWarning = useCallback(() => {
     setShowTimeoutWarning(false);
     setTimeoutCountdown(COUNTDOWN_SECONDS);
@@ -108,6 +146,7 @@ export const AuthProvider = ({ children }) => {
         const inactiveTime = Date.now() - parseInt(lastActivity, 10);
         if (inactiveTime > TIMEOUT_LOGOUT_MS) {
           console.log('Session timed out due to inactivity');
+          setSessionExpired('Session expired due to inactivity. Please login again.');
           logoutRef.current();
         } else if (inactiveTime > TIMEOUT_WARNING_MS && !showTimeoutWarning) {
           setShowTimeoutWarning(true);
@@ -141,6 +180,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Failed to fetch user', error);
       if (error.response?.status === 401) {
+        setSessionExpired();
         logout();
       } else {
         setUser(null);
@@ -163,12 +203,13 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', newToken); 
       localStorage.setItem('lastActivity', Date.now().toString());
     } catch {}
+    clearSessionExpired();
     setToken(newToken);
     await fetchUser();
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, fetchUser, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, fetchUser, isLoading, sessionExpiredMessage, clearSessionExpired }}>
       {children}
       {showTimeoutWarning && (
         <TimeoutModal countdown={timeoutCountdown} onDismiss={dismissTimeoutWarning} />

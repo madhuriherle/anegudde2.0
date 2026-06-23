@@ -14,7 +14,8 @@ import { Select } from '../components/ui/Select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/Dialog';
 import { DetailItem } from '../components/ui/DetailItem';
 import { cn } from '../utils/cn';
-import { formatDate, safeFormatTime, safeFormatDate } from '../utils/date';
+import { formatDate, getTodayDateInput, safeFormatTime, safeFormatDate } from '../utils/date';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 import { usePermission } from '../hooks/usePermission';
 
 const PurchaseReturnsPage = () => {
@@ -30,7 +31,7 @@ const PurchaseReturnsPage = () => {
   const [selectedBill, setSelectedBill] = useState('');
   const [returnItems, setReturnItems] = useState([]);
   const [remarks, setRemarks] = useState('');
-  const [returnDate, setReturnDate] = useState(new Date().toISOString().split('T')[0]);
+  const [returnDate, setReturnDate] = useState(getTodayDateInput());
   const [filterDate, setFilterDate] = useState('');
   const [editingReturnId, setEditingReturnId] = useState(null);
 
@@ -182,7 +183,7 @@ const PurchaseReturnsPage = () => {
     setReturnItems([]);
     setRemarks('');
     setEditingReturnId(null);
-    setReturnDate(new Date().toISOString().split('T')[0]);
+    setReturnDate(getTodayDateInput());
   };
 
   const handleAddItem = (item) => {
@@ -715,7 +716,7 @@ const PurchaseReturnsPage = () => {
                         <tr key={it.id} className="bg-white">
                               <td className="px-6 py-4 text-text-main whitespace-normal break-words font-normal" title={it.item_name}>{it.item_name || 'N/A'}</td>
                               <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">
-                                {it.original_purchase_qty !== null ? `${parseFloat(it.original_purchase_qty).toFixed(3)} ${it.unit || ''}` : 'N/A'}
+                                {it.original_purchase_qty !== null ? <QtyDisplay qty={it.original_purchase_qty} digits={3} unit={it.unit} /> : 'N/A'}
                               </td>
                               <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">₹{it.original_purchase_price !== null ? parseFloat(it.original_purchase_price).toLocaleString() : parseFloat(it.price).toLocaleString()}</td>
 
@@ -756,7 +757,7 @@ const PurchaseReturnsPage = () => {
                           {(viewingReturn.items || []).map((it) =>
                         <tr key={it.id} className="bg-white">
                               <td className="px-6 py-4 text-text-main whitespace-normal break-words font-normal" title={it.item_name}>{it.item_name || 'N/A'}</td>
-                              <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">{parseFloat(it.quantity).toFixed(3)} {it.unit || ''}</td>
+                              <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal"><QtyDisplay qty={it.quantity} digits={3} unit={it.unit} /></td>
                               <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">₹{parseFloat(it.price).toLocaleString()}</td>
                               <td className="px-6 py-4 text-text-main text-right whitespace-nowrap font-normal">₹{parseFloat(it.line_total).toLocaleString()}</td>
                             </tr>

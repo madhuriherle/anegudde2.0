@@ -9,7 +9,7 @@ import { Select } from '../components/ui/Select';
 import { PrinterSelectDropdown } from '../components/PrinterSelectDropdown';
 import { Button } from '../components/ui/Button';
 import { formatDate } from '../utils/date';
-import { formatQuantityWithUnit } from '../utils/quantity';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 import { useAuth } from '../context/AuthContext';
 
 const toDateInputValue = (date) => {
@@ -295,7 +295,7 @@ const DonationReportPage = () => {
                         {(row.items || []).map((it, idx) =>
                     <div key={idx} className="flex flex-col leading-tight">
                             <span className="text-sm font-normal text-text-main print:text-black">
-                              {it.item?.item_name || '-'} - <span className="font-normal text-text-main print:text-black">{formatQuantityWithUnit(it.quantity, it.item?.unit)}</span>
+                              {it.item?.item_name || '-'} - <span className="font-normal text-text-main print:text-black"><QtyDisplay qty={it.quantity} unit={it.item?.unit} /></span>
                             </span>
                           </div>
                     )}

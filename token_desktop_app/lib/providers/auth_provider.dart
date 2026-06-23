@@ -38,7 +38,8 @@ class AuthProvider with ChangeNotifier {
     if (token != null) {
       final sameDay = await _apiService.isSameDay();
       if (!sameDay) {
-        _sessionExpiredMessage = 'Session expired for the day. Please login again.';
+        _sessionExpiredMessage =
+            'Session expired for the day. Please login again.';
         await logout();
       } else {
         try {
@@ -72,10 +73,11 @@ class AuthProvider with ChangeNotifier {
 
     final success = await _apiService.login(username, password);
     if (success) {
+      _sessionExpiredMessage = null;
       _isAuthenticated = true;
       await fetchProfile();
     }
-    
+
     _isLoading = false;
     notifyListeners();
     return success;

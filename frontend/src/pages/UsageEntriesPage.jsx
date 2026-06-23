@@ -15,7 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '../components/ui/Label';
 import { Select } from '../components/ui/Select';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
-import { formatDate } from '../utils/date';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
+import { formatDate, getTodayDateInput } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { formatQuantityWithUnit } from '../utils/quantity';
 import { cn } from '../utils/cn';
@@ -89,7 +90,7 @@ const UsageEntriesPage = () => {
   const [viewingAdjustments, setViewingAdjustments] = useState([]);
   const [editingConsumption, setEditingConsumption] = useState(null);
   const [editingWastageEntryId, setEditingWastageEntryId] = useState(null);
-  const [customDate, setCustomDate] = useState('');
+  const [customDate, setCustomDate] = useState(getTodayDateInput());
   const [activityExpanded, setActivityExpanded] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -237,7 +238,7 @@ const UsageEntriesPage = () => {
     resolver: zodResolver(formSchema),
     mode: 'onChange',
     defaultValues: {
-      usage_date: new Date().toISOString().split('T')[0],
+      usage_date: getTodayDateInput(),
       regular_cooking_persons: 0,
       additional_cooking_persons: 0,
       regular_cleaning_persons: 0,
@@ -350,7 +351,7 @@ const UsageEntriesPage = () => {
       setEditingConsumption(null);
       setEditingWastageEntryId(null);
       reset({
-        usage_date: new Date().toISOString().split('T')[0],
+        usage_date: getTodayDateInput(),
         regular_cooking_persons: 0,
         additional_cooking_persons: 0,
         regular_cleaning_persons: 0,
@@ -387,7 +388,7 @@ const UsageEntriesPage = () => {
     setEditingConsumption(null);
     setEditingWastageEntryId(null);
     reset({
-      usage_date: new Date().toISOString().split('T')[0],
+      usage_date: getTodayDateInput(),
       regular_cooking_persons: 0,
       additional_cooking_persons: 0,
       regular_cleaning_persons: 0,
@@ -542,53 +543,77 @@ const UsageEntriesPage = () => {
   {
     accessorKey: 'usage_date',
     header: 'Date',
-    cell: (i) => <span className="text-base text-text-main">{formatDate(i.getValue())}</span>
+    cell: (i) => <span className="text-base text-text-main whitespace-nowrap">{formatDate(i.getValue())}</span>
   },
   {
-    id: 'total_cooking',
-    header: 'Total Cooking Persons',
-    cell: (i) =>
-    <span className="text-base text-text-main">
-      {Number(i.row.original.regular_cooking_persons || 0) +
-      Number(i.row.original.additional_cooking_persons || 0)}
-    </span>
+    id: 'wastage_summary',
+    header: 'Wastage',
+    cell: (i) => {
+      const entry = i.row.original;
+      let itemsList = [];
+      (entry.wastages || []).forEach((w) => {
+        (w.items || []).forEach((it) => {
+          const name = it.menu_item?.dish_name || it.item?.item_name || `Item #${it.item_id || it.menu_item_id}`;
+          const unit = it.menu_item?.unit?.unit_code || it.item?.unit?.unit_code || '';
+          const qty = Number(it.quantity);
+          const amount = Number(it.approx_amount || 0);
+          itemsList.push({ name, qty, unit, amount });
+        });
+      });
+      const totalAmount = itemsList.reduce((sum, it) => sum + (it.qty * it.amount), 0);
+      if (itemsList.length === 0) {
+        return <span className="text-sm font-semibold text-gray-400">No Wastage</span>;
+      }
+      return (
+        <div className="space-y-1 text-sm leading-6">
+          {itemsList.map((item, idx) => (
+            <div key={idx} className="flex items-baseline justify-between">
+              <span className="font-medium text-gray-700">
+                {item.name}
+                <span className="text-gray-400 mx-1">-</span>
+                <QtyDisplay qty={item.qty} unit={item.unit} />
+              </span>
+              <span className="font-semibold text-gray-800 ml-3">₹{(item.qty * item.amount).toFixed(0)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
   },
   {
-    id: 'total_serving',
-    header: 'Total Serving Persons',
-    cell: (i) =>
-    <span className="text-base text-text-main">
-      {Number(i.row.original.regular_serving_persons || 0) +
-      Number(i.row.original.additional_serving_persons || 0)}
-    </span>
-  },
-  {
-    id: 'total_cleaning',
-    header: 'Total Cleaning Persons',
-    cell: (i) =>
-    <span className="text-base text-text-main">
-      {Number(i.row.original.regular_cleaning_persons || 0) +
-      Number(i.row.original.additional_cleaning_persons || 0)}
-    </span>
+    id: 'total_amt',
+    header: 'Total',
+    cell: (i) => {
+      const entry = i.row.original;
+      let total = 0;
+      (entry.wastages || []).forEach((w) => {
+        (w.items || []).forEach((it) => {
+          total += Number(it.quantity || 0) * Number(it.approx_amount || 0);
+        });
+      });
+      return <span className="text-base font-bold text-text-main">₹{total.toFixed(0)}</span>;
+    }
   },
   {
     id: 'actions',
     header: () => <div className="text-center">Actions</div>,
-    cell: (info) =>
-    <div className="flex items-center justify-center gap-2">
-          <button onClick={() => handleView(info.row.original)} className="action-btn-view">View</button>
-          {canWrite && <button onClick={() => handleEdit(info.row.original)} className="action-btn-edit">Edit</button>}
+    cell: (info) => {
+      const entry = info.row.original;
+      return (
+        <div className="flex items-center justify-center gap-2">
+          <button onClick={() => handleView(entry)} className="action-btn-view">View</button>
+          {canWrite && <button onClick={() => handleEdit(entry)} className="action-btn-edit">Edit</button>}
           {canDelete && <button
-        onClick={async () => {
-          const confirmed = await showConfirm('Delete Entry', `Are you sure? This cannot be undone.`);
-          if (confirmed) deleteMutation.mutate(info.row.original.id);
-        }}
-        className="action-btn-delete">
-        
+            onClick={async () => {
+              const confirmed = await showConfirm('Delete Entry', `Are you sure? This cannot be undone.`);
+              if (confirmed) deleteMutation.mutate(entry.id);
+            }}
+            className="action-btn-delete">
             Delete
           </button>}
         </div>
-
+      );
+    }
   }],
   [deleteMutation, showConfirm, canWrite, canDelete]);
 
@@ -800,10 +825,7 @@ const UsageEntriesPage = () => {
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 text-right text-text-main font-semibold">
-                                  {formatQuantityWithUnit(
-                                    item.quantity_used || 0,
-                                    item.item?.unit || items?.find((it) => it.id == item.item_id)?.unit
-                                  )}
+                                  <QtyDisplay qty={item.quantity_used || 0} unit={item.item?.unit || items?.find((it) => it.id == item.item_id)?.unit} />
                                 </td>
                               </tr>
                             )
@@ -837,7 +859,7 @@ const UsageEntriesPage = () => {
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 text-right text-text-main font-semibold">
-                                  {formatQuantityWithUnit(w.quantity || 0, { unit_name: w.unit_name, unit_code: w.unit_code })}
+                                  <QtyDisplay qty={w.quantity || 0} unit={{ unit_name: w.unit_name, unit_code: w.unit_code }} />
                                 </td>
                                 <td className="px-4 py-3 text-right text-text-main">
                                   {w.approx_amount != null ? formatCurrency(Number(w.approx_amount || 0)) : '-'}
@@ -868,7 +890,7 @@ const UsageEntriesPage = () => {
                                   <span className="text-base font-medium">{a.menu_item_name}</span>
                                 </td>
                                 <td className="px-4 py-3 text-right text-text-main font-semibold">
-                                  {Number(a.quantity || 0) > 0 ? '+' : '-'} {formatQuantityWithUnit(Math.abs(Number(a.quantity || 0)), { unit_name: a.unit_name, unit_code: a.unit_code })}
+                                  {Number(a.quantity || 0) > 0 ? '+' : '-'} <QtyDisplay qty={Math.abs(Number(a.quantity || 0))} unit={{ unit_name: a.unit_name, unit_code: a.unit_code }} />
                                 </td>
                               </tr>
                             )

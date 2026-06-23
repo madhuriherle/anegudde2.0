@@ -1,13 +1,33 @@
 import 'dart:io';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class TokenFileService {
   static const String fileName = 'mpd.txt';
+  static const String outputFolderPreferenceKey = 'token_output_folder';
 
   const TokenFileService();
 
+  static Future<String> getOutputFolder() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(outputFolderPreferenceKey) ?? '';
+  }
+
+  static Future<void> saveOutputFolder(String folderPath) async {
+    final prefs = await SharedPreferences.getInstance();
+    final trimmedPath = folderPath.trim();
+    if (trimmedPath.isEmpty) {
+      await prefs.remove(outputFolderPreferenceKey);
+      return;
+    }
+    await prefs.setString(outputFolderPreferenceKey, trimmedPath);
+  }
+
+  static Future<void> clearOutputFolder() => saveOutputFolder('');
+
   Future<void> writeTokenCount(int count) async {
     final content = count.toString();
-    final targetDirs = _targetDirectories();
+    final targetDirs = await _targetDirectories();
 
     Object? lastError;
     StackTrace? lastStackTrace;
@@ -20,7 +40,9 @@ class TokenFileService {
         await File(
           '${dir.path}${Platform.pathSeparator}$fileName',
         ).writeAsString(content, flush: true);
-        print('Successfully updated $fileName with count: $content at ${dir.path}');
+        print(
+          'Successfully updated $fileName with count: $content at ${dir.path}',
+        );
         return;
       } catch (e, st) {
         lastError = e;
@@ -34,8 +56,12 @@ class TokenFileService {
     );
   }
 
-  List<Directory> _targetDirectories() {
+  Future<List<Directory>> _targetDirectories() async {
     final dirs = <String>{};
+    final savedFolder = await getOutputFolder();
+    if (savedFolder.trim().isNotEmpty) {
+      dirs.add(savedFolder.trim());
+    }
 
     try {
       dirs.add(File(Platform.resolvedExecutable).parent.path);

@@ -1,7 +1,8 @@
 from datetime import date, datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from .base import UTCBaseModel
+from app.schemas.wastage import WastageEntryFullOut
 
 
 class ConsumptionItemIn(BaseModel):
@@ -81,6 +82,8 @@ class UserMinimal(UTCBaseModel):
 class ConsumptionEntryFullOut(ConsumptionEntryOut):
     items: list[ConsumptionItemOut]
     user: UserMinimal | None = None
+    wastages: list[WastageEntryFullOut] = []
+
 
 ConsumptionEntryCreate.model_rebuild()
 ConsumptionEntryOut.model_rebuild()

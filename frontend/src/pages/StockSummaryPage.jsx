@@ -7,12 +7,13 @@ import { PrinterSelectDropdown } from '../components/PrinterSelectDropdown';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Card, CardContent } from '../components/ui/Card';
-import { formatDate } from '../utils/date';
+import { formatDate, getTodayDateInput } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
+import { QtyDisplay } from '../components/ui/QtyDisplay';
 
 export const StockSummaryPage = () => {
   const { showError } = useNotification();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getTodayDateInput());
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
 
@@ -264,13 +265,13 @@ export const StockSummaryPage = () => {
                     <tr key={row.item_id} className="hover:bg-bg-temple/10 transition-colors">
                       <td className="px-3 py-2 border-r border-border-temple/10 font-medium text-text-main whitespace-normal break-words">{row.item_name}</td>
                       <td className="px-3 py-2 border-r border-border-temple/10 text-text-main hidden sm:table-cell">{formatCurrency(row.rate)}</td>
-                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.opening_balance).toFixed(3)} {row.unit}</td>
-                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.purchase_qty).toFixed(3)} {row.unit}</td>
-                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.issue_qty).toFixed(3)} {row.unit}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words"><QtyDisplay qty={row.opening_balance} digits={3} unit={row.unit} /></td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words"><QtyDisplay qty={row.purchase_qty} digits={3} unit={row.unit} /></td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words"><QtyDisplay qty={row.issue_qty} digits={3} unit={row.unit} /></td>
                       <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-nowrap hidden sm:table-cell">{formatCurrency(row.issue_value)}</td>
-                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
-                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
-                      <td className="px-3 py-2 border-r border-border-temple/10 font-bold text-text-main whitespace-normal break-words">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell"><QtyDisplay qty={row.purchase_return_qty} digits={3} unit={row.unit} /></td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell"><QtyDisplay qty={row.stock_adjustment_qty} digits={3} unit={row.unit} /></td>
+                      <td className="px-3 py-2 border-r border-border-temple/10 font-bold text-text-main whitespace-normal break-words"><QtyDisplay qty={row.closing_stock} digits={3} unit={row.unit} /></td>
                       <td className="px-3 py-2 text-text-main whitespace-nowrap hidden sm:table-cell">{formatCurrency(row.closing_value)}</td>
                     </tr>
                   ))}
@@ -321,13 +322,13 @@ export const StockSummaryPage = () => {
                           <tr key={row.item_id} className="hover:bg-bg-temple/10 transition-colors">
                             <td className="px-3 py-2 border-r border-border-temple/10 font-medium text-text-main whitespace-normal break-words">{row.item_name}</td>
                             <td className="px-3 py-2 border-r border-border-temple/10 text-text-main hidden sm:table-cell">{formatCurrency(row.rate)}</td>
-                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.opening_balance).toFixed(3)} {row.unit}</td>
-                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.purchase_qty).toFixed(3)} {row.unit}</td>
-                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words">{Number(row.issue_qty).toFixed(3)} {row.unit}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words"><QtyDisplay qty={row.opening_balance} digits={3} unit={row.unit} /></td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words"><QtyDisplay qty={row.purchase_qty} digits={3} unit={row.unit} /></td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words"><QtyDisplay qty={row.issue_qty} digits={3} unit={row.unit} /></td>
                             <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-nowrap hidden sm:table-cell">{formatCurrency(row.issue_value)}</td>
-                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell">{Number(row.purchase_return_qty).toFixed(3)} {row.unit}</td>
-                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell">{Number(row.stock_adjustment_qty).toFixed(3)} {row.unit}</td>
-                            <td className="px-3 py-2 border-r border-border-temple/10 font-bold text-text-main whitespace-normal break-words">{Number(row.closing_stock).toFixed(3)} {row.unit}</td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell"><QtyDisplay qty={row.purchase_return_qty} digits={3} unit={row.unit} /></td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 text-text-main whitespace-normal break-words hidden sm:table-cell"><QtyDisplay qty={row.stock_adjustment_qty} digits={3} unit={row.unit} /></td>
+                            <td className="px-3 py-2 border-r border-border-temple/10 font-bold text-text-main whitespace-normal break-words"><QtyDisplay qty={row.closing_stock} digits={3} unit={row.unit} /></td>
                             <td className="px-3 py-2 text-text-main whitespace-nowrap hidden sm:table-cell">{formatCurrency(row.closing_value)}</td>
                           </tr>
                         ))}

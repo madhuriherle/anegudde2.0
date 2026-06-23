@@ -23,7 +23,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      try { localStorage.removeItem('token'); } catch {}
+      try {
+        localStorage.removeItem('token');
+        localStorage.setItem('sessionExpiredMessage', 'Session expired. Please login again.');
+        window.dispatchEvent(new Event('session-expired'));
+      } catch {}
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
