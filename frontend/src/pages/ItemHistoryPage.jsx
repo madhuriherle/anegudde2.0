@@ -9,7 +9,8 @@ import {
   RotateCw,
   Settings2,
   Utensils,
-  Heart } from
+  Heart,
+  Package } from
 
 'lucide-react';
 
@@ -56,6 +57,11 @@ const txnTypes = {
     label: 'Donation',
     className: 'bg-amber-100 text-amber-800 border-amber-300',
     icon: Heart
+  },
+  8: {
+    label: 'Opening Stock',
+    className: 'bg-blue-100 text-blue-800 border-blue-300',
+    icon: Package
   }
 };
 

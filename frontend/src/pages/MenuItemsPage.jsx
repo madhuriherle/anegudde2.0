@@ -146,7 +146,7 @@ const MenuItemsPage = () => {
 
   const handleConfigSave = async () => {
     const changedItems = Object.entries(configAmounts)
-      .filter(([id, val]) => val !== '' && Number(val) > 0)
+      .filter(([id, val]) => val !== '' && Number(val) >= 0)
       .map(([id, val]) => ({ id: Number(id), default_approx_amount: Number(val) }));
     if (changedItems.length === 0) {
       setConfigOpen(false);

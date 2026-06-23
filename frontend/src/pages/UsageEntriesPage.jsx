@@ -184,7 +184,7 @@ const UsageEntriesPage = () => {
     [itemsData]
   );
   const { data: menuItemsData } = useQuery({
-    queryKey: ['menu-items-list'],
+    queryKey: ['menu-items'],
     queryFn: async () => (await api.get('/menu-items/list_menu_items', { params: { page_size: 1000 } })).data
   });
   const menuItems = useMemo(
@@ -321,6 +321,7 @@ const UsageEntriesPage = () => {
       queryClient.invalidateQueries({ queryKey: ['wastages'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
       queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ['menu-items'] });
       showSuccess(variables?.isEditMode ? 'Entry updated' : 'Combined entry saved');
       setOpen(false);
       setEditingConsumption(null);
@@ -353,6 +354,7 @@ const UsageEntriesPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consumptions'] });
       queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ['menu-items'] });
       showSuccess('Usage record deleted');
     },
     onError: (err) => showError(err.response?.data?.detail || 'Delete failed')
