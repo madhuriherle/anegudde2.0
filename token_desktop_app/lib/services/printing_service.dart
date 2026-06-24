@@ -1,6 +1,4 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
@@ -190,7 +188,7 @@ class PrintingService {
   }) async {
     // Compact receipt — small footprint. userCode row adds ~30px.
     const double width = 450;
-    final double height = userCode.isEmpty ? 250 : 280;
+    final double height = userCode.isEmpty ? 260 : 290;
     const double scale = 3;
 
     final recorder = ui.PictureRecorder();
@@ -206,9 +204,9 @@ class PrintingService {
       ..strokeWidth = 1.5;
 
     canvas.drawColor(const Color(0xFFFFFFFF), ui.BlendMode.src);
-    const double borderLeft = 34;
-    const double borderTop = 4;
-    const double borderRight = width - 34;
+    const double borderLeft = 24;
+    const double borderTop = 8;
+    const double borderRight = width - 24;
     // Sit the bottom border just below the largest text line so there is no
     // blank space between the last text row and the border.
     final double borderBottom = height - 6;
@@ -251,25 +249,25 @@ class PrintingService {
       borderPaint,
     );
 
-    // Temple name (top, centered)
+    // Temple name (top, centered) — single line, full width
     _drawParagraph(
       canvas,
       _templeName,
-      x: 48,
-      y: 20,
-      width: width - 96,
-      fontSize: 19,
+      x: 28,
+      y: 18,
+      width: width - 56,
+      fontSize: 19.5,
       fontWeight: FontWeight.w700,
       textAlign: TextAlign.center,
     );
 
-    // R.No. row (large)
+    // R.No. row — bold and prominent (the receipt reference)
     _drawParagraph(
       canvas,
       'R.No.: $receiptNo',
-      x: 66,
-      y: 72,
-      width: width - 120,
+      x: 36,
+      y: 60,
+      width: width - 72,
       fontSize: 26,
       fontWeight: FontWeight.w700,
       textAlign: TextAlign.left,
@@ -280,49 +278,49 @@ class PrintingService {
     _drawParagraph(
       canvas,
       'Date: $date',
-      x: 66,
-      y: 112,
-      width: 250,
-      fontSize: 22,
-      fontWeight: FontWeight.w400,
+      x: 36,
+      y: 100,
+      width: 240,
+      fontSize: 21,
+      fontWeight: FontWeight.w700,
       textAlign: TextAlign.left,
       fontFamily: 'Arial',
     );
     _drawParagraph(
       canvas,
       time,
-      x: width - 172,
-      y: 112,
-      width: 126,
-      fontSize: 22,
-      fontWeight: FontWeight.w400,
+      x: 286,
+      y: 100,
+      width: 110,
+      fontSize: 21,
+      fontWeight: FontWeight.w700,
       textAlign: TextAlign.right,
       fontFamily: 'Arial',
     );
 
-    double y = 124;
+    double y = 134;
     if (userCode.isNotEmpty) {
       _drawParagraph(
         canvas,
         userCode,
-        x: 66,
+        x: 36,
         y: y,
-        width: width - 120,
-        fontSize: 18,
+        width: width - 72,
+        fontSize: 19,
         fontWeight: FontWeight.w400,
         textAlign: TextAlign.left,
         fontFamily: 'Arial',
       );
-      y += 26;
+      y += 22;
     }
 
     // ಮಹಾ ಪ್ರಸಾದ — the visual hero of the receipt
     _drawParagraph(
       canvas,
       _mahaPrasada,
-      x: 40,
+      x: 28,
       y: y - 2,
-      width: width - 80,
+      width: width - 56,
       fontSize: 32,
       fontWeight: FontWeight.w700,
       textAlign: TextAlign.center,
@@ -339,21 +337,21 @@ class PrintingService {
     _drawParagraph(
       canvas,
       _devoteeCountLabel,
-      x: 86,
-      y: dividerY + 10,
+      x: 52,
+      y: dividerY + 12,
       width: 220,
       fontSize: 26,
       fontWeight: FontWeight.w700,
       textAlign: TextAlign.left,
     );
-    // Token number (large, right-aligned)
+    // Token number (large, right-aligned) — biggest element on the receipt
     _drawParagraph(
       canvas,
       tokenCount,
-      x: 320,
-      y: dividerY + 2,
-      width: 80,
-      fontSize: 38,
+      x: 318,
+      y: dividerY + 4,
+      width: 90,
+      fontSize: 42,
       fontWeight: FontWeight.w700,
       textAlign: TextAlign.center,
       fontFamily: 'Arial',
@@ -404,14 +402,14 @@ class PrintingService {
       ),
     );
 
-    // Page rotated 90 degrees so the receipt (taller than wide) feeds sideways
-    // through the thermal printer and reads upright. Aspect ratio matches the
-    // PNG so there's no trailing whitespace.
+    // Print the receipt in normal landscape orientation. The PNG already has
+    // the target ticket shape, so rotating it here makes the printer output
+    // sideways and clips the border on narrow rolls.
     const pageWidth = 76 * PdfPageFormat.mm;
     const pageHeight = 50 * PdfPageFormat.mm;
-    const rotatedReceiptWidth = 74 * PdfPageFormat.mm;
-    final receiptAspectHeight = userCode.isEmpty ? 250 / 450 : 280 / 450;
-    final rotatedReceiptHeight = rotatedReceiptWidth * receiptAspectHeight;
+    const receiptWidth = 74 * PdfPageFormat.mm;
+    final receiptAspectHeight = userCode.isEmpty ? 260 / 450 : 290 / 450;
+    final receiptHeight = receiptWidth * receiptAspectHeight;
 
     doc.addPage(
       pw.Page(
@@ -423,19 +421,17 @@ class PrintingService {
           marginLeft: 0,
           marginRight: 0,
         ),
-        orientation: pw.PageOrientation.landscape,
         build: (pw.Context context) {
-          return pw.Center(
-            child: pw.Transform.rotate(
-              angle: -math.pi / 2,
-              child: pw.SizedBox(
-                width: rotatedReceiptWidth,
-                height: rotatedReceiptHeight,
-                child: pw.Image(
-                  receiptImage,
-                  width: rotatedReceiptWidth,
-                  fit: pw.BoxFit.fitWidth,
-                ),
+          return pw.Align(
+            alignment: pw.Alignment.topCenter,
+            child: pw.SizedBox(
+              width: receiptWidth,
+              height: receiptHeight,
+              child: pw.Image(
+                receiptImage,
+                width: receiptWidth,
+                height: receiptHeight,
+                fit: pw.BoxFit.contain,
               ),
             ),
           );
