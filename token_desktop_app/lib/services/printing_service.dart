@@ -206,7 +206,7 @@ class PrintingService {
     canvas.drawColor(const Color(0xFFFFFFFF), ui.BlendMode.src);
     const double borderLeft = 24;
     const double borderTop = 8;
-    const double borderRight = width - 24;
+    const double borderRight = width - 6;
     // Sit the bottom border just below the largest text line so there is no
     // blank space between the last text row and the border.
     final double borderBottom = height - 6;
@@ -405,11 +405,11 @@ class PrintingService {
     // Print the receipt in normal landscape orientation. The PNG already has
     // the target ticket shape, so rotating it here makes the printer output
     // sideways and clips the border on narrow rolls.
-    const pageWidth = 76 * PdfPageFormat.mm;
-    const pageHeight = 50 * PdfPageFormat.mm;
-    const receiptWidth = 74 * PdfPageFormat.mm;
+    const receiptWidth = 75 * PdfPageFormat.mm;
     final receiptAspectHeight = userCode.isEmpty ? 260 / 450 : 290 / 450;
     final receiptHeight = receiptWidth * receiptAspectHeight;
+    const pageWidth = 76 * PdfPageFormat.mm;
+    final pageHeight = receiptHeight;
 
     doc.addPage(
       pw.Page(
@@ -423,7 +423,7 @@ class PrintingService {
         ),
         build: (pw.Context context) {
           return pw.Align(
-            alignment: pw.Alignment.topCenter,
+            alignment: pw.Alignment.topRight,
             child: pw.SizedBox(
               width: receiptWidth,
               height: receiptHeight,
