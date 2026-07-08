@@ -11,6 +11,8 @@ import '../services/printing_service.dart';
 import '../services/printer_config_service.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
+import 'package:file_picker/file_picker.dart';
+import '../services/api_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -316,6 +318,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         );
                       } else if (value == 'manual') {
                         _openDesktopManual();
+                      } else if (value == 'folder') {
+                        _updateTokenFolderPath(context);
                       } else if (value == 'logout') {
                         _showLogoutConfirmation(context, authProvider);
                       }
@@ -361,6 +365,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                         ),
                       ),
+                      if (authProvider.user?.roleRankLevel == 1)
+                        const PopupMenuItem(
+                          value: 'folder',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.folder_open,
+                                size: 18,
+                                color: Color(0xFF4A3728),
+                              ),
+                              SizedBox(width: 12),
+                              Text(
+                                'Set Token Folder',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF4A3728),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       const PopupMenuDivider(),
                       const PopupMenuItem(
                         value: 'logout',
@@ -1105,6 +1130,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       },
     );
+  }
+
+  Future<void> _updateTokenFolderPath(BuildContext context) async {
+    try {
+      final selectedDirectory = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'Select Token Folder Path',
+      );
+      
+      if (selectedDirectory != null) {
+        // Fetch current settings
+        final response = await ApiService().get('/settings/get_current_settings');
+        if (response != null && response is Map) {
+          final currentSettings = Map<String, dynamic>.from(response);
+          currentSettings['token_file_path'] = selectedDirectory;
+          
+          final updateResponse = await ApiService().put('/settings/update', currentSettings);
+          if (updateResponse != null) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Token folder path updated successfully')),
+              );
+            }
+          } else {
+             throw Exception('Failed to update settings');
+          }
+        } else {
+           throw Exception('Failed to fetch current settings');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating token path: $e')),
+        );
+      }
+    }
   }
 
   void _showLogoutConfirmation(
