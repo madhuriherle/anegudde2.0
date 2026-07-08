@@ -96,6 +96,21 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
     try:
         db.commit()
         db.refresh(new_detail)
+        
+        # Write to txt file if a folder path is set in settings or payload
+        folder_to_use = getattr(settings, 'token_file_path', None)
+        if not folder_to_use and hasattr(payload, 'folder_path'):
+            folder_to_use = payload.folder_path
+            
+        if folder_to_use:
+            try:
+                import os
+                file_path = os.path.join(folder_to_use, "mpd.txt")
+                with open(file_path, "w") as file:
+                    file.write(str(generation.total_tokens))
+            except Exception as e:
+                print(f"Warning: Could not write mpd.txt: {e}")
+
         return new_detail
     except Exception as e:
         db.rollback()

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import * as Icons from 'lucide-react';
 import {
   ChevronDown,
@@ -222,36 +222,83 @@ const MainLayout = () => {
   const renderMenuItem = (item, depth = 0) => {
     const hasChildren = item.submodules && item.submodules.length > 0;
     const isExpanded = expandedMenus[item.id];
-    const isActive = item.route && location.pathname === item.route;
     const opensRoom = activeModule === 'main' && canAccessMain && hasChildren && !item.route &&
       item.submodules?.some((child) => child.route === '/canteen');
     const canExpandChildren = hasChildren && !opensRoom;
 
-    const content =
-    <div
-      className={cn(
-        "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-        item.route || canExpandChildren ? "cursor-pointer" : "cursor-default",
-        isActive ?
-        "bg-sidebar-active text-white shadow-sm" :
-        "text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white",
-        depth > 0 && "ml-4 py-1.5"
-      )}
-      onClick={() => {
-        if (opensRoom) {
-          setActiveModule(item.id);
-          navigate(findFirstRoute(item.submodules || []) || item.route || '/canteen');
-          setIsSidebarOpen(false);
-        } else if (item.route) {
-          if (item.route === '/' && activeModule !== 'main') setActiveModule('main');
-          navigate(item.route);
-          setIsSidebarOpen(false);
-        } else if (canExpandChildren) {
-          toggleExpand(item.id);
-        }
-      }}>
-      
-        {item.icon && item.route !== '/devotees' && <DynamicIcon name={item.icon} className={cn("w-5 h-5", isActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")} />}
+    const targetRoute = opensRoom
+      ? (findFirstRoute(item.submodules || []) || item.route || '/canteen')
+      : item.route;
+
+    const content = targetRoute ? (
+      <NavLink
+        to={targetRoute}
+        end
+        className={({ isActive: isLinkActive }) => cn(
+          "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+          isLinkActive ?
+          "bg-sidebar-active text-white shadow-sm" :
+          "text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white",
+          depth > 0 && "ml-4 py-1.5"
+        )}
+        onClick={(e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+            return;
+          }
+          if (opensRoom) {
+            setActiveModule(item.id);
+            setIsSidebarOpen(false);
+          } else if (item.route) {
+            if (item.route === '/' && activeModule !== 'main') setActiveModule('main');
+            setIsSidebarOpen(false);
+          }
+        }}
+      >
+        {({ isActive: isLinkActive }) => (
+          <>
+            {item.icon && item.route !== '/devotees' && (
+              <DynamicIcon
+                name={item.icon}
+                className={cn("w-5 h-5", isLinkActive ? "text-white" : "text-[#D7CCC8] group-hover:text-white")}
+              />
+            )}
+            <span className="flex-1">{item.name}</span>
+            {canExpandChildren && (
+              <button
+                type="button"
+                className="rounded p-1 hover:bg-white/10"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  toggleExpand(item.id);
+                }}
+              >
+                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </button>
+            )}
+          </>
+        )}
+      </NavLink>
+    ) : (
+      <div
+        className={cn(
+          "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+          canExpandChildren ? "cursor-pointer" : "cursor-default",
+          "text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white",
+          depth > 0 && "ml-4 py-1.5"
+        )}
+        onClick={() => {
+          if (canExpandChildren) {
+            toggleExpand(item.id);
+          }
+        }}
+      >
+        {item.icon && item.route !== '/devotees' && (
+          <DynamicIcon
+            name={item.icon}
+            className="w-5 h-5 text-[#D7CCC8] group-hover:text-white"
+          />
+        )}
         <span className="flex-1">{item.name}</span>
         {canExpandChildren && (
           <button
@@ -264,9 +311,9 @@ const MainLayout = () => {
           >
             {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
-        )
-      }
-      </div>;
+        )}
+      </div>
+    );
 
 
     return (
@@ -302,31 +349,39 @@ const MainLayout = () => {
           </span>
         </div>
         {activeModule !== 'main' && canAccessMain && (
-          <div
+          <NavLink
+            to="/"
+            end
             className="group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white"
-            onClick={() => {
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+                return;
+              }
               setActiveModule('main');
-              navigate('/');
               setIsSidebarOpen(false);
             }}
           >
             <Home className="w-5 h-5 text-[#D7CCC8] group-hover:text-white" />
             <span className="flex-1">Home</span>
-          </div>
+          </NavLink>
         )}
         {visibleMenuItems.map((item) => renderMenuItem(item))}
         {activeModule !== 'main' && canAccessMain && (
-          <div
+          <NavLink
+            to="/"
+            end
             className="group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-[#D7CCC8] hover:bg-sidebar-hover hover:text-white"
-            onClick={() => {
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+                return;
+              }
               setActiveModule('main');
-              navigate('/');
               setIsSidebarOpen(false);
             }}
           >
             <ArrowLeft className="w-5 h-5 text-[#D7CCC8] group-hover:text-white" />
             <span className="flex-1">Back</span>
-          </div>
+          </NavLink>
         )}
       </nav>
     </div>;
@@ -410,6 +465,35 @@ const MainLayout = () => {
                       <Icons.MonitorDown className="w-4 h-4" />
                       Token App Installer
                     </DropdownMenu.Item>
+                  )}
+                  {user?.user_code === 'dpsadmin' && (
+                    <>
+                      <DropdownMenu.Separator className="h-px bg-gray-100 my-1" />
+                      <DropdownMenu.Item
+                        className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50 outline-none cursor-pointer"
+                        onClick={async () => {
+                          try {
+                            const res = await api.get('/settings/get_current_settings');
+                            const currentSettings = res.data;
+                            const currentPath = currentSettings.token_file_path || '';
+                            const newPath = window.prompt(
+                              "Enter the local folder path to save the token count file (e.g., C:\\Tokens):",
+                              currentPath
+                            );
+                            if (newPath !== null) {
+                              const updatedSettings = { ...currentSettings, token_file_path: newPath.trim() };
+                              await api.put('/settings/update', updatedSettings);
+                              alert("Token folder path synced to database! All apps will now use this path.");
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            alert("Failed to update token folder path.");
+                          }
+                        }}>
+                        <Icons.FolderOpen className="w-4 h-4" />
+                        Set Token Folder Path
+                      </DropdownMenu.Item>
+                    </>
                   )}
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>

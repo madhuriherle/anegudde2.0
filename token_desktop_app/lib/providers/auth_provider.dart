@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/token_file_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -44,6 +45,7 @@ class AuthProvider with ChangeNotifier {
       } else {
         try {
           await fetchProfile();
+          await syncSettings();
           _isAuthenticated = _userProfile != null;
         } catch (e) {
           _isAuthenticated = false;
@@ -76,11 +78,23 @@ class AuthProvider with ChangeNotifier {
       _sessionExpiredMessage = null;
       _isAuthenticated = true;
       await fetchProfile();
+      await syncSettings();
     }
 
     _isLoading = false;
     notifyListeners();
     return success;
+  }
+
+  Future<void> syncSettings() async {
+    try {
+      final settings = await _apiService.get('/settings/get_current_settings');
+      if (settings != null && settings['token_file_path'] != null) {
+        await TokenFileService.saveOutputFolder(settings['token_file_path']);
+      }
+    } catch (e) {
+      print('Sync Settings Error: $e');
+    }
   }
 
   Future<void> logout() async {

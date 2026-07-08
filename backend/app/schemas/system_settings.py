@@ -19,9 +19,10 @@ class SystemSettingsBase(BaseModel):
     closing_time: Optional[str] = None
     google_maps_link: Optional[str] = None
     footer_note: Optional[str] = None
-    receipt_padding: int
+    receipt_padding: int = 4
     receipt_top_offset: float = Field(default=0.0, ge=-50, le=50)
     receipt_left_offset: float = Field(default=0.0, ge=-50, le=50)
+    token_file_path: Optional[str] = None
     
     # Display Toggles
     show_temple_logo: bool = True

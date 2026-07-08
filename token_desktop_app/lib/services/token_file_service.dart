@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,57 +27,8 @@ class TokenFileService {
   static Future<void> clearOutputFolder() => saveOutputFolder('');
 
   Future<void> writeTokenCount(int count) async {
-    final content = count.toString();
-    final savedFolder = await getOutputFolder();
-    final hasCustomFolder = savedFolder.trim().isNotEmpty;
-
-    if (hasCustomFolder) {
-      final dir = Directory(savedFolder.trim());
-      try {
-        if (!await dir.exists()) {
-          await dir.create(recursive: true);
-        }
-        await File(
-          '${dir.path}${Platform.pathSeparator}$fileName',
-        ).writeAsString(content, flush: true);
-        print(
-          'Successfully updated $fileName with count: $content at ${dir.path}',
-        );
-        return;
-      } catch (e) {
-        Error.throwWithStackTrace(
-          'Failed to write to saved folder "$savedFolder": $e',
-          StackTrace.current,
-        );
-      }
-    }
-
-    final targetDirs = await _targetDirectories();
-    Object? lastError;
-    StackTrace? lastStackTrace;
-
-    for (final dir in targetDirs) {
-      try {
-        if (!await dir.exists()) {
-          await dir.create(recursive: true);
-        }
-        await File(
-          '${dir.path}${Platform.pathSeparator}$fileName',
-        ).writeAsString(content, flush: true);
-        print(
-          'Successfully updated $fileName with count: $content at ${dir.path}',
-        );
-        return;
-      } catch (e, st) {
-        lastError = e;
-        lastStackTrace = st;
-      }
-    }
-
-    Error.throwWithStackTrace(
-      lastError ?? 'Unable to write $fileName',
-      lastStackTrace ?? StackTrace.current,
-    );
+    // Disabled: Python backend now creates mpd.txt on the server automatically.
+    // The Flutter app no longer needs to write this file.
   }
 
   Future<List<Directory>> _targetDirectories() async {

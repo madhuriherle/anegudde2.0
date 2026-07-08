@@ -62,6 +62,9 @@ class SystemSettings(Base):
     # Financial Year
     current_financial_year_id = Column(Integer, ForeignKey("financial_years.id"), nullable=True, index=True)
     
+    # Token Settings
+    token_file_path = Column(String(500), nullable=True)
+    
     # Meta
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
@@ -89,6 +92,9 @@ class PrinterConfig(Base):
 
 class ReceiptSequence(Base):
     __tablename__ = "receipt_sequences"
+    __table_args__ = (
+        UniqueConstraint("financial_year_id", "sequence_type", "donation_type_id", name="uq_receipt_sequence"),
+    )
     id = Column(Integer, primary_key=True)
     financial_year_id = Column(Integer, ForeignKey("financial_years.id"), nullable=False, index=True)
     sequence_type = Column(String(30), nullable=False, index=True)
