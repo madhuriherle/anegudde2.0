@@ -27,8 +27,31 @@ class TokenFileService {
 
   Future<void> writeTokenCount(int count) async {
     final content = count.toString();
-    final targetDirs = await _targetDirectories();
+    final savedFolder = await getOutputFolder();
+    final hasCustomFolder = savedFolder.trim().isNotEmpty;
 
+    if (hasCustomFolder) {
+      final dir = Directory(savedFolder.trim());
+      try {
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+        await File(
+          '${dir.path}${Platform.pathSeparator}$fileName',
+        ).writeAsString(content, flush: true);
+        print(
+          'Successfully updated $fileName with count: $content at ${dir.path}',
+        );
+        return;
+      } catch (e) {
+        Error.throwWithStackTrace(
+          'Failed to write to saved folder "$savedFolder": $e',
+          StackTrace.current,
+        );
+      }
+    }
+
+    final targetDirs = await _targetDirectories();
     Object? lastError;
     StackTrace? lastStackTrace;
 

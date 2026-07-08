@@ -9,6 +9,7 @@ import '../providers/token_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/printing_service.dart';
 import '../services/printer_config_service.dart';
+import 'login_screen.dart';
 import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -47,6 +48,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _initPrinterConfig();
       _refocusCountInput();
     });
+    Provider.of<TokenProvider>(context, listen: false).addListener(_onFileError);
 
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (!mounted) return;
@@ -178,8 +180,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _onFileError() {
+    final error = Provider.of<TokenProvider>(context, listen: false).fileWriteError;
+    if (error != null && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('File save error: $error'),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'SETTINGS',
+              textColor: Colors.white,
+              onPressed: () {
+                // Navigate to login to access settings
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      });
+    }
+  }
+
   @override
   void dispose() {
+    Provider.of<TokenProvider>(context, listen: false)
+        .removeListener(_onFileError);
     _refreshTimer?.cancel();
     _countController.dispose();
     _focusNode.dispose();
@@ -783,6 +816,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final response = await tokenProvider.issueTokens(count);
+    if (!mounted) return;
 
     if (response != null) {
       _countController.clear();
@@ -792,9 +826,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           response,
           printerName: _selectedPrinterName.isNotEmpty ? _selectedPrinterName : null,
         );
+        if (!mounted) return;
         await _showSuccessPopup(context, response);
       } catch (e) {
         print('Printing error: $e');
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Issued successfully, but printing failed: $e'),
@@ -1009,64 +1045,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       barrierDismissible: true,
       builder: (BuildContext context) {
-        Future.delayed(const Duration(seconds: 1), () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          }
-        });
-
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 8,
-          backgroundColor: Colors.white,
-          child: Container(
-            width: 320,
-            padding: const EdgeInsets.symmetric(
-              vertical: 32,
-              horizontal: 24,
+        return _AutoDismissWrapper(
+          duration: const Duration(seconds: 1),
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0F9F0),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFE1F2E1),
-                      width: 2,
+            elevation: 8,
+            backgroundColor: Colors.white,
+            child: Container(
+              width: 320,
+              padding: const EdgeInsets.symmetric(
+                vertical: 32,
+                horizontal: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F9F0),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFE1F2E1),
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Color(0xFF72C366),
+                      size: 40,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Color(0xFF72C366),
-                    size: 40,
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Token Generated Successfully',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF555555),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Token Generated Successfully',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF555555),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Devotees: ${data['token_count']}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF777777),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Devotees: ${data['token_count']}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF777777),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -1220,6 +1253,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
+  }
+}
+
+class _AutoDismissWrapper extends StatefulWidget {
+  final Widget child;
+  final Duration duration;
+
+  const _AutoDismissWrapper({
+    required this.child,
+    required this.duration,
+  });
+
+  @override
+  State<_AutoDismissWrapper> createState() => _AutoDismissWrapperState();
+}
+
+class _AutoDismissWrapperState extends State<_AutoDismissWrapper> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(widget.duration, () {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
 

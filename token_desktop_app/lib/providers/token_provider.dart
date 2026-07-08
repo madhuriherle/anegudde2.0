@@ -10,11 +10,13 @@ class TokenProvider with ChangeNotifier {
   int _totalReceipts = 0;
   bool _isLoading = false;
   DateTime _selectedDate = DateTime.now();
+  String? _fileWriteError;
 
   int get dailyTotal => _dailyTotal;
   int get totalReceipts => _totalReceipts;
   bool get isLoading => _isLoading;
   DateTime get selectedDate => _selectedDate;
+  String? get fileWriteError => _fileWriteError;
 
   void _syncSelectedDateWithToday() {
     final now = DateTime.now();
@@ -52,7 +54,9 @@ class TokenProvider with ChangeNotifier {
           _selectedDate.day == now.day) {
         try {
           await _tokenFileService.writeTokenCount(_dailyTotal);
+          _fileWriteError = null;
         } catch (e) {
+          _fileWriteError = '$e';
           print('Token file update failed: $e');
         }
       }
