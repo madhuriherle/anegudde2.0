@@ -99,8 +99,13 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
         
         # Write to txt file if a folder path is set in settings or payload
         folder_to_use = getattr(settings, 'token_file_path', None)
-        if not folder_to_use and hasattr(payload, 'folder_path'):
+        if not folder_to_use and hasattr(payload, 'folder_path') and getattr(payload, 'folder_path'):
             folder_to_use = payload.folder_path
+            
+        # Default to the backend folder if nothing is configured
+        if not folder_to_use:
+            import os
+            folder_to_use = os.getcwd()
             
         if folder_to_use:
             try:

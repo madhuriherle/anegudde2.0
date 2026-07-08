@@ -466,7 +466,7 @@ const MainLayout = () => {
                       Token App Installer
                     </DropdownMenu.Item>
                   )}
-                  {user?.user_code === 'dpsadmin' && (
+                  {user?.role_rank_level === 1 && (
                     <>
                       <DropdownMenu.Separator className="h-px bg-gray-100 my-1" />
                       <DropdownMenu.Item
