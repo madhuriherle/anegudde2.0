@@ -36,8 +36,20 @@ const itemSchema = z.object({
   item_name: z.string().min(1, 'Name is required'),
   category_id: z.coerce.number().optional().nullable(),
   unit_id: z.coerce.number().min(1, 'Unit is required'),
-  opening_stock: z.coerce.string().default('0'),
-  current_stock: z.coerce.string().default('0'),
+  opening_stock: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? '0' : String(val)),
+    z.string().refine(val => {
+      const num = Number(val);
+      return !isNaN(num) && num >= 0;
+    }, { message: 'Must be a valid non-negative number' })
+  ),
+  current_stock: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? '0' : String(val)),
+    z.string().refine(val => {
+      const num = Number(val);
+      return !isNaN(num) && num >= 0;
+    }, { message: 'Must be a valid non-negative number' })
+  ),
   default_price: z.coerce.number().min(0, 'Price cannot be negative').default(0),
   min_stock_level: z.coerce.number().min(0, 'Cannot be negative'),
   max_stock_level: z.coerce.number().min(0, 'Cannot be negative'),
@@ -226,7 +238,7 @@ const ItemsPage = () => {
     onError: (err) => showError(err.response?.data?.detail || 'Stock adjustment failed')
   });
 
-  const handleOpen = (item = null) => {
+  const handleOpen = async (item = null) => {
     setEditingItem(item);
     if (item) {
       reset({
@@ -236,20 +248,28 @@ const ItemsPage = () => {
         default_price: Number(item.default_price ?? 0),
         min_stock_level: Number(item.min_stock_level ?? 0),
         max_stock_level: Number(item.max_stock_level ?? 0),
-        serial_number: item.serial_numbers?.[0]?.serial_number || ''
+        serial_number: item.serial_numbers?.[0]?.serial_number || '',
       });
     } else {
+      let nextCode = '';
+      try {
+        const res = await api.get('/items/next-code');
+        nextCode = res.data?.next_code || '';
+      } catch (err) {
+        console.error('Failed to fetch next code', err);
+      }
+      
       reset({
         item_name: '',
-        category_id: 0,
-        unit_id: 0,
+        category_id: '',
+        unit_id: '',
         opening_stock: '0',
         current_stock: '0',
         default_price: 0,
         min_stock_level: 0,
         max_stock_level: 0,
         status: 1,
-        serial_number: ''
+        serial_number: nextCode,
       });
     }
     setOpen(true);
