@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.db.database import get_db
+from app.api.deps import get_db
 from app.db.models import User, ItemSerialNumber
 from app.api.auth import get_current_active_user
 import re
