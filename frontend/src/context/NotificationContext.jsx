@@ -173,6 +173,24 @@ export const NotificationProvider = ({ children }) => {
     });
   }, []);
 
+  const showWarning = useCallback(async (msg, title = 'Attention') => {
+    await MySwal.fire({
+      title: title,
+      text: msg,
+      icon: 'warning',
+      timer: 3000,
+      timerProgressBar: true,
+      confirmButtonColor: '#A14D2A',
+      confirmButtonText: 'OK',
+      customClass: {
+        popup: 'swal2-simple-popup',
+        title: 'swal2-temple-title',
+        htmlContainer: 'swal2-temple-text',
+        confirmButton: 'swal2-confirm-temple'
+      }
+    });
+  }, []);
+
   const showConfirm = useCallback(async (
   title,
   message,
@@ -214,7 +232,7 @@ export const NotificationProvider = ({ children }) => {
   }, []);
 
   return (
-    <NotificationContext.Provider value={{ showNotification, showSuccess, showError, showConfirm }}>
+    <NotificationContext.Provider value={{ showNotification, showSuccess, showError, showConfirm, showWarning }}>
       <style>{swalStyles}</style>
       {children}
     </NotificationContext.Provider>);

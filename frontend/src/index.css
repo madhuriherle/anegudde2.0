@@ -154,7 +154,14 @@
   }
 
   th {
-    font-size: 14px !important;
+    font-size: 14px;
+  }
+}
+
+@media print {
+  th {
+    font-size: 12px !important;
+    line-height: 1.05 !important;
   }
 }
 
@@ -167,5 +174,75 @@
 
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+}
+
+@media print {
+  #root .donation-report-print table th,
+  #root .donation-report-print table td,
+  #root .stock-summary-print table th,
+  #root .stock-summary-print table td,
+  #root .canteen-summary-print table th,
+  #root .canteen-summary-print table td,
+  #root .purchase-report-print table th,
+  #root .purchase-report-print table td,
+  #root .manpower-report-print table th,
+  #root .manpower-report-print table td,
+  #root .token-report-print table th,
+  #root .token-report-print table td,
+  #root .token-ledger-print table th,
+  #root .token-ledger-print table td {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    padding: 7px !important;
+  }
+
+  #root .donation-report-print table thead th,
+  #root .stock-summary-print table thead th,
+  #root .canteen-summary-print table thead th,
+  #root .purchase-report-print table thead th,
+  #root .manpower-report-print table thead th,
+  #root .token-report-print table thead th,
+  #root .token-ledger-print table thead th {
+    font-size: 12px !important;
+    line-height: 1.05 !important;
+    padding: 2px 4px !important;
+  }
+
+  #root .donation-report-print table th *,
+  #root .donation-report-print table td *,
+  #root .stock-summary-print table th *,
+  #root .stock-summary-print table td *,
+  #root .canteen-summary-print table th *,
+  #root .canteen-summary-print table td *,
+  #root .purchase-report-print table th *,
+  #root .purchase-report-print table td *,
+  #root .manpower-report-print table th *,
+  #root .manpower-report-print table td *,
+  #root .token-report-print table th *,
+  #root .token-report-print table td *,
+  #root .token-ledger-print table th *,
+  #root .token-ledger-print table td * {
+    font-size: inherit !important;
+    line-height: inherit !important;
+  }
+
+  #root .donation-report-print table thead th *,
+  #root .stock-summary-print table thead th *,
+  #root .canteen-summary-print table thead th *,
+  #root .purchase-report-print table thead th *,
+  #root .manpower-report-print table thead th *,
+  #root .token-report-print table thead th *,
+  #root .token-ledger-print table thead th * {
+    font-size: 12px !important;
+    line-height: 1.05 !important;
+  }
+
+  #root .donation-report-print .grand-total-row td,
+  #root .stock-summary-print .grand-total-row td,
+  #root .canteen-summary-print .grand-total-row td,
+  #root .purchase-report-print tfoot td,
+  #root .manpower-report-print .grand-total-row td {
+    font-size: 13px !important;
   }
 }

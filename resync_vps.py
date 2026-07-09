@@ -61,20 +61,21 @@ remote_cleanup_cmd = (
 )
 run_command(ssh, remote_cleanup_cmd)
 
-print("--- Uploading Rename Roles Script ---")
-sftp.put(os.path.join(local_base, "rename_roles.py"), f"{remote_base}/rename_roles.py")
-print("--- Renaming Roles ---")
-run_command(ssh, f"cd {remote_base} && backend/.venv/bin/python rename_roles.py")
+print("--- Uploading and Running Scripts if Exist ---")
+scripts = [
+    ("rename_roles.py", "rename_roles.py", f"cd {remote_base} && backend/.venv/bin/python rename_roles.py"),
+    ("reassign_user_records.py", "reassign_user_records.py", f"cd {remote_base} && backend/.venv/bin/python reassign_user_records.py"),
+    ("fix_sidebar.py", "fix_sidebar.py", f"cd {remote_base} && backend/.venv/bin/python fix_sidebar.py")
+]
 
-print("--- Uploading Reassign User Records Script ---")
-sftp.put(os.path.join(local_base, "reassign_user_records.py"), f"{remote_base}/reassign_user_records.py")
-print("--- Reassigning User Records ---")
-run_command(ssh, f"cd {remote_base} && backend/.venv/bin/python reassign_user_records.py")
-
-print("--- Uploading Sidebar Fixes Script ---")
-sftp.put(os.path.join(local_base, "fix_sidebar.py"), f"{remote_base}/fix_sidebar.py")
-print("--- Applying Sidebar Fixes ---")
-run_command(ssh, f"cd {remote_base} && backend/.venv/bin/python fix_sidebar.py")
+for local_name, remote_name, run_cmd in scripts:
+    local_path = os.path.join(local_base, local_name)
+    if os.path.exists(local_path):
+        print(f"Uploading and running: {local_name}")
+        sftp.put(local_path, f"{remote_base}/{remote_name}")
+        run_command(ssh, run_cmd)
+    else:
+        print(f"Skipping (not found locally): {local_name}")
 
 
 

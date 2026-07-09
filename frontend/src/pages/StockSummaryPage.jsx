@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Filter } from 'lucide-react';
 import api from '../api/axios';
@@ -7,6 +7,7 @@ import { PrinterSelectDropdown } from '../components/PrinterSelectDropdown';
 import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Card, CardContent } from '../components/ui/Card';
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from '../components/ui/Dialog';
 import { formatDate, getTodayDateInput } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { QtyDisplay } from '../components/ui/QtyDisplay';
@@ -16,6 +17,8 @@ export const StockSummaryPage = () => {
   const [selectedDate, setSelectedDate] = useState(getTodayDateInput());
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+
+
 
   const { data: reportData, isLoading } = useQuery({
     queryKey: ['detailed-stock-summary', selectedDate],
@@ -50,9 +53,39 @@ export const StockSummaryPage = () => {
     window.print();
   };
 
+  const orderedRows = useMemo(() => {
+    const rows = reportData?.rows ?? [];
+    return [...rows].sort((a, b) => {
+      // Sort by category name first
+      const catA = a.category_name || 'Uncategorized';
+      const catB = b.category_name || 'Uncategorized';
+      const catComp = catA.localeCompare(catB);
+      if (catComp !== 0) return catComp;
+
+      // Within category, sort by code
+      const codeA = itemCodeMap[a.item_name] ?? 999;
+      const codeB = itemCodeMap[b.item_name] ?? 999;
+      if (codeA !== codeB) return codeA - codeB;
+
+      // Then by name
+      return String(a.item_name || '').localeCompare(String(b.item_name || ''));
+    });
+  }, [reportData, itemCodeMap]);
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set();
+    orderedRows.forEach((row) => set.add(row.category_name || 'Uncategorized'));
+    return ['ALL', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [orderedRows]);
+
+  const filteredRows = useMemo(() => {
+    if (selectedCategory === 'ALL') return orderedRows;
+    return orderedRows.filter((row) => (row.category_name || 'Uncategorized') === selectedCategory);
+  }, [orderedRows, selectedCategory]);
+
   const grandTotals = useMemo(() => {
-    if (!reportData || !reportData.rows) return null;
-    return reportData.rows.reduce((acc, row) => ({
+    if (!filteredRows) return null;
+    return filteredRows.reduce((acc, row) => ({
       opening: acc.opening + Number(row.opening_balance),
       purchase: acc.purchase + Number(row.purchase_qty),
       issues: acc.issues + Number(row.issue_qty),
@@ -71,28 +104,7 @@ export const StockSummaryPage = () => {
       closing: 0,
       closing_val: 0
     });
-  }, [reportData]);
-
-  const orderedRows = useMemo(() => {
-    const rows = reportData?.rows ?? [];
-    return [...rows].sort((a, b) => {
-      const codeA = itemCodeMap[a.item_name] ?? 999;
-      const codeB = itemCodeMap[b.item_name] ?? 999;
-      if (codeA !== codeB) return codeA - codeB;
-      return String(a.item_name || '').localeCompare(String(b.item_name || ''));
-    });
-  }, [reportData, itemCodeMap]);
-
-  const categoryOptions = useMemo(() => {
-    const set = new Set();
-    orderedRows.forEach((row) => set.add(row.category_name || 'Uncategorized'));
-    return ['ALL', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-  }, [orderedRows]);
-
-  const filteredRows = useMemo(() => {
-    if (selectedCategory === 'ALL') return orderedRows;
-    return orderedRows.filter((row) => (row.category_name || 'Uncategorized') === selectedCategory);
-  }, [orderedRows, selectedCategory]);
+  }, [filteredRows]);
 
   const groupedRows = useMemo(() => {
     const groups = {};
@@ -136,16 +148,26 @@ export const StockSummaryPage = () => {
             background: #ffffff !important;
             background-color: #ffffff !important;
           }
-          .stock-summary-print table { table-layout: fixed; width: 100%; border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid #d7c9ba !important; }
+          .stock-summary-print table { table-layout: fixed; width: 100%; border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid #d7c9ba !important; outline: 1px solid #d7c9ba !important; outline-offset: -1px !important; }
+          .stock-summary-print table .hidden {
+            display: table-cell !important;
+          }
           .stock-summary-print thead { display: table-header-group !important; }
           .stock-summary-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
           .stock-summary-print .category-print-section { break-inside: avoid-page !important; page-break-inside: avoid !important; }
           .stock-summary-print .category-print-title { break-after: avoid !important; page-break-after: avoid !important; }
           .stock-summary-print .category-print-table thead { display: table-header-group !important; }
           .stock-summary-print .category-print-table tbody tr:first-child { break-inside: avoid !important; page-break-inside: avoid !important; }
-          .stock-summary-print th, .stock-summary-print td { padding: 4px 6px !important; border-right: 1px solid #d7c9ba !important; border-bottom: 1px solid #d7c9ba !important; }
-          .stock-summary-print th { border-top: 1px solid #d7c9ba !important; }
-          .stock-summary-print tr td:last-child, .stock-summary-print tr th:last-child { border-right: none !important; }
+          .stock-summary-print th, .stock-summary-print td { padding: 7px !important; font-size: 12px !important; border: 0 !important; border-left: 1px solid #d7c9ba !important; border-top: 1px solid #d7c9ba !important; border-right: 1px solid #d7c9ba !important; border-bottom: 1px solid #d7c9ba !important; }
+          .stock-summary-print thead th, .stock-summary-print thead th * { font-size: 12px !important; line-height: 1.05 !important; padding-top: 7px !important; padding-bottom: 7px !important; }
+          .stock-summary-print table thead tr,
+          .stock-summary-print table thead tr *,
+          .stock-summary-print table thead th {
+            font-size: 12px !important;
+            line-height: 1.05 !important;
+          }
+          .stock-summary-print tbody td { border-top: 1px solid #d7c9ba !important; }
+          .stock-summary-print th:last-child, .stock-summary-print td:last-child { border-right: 1px solid #d7c9ba !important; }
           .stock-summary-print tfoot td { border: 1px solid #cab7a4 !important; }
           .stock-summary-print .stock-summary-report-card,
           .stock-summary-print .report-table-wrap {
@@ -162,12 +184,18 @@ export const StockSummaryPage = () => {
           .stock-summary-print .shadow-2xl {
             box-shadow: none !important;
           }
-          .stock-summary-print .grand-total-row td { border-top: 2px solid #bfa892 !important; border-bottom: 1px solid #bfa892 !important; }
+          .stock-summary-print .grand-total-row td { border-top: 2px solid #bfa892 !important; border-bottom: 1px solid #bfa892 !important; font-size: 13px !important; }
+          .stock-summary-print table th:nth-child(1),
+          .stock-summary-print table td:nth-child(1) { width: 18% !important; }
+          .stock-summary-print table th:nth-child(2),
+          .stock-summary-print table td:nth-child(2) { width: 8% !important; }
+          .stock-summary-print table th:nth-child(n+3),
+          .stock-summary-print table td:nth-child(n+3) { width: 9.25% !important; }
         }
       `}</style>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
-          <h2 className="page-title">Stock Summary Report</h2>
+          <h2 className="page-title" style={{ fontSize: 20 }}>Stock Summary Report</h2>
         </div>
         <PrinterSelectDropdown
           context="REPORT_STOCK"
@@ -176,47 +204,72 @@ export const StockSummaryPage = () => {
         />
       </div>
 
-      <Card className="border-border-temple print:hidden">
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-6">
-            <div className="space-y-1.5 w-full sm:w-[240px]">
-              <Label className="text-text-main font-medium">Date</Label>
-              <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="h-10 text-text-main" />
-            </div>
+      <Card className="border-border-temple bg-[#FAF6F0]/30 shadow-md print:hidden">
+        <CardContent className="p-5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             
-            <div className="flex items-center gap-2 mb-2.5">
-              <input 
-                type="checkbox" 
-                id="groupByCategory" 
-                checked={groupByCategory} 
-                onChange={(e) => {
-                  setGroupByCategory(e.target.checked);
-                  if (!e.target.checked) setSelectedCategory('ALL');
-                }}
-                className="w-4 h-4 rounded border-border-temple/50 text-primary focus:ring-primary"
-              />
-              <Label htmlFor="groupByCategory" className="text-text-main font-medium cursor-pointer">With Category</Label>
+            {/* Left Section: Inputs & Controls */}
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-3 flex-1">
+              
+              {/* 1. Date Selector */}
+              <div className="space-y-1.5 w-full sm:w-[200px]">
+                <Label className="text-xs font-bold text-text-main/70 uppercase tracking-wider">Select Date</Label>
+                <Input 
+                  type="date" 
+                  value={selectedDate} 
+                  onChange={(e) => setSelectedDate(e.target.value)} 
+                  className="h-10 border-border-temple/50 bg-white text-text-main focus:border-primary focus:ring-primary" 
+                />
+              </div>
+
+              {/* 2. With Category Toggle */}
+              <div className="flex items-center h-10">
+                <label className="relative inline-flex items-center cursor-pointer select-none">
+                  <input 
+                    type="checkbox" 
+                    id="groupByCategory" 
+                    checked={groupByCategory} 
+                    onChange={(e) => {
+                      setGroupByCategory(e.target.checked);
+                      if (!e.target.checked) {
+                        setSelectedCategory('ALL');
+                      }
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-6 bg-[#E2D2B8]/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-[#E2D2B8] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  <span className="ms-3 text-sm font-semibold text-text-main">With Category</span>
+                </label>
+              </div>
+
+              {/* Category Dropdown (Only shown when With Category grouping is enabled) */}
+              {groupByCategory && (
+                <div className="space-y-1.5 w-full sm:w-[200px] animate-in fade-in slide-in-from-left-2">
+                  <Label className="text-xs font-bold text-text-main/70 uppercase tracking-wider">Select Category</Label>
+                  <div className="relative">
+                    <Filter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-main/60" />
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="h-10 w-full rounded-md border border-border-temple/50 bg-white pl-9 pr-8 text-sm text-text-main outline-none focus:border-primary focus:ring-primary transition-all appearance-none cursor-pointer">
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category === 'ALL' ? 'All Categories' : toEnglishCategory(category)}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-text-main/60">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+
             </div>
 
-            {groupByCategory && (
-              <div className="space-y-1.5 w-full sm:w-[280px] animate-in fade-in slide-in-from-left-2">
-                <Label className="text-text-main font-medium">Select Category</Label>
-                <div className="relative">
-                  <Filter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-main/60" />
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="h-10 w-full rounded-md border border-border-temple/50 bg-white pl-9 text-sm text-text-main outline-none focus:border-primary transition-all">
-                    
-                    {categoryOptions.map((category) =>
-                    <option key={category} value={category}>
-                        {category === 'ALL' ? 'All Categories' : category}
-                      </option>
-                    )}
-                  </select>
-                </div>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -233,19 +286,18 @@ export const StockSummaryPage = () => {
         </div>
 
         <div className="p-4 print:p-0">
-          {isLoading ?
-          <div className="py-10 text-center">
+          {isLoading ? (
+            <div className="py-10 text-center">
               <div className="flex items-center justify-center gap-2 text-text-main">
                 Loading report...
               </div>
-            </div> :
-          filteredRows.length === 0 ?
-          <div className="py-10 text-center text-text-main/60">No data found</div> :
-
-          !groupByCategory ? (
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="py-10 text-center text-text-main/60">No data found matching your filters</div>
+          ) : !groupByCategory ? (
             /* FLAT LIST - Single Table */
             <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white">
-              <table className="w-full table-fixed text-sm border-collapse">
+              <table className="w-full table-fixed text-xs border-collapse">
                 <thead className="bg-[#FFF4E6] border-b border-border-temple">
                   <tr className="text-text-main font-bold uppercase">
                     <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
@@ -278,7 +330,7 @@ export const StockSummaryPage = () => {
                 </tbody>
                 {grandTotals && (
                 <tbody className="bg-[#FAF3E7] border-t-2 border-border-temple/60 text-black">
-                  <tr className="grand-total-row font-extrabold text-[16px]">
+                  <tr className="grand-total-row font-extrabold text-[13px]">
                     <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] !font-extrabold">GRAND TOTAL</td>
                     <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words !font-extrabold">{grandTotals.opening.toFixed(3)}</td>
                     <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words !font-extrabold">{grandTotals.purchase.toFixed(3)}</td>
@@ -302,7 +354,7 @@ export const StockSummaryPage = () => {
                     {toEnglishCategory(categoryName)}
                   </h2>
                   <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white">
-                    <table className="w-full table-fixed text-sm border-collapse category-print-table">
+                    <table className="w-full table-fixed text-xs border-collapse category-print-table">
                       <thead className="bg-[#FFF4E6] border-b border-border-temple">
                         <tr className="text-text-main font-bold uppercase">
                           <th className="px-3 py-2 border-r border-border-temple/40 text-left whitespace-normal break-words">Item Name</th>
@@ -333,7 +385,7 @@ export const StockSummaryPage = () => {
                           </tr>
                         ))}
                       </tbody>
-                      <tbody className="bg-[#FAF7F2] font-black text-[13px] border-t-2 border-border-temple/20">
+                      <tbody className="bg-[#FAF7F2] font-black text-[11px] border-t-2 border-border-temple/20">
                         <tr className="text-primary">
                           <td colSpan={2} className="px-3 py-3 border-r border-border-temple/10 uppercase tracking-tighter">TOTAL</td>
                           <td className="px-3 py-3 border-r border-border-temple/10 text-black whitespace-normal break-words">{rows.reduce((a, b) => a + Number(b.opening_balance || 0), 0).toFixed(3)}</td>
@@ -353,9 +405,9 @@ export const StockSummaryPage = () => {
 
               {grandTotals && (
                 <div className="report-table-wrap overflow-x-auto print:overflow-visible rounded-xl border border-border-temple shadow-sm bg-white mt-8">
-                  <table className="w-full table-fixed text-sm border-collapse">
+                  <table className="w-full table-fixed text-xs border-collapse">
                     <tbody className="bg-[#FAF3E7] border-t-2 border-border-temple/60 text-black">
-                      <tr className="grand-total-row font-black text-[15px]">
+                      <tr className="grand-total-row font-black text-[13px]">
                         <td colSpan={2} className="px-3 py-5 border-r border-black/10 text-left uppercase tracking-[0.2em] font-black">GRAND TOTAL</td>
                         <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words font-black">{grandTotals.opening.toFixed(3)}</td>
                         <td className="px-3 py-5 border-r border-black/10 text-left whitespace-normal break-words font-black">{grandTotals.purchase.toFixed(3)}</td>

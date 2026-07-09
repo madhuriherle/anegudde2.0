@@ -365,7 +365,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                         ),
                       ),
-                      if (authProvider.user?.roleRankLevel == 1)
+                      if (authProvider.userProfile?['role_rank_level'] == 1)
                         const PopupMenuItem(
                           value: 'folder',
                           child: Row(

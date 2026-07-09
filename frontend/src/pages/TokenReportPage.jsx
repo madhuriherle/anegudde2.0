@@ -121,15 +121,24 @@ const TokenReportPage = () => {
           }
           .token-report-print table { 
             width: 100% !important; 
-            border-collapse: collapse !important; 
+            border-collapse: separate !important; 
+            border-spacing: 0 !important;
             border: 1px solid #d7c9ba !important;
+            outline: 1px solid #d7c9ba !important;
+            outline-offset: -1px !important;
             table-layout: fixed !important;
           }
           .token-report-print th, .token-report-print td { 
-            border: 1px solid #d7c9ba !important; 
-            padding: 8px 12px !important;
+            border: 0 !important;
+            border-left: 1px solid #d7c9ba !important;
+            border-top: 1px solid #d7c9ba !important;
+            border-right: 1px solid #d7c9ba !important;
+            border-bottom: 1px solid #d7c9ba !important;
+            padding: 7px !important;
             font-size: 12px !important;
           }
+          .token-report-print tbody td { border-top: 1px solid #d7c9ba !important; }
+          .token-report-print th:last-child, .token-report-print td:last-child { border-right: 1px solid #d7c9ba !important; }
           .token-report-print thead { 
             display: table-header-group !important; 
           }

@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
         if (inactiveTime > TIMEOUT_LOGOUT_MS) {
           localStorage.removeItem('token');
           localStorage.removeItem('lastActivity');
-          localStorage.setItem('sessionExpiredMessage', 'Session expired due to inactivity. Please login again.');
+          sessionStorage.setItem('sessionExpiredMessage', 'Session expired due to inactivity. Please login again.');
           return null;
         }
       }
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }) => {
   const [timeoutCountdown, setTimeoutCountdown] = useState(COUNTDOWN_SECONDS);
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState(() => {
     try {
-      return localStorage.getItem('sessionExpiredMessage') || '';
+      return sessionStorage.getItem('sessionExpiredMessage') || '';
     } catch {
       return '';
     }
@@ -64,14 +64,14 @@ export const AuthProvider = ({ children }) => {
 
   const setSessionExpired = useCallback((message = 'Session expired. Please login again.') => {
     try {
-      localStorage.setItem('sessionExpiredMessage', message);
+      sessionStorage.setItem('sessionExpiredMessage', message);
     } catch {}
     setSessionExpiredMessage(message);
   }, []);
 
   const clearSessionExpired = useCallback(() => {
     try {
-      localStorage.removeItem('sessionExpiredMessage');
+      sessionStorage.removeItem('sessionExpiredMessage');
     } catch {}
     setSessionExpiredMessage('');
   }, []);
@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const handleSessionExpired = () => {
       try {
-        setSessionExpiredMessage(localStorage.getItem('sessionExpiredMessage') || 'Session expired. Please login again.');
+        setSessionExpiredMessage(sessionStorage.getItem('sessionExpiredMessage') || 'Session expired. Please login again.');
       } catch {
         setSessionExpiredMessage('Session expired. Please login again.');
       }

@@ -154,12 +154,15 @@ const ManpowerReportPage = () => {
             background: #ffffff !important;
             background-color: #ffffff !important;
           }
-          .manpower-report-print table { border-collapse: collapse; width: 100%; border: 1px solid #d7c9ba !important; }
+          .manpower-report-print table { border-collapse: separate !important; border-spacing: 0 !important; width: 100%; border: 1px solid #d7c9ba !important; outline: 1px solid #d7c9ba !important; outline-offset: -1px !important; }
           .manpower-report-print thead { display: table-header-group !important; }
           .manpower-report-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
-          .manpower-report-print th, .manpower-report-print td { border: 1px solid #d7c9ba !important; padding: 4px 6px !important; }
+          .manpower-report-print th, .manpower-report-print td { border: 0 !important; border-left: 1px solid #d7c9ba !important; border-top: 1px solid #d7c9ba !important; border-right: 1px solid #d7c9ba !important; border-bottom: 1px solid #d7c9ba !important; padding: 7px !important; font-size: 12px !important; }
+          .manpower-report-print tbody td { border-top: 1px solid #d7c9ba !important; }
+          .manpower-report-print th:last-child, .manpower-report-print td:last-child { border-right: 1px solid #d7c9ba !important; }
           .manpower-report-print th { border-top: 1px solid #d7c9ba !important; background-color: #ffffff !important; }
-          .manpower-report-print tfoot td { border: 1px solid #cab7a4 !important; }
+          .manpower-report-print tfoot td { border: 1px solid #cab7a4 !important; font-size: 13px !important; }
+          .manpower-report-print .grand-total-row td { font-size: 13px !important; }
           .manpower-report-print .manpower-report-card,
           .manpower-report-print .report-table-wrap {
             border: none !important;

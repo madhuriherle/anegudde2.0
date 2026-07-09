@@ -107,6 +107,9 @@ const DonationReportPage = () => {
             background: #ffffff !important;
             background-color: #ffffff !important;
           }
+          .donation-report-print, .donation-report-print * {
+            overflow: visible !important;
+          }
           .donation-report-print,
           .donation-report-print div,
           .donation-report-print section,
@@ -131,17 +134,30 @@ const DonationReportPage = () => {
             border-collapse: separate !important;
             border-spacing: 0 !important;
             border: 1px solid #d7c9ba !important;
+            outline: 1px solid #d7c9ba !important;
+            outline-offset: -1px !important;
           }
           .donation-report-print thead { display: table-header-group !important; }
           .donation-report-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
           .donation-report-print th, .donation-report-print td { 
-            border-right: 1px solid #d7c9ba !important; 
-            border-bottom: 1px solid #d7c9ba !important; 
-            padding: 6px 4px !important;
-            font-size: 10px !important;
+            border: 0 !important;
+            border-left: 1px solid #d7c9ba !important;
+            border-top: 1px solid #d7c9ba !important;
+            border-right: 1px solid #d7c9ba !important;
+            border-bottom: 1px solid #d7c9ba !important;
+            padding: 7px !important;
+            font-size: 12px !important;
           }
-          .donation-report-print th { border-top: 1px solid #d7c9ba !important; }
-          .donation-report-print tr td:last-child, .donation-report-print tr th:last-child { border-right: none !important; }
+          .donation-report-print th {
+            border-top: 0 !important;
+          }
+          .donation-report-print tbody td {
+            border-top: 1px solid #d7c9ba !important;
+          }
+          .donation-report-print th:last-child,
+          .donation-report-print td:last-child {
+            border-right: 1px solid #d7c9ba !important;
+          }
           .donation-report-print tfoot td {
             border: 1px solid #cab7a4 !important;
           }
@@ -152,6 +168,7 @@ const DonationReportPage = () => {
           .donation-report-print .grand-total-row td {
             border-top: 2px solid #bfa892 !important;
             border-bottom: 1px solid #bfa892 !important;
+            font-size: 13px !important;
           }
           .donation-report-print th {
             background-color: #ffffff !important;

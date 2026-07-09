@@ -202,7 +202,7 @@ const MenuItemsPage = () => {
       size: 120,
       cell: (info) => {
         const val = info.getValue();
-        return <span className="text-text-main text-center block">{val != null ? Number(val).toFixed(2) : '-'}</span>;
+        return <span className="text-text-main text-center block">{val != null ? `₹${Number(val).toFixed(2)}` : '-'}</span>;
       }
     },
     {

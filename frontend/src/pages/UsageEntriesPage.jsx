@@ -95,6 +95,7 @@ const UsageEntriesPage = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const activityDrawerRef = useRef(null);
+  const lastCheckedDateRef = useRef('');
 
   const [usageSearchQuery, setUsageSearchQuery] = useState('');
 
@@ -384,23 +385,39 @@ const UsageEntriesPage = () => {
     onError: (err) => showError(err.response?.data?.detail || 'Delete failed')
   });
 
-  const openNew = () => {
-    setEditingConsumption(null);
-    setEditingWastageEntryId(null);
-    reset({
-      usage_date: getTodayDateInput(),
-      regular_cooking_persons: 0,
-      additional_cooking_persons: 0,
-      regular_cleaning_persons: 0,
-      additional_cleaning_persons: 0,
-      regular_serving_persons: 0,
-      additional_serving_persons: 0,
-      times_cooked: 0,
-      raw_items: buildRawDefaults(),
-      wastage_items: buildWastageDefaults(),
-      raw_wastage_items: []
-    });
-    setOpen(true);
+  const openNew = async () => {
+    try {
+      const todayStr = getTodayDateInput();
+      const res = await api.get('/daily-usage/list_consumptions', { params: { q: todayStr } });
+      const existing = res.data?.items?.find(item => item.usage_date === todayStr && !item.is_deleted);
+      
+      let defaultDate = todayStr;
+      if (existing) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        defaultDate = yesterday.toISOString().split('T')[0];
+      }
+
+      setEditingConsumption(null);
+      setEditingWastageEntryId(null);
+      lastCheckedDateRef.current = defaultDate;
+      reset({
+        usage_date: defaultDate,
+        regular_cooking_persons: 0,
+        additional_cooking_persons: 0,
+        regular_cleaning_persons: 0,
+        additional_cleaning_persons: 0,
+        regular_serving_persons: 0,
+        additional_serving_persons: 0,
+        times_cooked: 0,
+        raw_items: buildRawDefaults(),
+        wastage_items: buildWastageDefaults(),
+        raw_wastage_items: []
+      });
+      setOpen(true);
+    } catch (err) {
+      showError('Failed to verify existing daily usage entries');
+    }
   };
 
   const handleEdit = async (consumption) => {
@@ -472,6 +489,36 @@ const UsageEntriesPage = () => {
       showError('Failed to fetch record for edit');
     }
   };
+
+  const selectedDate = watch('usage_date');
+
+  useEffect(() => {
+    if (!open || !selectedDate || editingConsumption) {
+      return;
+    }
+    
+    if (selectedDate === lastCheckedDateRef.current) {
+      return;
+    }
+    
+    lastCheckedDateRef.current = selectedDate;
+
+    const checkDateEntry = async () => {
+      try {
+        const res = await api.get('/daily-usage/list_consumptions', { params: { q: selectedDate } });
+        const existing = res.data?.items?.find(item => item.usage_date === selectedDate && !item.is_deleted);
+        if (existing) {
+          showSuccess(`An entry already exists for ${formatDate(selectedDate)}. Loading it for editing.`);
+          handleEdit(existing);
+        }
+      } catch (err) {
+        console.error("Error checking date entry:", err);
+      }
+    };
+
+    const timer = setTimeout(checkDateEntry, 300);
+    return () => clearTimeout(timer);
+  }, [selectedDate, open, editingConsumption]);
 
   const handleView = async (consumption) => {
     try {
@@ -943,7 +990,16 @@ const UsageEntriesPage = () => {
                   <div className="grid grid-cols-1 gap-3">
                     <div className="grid grid-cols-[1fr_140px] items-center gap-3">
                     <Label className="temple-label leading-tight">Date *</Label>
-                    <Input type="date" {...register('usage_date')} readOnly className="h-10 text-base bg-gray-100 cursor-not-allowed" />
+                    <Input 
+                      type="date" 
+                      {...register('usage_date')} 
+                      readOnly={Boolean(editingConsumption)} 
+                      max={getTodayDateInput()}
+                      className={cn(
+                        "h-10 text-base",
+                        editingConsumption ? "bg-gray-100 cursor-not-allowed" : ""
+                      )} 
+                    />
                   </div>
                   <div className="grid grid-cols-[1fr_140px] items-center gap-3">
                     <Label className="temple-label leading-tight">No. of times cooked</Label>

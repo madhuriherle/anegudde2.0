@@ -15,7 +15,7 @@ const QtyDisplay = ({ qty, unit, digits }) => {
   return (
     <span>
       {formatted}
-      {unitText && <span className="text-xs text-gray-400 ml-0.5">{unitText}</span>}
+      {unitText && <span className="text-[0.85em] text-gray-400 ml-0.5">{unitText}</span>}
     </span>
   );
 };

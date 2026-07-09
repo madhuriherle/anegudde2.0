@@ -70,6 +70,18 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
     if payload.usage_date > get_today_ist():
         raise HTTPException(status_code=400, detail="Usage date cannot be in the future.")
 
+    # Restrict to one entry per day
+    existing_entry = db.query(ConsumptionEntry).filter(
+        ConsumptionEntry.usage_date == payload.usage_date,
+        ConsumptionEntry.is_deleted == False
+    ).first()
+    if existing_entry:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A daily usage entry already exists for {payload.usage_date.strftime('%d-%m-%Y')}. Only one entry is allowed per day."
+        )
+
+
     for manpower_value in [
         payload.regular_cooking_persons,
         payload.additional_cooking_persons,
@@ -276,6 +288,19 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
 
     if payload.usage_date > get_today_ist():
         raise HTTPException(status_code=400, detail="Usage date cannot be in the future.")
+
+    # Restrict to one entry per day
+    existing_entry = db.query(ConsumptionEntry).filter(
+        ConsumptionEntry.usage_date == payload.usage_date,
+        ConsumptionEntry.is_deleted == False,
+        ConsumptionEntry.id != consumption_id
+    ).first()
+    if existing_entry:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A daily usage entry already exists for {payload.usage_date.strftime('%d-%m-%Y')}. Only one entry is allowed per day."
+        )
+
     for manpower_value in [
         payload.regular_cooking_persons,
         payload.additional_cooking_persons,

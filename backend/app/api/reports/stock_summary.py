@@ -76,8 +76,7 @@ def detailed_stock_summary_report(
             db.query(func.max(StockLedger.id))
             .filter(
                 StockLedger.txn_date <= to_date,
-                StockLedger.status == 1,
-                StockLedger.txn_type != 8
+                StockLedger.status == 1
             )
             .group_by(StockLedger.item_id)
         )
@@ -93,17 +92,16 @@ def detailed_stock_summary_report(
         period_stats = (
             db.query(
                 StockLedger.item_id,
-                func.coalesce(func.sum(case((StockLedger.txn_type == 1, StockLedger.qty_in), else_=0)), 0).label("purchase_qty"),
+                func.coalesce(func.sum(case((StockLedger.txn_type == 1, StockLedger.qty_in), (StockLedger.txn_type == 7, StockLedger.qty_in), else_=0)), 0).label("purchase_qty"),
                 func.coalesce(func.sum(case((StockLedger.txn_type == 2, StockLedger.qty_out), else_=0)), 0).label("issue_qty"),
                 func.coalesce(func.sum(case((StockLedger.txn_type == 2, StockLedger.value_out), else_=0)), 0).label("issue_value"),
-                func.coalesce(func.sum(case((StockLedger.ref_table.like("%RETURN%"), StockLedger.qty_out), else_=0)), 0).label("purchase_return_qty"),
+                func.coalesce(func.sum(case((StockLedger.txn_type == 5, StockLedger.qty_out), else_=0)), 0).label("purchase_return_qty"),
                 func.coalesce(
                     func.sum(
                         case(
-                            (StockLedger.ref_table == "consumption_entries:RAW_RETURN", StockLedger.qty_in - StockLedger.qty_out),
-                            (StockLedger.ref_table == "stock_adjustments", StockLedger.qty_in - StockLedger.qty_out),
+                            (StockLedger.txn_type == 3, StockLedger.qty_in - StockLedger.qty_out),
                             (StockLedger.txn_type == 4, StockLedger.qty_in - StockLedger.qty_out),
-                            (StockLedger.txn_type == 7, StockLedger.qty_in - StockLedger.qty_out),
+                            (StockLedger.txn_type == 6, StockLedger.qty_in - StockLedger.qty_out),
                             else_=0
                         )
                     ),
@@ -237,8 +235,7 @@ def canteen_summary_report(
             db.query(func.max(StockLedger.id))
             .filter(
                 StockLedger.txn_date <= to_date,
-                StockLedger.status == 1,
-                StockLedger.txn_type != 8
+                StockLedger.status == 1
             )
             .group_by(StockLedger.item_id)
         )
@@ -253,17 +250,16 @@ def canteen_summary_report(
         period_stats = (
             db.query(
                 StockLedger.item_id,
-                func.coalesce(func.sum(case((StockLedger.txn_type == 1, StockLedger.qty_in), else_=0)), 0).label("purchase_qty"),
+                func.coalesce(func.sum(case((StockLedger.txn_type == 1, StockLedger.qty_in), (StockLedger.txn_type == 7, StockLedger.qty_in), else_=0)), 0).label("purchase_qty"),
                 func.coalesce(func.sum(case((StockLedger.txn_type == 2, StockLedger.qty_out), else_=0)), 0).label("issue_qty"),
                 func.coalesce(func.sum(case((StockLedger.txn_type == 2, StockLedger.value_out), else_=0)), 0).label("issue_value"),
-                func.coalesce(func.sum(case((StockLedger.ref_table.like("%RETURN%"), StockLedger.qty_out), else_=0)), 0).label("purchase_return_qty"),
+                func.coalesce(func.sum(case((StockLedger.txn_type == 5, StockLedger.qty_out), else_=0)), 0).label("purchase_return_qty"),
                 func.coalesce(
                     func.sum(
                         case(
-                            (StockLedger.ref_table == "consumption_entries:RAW_RETURN", StockLedger.qty_in - StockLedger.qty_out),
-                            (StockLedger.ref_table == "stock_adjustments", StockLedger.qty_in - StockLedger.qty_out),
+                            (StockLedger.txn_type == 3, StockLedger.qty_in - StockLedger.qty_out),
                             (StockLedger.txn_type == 4, StockLedger.qty_in - StockLedger.qty_out),
-                            (StockLedger.txn_type == 7, StockLedger.qty_in - StockLedger.qty_out),
+                            (StockLedger.txn_type == 6, StockLedger.qty_in - StockLedger.qty_out),
                             else_=0
                         )
                     ),

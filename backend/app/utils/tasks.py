@@ -41,7 +41,7 @@ def generate_daily_stock_summary(summary_date: date):
             
             # 3. Aggregate transactions for this date
             ledger_data = db.query(
-                func.sum(case((StockLedger.txn_type == 1, StockLedger.qty_in), else_=0)).label("purchased_qty"),
+                func.sum(case((StockLedger.txn_type == 1, StockLedger.qty_in), (StockLedger.txn_type == 7, StockLedger.qty_in), else_=0)).label("purchased_qty"),
                 func.sum(case((StockLedger.txn_type == 1, StockLedger.value_in), else_=0)).label("purchased_value"),
                 func.sum(case((StockLedger.txn_type == 2, StockLedger.qty_out), else_=0)).label("consumed_qty"),
                 func.sum(case((StockLedger.txn_type == 3, StockLedger.qty_out), else_=0)).label("wastage_qty"),
@@ -49,14 +49,13 @@ def generate_daily_stock_summary(summary_date: date):
                     (StockLedger.txn_type == 4, StockLedger.qty_in - StockLedger.qty_out),
                     (StockLedger.txn_type == 5, -StockLedger.qty_out), # Purchase Return
                     (StockLedger.txn_type == 6, StockLedger.qty_in),   # Consumption Return
-                    (StockLedger.txn_type == 7, StockLedger.qty_in),   # Donation
-                    (StockLedger.txn_type == 8, StockLedger.qty_in - StockLedger.qty_out), # Opening Stock
                     else_=0
                 )).label("adjustment_qty")
             ).filter(
                 StockLedger.item_id == item.id,
                 StockLedger.txn_date == summary_date,
-                StockLedger.status == 1
+                StockLedger.status == 1,
+                StockLedger.txn_type != 8
             ).first()
             
             purchased_qty = ledger_data.purchased_qty or Decimal("0")

@@ -10,8 +10,9 @@ def compute_current_value(
     value_in: Decimal,
     value_out: Decimal,
 ) -> Decimal:
-    prev_val = db.query(func.coalesce(func.max(StockLedger.current_value), 0)).filter(
+    last_ledger = db.query(StockLedger.current_value).filter(
         StockLedger.item_id == item_id,
         StockLedger.status == 1,
-    ).scalar()
+    ).order_by(StockLedger.id.desc()).first()
+    prev_val = last_ledger[0] if last_ledger else Decimal("0")
     return Decimal(str(prev_val or 0)) + value_in - value_out

@@ -203,7 +203,7 @@ const DonationsPage = () => {
       const linkedModules = type.modules || [];
       return linkedModules.length === 0 || linkedModules.some((module) => {
         const name = String(module.name || '').trim().toLowerCase();
-        return name.includes('canteen') || name.includes('main menu');
+        return name.includes('canteen') || name.includes('main menu') || name.includes('donation') || name.includes('mahaprasa');
       });
     })
   ), [donationTypes]);

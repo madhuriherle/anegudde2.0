@@ -25,8 +25,8 @@ def update_donation(
             "id": entry.id,
             "devotee_name": entry.devotee_name,
             "receipt_display_number": entry.receipt_display_number,
-            "donation_type_id": entry.donation_type_id,
-            "total_amount": str(entry.total_amount) if entry.total_amount else None,
+            "donation_type": entry.donation_type,
+            "total_gross_amount": str(entry.total_gross_amount) if entry.total_gross_amount else None,
         }
     }
     

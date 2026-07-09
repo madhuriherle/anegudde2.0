@@ -11,6 +11,7 @@ class UserMinimal(UTCBaseModel):
 class TokenDetailCreate(BaseModel):
     token_count: int
     date: Optional[dt_date] = None
+    folder_path: Optional[str] = None
 
 class TokenDetailResponse(UTCBaseModel):
     id: int
@@ -42,4 +43,3 @@ class TokenDetailPaginatedResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
-

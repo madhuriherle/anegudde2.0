@@ -4,12 +4,13 @@ from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from sqlalchemy.exc import IntegrityError
 from app.db.models import DonationType, FinancialYear, ReceiptSequence, SystemSettings
 
 
 TOKEN_SEQUENCE = "TOKEN"
 DONATION_SEQUENCE = "DONATION"
-TOKEN_RECEIPT_PREFIX = "TOK-"
+TOKEN_RECEIPT_PREFIX = ""
 
 
 def _get_financial_year_for_date(db: Session, target_date: date) -> FinancialYear:
@@ -48,41 +49,45 @@ def _next_sequence_number(
     prefix: str | None,
     donation_type_id: int | None = None,
 ) -> int:
-    query = db.query(ReceiptSequence).filter(
-        ReceiptSequence.financial_year_id == financial_year_id,
-        ReceiptSequence.sequence_type == sequence_type,
-    )
-    if donation_type_id is None:
-        query = query.filter(ReceiptSequence.donation_type_id.is_(None))
-    else:
-        query = query.filter(ReceiptSequence.donation_type_id == donation_type_id)
-
-    sequence = query.with_for_update().first()
-    now = datetime.now(timezone.utc)
     db_prefix = prefix or ""
-    if not sequence:
-        sequence = ReceiptSequence(
-            financial_year_id=financial_year_id,
-            sequence_type=sequence_type,
-            donation_type_id=donation_type_id,
-            prefix=db_prefix,
-            last_number=0,
-            created_at=now,
-            updated_at=now,
-        )
-        db.add(sequence)
-        db.flush()
-        sequence = (
-            db.query(ReceiptSequence)
-            .filter(ReceiptSequence.id == sequence.id)
-            .with_for_update()
-            .first()
-        )
+    now = datetime.now(timezone.utc)
 
-    sequence.prefix = db_prefix
-    sequence.last_number += 1
-    sequence.updated_at = now
-    return sequence.last_number
+    for attempt in range(3):
+        query = db.query(ReceiptSequence).filter(
+            ReceiptSequence.financial_year_id == financial_year_id,
+            ReceiptSequence.sequence_type == sequence_type,
+        )
+        if donation_type_id is None:
+            query = query.filter(ReceiptSequence.donation_type_id.is_(None))
+        else:
+            query = query.filter(ReceiptSequence.donation_type_id == donation_type_id)
+
+        sequence = query.with_for_update().first()
+
+        if sequence:
+            sequence.prefix = db_prefix
+            sequence.last_number += 1
+            sequence.updated_at = now
+            return sequence.last_number
+
+        try:
+            sequence = ReceiptSequence(
+                financial_year_id=financial_year_id,
+                sequence_type=sequence_type,
+                donation_type_id=donation_type_id,
+                prefix=db_prefix,
+                last_number=0,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(sequence)
+            db.flush()
+            sequence.last_number += 1
+            return sequence.last_number
+        except IntegrityError:
+            db.rollback()
+
+    raise HTTPException(status_code=500, detail="Failed to generate receipt number")
 
 
 def next_token_receipt(db: Session, target_date: date) -> tuple[int, str, int, str]:

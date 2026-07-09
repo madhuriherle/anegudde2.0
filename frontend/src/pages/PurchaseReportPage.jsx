@@ -19,8 +19,9 @@ const toDateInputValue = (date) => {
 
 const PurchaseReportPage = () => {
   const today = toDateInputValue(new Date());
+  const firstOfMonth = toDateInputValue(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const { showError } = useNotification();
-  const [fromDate, setFromDate] = useState(today);
+  const [fromDate, setFromDate] = useState(firstOfMonth);
   const [toDate, setToDate] = useState(today);
 
   const { data: details = [], isLoading } = useQuery({
@@ -92,20 +93,30 @@ const PurchaseReportPage = () => {
           .purchase-report-print table {
             table-layout: fixed;
             width: 100% !important;
-            border-collapse: collapse !important;
+            border-collapse: separate !important;
             border-spacing: 0 !important;
             border: 1.25px solid #8f7d6d !important;
+            outline: 1.25px solid #8f7d6d !important;
+            outline-offset: -1px !important;
           }
           .purchase-report-print thead { display: table-header-group !important; }
           .purchase-report-print tr { page-break-inside: avoid !important; break-inside: avoid !important; }
           .purchase-report-print th,
           .purchase-report-print td {
-            border: 1.25px solid #8f7d6d !important;
-            padding: 4px 6px !important;
+            border: 0 !important;
+            border-left: 1.25px solid #8f7d6d !important;
+            border-top: 1.25px solid #8f7d6d !important;
+            border-right: 1.25px solid #8f7d6d !important;
+            border-bottom: 1.25px solid #8f7d6d !important;
+            padding: 7px !important;
+            font-size: 12px !important;
           }
+          .purchase-report-print tbody td { border-top: 1.25px solid #8f7d6d !important; }
+          .purchase-report-print th:last-child, .purchase-report-print td:last-child { border-right: 1.25px solid #8f7d6d !important; }
           .purchase-report-print tfoot td {
             border: 1.25px solid #8f7d6d !important;
             font-weight: 800 !important;
+            font-size: 13px !important;
           }
           .purchase-report-print .shadow-sm,
           .purchase-report-print .shadow,

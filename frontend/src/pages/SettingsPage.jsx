@@ -142,7 +142,7 @@ const ToggleField = VisibilityToggle;
 const cleanupGroups = [
   {
     id: 'canteen_tokens',
-    title: 'Mahaprasad Token Data',
+    title: 'Mahaprasadam Token Data',
     description: 'Token generations and token receipt details.',
   },
   {
