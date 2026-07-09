@@ -259,6 +259,12 @@ def delete_item(item_id: int, db: Session, user_id: int | None = None) -> None:
     item.is_deleted = True
     item.deleted_at = datetime.now(timezone.utc)
     item.deleted_by_id = user_id
+    
+    # Also deactivate associated serial numbers to free up the sequence if desired, 
+    # or just keep them from showing up as active
+    for serial in item.serial_numbers:
+        serial.status = 0
+        
     db.commit()
 
 
