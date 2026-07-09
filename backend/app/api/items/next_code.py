@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_user
 from app.db.models import User, ItemSerialNumber
-from app.api.auth import get_current_active_user
 import re
 
 router = APIRouter()
@@ -11,7 +10,7 @@ router = APIRouter()
 @router.get("/next-code")
 def get_next_item_code(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Finds the highest numerical item code and increments it by 1.
