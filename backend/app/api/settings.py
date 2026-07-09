@@ -209,7 +209,7 @@ def update_settings(
         "snapshot": {
             "id": settings.id,
             "temple_name": settings.temple_name,
-            "financial_year_id": settings.financial_year_id,
+            "financial_year_id": settings.current_financial_year_id,
         }
     }
     
