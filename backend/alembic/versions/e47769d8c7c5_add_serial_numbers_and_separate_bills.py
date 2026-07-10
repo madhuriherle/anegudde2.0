@@ -41,7 +41,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('serial_number')
     )
-    op.drop_table('token_details_2026_05')
     op.drop_column('purchase_entries', 'bill_file_name')
     op.drop_column('purchase_entries', 'bill_file_path')
     op.drop_column('purchase_entries', 'bill_file_mime')
@@ -54,19 +53,6 @@ def downgrade() -> None:
     op.add_column('purchase_entries', sa.Column('bill_file_mime', sa.VARCHAR(length=120), autoincrement=False, nullable=True))
     op.add_column('purchase_entries', sa.Column('bill_file_path', sa.VARCHAR(length=500), autoincrement=False, nullable=True))
     op.add_column('purchase_entries', sa.Column('bill_file_name', sa.VARCHAR(length=255), autoincrement=False, nullable=True))
-    op.create_table('token_details_2026_05',
-    sa.Column('id', sa.INTEGER(), autoincrement=False, nullable=False),
-    sa.Column('generation_id', sa.INTEGER(), autoincrement=False, nullable=False),
-    sa.Column('token_count', sa.INTEGER(), autoincrement=False, nullable=False),
-    sa.Column('created_at', postgresql.TIMESTAMP(), server_default=sa.text('now()'), autoincrement=False, nullable=False),
-    sa.Column('updated_at', postgresql.TIMESTAMP(), server_default=sa.text('now()'), autoincrement=False, nullable=False),
-    sa.Column('created_by', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('updated_by', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], name=op.f('token_details_created_by_fkey')),
-    sa.ForeignKeyConstraint(['generation_id'], ['token_generations.id'], name=op.f('token_details_generation_id_fkey')),
-    sa.ForeignKeyConstraint(['updated_by'], ['users.id'], name=op.f('token_details_updated_by_fkey')),
-    sa.PrimaryKeyConstraint('id', 'created_at', name=op.f('token_details_2026_05_pkey'))
-    )
     op.drop_table('item_serial_numbers')
     op.drop_table('purchase_bills')
     # ### end Alembic commands ###

@@ -21,5 +21,11 @@ if not DATABASE_URL:
 if not DATABASE_URL:
     raise ValueError(f"DATABASE_URL not found. Searched at: {env_path}")
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=3600, future=True)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    future=True,
+    connect_args={"options": "-c timezone=UTC"},
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
