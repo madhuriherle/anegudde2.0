@@ -188,7 +188,7 @@ const UsageEntriesPage = () => {
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-list'],
-    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data
+    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 100 } })).data
   });
   const items = useMemo(
     () => Array.isArray(itemsData) ? itemsData : itemsData?.items || [],
@@ -196,7 +196,7 @@ const UsageEntriesPage = () => {
   );
   const { data: menuItemsData } = useQuery({
     queryKey: ['menu-items'],
-    queryFn: async () => (await api.get('/menu-items/list_menu_items', { params: { page_size: 1000 } })).data
+    queryFn: async () => (await api.get('/menu-items/list_menu_items', { params: { page_size: 100 } })).data
   });
   const menuItems = useMemo(
     () => Array.isArray(menuItemsData) ? menuItemsData : menuItemsData?.items || [],
@@ -424,7 +424,7 @@ const UsageEntriesPage = () => {
     try {
       const [consumptionRes, wastageRes, adjustmentsRes] = await Promise.allSettled([
         api.get(`/daily-usage/get_consumption/${consumption.id}`),
-        api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
+        api.get('/wastages/list_wastages', { params: { page_size: 100 } }),
         api.get('/stock-adjustments/list_adjustments', { params: { consumption_entry_id: consumption.id } })
       ]);
 
@@ -524,7 +524,7 @@ const UsageEntriesPage = () => {
     try {
       const [consumptionRes, wastageRes, adjustmentsRes] = await Promise.allSettled([
         api.get(`/daily-usage/get_consumption/${consumption.id}`),
-        api.get('/wastages/list_wastages', { params: { page_size: 1000 } }),
+        api.get('/wastages/list_wastages', { params: { page_size: 100 } }),
         api.get('/stock-adjustments/list_adjustments', { params: { consumption_entry_id: consumption.id } })
       ]);
 

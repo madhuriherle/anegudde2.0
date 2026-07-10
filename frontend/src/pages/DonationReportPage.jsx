@@ -45,7 +45,7 @@ const DonationReportPage = () => {
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-list-all'],
-    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data
+    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 100 } })).data
   });
 
   const items = useMemo(() => {

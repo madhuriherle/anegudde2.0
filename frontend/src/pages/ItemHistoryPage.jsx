@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -69,6 +69,9 @@ const ItemHistoryPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
   const { data: item } = useQuery({
     queryKey: ['item', id],
     queryFn: async () => {
@@ -78,9 +81,11 @@ const ItemHistoryPage = () => {
   });
 
   const { data: ledger, isLoading } = useQuery({
-    queryKey: ['item-ledger', id],
+    queryKey: ['item-ledger', id, page, pageSize],
     queryFn: async () => {
-      const ledgerRes = await api.get(`/items/get_stock_ledger/${id}`);
+      const ledgerRes = await api.get(`/items/get_stock_ledger/${id}`, {
+        params: { page, page_size: pageSize }
+      });
       return ledgerRes.data;
     }
   });
@@ -204,7 +209,14 @@ const ItemHistoryPage = () => {
           <DataTable
             columns={columns}
             data={ledger?.items || []}
-            loading={isLoading} />
+            loading={isLoading}
+            manualPagination
+            pageCount={ledger?.total_pages || 0}
+            pageIndex={page - 1}
+            pageSize={pageSize}
+            onPageChange={(p) => setPage(p)}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+            totalCount={ledger?.total || 0} />
         </div>
       </Card>
     </div>);

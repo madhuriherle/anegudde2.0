@@ -32,14 +32,14 @@ const CanteenSummaryPage = () => {
   const { data: menuItemsData } = useQuery({
     queryKey: ['menu-items-master'],
     queryFn: async () => {
-      const res = await api.get('/menu-items/list_menu_items', { params: { page_size: 1000, status: 1 } });
+      const res = await api.get('/menu-items/list_menu_items', { params: { page_size: 100, status: 1 } });
       return res.data;
     }
   });
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-list-all-summary'],
-    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data
+    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 100 } })).data
   });
 
   const itemCodeMap = useMemo(() => {

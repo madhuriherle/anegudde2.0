@@ -66,7 +66,7 @@ const DonationTypesPage = () => {
 
   const { data: donationTypes, isLoading } = useQuery({
     queryKey: ['donation-types'],
-    queryFn: async () => (await api.get('/donation-types/list_donation_types', { params: { status: null, page_size: 1000 } })).data
+    queryFn: async () => (await api.get('/donation-types/list_donation_types', { params: { status: null, page_size: 100 } })).data
   });
 
   const { data: moduleTree } = useQuery({

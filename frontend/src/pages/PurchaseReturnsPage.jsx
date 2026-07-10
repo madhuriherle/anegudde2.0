@@ -34,16 +34,18 @@ const PurchaseReturnsPage = () => {
   const [returnDate, setReturnDate] = useState(getTodayDateInput());
   const [filterDate, setFilterDate] = useState('');
   const [editingReturnId, setEditingReturnId] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingReturn, setViewingReturn] = useState(null);
 
   // Data Fetching
   const { data: returns, isLoading } = useQuery({
-    queryKey: ['purchase-returns', filterDate],
+    queryKey: ['purchase-returns', filterDate, page, pageSize],
     queryFn: async () => {
       const res = await api.get('/purchases/list_returns', {
-        params: filterDate ? { q: filterDate } : undefined
+        params: { ...(filterDate ? { q: filterDate } : {}), page, page_size: pageSize }
       });
       return res.data;
     }
@@ -404,7 +406,18 @@ const PurchaseReturnsPage = () => {
       </div>
 
       <div className="rounded-xl border border-border-temple overflow-hidden bg-white">
-        <DataTable columns={columns} data={returns?.items || []} loading={isLoading} />
+        <DataTable
+          columns={columns}
+          data={returns?.items || []}
+          loading={isLoading}
+          manualPagination
+          pageCount={returns?.total_pages || 0}
+          pageIndex={page - 1}
+          pageSize={pageSize}
+          onPageChange={(p) => setPage(p)}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+          totalCount={returns?.total || 0}
+        />
       </div>
 
       {canReadActivityLogs && (

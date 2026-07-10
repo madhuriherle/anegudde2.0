@@ -51,7 +51,7 @@ const ActivityLogsPage = () => {
 
   const { data: usersData } = useQuery({
     queryKey: ['active-users'],
-    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 1000 } })).data,
+    queryFn: async () => (await api.get('/users/list_users', { params: { page_size: 100 } })).data,
     enabled: canListUsers,
   });
 

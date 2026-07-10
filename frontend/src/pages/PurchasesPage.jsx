@@ -182,7 +182,7 @@ const PurchasesPage = () => {
 
   const { data: itemsData } = useQuery({
     queryKey: ['items-list'],
-    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 1000 } })).data
+    queryFn: async () => (await api.get('/items/list_items', { params: { page_size: 100 } })).data
   });
   const items = useMemo(() => {
     const list = itemsData?.items || [];

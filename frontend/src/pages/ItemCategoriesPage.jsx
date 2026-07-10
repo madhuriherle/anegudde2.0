@@ -31,6 +31,7 @@ const ItemCategoriesPage = () => {
 
   // Filter States
   const [pageSize, setPageSize] = useState(50);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
 
   const [editingCategory, setEditingCategory] = useState(null);
@@ -40,9 +41,9 @@ const ItemCategoriesPage = () => {
 
   // Fetch Data
   const { data: categories, isLoading } = useQuery({
-    queryKey: ['item-categories', search, pageSize],
+    queryKey: ['item-categories', search, page, pageSize],
     queryFn: async () => {
-      const params = { q: search, page_size: pageSize };
+      const params = { q: search, page, page_size: pageSize };
       const res = await api.get('/item-categories/list_categories', { params });
       return res.data;
     }
@@ -220,7 +221,18 @@ const ItemCategoriesPage = () => {
 
         <div className={cn("lg:col-span-8", !canWrite && "lg:col-span-12")}>
           <Card className="border-border-temple shadow-sm overflow-hidden">
-            <DataTable columns={columns} data={sortedCategories} loading={isLoading} />
+            <DataTable
+              columns={columns}
+              data={sortedCategories}
+              loading={isLoading}
+              manualPagination
+              pageCount={categories?.total_pages || 0}
+              pageIndex={page - 1}
+              pageSize={pageSize}
+              onPageChange={(p) => setPage(p)}
+              onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+              totalCount={categories?.total || 0}
+            />
           </Card>
         </div>
       </div>

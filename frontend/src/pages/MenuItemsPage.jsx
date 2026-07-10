@@ -40,7 +40,7 @@ const MenuItemsPage = () => {
   const { data: menuItems, isLoading: menuItemsLoading } = useQuery({
     queryKey: ['menu-items', search],
     queryFn: async () => {
-      const params = { page_size: 1000 };
+      const params = { page_size: 100 };
       if (search) params.q = search;
       const res = await api.get('/menu-items/list_menu_items', { params });
       return res.data;
@@ -49,7 +49,7 @@ const MenuItemsPage = () => {
 
   const { data: units } = useQuery({
     queryKey: ['units-list'],
-    queryFn: async () => (await api.get('/units/list_units', { params: { page_size: 1000 } })).data,
+    queryFn: async () => (await api.get('/units/list_units', { params: { page_size: 100 } })).data,
     enabled: canWrite
   });
 
