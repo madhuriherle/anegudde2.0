@@ -7,3 +7,10 @@ frontend/node_modules/
 frontend/dist/
 .DS_Store
 *.log
+
+# Added to ignore unwanted local files
+backend/.venv/
+backend/app.db
+frontend/dist.zip
+token_desktop_app/Output/
+token_desktop_app/New folder/
