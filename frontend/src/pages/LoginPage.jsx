@@ -67,8 +67,14 @@ const LoginPage = () => {
       showSuccess('Login successful! Welcome back.');
       navigate('/', { replace: true });
     } catch (err) {
-      const errorMsg =
-      err.response?.data?.detail || 'Invalid username or password';
+      let errorMsg;
+      if (err.response) {
+        errorMsg = err.response.data?.detail || 'Invalid username or password';
+      } else if (err.request) {
+        errorMsg = 'Unable to reach the server. Please check your internet connection and try again.';
+      } else {
+        errorMsg = 'Something went wrong. Please try again.';
+      }
       setError(errorMsg);
       showError(errorMsg);
     } finally {

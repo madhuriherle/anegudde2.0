@@ -1,8 +1,24 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
+const _kNetworkErrorMessage =
+    'Could not reach the server. Please check the server address in Settings and your network connection.';
+
+/// Thrown when a request fails because the server couldn't be reached at all
+/// (timeout, DNS/connection failure) - as opposed to the server responding
+/// with an error status. Lets callers show a "check your connection" message
+/// instead of a generic failure.
+class NetworkException implements Exception {
+  final String message;
+  const NetworkException(this.message);
+
+  @override
+  String toString() => message;
+}
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -149,18 +165,24 @@ class ApiService {
     };
   }
 
+  String? _lastLoginError;
+  String? get lastLoginError => _lastLoginError;
+
   Future<bool> login(String username, String password) async {
+    _lastLoginError = null;
     try {
       print('Attempting login to: $_baseUrl/auth/login');
-      final response = await http.post(
-        _buildUri('/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'username': username.trim(),
-          'password': password.trim(),
-          'client_type': 'desktop',
-        }),
-      );
+      final response = await http
+          .post(
+            _buildUri('/auth/login'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'username': username.trim(),
+              'password': password.trim(),
+              'client_type': 'desktop',
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       print('Login Response Status: ${response.statusCode}');
       if (response.statusCode != 200) {
@@ -175,9 +197,31 @@ class ApiService {
             'login_date', DateFormat('yyyy-MM-dd').format(DateTime.now()));
         return true;
       }
+
+      if (response.statusCode == 401) {
+        _lastLoginError = 'Invalid username or password.';
+      } else {
+        try {
+          final body = json.decode(response.body);
+          _lastLoginError =
+              body is Map && body['detail'] != null ? body['detail'].toString() : null;
+        } catch (_) {
+          // Response body wasn't JSON; fall through to the generic message below.
+        }
+        _lastLoginError ??= 'Login failed (server error ${response.statusCode}).';
+      }
+      return false;
+    } on TimeoutException catch (e) {
+      print('Login Exception: $e');
+      _lastLoginError = _kNetworkErrorMessage;
+      return false;
+    } on SocketException catch (e) {
+      print('Login Exception: $e');
+      _lastLoginError = _kNetworkErrorMessage;
       return false;
     } catch (e) {
       print('Login Exception: $e');
+      _lastLoginError = _kNetworkErrorMessage;
       return false;
     }
   }
@@ -185,10 +229,12 @@ class ApiService {
   Future<void> logout() async {
     try {
       print('Attempting logout call to backend...');
-      await http.post(
-        _buildUri('/auth/logout'),
-        headers: await _headers(),
-      );
+      await http
+          .post(
+            _buildUri('/auth/logout'),
+            headers: await _headers(),
+          )
+          .timeout(const Duration(seconds: 10));
     } catch (e) {
       print('Logout API call failed: $e');
     }
@@ -198,29 +244,49 @@ class ApiService {
   }
 
   Future<dynamic> get(String endpoint) async {
-    final response = await http.get(
-      _buildUri(endpoint),
-      headers: await _headers(),
+    final response = await _sendWithTimeout(
+      () async => http.get(_buildUri(endpoint), headers: await _headers()),
     );
     return _handleResponse(response);
   }
 
   Future<dynamic> post(String endpoint, Map<String, dynamic> body) async {
-    final response = await http.post(
-      _buildUri(endpoint),
-      headers: await _headers(),
-      body: json.encode(body),
+    final response = await _sendWithTimeout(
+      () async => http.post(
+        _buildUri(endpoint),
+        headers: await _headers(),
+        body: json.encode(body),
+      ),
     );
     return _handleResponse(response);
   }
 
   Future<dynamic> put(String endpoint, Map<String, dynamic> body) async {
-    final response = await http.put(
-      _buildUri(endpoint),
-      headers: await _headers(),
-      body: json.encode(body),
+    final response = await _sendWithTimeout(
+      () async => http.put(
+        _buildUri(endpoint),
+        headers: await _headers(),
+        body: json.encode(body),
+      ),
     );
     return _handleResponse(response);
+  }
+
+  /// Runs [request] with a bounded timeout, normalizing any connectivity
+  /// failure (timeout, DNS/connection error) into a [NetworkException] so
+  /// callers can tell "server unreachable" apart from "server said no".
+  Future<http.Response> _sendWithTimeout(
+    Future<http.Response> Function() request,
+  ) async {
+    try {
+      return await request().timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      throw const NetworkException(_kNetworkErrorMessage);
+    } on SocketException {
+      throw const NetworkException(_kNetworkErrorMessage);
+    } on http.ClientException {
+      throw const NetworkException(_kNetworkErrorMessage);
+    }
   }
 
   dynamic _handleResponse(http.Response response) {
@@ -231,7 +297,16 @@ class ApiService {
       throw Exception('Unauthorized');
     } else {
       print('API Error Status: ${response.statusCode}');
-      throw Exception('API Error: ${response.statusCode}');
+      String? detail;
+      try {
+        final body = json.decode(response.body);
+        if (body is Map && body['detail'] != null) {
+          detail = body['detail'].toString();
+        }
+      } catch (_) {
+        // Response body wasn't JSON; fall through to the generic message below.
+      }
+      throw Exception(detail ?? 'API Error: ${response.statusCode}');
     }
   }
 }

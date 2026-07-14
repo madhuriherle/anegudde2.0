@@ -183,13 +183,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _onFileError() {
-    final error = Provider.of<TokenProvider>(context, listen: false).fileWriteError;
-    if (error != null && mounted) {
+    final tokenProvider = Provider.of<TokenProvider>(context, listen: false);
+    final fileError = tokenProvider.fileWriteError;
+    final fetchError = tokenProvider.fetchError;
+    final message = fileError != null ? 'File save error: $fileError' : fetchError;
+    if (message != null && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('File save error: $error'),
+            content: Text(message),
             backgroundColor: Colors.redAccent,
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
@@ -863,7 +866,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
     } else {
-      await _showErrorAlert('Unauthorized or failed to generate token. Please check your permissions.');
+      await _showErrorAlert(
+        tokenProvider.issueTokenError ?? 'Failed to generate token. Please try again.',
+      );
     }
 
     _refocusCountInput();
@@ -1134,29 +1139,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _updateTokenFolderPath(BuildContext context) async {
     try {
+      // Fetch current settings first so the picker can default to where mpd.txt
+      // is actually being written today (explicit path, or the backend's fallback cwd).
+      final response = await ApiService().get('/settings/get_current_settings');
+      if (response == null || response is! Map) {
+        throw Exception('Failed to fetch current settings');
+      }
+      final currentSettings = Map<String, dynamic>.from(response);
+      final currentPath = (currentSettings['token_file_path'] as String?)?.trim().isNotEmpty == true
+          ? currentSettings['token_file_path'] as String
+          : currentSettings['effective_token_file_path'] as String?;
+
       final selectedDirectory = await FilePicker.platform.getDirectoryPath(
         dialogTitle: 'Select Token Folder Path',
+        initialDirectory: currentPath,
       );
-      
+
       if (selectedDirectory != null) {
-        // Fetch current settings
-        final response = await ApiService().get('/settings/get_current_settings');
-        if (response != null && response is Map) {
-          final currentSettings = Map<String, dynamic>.from(response);
-          currentSettings['token_file_path'] = selectedDirectory;
-          
-          final updateResponse = await ApiService().put('/settings/update', currentSettings);
-          if (updateResponse != null) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Token folder path updated successfully')),
-              );
-            }
-          } else {
-             throw Exception('Failed to update settings');
+        currentSettings['token_file_path'] = selectedDirectory;
+
+        final updateResponse = await ApiService().put('/settings/update', currentSettings);
+        if (updateResponse != null) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Token folder path updated successfully')),
+            );
           }
         } else {
-           throw Exception('Failed to fetch current settings');
+          throw Exception('Failed to update settings');
         }
       }
     } catch (e) {

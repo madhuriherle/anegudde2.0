@@ -120,17 +120,16 @@ def get_settings(
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
 
-    # Map relationship field to schema field
-    res = SystemSettingsOut.model_validate(settings)
-    if settings.current_year:
-        res.financial_year_name = settings.current_year.name
-    return res
+    return _settings_response(settings)
 
 
 def _settings_response(settings: SystemSettings) -> SystemSettingsOut:
     res = SystemSettingsOut.model_validate(settings)
     if settings.current_year:
         res.financial_year_name = settings.current_year.name
+    # The mpd.txt token file is written here whenever no folder is explicitly configured
+    # (see token_service.create_tokens), so surface it as the picker's default location.
+    res.effective_token_file_path = settings.token_file_path or os.getcwd()
     return res
 
 

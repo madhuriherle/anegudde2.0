@@ -475,13 +475,18 @@ const MainLayout = () => {
                           try {
                             const res = await api.get('/settings/get_current_settings');
                             const currentSettings = res.data;
-                            const currentPath = currentSettings.token_file_path || '';
+                            const currentPath = currentSettings.token_file_path || currentSettings.effective_token_file_path || '';
                             const newPath = window.prompt(
                               "Enter the local folder path to save the token count file (e.g., C:\\Tokens):",
                               currentPath
                             );
                             if (newPath !== null) {
-                              const updatedSettings = { ...currentSettings, token_file_path: newPath.trim() };
+                              const trimmedPath = newPath.trim();
+                              if (!trimmedPath) {
+                                alert("Folder path cannot be empty.");
+                                return;
+                              }
+                              const updatedSettings = { ...currentSettings, token_file_path: trimmedPath };
                               await api.put('/settings/update', updatedSettings);
                               alert("Token folder path synced to database! All apps will now use this path.");
                             }

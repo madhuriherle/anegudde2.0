@@ -8,11 +8,15 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   Map<String, dynamic>? _userProfile;
   String? _sessionExpiredMessage;
+  String? _loginError;
+  String? _connectionErrorMessage;
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
   Map<String, dynamic>? get userProfile => _userProfile;
   String? get sessionExpiredMessage => _sessionExpiredMessage;
+  String? get loginError => _loginError;
+  String? get connectionErrorMessage => _connectionErrorMessage;
 
   AuthProvider() {
     ApiService.onUnauthorized = _handleUnauthorized;
@@ -31,8 +35,14 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void clearConnectionError() {
+    _connectionErrorMessage = null;
+    notifyListeners();
+  }
+
   Future<void> checkAuth() async {
     _isLoading = true;
+    _connectionErrorMessage = null;
     notifyListeners();
 
     final token = await _apiService.token;
@@ -64,6 +74,9 @@ class AuthProvider with ChangeNotifier {
     try {
       _userProfile = await _apiService.get('/auth/get_current_user_profile');
       notifyListeners();
+    } on NetworkException catch (e) {
+      print('Fetch Profile Error: $e');
+      _connectionErrorMessage = e.message;
     } catch (e) {
       print('Fetch Profile Error: $e');
     }
@@ -71,6 +84,8 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> login(String username, String password) async {
     _isLoading = true;
+    _loginError = null;
+    _connectionErrorMessage = null;
     notifyListeners();
 
     final success = await _apiService.login(username, password);
@@ -79,6 +94,8 @@ class AuthProvider with ChangeNotifier {
       _isAuthenticated = true;
       await fetchProfile();
       await syncSettings();
+    } else {
+      _loginError = _apiService.lastLoginError ?? 'Login failed. Please try again.';
     }
 
     _isLoading = false;

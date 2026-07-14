@@ -37,6 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final sessionExpiredMessage = authProvider.sessionExpiredMessage;
+    final connectionErrorMessage = authProvider.connectionErrorMessage;
 
     return Scaffold(
       body: Stack(
@@ -98,73 +99,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Color(0xFF4A3728), // Updated to match dashboard
                     ),
                   ),
+                  if (connectionErrorMessage != null) ...[
+                    const SizedBox(height: 20),
+                    _LoginBanner(
+                      icon: Icons.wifi_off,
+                      title: 'Connection issue',
+                      message: connectionErrorMessage,
+                      accentColor: const Color(0xFFB3261E),
+                      backgroundColor: const Color(0xFFFDF0EE),
+                      onDismiss: authProvider.clearConnectionError,
+                    ),
+                  ],
                   if (sessionExpiredMessage != null) ...[
                     const SizedBox(height: 20),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFAF6F0),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFD9C8AF)),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: 36,
-                            width: 36,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD9C8AF).withOpacity(0.3),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.lock_clock,
-                              color: Color(0xFF4A3728),
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Session expired',
-                                  style: TextStyle(
-                                    color: Color(0xFF4A3728),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  sessionExpiredMessage,
-                                  style: const TextStyle(
-                                    color: Color(0xFF7A5C3E),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minHeight: 32,
-                              minWidth: 32,
-                            ),
-                            icon: const Icon(
-                              Icons.close,
-                              size: 18,
-                              color: Color(0xFF7A5C3E),
-                            ),
-                            onPressed: authProvider.clearSessionMessage,
-                          ),
-                        ],
-                      ),
+                    _LoginBanner(
+                      icon: Icons.lock_clock,
+                      title: 'Session expired',
+                      message: sessionExpiredMessage,
+                      accentColor: const Color(0xFF4A3728),
+                      backgroundColor: const Color(0xFFFAF6F0),
+                      onDismiss: authProvider.clearSessionMessage,
                     ),
                   ],
                   const SizedBox(height: 32),
@@ -265,10 +219,90 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordController.text.trim(),
     );
     if (!success && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Login Failed')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.loginError ?? 'Login Failed'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
+  }
+}
+
+class _LoginBanner extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final Color accentColor;
+  final Color backgroundColor;
+  final VoidCallback onDismiss;
+
+  const _LoginBanner({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.accentColor,
+    required this.backgroundColor,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withOpacity(0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 36,
+            width: 36,
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: accentColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: accentColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: TextStyle(
+                    color: accentColor.withOpacity(0.85),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minHeight: 32, minWidth: 32),
+            icon: Icon(Icons.close, size: 18, color: accentColor.withOpacity(0.85)),
+            onPressed: onDismiss,
+          ),
+        ],
+      ),
+    );
   }
 }
 

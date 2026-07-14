@@ -11,12 +11,16 @@ class TokenProvider with ChangeNotifier {
   bool _isLoading = false;
   DateTime _selectedDate = DateTime.now();
   String? _fileWriteError;
+  String? _fetchError;
+  String? _issueTokenError;
 
   int get dailyTotal => _dailyTotal;
   int get totalReceipts => _totalReceipts;
   bool get isLoading => _isLoading;
   DateTime get selectedDate => _selectedDate;
   String? get fileWriteError => _fileWriteError;
+  String? get fetchError => _fetchError;
+  String? get issueTokenError => _issueTokenError;
 
   void _syncSelectedDateWithToday() {
     final now = DateTime.now();
@@ -43,6 +47,7 @@ class TokenProvider with ChangeNotifier {
       final tokenResponse = await _apiService.get(
         '/tokens/get_details_by_date/$dateStr',
       );
+      _fetchError = null;
 
       _dailyTotal = tokenResponse['total_tokens'] ?? 0;
       _totalReceipts = tokenResponse['total'] ?? 0;
@@ -60,6 +65,11 @@ class TokenProvider with ChangeNotifier {
           print('Token file update failed: $e');
         }
       }
+    } on NetworkException catch (e) {
+      print('Fetch Data Error: $e');
+      // Keep the last-known totals instead of flashing to 0 on a transient
+      // network blip - the banner tells the user the figure may be stale.
+      _fetchError = e.message;
     } catch (e) {
       print('Fetch Data Error: $e');
       _dailyTotal = 0;
@@ -73,6 +83,7 @@ class TokenProvider with ChangeNotifier {
   Future<Map<String, dynamic>?> issueTokens(int count) async {
     _syncSelectedDateWithToday();
     _isLoading = true;
+    _issueTokenError = null;
     notifyListeners();
 
     try {
@@ -90,6 +101,7 @@ class TokenProvider with ChangeNotifier {
       return response;
     } catch (e) {
       print('Issue Token Error: $e');
+      _issueTokenError = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
       notifyListeners();
       return null;

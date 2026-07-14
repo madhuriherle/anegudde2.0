@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from datetime import datetime
 from typing import Optional
 
@@ -35,6 +35,16 @@ class SystemSettingsBase(BaseModel):
     show_temple_website: bool = True
     show_temple_timings: bool = True
     show_google_maps_link: bool = True
+
+    @field_validator('token_file_path')
+    @classmethod
+    def normalize_token_file_path(cls, value: Optional[str]) -> Optional[str]:
+        # A blank/whitespace-only path is not a valid folder selection - treat it as
+        # "not configured" so it doesn't get persisted as if it were a real path.
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
 
     @model_validator(mode='after')
     def check_names(self) -> 'SystemSettingsBase':
@@ -171,6 +181,7 @@ class SystemSettingsOut(SystemSettingsBase):
     id: int
     current_financial_year_id: Optional[int] = None
     financial_year_name: Optional[str] = None
+    effective_token_file_path: Optional[str] = None
     updated_at: datetime
     updated_by: Optional[int] = None
 
