@@ -20,10 +20,7 @@ def list_wastages(db: Session, page: int = 1, page_size: int = 20, q: str = None
     if q:
         from sqlalchemy import or_
         query = query.join(WastageEntry.items).join(WastageItem.menu_item).filter(
-            or_(
-                WastageEntry.reason.ilike(f"%{q}%"),
-                MenuItem.dish_name.ilike(f"%{q}%")
-            )
+            MenuItem.dish_name.ilike(f"%{q}%")
         ).distinct()
 
     total = query.count()

@@ -7,8 +7,12 @@ import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 
 class PrintingService {
-  static const String _templeName =
-      '\u0C86\u0CA8\u0CC6\u0C97\u0CC1\u0CA1\u0CCD\u0CA1\u0CC6 \u0CB6\u0CCD\u0CB0\u0CC0 \u0CB5\u0CBF\u0CA8\u0CBE\u0CAF\u0C95 \u0CA6\u0CC7\u0CB5\u0CB8\u0CCD\u0CA5\u0CBE\u0CA8, \u0C95\u0CC1\u0C82\u0CAD\u0CBE\u0CB6\u0CBF';
+  // Split across two lines so it isn't cramped onto one tiny row:
+  // "Anegudde Sri Vinayaka Devasthana," / "Kumbashi"
+  static const String _templeNameLine1 =
+      '\u0C86\u0CA8\u0CC6\u0C97\u0CC1\u0CA1\u0CCD\u0CA1\u0CC6 \u0CB6\u0CCD\u0CB0\u0CC0 \u0CB5\u0CBF\u0CA8\u0CBE\u0CAF\u0C95 \u0CA6\u0CC7\u0CB5\u0CB8\u0CCD\u0CA5\u0CBE\u0CA8,';
+  static const String _templeNameLine2 =
+      '\u0C95\u0CC1\u0C82\u0CAD\u0CBE\u0CB6\u0CBF';
   static const String _mahaPrasada =
       '\u0CAE\u0CB9\u0CBE \u0CAA\u0CCD\u0CB0\u0CB8\u0CBE\u0CA6';
   static const String _devoteeCountLabel =
@@ -187,8 +191,10 @@ class PrintingService {
     required String userCode,
   }) async {
     // Compact receipt — small footprint. userCode row adds ~30px.
+    // The temple name now takes two lines instead of one, so the card is
+    // 26px taller than before to fit it without crowding the rows below.
     const double width = 450;
-    final double height = userCode.isEmpty ? 260 : 290;
+    final double height = userCode.isEmpty ? 286 : 316;
     const double scale = 3;
 
     final recorder = ui.PictureRecorder();
@@ -249,14 +255,25 @@ class PrintingService {
       borderPaint,
     );
 
-    // Temple name (top, centered) — single line, full width
+    // Temple name (top, centered) — split across two lines so each one
+    // gets a readable size instead of being crammed onto a single row.
     _drawParagraph(
       canvas,
-      _templeName,
+      _templeNameLine1,
       x: 28,
-      y: 18,
+      y: 14,
       width: width - 56,
-      fontSize: 19.5,
+      fontSize: 21,
+      fontWeight: FontWeight.w700,
+      textAlign: TextAlign.center,
+    );
+    _drawParagraph(
+      canvas,
+      _templeNameLine2,
+      x: 28,
+      y: 40,
+      width: width - 56,
+      fontSize: 21,
       fontWeight: FontWeight.w700,
       textAlign: TextAlign.center,
     );
@@ -266,7 +283,7 @@ class PrintingService {
       canvas,
       'R.No.: $receiptNo',
       x: 36,
-      y: 60,
+      y: 86,
       width: width - 72,
       fontSize: 26,
       fontWeight: FontWeight.w700,
@@ -279,7 +296,7 @@ class PrintingService {
       canvas,
       'Date: $date',
       x: 36,
-      y: 100,
+      y: 126,
       width: 240,
       fontSize: 21,
       fontWeight: FontWeight.w700,
@@ -290,7 +307,7 @@ class PrintingService {
       canvas,
       time,
       x: 286,
-      y: 100,
+      y: 126,
       width: 110,
       fontSize: 21,
       fontWeight: FontWeight.w700,
@@ -298,7 +315,7 @@ class PrintingService {
       fontFamily: 'Arial',
     );
 
-    double y = 134;
+    double y = 160;
     if (userCode.isNotEmpty) {
       _drawParagraph(
         canvas,
@@ -406,7 +423,7 @@ class PrintingService {
     // the target ticket shape, so rotating it here makes the printer output
     // sideways and clips the border on narrow rolls.
     const receiptWidth = 75 * PdfPageFormat.mm;
-    final receiptAspectHeight = userCode.isEmpty ? 260 / 450 : 290 / 450;
+    final receiptAspectHeight = userCode.isEmpty ? 286 / 450 : 316 / 450;
     final receiptHeight = receiptWidth * receiptAspectHeight;
     const pageWidth = 76 * PdfPageFormat.mm;
     final pageHeight = receiptHeight;

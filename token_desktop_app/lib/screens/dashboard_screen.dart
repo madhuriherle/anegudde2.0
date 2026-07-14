@@ -30,6 +30,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Printer> _availablePrinters = [];
   bool _showPrinterSelector = false;
 
+  // Cached at initState so dispose() never has to call Provider.of(context) -
+  // by the time dispose() runs (e.g. right after logout tears down this
+  // screen) the context can already be invalid for ancestor lookups.
+  late final TokenProvider _tokenProvider;
+
   void _refocusCountInput() {
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -45,16 +50,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _tokenProvider = Provider.of<TokenProvider>(context, listen: false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<TokenProvider>(context, listen: false).fetchDailyTotal();
+      _tokenProvider.fetchDailyTotal();
       _initPrinterConfig();
       _refocusCountInput();
     });
-    Provider.of<TokenProvider>(context, listen: false).addListener(_onFileError);
+    _tokenProvider.addListener(_onFileError);
 
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (!mounted) return;
-      Provider.of<TokenProvider>(context, listen: false).fetchDailyTotal();
+      _tokenProvider.fetchDailyTotal();
     });
   }
 
@@ -183,9 +189,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _onFileError() {
-    final tokenProvider = Provider.of<TokenProvider>(context, listen: false);
-    final fileError = tokenProvider.fileWriteError;
-    final fetchError = tokenProvider.fetchError;
+    final fileError = _tokenProvider.fileWriteError;
+    final fetchError = _tokenProvider.fetchError;
     final message = fileError != null ? 'File save error: $fileError' : fetchError;
     if (message != null && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -216,8 +221,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
-    Provider.of<TokenProvider>(context, listen: false)
-        .removeListener(_onFileError);
+    _tokenProvider.removeListener(_onFileError);
     _refreshTimer?.cancel();
     _countController.dispose();
     _focusNode.dispose();

@@ -35,39 +35,6 @@ def consumptions_report(
     return [ReportRow(period=r.period, total_amount=r.total_amount, total_count=r.total_count) for r in rows]
 
 
-@router.get("/get_cooked_remained_totals")
-def cooked_remained_totals(
-    from_date: date = Query(...), 
-    to_date: date = Query(...), 
-    db: Session = Depends(get_db), 
-    _: User = Depends(PermissionChecker("daily_usage.read"))
-):
-    row = (
-        db.query(
-            func.coalesce(func.sum(ConsumptionEntry.anna_remained), 0).label("anna_remained"),
-            func.coalesce(func.sum(ConsumptionEntry.saru_remained), 0).label("saru_remained"),
-            func.coalesce(func.sum(ConsumptionEntry.huli_remained), 0).label("huli_remained"),
-            func.coalesce(func.sum(ConsumptionEntry.payas_remained), 0).label("payas_remained"),
-            func.count(ConsumptionEntry.id).label("entry_count"),
-        )
-        .filter(
-            ConsumptionEntry.is_deleted == False,
-            ConsumptionEntry.usage_date >= from_date, 
-            ConsumptionEntry.usage_date <= to_date
-        )
-        .first()
-    )
-    return {
-        "from_date": from_date,
-        "to_date": to_date,
-        "anna_remained": row.anna_remained,
-        "saru_remained": row.saru_remained,
-        "huli_remained": row.huli_remained,
-        "payas_remained": row.payas_remained,
-        "entry_count": row.entry_count,
-    }
-
-
 @router.get("/get_raw_stock_movement")
 def raw_stock_movement(
     from_date: date = Query(...), 

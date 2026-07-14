@@ -106,8 +106,12 @@ class AuthProvider with ChangeNotifier {
   Future<void> syncSettings() async {
     try {
       final settings = await _apiService.get('/settings/get_current_settings');
-      if (settings != null && settings['token_file_path'] != null) {
-        await TokenFileService.saveOutputFolder(settings['token_file_path']);
+      // Fall back to effective_token_file_path (where mpd.txt actually lands
+      // when no folder is explicitly configured) so this never shows a stale
+      // cached value that doesn't match reality.
+      final path = settings?['token_file_path'] ?? settings?['effective_token_file_path'];
+      if (path != null) {
+        await TokenFileService.saveOutputFolder(path);
       }
     } catch (e) {
       print('Sync Settings Error: $e');
