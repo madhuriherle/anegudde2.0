@@ -22,7 +22,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final _countController = TextEditingController();
+  final _countController = TextEditingController(text: '1');
   final _focusNode = FocusNode();
   Timer? _refreshTimer;
   final PrinterConfigService _printerConfigService = PrinterConfigService();
@@ -863,7 +863,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (!isValidFormat) {
       await _showInvalidFormatAlert();
-      _countController.clear();
+      _countController.text = '1';
       _refocusCountInput();
       return;
     }
@@ -882,7 +882,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!mounted) return;
 
     if (response != null) {
-      _countController.clear();
+      _countController.text = '1';
 
       try {
         await PrintingService.printToken(
