@@ -6,10 +6,10 @@ echo ========================================
 echo.
 echo Starting Backend and Frontend...
 
-cd /d "D:\anegudde2.0\backend"
+cd /d "%~dp0backend"
 start /b cmd /c "python -m uvicorn app.main:app --host 0.0.0.0 --port 2509 --reload"
 
-cd /d "D:\anegudde2.0\frontend"
+cd /d "%~dp0frontend"
 start /b cmd /c "npm run dev -- --host 0.0.0.0 --port 2508"
 
 echo.
