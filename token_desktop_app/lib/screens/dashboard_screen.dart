@@ -762,7 +762,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         ),
                                 ),
                               ),
-                            ),
 
                             if (_successMessage != null) ...[
                               const SizedBox(height: 12),
@@ -776,15 +775,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(Icons.check_circle, color: Color(0xFF72C366), size: 18),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      _successMessage!,
-                                      style: const TextStyle(
-                                        color: Color(0xFF3A7D34),
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
+                                    Flexible(
+                                      child: Text(
+                                        _successMessage!,
+                                        style: const TextStyle(
+                                          color: Color(0xFF3A7D34),
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
@@ -793,6 +796,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ],
                         ),
+                      ),
                       ),
                     ],
                   ),
