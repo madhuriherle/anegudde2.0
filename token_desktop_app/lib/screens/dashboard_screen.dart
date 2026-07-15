@@ -29,6 +29,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _selectedPrinterName = '';
   List<Printer> _availablePrinters = [];
   bool _showPrinterSelector = false;
+  String? _successMessage;
+  Timer? _successTimer;
 
   // Cached at initState so dispose() never has to call Provider.of(context) -
   // by the time dispose() runs (e.g. right after logout tears down this
@@ -223,6 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _tokenProvider.removeListener(_onFileError);
     _refreshTimer?.cancel();
+    _successTimer?.cancel();
     _countController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -759,8 +762,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         ),
                                 ),
                               ),
+                            ),
+
+                            if (_successMessage != null) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                width: fieldWidth,
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0F9F0),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFF72C366)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.check_circle, color: Color(0xFF72C366), size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _successMessage!,
+                                      style: const TextStyle(
+                                        color: Color(0xFF3A7D34),
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
-                          ),
+                          ],
                         ),
                       ),
                     ],
@@ -859,7 +890,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           printerName: _selectedPrinterName.isNotEmpty ? _selectedPrinterName : null,
         );
         if (!mounted) return;
-        await _showSuccessPopup(context, response);
+        setState(() {
+          _successMessage = 'Token generated & printed for ${response['token_count']} devotee(s)';
+        });
+        _successTimer?.cancel();
+        _successTimer = Timer(const Duration(seconds: 5), () {
+          if (mounted) setState(() => _successMessage = null);
+        });
       } catch (e) {
         print('Printing error: $e');
         if (!mounted) return;
@@ -1071,76 +1108,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _refocusCountInput();
   }
 
-  Future<void> _showSuccessPopup(
-    BuildContext context,
-    Map<String, dynamic> data,
-  ) async {
-    await showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return _AutoDismissWrapper(
-          duration: const Duration(seconds: 1),
-          child: Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            elevation: 8,
-            backgroundColor: Colors.white,
-            child: Container(
-              width: 320,
-              padding: const EdgeInsets.symmetric(
-                vertical: 32,
-                horizontal: 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F9F0),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFE1F2E1),
-                        width: 2,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.check,
-                      color: Color(0xFF72C366),
-                      size: 40,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Token Generated Successfully',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF555555),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Devotees: ${data['token_count']}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF777777),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _updateTokenFolderPath(BuildContext context) async {
     try {
       // Fetch current settings first so the picker can default to where mpd.txt
@@ -1328,44 +1295,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
-  }
-}
-
-class _AutoDismissWrapper extends StatefulWidget {
-  final Widget child;
-  final Duration duration;
-
-  const _AutoDismissWrapper({
-    required this.child,
-    required this.duration,
-  });
-
-  @override
-  State<_AutoDismissWrapper> createState() => _AutoDismissWrapperState();
-}
-
-class _AutoDismissWrapperState extends State<_AutoDismissWrapper> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer(widget.duration, () {
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return widget.child;
   }
 }
 
