@@ -518,14 +518,6 @@ const PurchasesPage = () => {
     const calculatedGrandTotal = Number(totalAmount.toFixed(2));
     const payloadData = { ...data, invoice_amount: calculatedGrandTotal };
 
-    const hasExistingBill = editingPurchase?.bills?.length > 0;
-    const willHaveBill = selectedBillFile !== null || (hasExistingBill && !removeExistingBill);
-
-    if (!willHaveBill) {
-      showError('Bill Attachment is mandatory. Please upload a bill.');
-      return;
-    }
-
     const confirmed = await showConfirm(
       editingPurchase ? "Confirm Update" : "Confirm Save",
       `Are you sure you want to ${editingPurchase ? 'update' : 'save'} this purchase?`
