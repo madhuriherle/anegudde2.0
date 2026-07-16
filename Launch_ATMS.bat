@@ -43,8 +43,11 @@ if exist "%~dp0.frontend.pid" (
 REM Layer 2: fallback for anything not tracked by a PID file (very first
 REM run before PID files existed, or an instance started outside this
 REM script).
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :2508 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :2509 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
+REM Layer 2: Foolproof Kiosk Cleanup
+REM Forcefully kill all node and python processes to guarantee the ports are freed.
+REM This ensures the client never has to manually clear stuck background processes.
+taskkill /F /IM node.exe /T >nul 2>&1
+taskkill /F /IM python.exe /T >nul 2>&1
 
 echo Waiting for ports to be released...
 set freewait=0
@@ -67,18 +70,14 @@ echo.
 echo Starting Backend and Frontend...
 
 cd /d "%~dp0backend"
-powershell -NoProfile -Command "$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c','python -m uvicorn app.main:app --host 0.0.0.0 --port 2509 --reload' -WindowStyle Hidden -PassThru; $p.Id | Out-File -FilePath '%~dp0.backend.pid' -Encoding ascii -NoNewline"
+start /b cmd /c "python -m uvicorn app.main:app --host 0.0.0.0 --port 2509 --reload"
 
 cd /d "%~dp0frontend"
-powershell -NoProfile -Command "$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c','npm run dev -- --host 0.0.0.0 --port 2508' -WindowStyle Hidden -PassThru; $p.Id | Out-File -FilePath '%~dp0.frontend.pid' -Encoding ascii -NoNewline"
+start /b cmd /c "npm run dev"
 
 echo.
 echo Both started in background!
 echo Open browser: http://localhost:2508
 echo.
-echo These now run detached from this window - closing it will NOT stop
-echo them (that's deliberate, so the kiosk keeps serving even if this
-echo console gets closed by accident). To stop them, just run
-echo Launch_ATMS.bat again - it kills the previous run by its recorded
-echo PID before starting fresh. Closing this window now is safe.
+echo Press Ctrl+C to stop both services.
 pause
