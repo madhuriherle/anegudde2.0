@@ -10,6 +10,12 @@ export default defineConfig({
   ],
   server: {
     port: 2508,
+    // Fail loudly instead of silently jumping to the next free port when
+    // 2508 is still occupied (e.g. Launch_ATMS.bat's kill step raced the
+    // OS releasing the socket) - this is a fixed kiosk address other
+    // devices on the WiFi rely on, so a silent port change is worse than
+    // a visible failure.
+    strictPort: true,
     host: '0.0.0.0',
     proxy: {
       '/api': {

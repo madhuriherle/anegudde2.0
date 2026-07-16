@@ -141,43 +141,18 @@ const MainLayout = () => {
 
   const downloadFile = async (endpoint, filename) => {
     try {
-      const response = await api.get(endpoint, { responseType: 'blob' });
-      const contentType = response.headers?.['content-type'] || response.data?.type || '';
-      if (contentType.includes('application/json')) {
-        const message = await response.data.text();
-        let detail = message;
-        try {
-          const parsed = JSON.parse(message);
-          detail = parsed.detail || detail;
-        } catch {
-          // Keep the raw message when the body is not valid JSON.
-        }
-        throw new Error(detail || `Failed to download ${filename}`);
-      }
-      const disposition = response.headers?.['content-disposition'] || '';
-      const match = disposition.match(/filename="?([^"]+)"?/i);
-      const downloadName = match?.[1] || filename;
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      let token = null;
+      try { token = localStorage.getItem('token'); } catch {}
+      const fullUrl = `/api${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${token}`;
       const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', downloadName);
+      link.href = fullUrl;
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(`Failed to download ${filename}:`, error);
-      if (error.response?.data instanceof Blob) {
-        try {
-          const text = await error.response.data.text();
-          const parsed = JSON.parse(text);
-          showError(parsed.detail || `Failed to download ${filename}`);
-          return;
-        } catch {
-          // Fall through to the generic handler below.
-        }
-      }
-      showError(error.response?.data?.detail || error.message || `Failed to download ${filename}`);
+      showError(`Failed to download ${filename}`);
     }
   };
 

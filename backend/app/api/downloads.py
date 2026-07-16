@@ -1,9 +1,11 @@
 import json
 import os
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_db
 from app.db.models import User
+from jose import JWTError, jwt
+from sqlalchemy.orm import joinedload
 
 router = APIRouter(prefix="/downloads", tags=["Downloads"])
 
@@ -56,9 +58,31 @@ def _download_name(role_name: str, filename: str) -> str:
 
 
 @router.get("/token-app")
-def download_token_app(current_user: User = Depends(get_current_user)):
-    if not (current_user.role and current_user.role.rank_level == 1):
-        raise HTTPException(status_code=403, detail="Only rank 1 users can download the token app")
+def download_token_app(token: str | None = Query(None)):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token required")
+    try:
+        payload = jwt.decode(
+            token,
+            os.getenv("SECRET_KEY", "change_me"),
+            algorithms=[os.getenv("ALGORITHM", "HS256")],
+            options={"verify_exp": False},
+        )
+        username = payload.get("sub")
+        if not username:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    db = get_db().__next__()
+    try:
+        user = db.query(User).options(
+            joinedload(User.role)
+        ).filter(User.username == username, User.is_deleted == False, User.status == 1).first()
+        if not user or not (user.role and user.role.rank_level == 1):
+            raise HTTPException(status_code=403, detail="Only rank 1 users can download the token app")
+    finally:
+        db.close()
 
     filepath = os.path.join(TOKEN_APP_DIR, TOKEN_APP_FILENAME)
     if not os.path.isfile(filepath):

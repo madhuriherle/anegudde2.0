@@ -14,3 +14,5 @@ backend/app.db
 frontend/dist.zip
 token_desktop_app/Output/
 token_desktop_app/New folder/
+.backend.pid
+.frontend.pid
