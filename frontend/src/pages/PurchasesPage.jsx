@@ -1045,7 +1045,7 @@ const PurchasesPage = () => {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-text-main font-bold">Bill Attachment *</Label>
+                <Label className="text-text-main font-bold">Bill Attachment</Label>
                 <label
                   htmlFor="bill-file-upload"
                   className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-lg border border-dashed border-[#D9C8AF] bg-[#FAF7F2] px-4 py-3 transition hover:bg-[#F4E9D8] hover:border-primary"

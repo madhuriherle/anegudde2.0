@@ -863,7 +863,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _handleIssueTokens(TokenProvider tokenProvider) async {
     final countText = _countController.text.trim();
-    final isValidFormat = RegExp(r'^[0-9]+$').hasMatch(countText);
+    final isValidFormat = RegExp(r'^-?[0-9]+$').hasMatch(countText);
 
     if (!isValidFormat) {
       await _showInvalidFormatAlert();
@@ -874,7 +874,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final count = int.tryParse(countText);
 
-    if (count == null || count <= 0) {
+    if (count == null || count == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid count')),
       );

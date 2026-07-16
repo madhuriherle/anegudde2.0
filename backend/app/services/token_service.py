@@ -61,6 +61,15 @@ def create_tokens(payload: TokenDetailCreate, db: Session, current_user: User):
             TokenGeneration.id == generation.id
         ).with_for_update().first()
 
+    # Individual entries may be negative (corrections/deductions), but the
+    # running total for the day must never go below zero - you can't deduct
+    # tokens that were never added.
+    if generation.total_tokens + payload.token_count < 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot deduct {abs(payload.token_count)} tokens - only {generation.total_tokens} available for {target_date}."
+        )
+
     # 2. Calculate Manual ID for Partitioned Table (Global Max)
     max_id = db.query(func.max(TokenDetail.id)).scalar() or 0
     next_id = max_id + 1

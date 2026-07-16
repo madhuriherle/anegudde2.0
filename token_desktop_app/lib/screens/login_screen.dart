@@ -742,6 +742,13 @@ class _SettingsDialogState extends State<_SettingsDialog> {
                                             .detectBaseUrl(
                                               urlController.text,
                                             );
+                                        final resolvedUrl = detected ??
+                                            ApiService().guessBaseUrl(
+                                              urlController.text,
+                                            );
+                                        await ApiService().updateBaseUrl(
+                                          resolvedUrl,
+                                        );
                                         setState(() {
                                           testing = false;
                                           if (detected != null) {
@@ -751,35 +758,22 @@ class _SettingsDialogState extends State<_SettingsDialog> {
                                           } else {
                                             testSuccess = false;
                                             testResult =
-                                                'Connection Failed';
+                                                'Saved (unverified) \u2192 ${resolvedUrl.replaceFirst('http://', '')}';
                                           }
                                         });
-                                        if (detected == null) {
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Connection failed. Please verify the URL.',
-                                              ),
-                                              backgroundColor:
-                                                  Colors.redAccent,
-                                            ),
-                                          );
-                                          return;
-                                        }
-                                        await ApiService().updateBaseUrl(
-                                          detected,
-                                        );
                                         if (!context.mounted) return;
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              'Saved: ${detected.replaceFirst('http://', '')}',
+                                              detected != null
+                                                  ? 'Saved: ${detected.replaceFirst('http://', '')}'
+                                                  : "Couldn't verify connection, but saved: ${resolvedUrl.replaceFirst('http://', '')}",
                                             ),
+                                            backgroundColor: detected != null
+                                                ? null
+                                                : Colors.orange,
                                           ),
                                         );
                                         Navigator.pop(context);

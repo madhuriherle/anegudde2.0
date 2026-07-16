@@ -97,6 +97,19 @@ class ApiService {
     return null;
   }
 
+  /// Best-effort normalization for when [detectBaseUrl] couldn't verify the
+  /// server live (e.g. it's temporarily down). Unlike [detectBaseUrl], this
+  /// does NOT guess/append an /api suffix - it saves exactly what was typed
+  /// (just adding the scheme and stripping a trailing slash) since we have
+  /// no confirmation of which variant the server expects.
+  String guessBaseUrl(String input) {
+    var url = input.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'http://$url';
+    }
+    return _normalizeBaseUrl(url);
+  }
+
   /// Real TCP ping — checks if the server is reachable at host:port.
   /// Supports input formats: "host:port", "http://host:port", "http://host:port/path"
   Future<bool> ping(String input) async {

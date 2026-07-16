@@ -1,10 +1,15 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:http/http.dart' as http;
 
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+
+const String _printerAgentUrl = 'http://localhost:5623';
 
 class PrintingService {
   // Split across two lines so it isn't cramped onto one tiny row:
@@ -195,7 +200,7 @@ class PrintingService {
     // 26px taller than before to fit it without crowding the rows below.
     const double width = 450;
     final double height = userCode.isEmpty ? 286 : 316;
-    const double scale = 3;
+    const double scale = 1.5;
 
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
@@ -389,9 +394,6 @@ class PrintingService {
   }) async {
     final doc = pw.Document();
 
-    // The complete receipt is rendered as one high-resolution image so Kannada
-    // shaping stays clear on thermal printers.
-
     // Use server-provided timestamp if available, otherwise fallback to local time
     final createdAtStr = tokenData['created_at'];
     final DateTime createdAt = createdAtStr != null
@@ -419,9 +421,6 @@ class PrintingService {
       ),
     );
 
-    // Print the receipt in normal landscape orientation. The PNG already has
-    // the target ticket shape, so rotating it here makes the printer output
-    // sideways and clips the border on narrow rolls.
     const receiptWidth = 75 * PdfPageFormat.mm;
     final receiptAspectHeight = userCode.isEmpty ? 286 / 450 : 316 / 450;
     final receiptHeight = receiptWidth * receiptAspectHeight;
@@ -456,18 +455,42 @@ class PrintingService {
       ),
     );
 
-    // Try to find the target printer
+    final pdfBytes = await doc.save();
+    final pdfBase64 = base64Encode(pdfBytes);
+    final filename = 'Token_${receiptNo}.pdf';
+
+    // Try printer-agent first (faster - direct Windows API call)
+    try {
+      final agentResponse = await http
+          .post(
+            Uri.parse('$_printerAgentUrl/api/print'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'printer_name': printerName ?? '',
+              'pdf_base64': pdfBase64,
+              'filename': filename,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (agentResponse.statusCode == 200) {
+        print('Printed via printer-agent');
+        return;
+      }
+    } catch (e) {
+      print('Printer-agent unavailable, falling back to Flutter print: $e');
+    }
+
+    // Fallback to Flutter printing plugin
     try {
       final printers = await Printing.listPrinters();
       Printer? targetPrinter;
 
       if (printerName != null && printerName.isNotEmpty) {
-        // Try exact match first
         targetPrinter =
             printers.where((p) => p.name == printerName).toList().isNotEmpty
             ? printers.firstWhere((p) => p.name == printerName)
             : null;
-        // Try case-insensitive contains
         targetPrinter ??=
             printers
                 .where(
@@ -482,7 +505,6 @@ class PrintingService {
             : null;
       }
 
-      // Fall back to default printer if no match
       targetPrinter ??= printers.firstWhere(
         (p) => p.isDefault,
         orElse: () => printers.first,
@@ -490,15 +512,14 @@ class PrintingService {
 
       await Printing.directPrintPdf(
         printer: targetPrinter,
-        onLayout: (PdfPageFormat format) => doc.save(),
-        name: 'Token_$receiptNo',
+        onLayout: (PdfPageFormat format) => Future.value(pdfBytes),
+        name: filename,
       );
     } catch (e) {
       print('Direct print failed, falling back to layoutPdf: $e');
-      // Fallback to standard layout print if direct print fails
       await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) => doc.save(),
-        name: 'Token_$receiptNo',
+        onLayout: (PdfPageFormat format) => Future.value(pdfBytes),
+        name: filename,
       );
     }
   }
