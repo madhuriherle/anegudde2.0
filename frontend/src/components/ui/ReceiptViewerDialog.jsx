@@ -92,13 +92,18 @@ export function ReceiptViewerDialog({
 
       html,
       body {
-        width: 148mm;
-        height: 105mm;
+        width: 100%;
+        height: 100%;
         margin: 0;
         padding: 0;
         background: white !important;
         font-family: 'Nirmala UI', 'Noto Sans Kannada', sans-serif;
         overflow: hidden;
+      }
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
       }
       @page {
         size: A6 landscape;
@@ -117,6 +122,7 @@ export function ReceiptViewerDialog({
         padding: 0;
         overflow: hidden;
         position: relative;
+        flex-shrink: 0;
       }
       .preview-only-header {
         display: none !important;

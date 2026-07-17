@@ -192,7 +192,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
   const notes = [donation.amount_note, donation.remarks].filter(Boolean).join('\n');
 
   const DetailRow = ({ left, right }) => (
-    <div style={{ display: 'flex', alignItems: 'baseline', fontSize: '8pt', lineHeight: '1.35', minHeight: '4.5mm' }}>
+    <div style={{ display: 'flex', fontSize: '8pt', lineHeight: '1.35', minHeight: '4.5mm' }}>
       <span style={{ flex: '0 0 58%', wordBreak: 'break-word' }}>{left}</span>
       <span style={{ flex: '0 0 42%', paddingLeft: '1.5mm', wordBreak: 'break-word' }}>{right}</span>
     </div>
