@@ -272,17 +272,17 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
           </colgroup>
           <thead>
             <tr style={{ height: '6mm' }}>
-              <th style={{ ...styles.th, borderLeft: 'none' }}>ಕ್ರ.ಸಂ.</th>
+              <th style={styles.th}>ಕ್ರ.ಸಂ.</th>
               <th style={styles.th}>ಸೇವಾ ವಿವರ</th>
               <th style={styles.th}>ಪ್ರಮಾಣ</th>
               <th style={styles.th}>ದರ</th>
-              <th style={{ ...styles.th, ...styles.mobalaguTh, borderRight: 'none' }}>ಮೊಬಲಗು</th>
+              <th style={{ ...styles.th, ...styles.mobalaguTh }}>ಮೊಬಲಗು</th>
             </tr>
           </thead>
           <tbody>
             {/* Main Seva Row */}
             <tr style={{ height: '10mm' }}>
-              <td style={{ ...styles.td, textAlign: 'center', borderLeft: 'none', verticalAlign: 'middle' }}>1</td>
+              <td style={{ ...styles.td, textAlign: 'center', verticalAlign: 'middle' }}>1</td>
 
               <td style={{ ...styles.td, fontWeight: '700', verticalAlign: 'middle' }}>
                 {donationTypeName}
@@ -296,7 +296,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
                 {isItemDonation ? '0.00' : totalAmount.toFixed(2)}
               </td>
 
-              <td style={{ ...styles.td, textAlign: 'center', borderRight: 'none', verticalAlign: 'middle' }}>
+              <td style={{ ...styles.td, textAlign: 'center', verticalAlign: 'middle' }}>
                 {totalAmount.toFixed(2)}
               </td>
             </tr>
@@ -306,7 +306,6 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
               <td colSpan="3"
                   style={{
                     ...styles.td,
-                    borderLeft: 'none',
                     fontWeight: '400',
                     fontSize: '9pt',
                     textTransform: 'uppercase',
@@ -334,7 +333,6 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
                 style={{
                   ...styles.td,
                   textAlign: 'center',
-                  borderRight: 'none',
                   fontWeight: '900',
                   verticalAlign: 'middle'
                 }}
