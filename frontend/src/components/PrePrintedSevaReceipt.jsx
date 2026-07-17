@@ -100,10 +100,10 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
       marginTop: '3mm',
     },
     th: {
-      border: '1.5pt solid black',
+      border: '0.5pt solid #666',
       fontFamily: "'Noto Sans Kannada', 'Nirmala UI', sans-serif",
       fontSize: '7.5pt',
-      fontWeight: '400',
+      fontWeight: '700',
       lineHeight: '1.1',
       padding: '1mm 0.5mm',
       textAlign: 'center',
@@ -111,7 +111,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
       wordBreak: 'break-word',
     },
     td: {
-      border: '1.5pt solid black',
+      border: '0.5pt solid #666',
       fontFamily: "'Noto Sans Kannada', 'Nirmala UI', sans-serif",
       fontSize: '8pt',
       padding: '1mm 1mm',
@@ -120,15 +120,14 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
       boxSizing: 'border-box',
     },
     itemTd: {
-      border: '1.5pt solid black',
-      borderBottom: '1.5pt solid black',
+      border: '0.5pt solid #666',
+      borderBottom: '0.5pt solid #666',
       fontFamily: "'Noto Sans Kannada', 'Nirmala UI', sans-serif",
       fontSize: '9pt',
       padding: '1.5mm 1.5mm',
       verticalAlign: 'top',
     },
     mobalaguTh: {
-      fontWeight: '400',
       letterSpacing: '0',
     },
     subDescription: {
@@ -192,7 +191,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
   const notes = [donation.amount_note, donation.remarks].filter(Boolean).join('\n');
 
   const DetailRow = ({ left, right }) => (
-    <div style={{ display: 'flex', fontSize: '8pt', lineHeight: '1.35', minHeight: '4.5mm' }}>
+    <div style={{ display: 'flex', fontFamily: "'Noto Sans Kannada', 'Nirmala UI', sans-serif", fontSize: '8pt', lineHeight: '1.35', minHeight: '4.5mm' }}>
       <span style={{ flex: '0 0 58%', wordBreak: 'break-word' }}>{left}</span>
       <span style={{ flex: '0 0 42%', paddingLeft: '1.5mm', wordBreak: 'break-word' }}>{right}</span>
     </div>
@@ -248,15 +247,15 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
             )}
           </div>
           <DetailRow
-            left={<><strong>Receipt No</strong> : {donation.receipt_display_number || donation.id}</>}
-            right={<><strong>Date</strong> : {format(receiptDate, 'dd-MM-yyyy')}&nbsp;&nbsp;<strong>Time</strong> : {format(receiptDate, 'HH:mm:ss')}</>}
+            left={<><strong style={{ fontWeight: 700 }}>Receipt No</strong> : {donation.receipt_display_number || donation.id}</>}
+            right={<><strong style={{ fontWeight: 700 }}>Date</strong> : {format(receiptDate, 'dd-MM-yyyy')}&nbsp;&nbsp;<strong style={{ fontWeight: 700 }}>Time</strong> : {format(receiptDate, 'HH:mm:ss')}</>}
           />
           <DetailRow
-            left={<><strong>Name</strong> : {toTitleCase(donation.devotee_name)}</>}
-            right={<><strong>Mobile No</strong> : {donation.phone_number || ''}</>}
+            left={<><strong style={{ fontWeight: 700 }}>Name</strong> : {toTitleCase(donation.devotee_name)}</>}
+            right={<><strong style={{ fontWeight: 700 }}>Mobile No</strong> : {donation.phone_number || ''}</>}
           />
           <DetailRow
-            left={<><strong>Address</strong> : {devoteeAddress}</>}
+            left={<><strong style={{ fontWeight: 700 }}>Address</strong> : {devoteeAddress}</>}
             right={<></>}
           />
         </div>
@@ -284,7 +283,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
             <tr style={{ height: '10mm' }}>
               <td style={{ ...styles.td, textAlign: 'center', verticalAlign: 'middle' }}>1</td>
 
-              <td style={{ ...styles.td, fontWeight: '700', verticalAlign: 'middle' }}>
+              <td style={{ ...styles.td, verticalAlign: 'middle' }}>
                 {donationTypeName}
               </td>
 
@@ -308,7 +307,6 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
                     ...styles.td,
                     fontWeight: '400',
                     fontSize: '9pt',
-                    textTransform: 'uppercase',
                     padding: '1.5mm 3mm',
                     whiteSpace: 'pre-line',
                     verticalAlign: 'middle'
@@ -322,7 +320,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
                 style={{
                   ...styles.td,
                   textAlign: 'center',
-                  fontWeight: '900',
+                  fontWeight: '700',
                   verticalAlign: 'middle'
                 }}
               >
@@ -333,7 +331,6 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
                 style={{
                   ...styles.td,
                   textAlign: 'center',
-                  fontWeight: '900',
                   verticalAlign: 'middle'
                 }}
               >
