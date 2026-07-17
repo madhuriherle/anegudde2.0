@@ -247,15 +247,15 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
             )}
           </div>
           <DetailRow
-            left={<><strong style={{ fontWeight: 700 }}>Receipt No</strong> : {donation.receipt_display_number || donation.id}</>}
-            right={<><strong style={{ fontWeight: 700 }}>Date</strong> : {format(receiptDate, 'dd-MM-yyyy')}&nbsp;&nbsp;<strong style={{ fontWeight: 700 }}>Time</strong> : {format(receiptDate, 'HH:mm:ss')}</>}
+            left={<><strong style={{ fontWeight: 800 }}>Receipt No</strong> : {donation.receipt_display_number || donation.id}</>}
+            right={<><strong style={{ fontWeight: 800 }}>Date</strong> : {format(receiptDate, 'dd-MM-yyyy')}&nbsp;&nbsp;<strong style={{ fontWeight: 800 }}>Time</strong> : {format(receiptDate, 'HH:mm:ss')}</>}
           />
           <DetailRow
-            left={<><strong style={{ fontWeight: 700 }}>Name</strong> : {toTitleCase(donation.devotee_name)}</>}
-            right={<><strong style={{ fontWeight: 700 }}>Mobile No</strong> : {donation.phone_number || ''}</>}
+            left={<><strong style={{ fontWeight: 800 }}>Name</strong> : {toTitleCase(donation.devotee_name)}</>}
+            right={<><strong style={{ fontWeight: 800 }}>Mobile No</strong> : {donation.phone_number || ''}</>}
           />
           <DetailRow
-            left={<><strong style={{ fontWeight: 700 }}>Address</strong> : {devoteeAddress}</>}
+            left={<><strong style={{ fontWeight: 800 }}>Address</strong> : {devoteeAddress}</>}
             right={<></>}
           />
         </div>
@@ -320,7 +320,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
                 style={{
                   ...styles.td,
                   textAlign: 'center',
-                  fontWeight: '700',
+                  fontWeight: '800',
                   verticalAlign: 'middle'
                 }}
               >

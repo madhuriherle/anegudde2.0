@@ -88,7 +88,7 @@ export function ReceiptViewerDialog({
 
     // Minimal CSS for the receipt
     const printStyles = `
-      @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;700&family=Merriweather:wght@400;700&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;600;700;800;900&family=Merriweather:wght@400;700&display=swap');
 
       html,
       body {
