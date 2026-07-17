@@ -121,6 +121,9 @@ export function ReceiptViewerDialog({
       .preview-only-header {
         display: none !important;
       }
+      .preview-only-border {
+        border: none !important;
+      }
       .print-invisible {
         visibility: hidden !important;
       }

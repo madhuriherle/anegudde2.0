@@ -57,7 +57,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
       left: '5mm',
       width: '138mm',
       minHeight: '74mm',
-      border: 'none',
+      border: '1.5pt solid black',
       boxSizing: 'border-box',
       overflow: 'visible',
     },
@@ -234,7 +234,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
         </div>
 
         {/* --- DONATION DETAILS SECTION --- */}
-        <div style={styles.bodyBorder}>
+        <div className="preview-only-border" style={styles.bodyBorder}>
 
         <div style={styles.detailsBlock}>
           <div style={{ ...styles.receiptTitle, color: '#000', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
