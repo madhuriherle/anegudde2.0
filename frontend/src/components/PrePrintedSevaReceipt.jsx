@@ -10,15 +10,15 @@ if (typeof document !== 'undefined' && !document.getElementById('noto-kannada-fo
 }
 
 /**
- * PrePrintedSevaReceipt - Adjusted for A5 Landscape with "Recorded By" and minimum top space.
+ * PrePrintedSevaReceipt - Adjusted for A6 Landscape with "Recorded By" and minimum top space.
  */
 const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
   if (!donation) return null;
 
   const styles = {
     page: {
-      width: '210mm',
-      height: '148mm',
+      width: '148mm',
+      height: '105mm',
       position: 'relative',
       overflow: 'hidden',
       fontFamily: "'Noto Sans Kannada', 'Nirmala UI', sans-serif",
@@ -39,8 +39,8 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
       position: 'absolute',
       top: '0mm',
       left: '0mm',
-      width: '210mm',
-      height: '36mm',
+      width: '148mm',
+      minHeight: '20mm',
       textAlign: 'center',
       lineHeight: '1.25',
     },
@@ -54,10 +54,10 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
     bodyBorder: {
       position: 'absolute',
       top: '28mm',
-      left: '10mm',
-      width: '190mm',
-      minHeight: '119mm',
-      border: '1.5pt solid black',
+      left: '5mm',
+      width: '138mm',
+      minHeight: '74mm',
+      border: 'none',
       boxSizing: 'border-box',
       overflow: 'visible',
     },
@@ -66,17 +66,17 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
-      gap: '3mm',
-      padding: '1.5mm 2mm 0mm',
+      gap: '2mm',
+      padding: '1mm 2mm 0mm',
       boxSizing: 'border-box',
     },
     receiptTitle: {
       textAlign: 'center',
       fontWeight: '900',
-      fontSize: '11.5pt',
+      fontSize: '9.5pt',
       color: '#1F3D78',
       letterSpacing: '0.5px',
-      lineHeight: '1.2',
+      lineHeight: '1.1',
     },
     detailsGrid: {
       display: 'grid',
@@ -97,23 +97,24 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
       width: '100%',
       borderCollapse: 'collapse',
       tableLayout: 'fixed',
-      marginTop: '15mm',
+      marginTop: '3mm',
     },
     th: {
       border: '1.5pt solid black',
       fontFamily: "'Noto Sans Kannada', 'Nirmala UI', sans-serif",
-      fontSize: '9pt',
+      fontSize: '7.5pt',
       fontWeight: '400',
-      lineHeight: '1.15',
-      padding: '1.2mm 1mm',
+      lineHeight: '1.1',
+      padding: '1mm 0.5mm',
       textAlign: 'center',
       boxSizing: 'border-box',
+      wordBreak: 'break-word',
     },
     td: {
       border: '1.5pt solid black',
       fontFamily: "'Noto Sans Kannada', 'Nirmala UI', sans-serif",
-      fontSize: '9pt',
-      padding: '1.5mm 1.5mm',
+      fontSize: '8pt',
+      padding: '1mm 1mm',
       verticalAlign: 'top',
       wordBreak: 'break-word',
       boxSizing: 'border-box',
@@ -191,9 +192,9 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
   const notes = [donation.amount_note, donation.remarks].filter(Boolean).join('\n');
 
   const DetailRow = ({ left, right }) => (
-    <div style={{ display: 'flex', fontSize: '9pt', lineHeight: '1.45', minHeight: '5mm' }}>
-      <span style={{ flex: '0 0 112mm', wordBreak: 'break-word' }}>{left}</span>
-      <span style={{ paddingLeft: '8mm', wordBreak: 'break-word' }}>{right}</span>
+    <div style={{ display: 'flex', fontSize: '8pt', lineHeight: '1.35', minHeight: '4.5mm' }}>
+      <span style={{ flex: '0 0 58%', wordBreak: 'break-word' }}>{left}</span>
+      <span style={{ flex: '0 0 42%', paddingLeft: '1.5mm', wordBreak: 'break-word' }}>{right}</span>
     </div>
   );
 
@@ -205,16 +206,18 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
         <div className="preview-only-header" style={styles.header}>
           <div
             style={{
-              height: '27mm',
-              paddingTop: '5mm',
+              minHeight: '20mm',
+              paddingTop: '2mm',
+              paddingBottom: '1mm',
               backgroundColor: '#E6C62F',
               color: '#303030',
               borderBottom: '0.8pt solid #8A7A22',
               boxSizing: 'border-box',
+              wordBreak: 'break-word',
             }}
           >
             {(showTempleNameKn || showTempleName) && (
-              <div style={{ fontSize: '12.5pt', fontWeight: '800', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '10pt', fontWeight: '800', textTransform: 'uppercase' }}>
                 {[
                   showTempleNameKn && templeNameKn,
                   showTempleName && templeName,
@@ -222,10 +225,10 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
               </div>
             )}
             {showTempleAddress && (
-              <div style={{ marginTop: '1mm', fontSize: '9.5pt', fontWeight: '600' }}>{templeAddress}</div>
+              <div style={{ marginTop: '0.5mm', fontSize: '7pt', fontWeight: '600' }}>{templeAddress}</div>
             )}
             {contactLine && (
-              <div style={{ marginTop: '1mm', fontSize: '9.5pt', fontWeight: '600' }}>{contactLine}</div>
+              <div style={{ marginTop: '0.5mm', fontSize: '7pt', fontWeight: '600' }}>{contactLine}</div>
             )}
           </div>
         </div>
@@ -261,14 +264,14 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
         {/* --- TABLE SECTION --- */}
         <table style={styles.table}>
           <colgroup>
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '47%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '16%' }} />
-            <col style={{ width: '16%' }} />
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '37%' }} />
+            <col style={{ width: '15%' }} />
+            <col style={{ width: '17%' }} />
+            <col style={{ width: '17%' }} />
           </colgroup>
           <thead>
-            <tr style={{ height: '7mm' }}>
+            <tr style={{ height: '6mm' }}>
               <th style={{ ...styles.th, borderLeft: 'none' }}>ಕ್ರ.ಸಂ.</th>
               <th style={styles.th}>ಸೇವಾ ವಿವರ</th>
               <th style={styles.th}>ಪ್ರಮಾಣ</th>
@@ -278,7 +281,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
           </thead>
           <tbody>
             {/* Main Seva Row */}
-            <tr style={{ height: '12mm' }}>
+            <tr style={{ height: '10mm' }}>
               <td style={{ ...styles.td, textAlign: 'center', borderLeft: 'none', verticalAlign: 'middle' }}>1</td>
 
               <td style={{ ...styles.td, fontWeight: '700', verticalAlign: 'middle' }}>
@@ -299,7 +302,7 @@ const PrePrintedSevaReceipt = forwardRef(({ donation, settings }, ref) => {
             </tr>
 
             {/* Item / Notes Row + TOTAL */}
-            <tr style={{ height: '12mm' }}>
+            <tr style={{ height: '10mm' }}>
               <td colSpan="3"
                   style={{
                     ...styles.td,

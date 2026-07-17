@@ -52,14 +52,25 @@ taskkill /F /IM python.exe /T >nul 2>&1
 echo Waiting for ports to be released...
 set freewait=0
 :waitports
+REM Layer 3: kill by whatever PID netstat says actually owns the port, not
+REM just by image name. Covers stragglers that survive taskkill /IM node.exe
+REM /python.exe - e.g. a leftover from a previous run started in a different
+REM session, or a second overlapping launch - by targeting the exact PID
+REM squatting on 2508/2509 every second instead of only waiting and hoping.
+for /f "tokens=5" %%p in ('netstat -aon ^| findstr :2508 ^| findstr LISTENING 2^>nul') do (
+    taskkill /PID %%p /F >nul 2>&1
+)
+for /f "tokens=5" %%p in ('netstat -aon ^| findstr :2509 ^| findstr LISTENING 2^>nul') do (
+    taskkill /PID %%p /F >nul 2>&1
+)
 netstat -aon | findstr :2508 | findstr LISTENING >nul
 set port2508busy=%errorlevel%
 netstat -aon | findstr :2509 | findstr LISTENING >nul
 set port2509busy=%errorlevel%
 if %port2508busy% NEQ 0 if %port2509busy% NEQ 0 goto portsfree
 set /a freewait+=1
-if %freewait% GEQ 10 (
-    echo WARNING: Ports still appear busy after 10 seconds - continuing anyway.
+if %freewait% GEQ 15 (
+    echo WARNING: Ports still appear busy after 15 seconds - continuing anyway.
     goto portsfree
 )
 timeout /t 1 /nobreak >nul

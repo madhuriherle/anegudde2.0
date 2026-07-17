@@ -71,13 +71,15 @@ export function ReceiptViewerDialog({
     const printContent = document.getElementById('receipt-print-content');
     if (!printContent) return;
 
-    // Create a hidden iframe
+    // Print via a hidden iframe rather than window.open() - avoids any
+    // chance of the browser's pop-up blocker interrupting an unattended
+    // counter workflow.
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.left = '-10000px';
     iframe.style.top = '0';
-    iframe.style.width = '210mm';
-    iframe.style.height = '148mm';
+    iframe.style.width = '148mm';
+    iframe.style.height = '105mm';
     iframe.style.border = 'none';
     iframe.style.opacity = '0';
     document.body.appendChild(iframe);
@@ -87,33 +89,33 @@ export function ReceiptViewerDialog({
     // Minimal CSS for the receipt
     const printStyles = `
       @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;700&family=Merriweather:wght@400;700&display=swap');
-      
+
       html,
-      body { 
-        width: 210mm;
-        height: 148mm;
-        margin: 0; 
-        padding: 0; 
-        background: white !important; 
+      body {
+        width: 148mm;
+        height: 105mm;
+        margin: 0;
+        padding: 0;
+        background: white !important;
         font-family: 'Nirmala UI', 'Noto Sans Kannada', sans-serif;
         overflow: hidden;
       }
-      @page { 
-        size: A5 landscape; 
-        margin: 0; 
+      @page {
+        size: A6 landscape;
+        margin: 0;
       }
-      * { 
-        box-sizing: border-box; 
-        -webkit-print-color-adjust: exact; 
-        print-color-adjust: exact; 
+      * {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
-      .print-only { 
-        display: block !important; 
-        width: 210mm; 
-        height: 148mm; 
+      .print-only {
+        display: block !important;
+        width: 148mm;
+        height: 105mm;
         margin: 0;
         padding: 0;
-        overflow: hidden; 
+        overflow: hidden;
         position: relative;
       }
       .preview-only-header {
@@ -143,7 +145,7 @@ export function ReceiptViewerDialog({
               setTimeout(() => {
                 window.focus();
                 window.print();
-              }, 500);
+              }, 700);
             });
           </script>
         </body>
@@ -162,7 +164,7 @@ export function ReceiptViewerDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showClose={true} className="w-fit max-w-[calc(100vw-2rem)] h-fit max-h-[96vh] p-0 flex flex-col bg-white overflow-hidden shadow-2xl rounded-2xl border-none">
-        {/* Custom Header - Perfect Fit */}
+        {/* Header */}
         <div className="shrink-0 flex items-center bg-[#F6EEDF] border-b border-[#E2D2B8] px-6 py-4">
           <div className="flex items-center gap-3 pr-10">
             <Receipt className="h-6 w-6 text-primary" />
@@ -173,27 +175,34 @@ export function ReceiptViewerDialog({
           </div>
         </div>
 
-        {/* Content Area - No Padding for perfect fit */}
-        <div className="overflow-hidden bg-bg-temple flex items-center justify-center">
+        {/* Preview Area — scrollable so nothing is clipped on small screens */}
+        <div className="overflow-auto bg-[#E2D5C3] flex items-center justify-center p-6">
           {loading ? (
-            <div className="flex flex-col items-center justify-center gap-3 bg-white p-12 min-w-[400px] min-h-[250px]">
+            <div className="flex flex-col items-center justify-center gap-3 bg-white p-12 min-w-[400px] min-h-[250px] rounded-xl shadow">
               <Loader2 className="h-10 w-10 animate-spin text-primary" />
               <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Loading Receipt...</p>
             </div>
           ) : (
+            /* Outer box is the scaled-down visual size */
             <div
-              className="relative bg-white border border-black shrink-0"
+              className="relative shrink-0"
               style={{
-                width: `${210 * previewScale}mm`,
-                height: `${148 * previewScale}mm`,
+                width: `${148 * previewScale}mm`,
+                height: `${105 * previewScale}mm`,
               }}
             >
+              {/* Inner box is always the real print size — scaled down via transform */}
               <div
-                className="origin-top-left"
                 style={{
-                  width: '210mm',
-                  height: '148mm',
+                  width: '148mm',
+                  height: '105mm',
                   transform: `scale(${previewScale})`,
+                  transformOrigin: 'top left',
+                  background: '#fff',
+                  boxShadow: '0 6px 36px rgba(0,0,0,0.25)',
+                  outline: '1px solid #C4AE8A',
+                  borderRadius: '2px',
+                  overflow: 'hidden',
                 }}
               >
                 <div id="receipt-print-content">
@@ -208,7 +217,7 @@ export function ReceiptViewerDialog({
           )}
         </div>
 
-        {/* Custom Footer - Improved UI */}
+        {/* Footer */}
         <div className="shrink-0 flex items-center justify-between bg-[#F3E8D4] border-t border-[#E2D2B8] px-6 py-4">
           <button
             onClick={() => onOpenChange(false)}
