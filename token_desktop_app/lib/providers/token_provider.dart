@@ -33,6 +33,8 @@ class TokenProvider with ChangeNotifier {
   bool _tryOnlineFirst = false;
   Timer? _syncTimer;
   bool _syncing = false;
+  DateTime? _lastSyncedAt;
+  DateTime? _nextSyncAt;
 
   TokenProvider() {
     unawaited(_initOfflineQueue());
@@ -60,7 +62,9 @@ class TokenProvider with ChangeNotifier {
   void _startSyncTimer() {
     _syncTimer?.cancel();
     _pollOnce();
+    _nextSyncAt = DateTime.now().add(Duration(minutes: _syncIntervalMinutes));
     _syncTimer = Timer.periodic(Duration(minutes: _syncIntervalMinutes), (_) {
+      _nextSyncAt = DateTime.now().add(Duration(minutes: _syncIntervalMinutes));
       _pollOnce();
     });
   }
@@ -133,6 +137,12 @@ class TokenProvider with ChangeNotifier {
   String? get issueTokenError => _issueTokenError;
   bool get isConnected => _isConnected;
   int get pendingSyncCount => _pendingSyncCount;
+  DateTime? get lastSyncedAt => _lastSyncedAt;
+  DateTime? get nextSyncAt => _nextSyncAt;
+
+  /// Manual "Sync Now" - runs the same check/push logic as the periodic
+  /// timer, just on demand instead of waiting for the next tick.
+  Future<void> syncNow() => _syncPendingTokens();
 
   @override
   void dispose() {
@@ -305,6 +315,7 @@ class TokenProvider with ChangeNotifier {
         notifyListeners();
         return;
       }
+      _lastSyncedAt = DateTime.now();
 
       final pending = _offlineQueue.pendingEntries;
       final currentDateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);

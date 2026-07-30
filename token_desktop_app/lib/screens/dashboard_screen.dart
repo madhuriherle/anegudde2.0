@@ -163,81 +163,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _showSyncIntervalDialog(TokenProvider tokenProvider) async {
-    final controller = TextEditingController(
-      text: tokenProvider.syncIntervalMinutes.toString(),
-    );
-
-    bool tryOnlineFirst = tokenProvider.tryOnlineFirst;
-
     await showDialog<void>(
       context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Offline Sync Settings'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'How often queued tokens are pushed to the server, in '
-                    'minutes (1-60). Default is 5.',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: controller,
-                    keyboardType: TextInputType.number,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Minutes',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  CheckboxListTile(
-                    value: tryOnlineFirst,
-                    onChanged: (val) {
-                      setDialogState(() => tryOnlineFirst = val ?? false);
-                    },
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    title: const Text(
-                      'Try the server first for the real receipt number',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    subtitle: const Text(
-                      'Off by default: every token prints instantly with a local '
-                      'number and syncs in the background. On: each token tries '
-                      'the server first, using a local number only if that fails.',
-                      style: TextStyle(fontSize: 11),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final minutes = int.tryParse(controller.text.trim());
-                    if (minutes == null) return;
-                    await tokenProvider.setSyncIntervalMinutes(minutes);
-                    await tokenProvider.setTryOnlineFirst(tryOnlineFirst);
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (ctx) => _OfflineModeDialog(tokenProvider: tokenProvider),
     );
   }
 
@@ -266,13 +194,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _onFileError() {
-    final fileError = _tokenProvider.fileWriteError;
-    final fetchError = _tokenProvider.fetchError;
-    final message = fileError != null ? 'File save error: $fileError' : fetchError;
+    // Network reachability is now shown by the Connected/Not Connected pill
+    // in the header - this banner only covers the separate, unrelated case
+    // of the local mpd.txt file write failing (e.g. permissions, disk full).
+    final message = _tokenProvider.fileWriteError;
     if (message == null) {
-      // Both error states are clear - drop any stale banner still on screen
-      // instead of letting it linger out its own timer after we've already
-      // proven the server is reachable again.
+      // Drop any stale banner still on screen instead of letting it linger
+      // out its own timer after the write has already succeeded again.
       if (mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
@@ -1447,6 +1375,248 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OfflineModeDialog extends StatefulWidget {
+  final TokenProvider tokenProvider;
+  const _OfflineModeDialog({required this.tokenProvider});
+
+  @override
+  State<_OfflineModeDialog> createState() => _OfflineModeDialogState();
+}
+
+class _OfflineModeDialogState extends State<_OfflineModeDialog> {
+  late final TextEditingController _controller;
+  late bool _tryOnlineFirst;
+  bool _isSyncingNow = false;
+  Timer? _tickTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.tokenProvider.syncIntervalMinutes.toString(),
+    );
+    _tryOnlineFirst = widget.tokenProvider.tryOnlineFirst;
+    // Ticks purely to refresh the countdown text every second - the
+    // provider itself only notifies listeners when a sync actually happens.
+    _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tickTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _formatLastSynced(DateTime? lastSyncedAt) {
+    if (lastSyncedAt == null) return 'Not synced yet';
+    final diff = DateTime.now().difference(lastSyncedAt);
+    if (diff.inSeconds < 60) return 'Last synced: just now';
+    if (diff.inMinutes < 60) return 'Last synced: ${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return 'Last synced: ${diff.inHours} hr ago';
+    return 'Last synced: ${diff.inDays} day${diff.inDays == 1 ? '' : 's'} ago';
+  }
+
+  String _formatCountdown(DateTime? nextSyncAt) {
+    if (nextSyncAt == null) return '';
+    final remaining = nextSyncAt.difference(DateTime.now());
+    if (remaining.isNegative) return 'Checking now…';
+    final minutes = remaining.inMinutes;
+    final seconds = remaining.inSeconds % 60;
+    return 'Next check in ${minutes.toString().padLeft(1, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildReceiptNumberOption({
+    required String title,
+    required String subtitle,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Radio<bool>(
+              value: true,
+              groupValue: selected,
+              onChanged: (_) => onTap(),
+              activeColor: const Color(0xFFB45309),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF4A3728))),
+                  Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF9B8674))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokenProvider = widget.tokenProvider;
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: const Color(0xFFFFF8F1),
+      child: Container(
+        width: 360,
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Offline Mode',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF4A3728)),
+            ),
+            const SizedBox(height: 16),
+            ListenableBuilder(
+              listenable: tokenProvider,
+              builder: (context, _) {
+                final pending = tokenProvider.pendingSyncCount;
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5EAD9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  pending > 0
+                                      ? '$pending receipt${pending == 1 ? '' : 's'} pending sync'
+                                      : 'All receipts synced',
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF4A3728)),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _formatLastSynced(tokenProvider.lastSyncedAt),
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFF9B8674)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _isSyncingNow
+                                ? null
+                                : () async {
+                                    setState(() => _isSyncingNow = true);
+                                    await tokenProvider.syncNow();
+                                    if (mounted) setState(() => _isSyncingNow = false);
+                                  },
+                            child: Text(_isSyncingNow ? 'Syncing…' : 'Sync Now'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatCountdown(tokenProvider.nextSyncAt),
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF9B8674)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Pending receipts sync every',
+              style: TextStyle(fontSize: 13, color: Color(0xFF6B4F3A), fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                SizedBox(
+                  width: 70,
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A3728)),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFB45309), width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text('minutes', style: TextStyle(fontSize: 14, color: Color(0xFF4A3728))),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Receipt Number',
+              style: TextStyle(fontSize: 13, color: Color(0xFF6B4F3A), fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            _buildReceiptNumberOption(
+              title: 'Print instantly',
+              subtitle: 'Recommended',
+              selected: !_tryOnlineFirst,
+              onTap: () => setState(() => _tryOnlineFirst = false),
+            ),
+            _buildReceiptNumberOption(
+              title: 'Wait for server number',
+              subtitle: 'Needs a stable connection',
+              selected: _tryOnlineFirst,
+              onTap: () => setState(() => _tryOnlineFirst = true),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel', style: TextStyle(color: Color(0xFF6B4F3A))),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () async {
+                    final minutes = int.tryParse(_controller.text.trim());
+                    if (minutes == null) return;
+                    await tokenProvider.setSyncIntervalMinutes(minutes);
+                    await tokenProvider.setTryOnlineFirst(_tryOnlineFirst);
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4A3728),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Save'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

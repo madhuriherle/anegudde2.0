@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class OfflineTokenQueue {
   static const _boxName = 'offline_tokens_v1';
   static const _localSeqKey = 'offline_local_receipt_seq';
+  static const _localSeqDateKey = 'offline_local_receipt_seq_date';
 
   Box<Map>? _box;
 
@@ -40,13 +41,19 @@ class OfflineTokenQueue {
   Map<dynamic, Map> get pendingEntries =>
       _box != null ? Map.from(_box!.toMap()) : {};
 
-  /// A plain, ever-increasing local counter used as the printed R.No. when
-  /// offline - persisted separately from the queue itself so it keeps
-  /// climbing even after entries are synced and removed.
+  /// A plain local counter used as the printed R.No. when offline -
+  /// resets to 1 on the first offline print of each new day, matching how
+  /// the real backend's receipt number also restarts fresh every day.
+  /// Persisted separately from the queue itself so it survives entries
+  /// being synced and removed.
   Future<int> nextLocalReceiptNo() async {
     final prefs = await SharedPreferences.getInstance();
-    final next = (prefs.getInt(_localSeqKey) ?? 0) + 1;
+    final today = DateTime.now().toIso8601String().substring(0, 10); // yyyy-MM-dd
+    final storedDate = prefs.getString(_localSeqDateKey);
+    final current = storedDate == today ? (prefs.getInt(_localSeqKey) ?? 0) : 0;
+    final next = current + 1;
     await prefs.setInt(_localSeqKey, next);
+    await prefs.setString(_localSeqDateKey, today);
     return next;
   }
 

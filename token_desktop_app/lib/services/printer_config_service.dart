@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,7 +28,13 @@ class PrinterConfigService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('printer_$context', printerName);
 
-    // Sync to backend
+    // Sync to backend in the background - don't make the caller (and
+    // whatever dialog is waiting to close) wait on a network round-trip
+    // that can take the full request timeout if the server's unreachable.
+    unawaited(_syncPrinterToBackend(context, printerName));
+  }
+
+  Future<void> _syncPrinterToBackend(String context, String printerName) async {
     try {
       final machineId = await getMachineId();
       await _api.put('/settings/printer-config', {
