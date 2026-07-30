@@ -44,8 +44,11 @@ def create_role(
     if payload.rank_level <= my_rank:
         raise HTTPException(status_code=400, detail="Cannot create role with same or higher rank than yours")
 
-    # Check if name exists
-    existing = db.query(Role).filter(Role.role_name == payload.role_name).first()
+    # Check if name exists (exclude soft-deleted)
+    existing = db.query(Role).filter(
+        Role.role_name == payload.role_name,
+        Role.is_deleted == False
+    ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Role name already exists")
 
@@ -92,9 +95,12 @@ def update_role(
     if payload.rank_level is not None and payload.rank_level <= my_rank:
         raise HTTPException(status_code=400, detail="New rank must be weaker than yours")
 
-    # Check duplicate name (exclude self)
+    # Check duplicate name (exclude self and soft-deleted)
     if payload.role_name is not None and payload.role_name != role.role_name:
-        existing = db.query(Role).filter(Role.role_name == payload.role_name).first()
+        existing = db.query(Role).filter(
+            Role.role_name == payload.role_name,
+            Role.is_deleted == False
+        ).first()
         if existing:
             raise HTTPException(status_code=400, detail="Role name already exists")
 

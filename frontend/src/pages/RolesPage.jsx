@@ -99,15 +99,15 @@ const RolesPage = () => {
   });
 
   const mutation = useMutation({
-    mutationFn: async (data) => {
-      if (editingRole) {
-        return api.put(`/users/update_role/${editingRole.id}`, data);
+    mutationFn: async ({ data, roleId }) => {
+      if (roleId) {
+        return api.put(`/users/update_role/${roleId}`, data);
       }
       return api.post('/users/create_role', data);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
-      showSuccess(editingRole ? 'Role updated' : 'Role created');
+      showSuccess(variables.roleId ? 'Role updated' : 'Role created');
       handleClose();
     },
     onError: (err) => {
@@ -156,16 +156,17 @@ const RolesPage = () => {
   };
 
   const onSubmit = async (data) => {
+    const roleId = editingRole?.id;
     const confirmed = await showConfirm(
-      editingRole ? 'Confirm Update' : 'Confirm Save',
-      `Are you sure you want to ${editingRole ? 'update' : 'save'} this role?`
+      roleId ? 'Confirm Update' : 'Confirm Save',
+      `Are you sure you want to ${roleId ? 'update' : 'save'} this role?`
     );
     if (!confirmed) return;
     const payload = {
         ...data,
         module_id: data.module_id == null ? null : data.module_id,
     };
-    mutation.mutate(payload);
+    mutation.mutate({ data: payload, roleId });
   };
 
   const filteredRoles = useMemo(() => {
