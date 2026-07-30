@@ -282,7 +282,7 @@ const TokenReportPage = () => {
                         {formatDate(row.date)}
                       </td>
                       <td className="px-6 py-4 text-left">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
+                        <span className="text-xs font-bold text-text-main">
                           {row.total_tokens}
                         </span>
                       </td>
@@ -306,7 +306,7 @@ const TokenReportPage = () => {
                   <tr className="grand-total-row bg-[#FFF4E6] border-t-2 border-primary/30">
                     <td className="px-6 py-5 text-text-main text-base font-black uppercase tracking-wide">Grand Total</td>
                     <td className="px-6 py-5 text-left">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-base font-black bg-primary/10 text-primary">
+                      <span className="text-base font-black text-text-main">
                         {generationsData?.grand_total_tokens ?? 0}
                       </span>
                     </td>
