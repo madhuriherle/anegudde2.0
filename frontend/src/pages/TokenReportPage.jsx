@@ -96,7 +96,7 @@ const TokenReportPage = () => {
     <div className="space-y-6 token-report-print">
       <style>{`
         @media print {
-          @page { size: A4 portrait; margin: 10mm; }
+          @page { size: A4 landscape; margin: 10mm; }
           header, aside, footer, .print\\:hidden { display: none !important; }
           main { padding: 0 !important; margin: 0 !important; }
           .lg\\:pl-64 { padding-left: 0 !important; }
@@ -111,13 +111,6 @@ const TokenReportPage = () => {
           }
           .token-report-print {
             padding: 0 !important; margin: 0 !important; width: 100% !important;
-          }
-          .token-report-print .token-print-header {
-            display: block !important;
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #d7c9ba;
-            padding-bottom: 15px;
           }
           .token-report-print table { 
             width: 100% !important; 
@@ -176,14 +169,14 @@ const TokenReportPage = () => {
             border-top: 2px solid #bfa892 !important;
           }
         }
-        .token-print-header { display: none; }
+        .token-print-header { display: block; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #d7c9ba; padding-bottom: 15px; }
       `}</style>
 
       {/* Canteen-style Print Header */}
-      <div className="token-print-header text-center">
+      <div className="token-print-header">
         <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಸಿ (ಅನ್ನದಾನ)</h1>
-        <p className="text-sm font-bold text-text-main mt-1">
-          TOKEN ISSUED SUMMARY REPORT
+        <p className="text-sm font-bold text-text-main mt-1 uppercase tracking-wider">
+          TOKEN ISSUED SUMMARY REPORT — {new Date(activeDateRange.startDate).getDate().toString().padStart(2, '0')}-{(new Date(activeDateRange.startDate).getMonth() + 1).toString().padStart(2, '0')}-{new Date(activeDateRange.startDate).getFullYear()} to {new Date(activeDateRange.endDate).getDate().toString().padStart(2, '0')}-{(new Date(activeDateRange.endDate).getMonth() + 1).toString().padStart(2, '0')}-{new Date(activeDateRange.endDate).getFullYear()}
         </p>
       </div>
 
