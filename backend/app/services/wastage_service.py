@@ -1,11 +1,15 @@
+import logging
 from datetime import datetime, timezone
 import math
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import MenuItem, User, WastageEntry, WastageItem, Item, StockLedger
 from app.schemas.wastage import WastageEntryCreate, WastageEntryUpdate
 from app.utils.stock_ledger_utils import compute_current_value
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 def list_wastages(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
     query = db.query(WastageEntry).filter(WastageEntry.is_deleted == False).options(
@@ -57,23 +61,34 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
         updated_by=current_user.id
     )
     db.add(entry); db.flush()
-    
+
+    # Lock every raw item this entry will touch up front, in a consistent
+    # (ascending id) order - prevents lost updates from concurrent writes
+    # to the same item's stock, and a fixed lock order avoids two
+    # concurrent requests deadlocking each other. Menu-item-only rows
+    # (item_id is None) never touch this map at all.
+    raw_item_ids = [it.item_id for it in payload.items if it.item_id]
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(raw_item_ids)).order_by(Item.id).with_for_update().all()
+    } if raw_item_ids else {}
+
     for it in payload.items:
         # Skip zero quantity items
         if Decimal(str(it.quantity)) <= 0:
             continue
 
         wastage_item = WastageItem(
-            wastage_entry_id=entry.id, 
+            wastage_entry_id=entry.id,
             consumption_entry_id=payload.consumption_entry_id,
-            wastage_date=payload.wastage_date, 
-            menu_item_id=it.menu_item_id, 
+            wastage_date=payload.wastage_date,
+            menu_item_id=it.menu_item_id,
             item_id=it.item_id,
-            quantity=it.quantity, 
+            quantity=it.quantity,
             approx_amount=it.approx_amount,
-            created_at=now, 
-            updated_at=now, 
-            created_by=current_user.id, 
+            created_at=now,
+            updated_at=now,
+            created_by=current_user.id,
             updated_by=current_user.id
         )
         db.add(wastage_item)
@@ -85,11 +100,11 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
                 menu_item.default_approx_amount = Decimal(str(it.approx_amount))
                 menu_item.updated_at = now
                 menu_item.updated_by = current_user.id
-        
-        # If it's a raw item wastage (should be handled by stock_adjustment_service now, 
+
+        # If it's a raw item wastage (should be handled by stock_adjustment_service now,
         # but kept for legacy/compatibility if called directly with item_id)
         if it.item_id:
-            item = db.query(Item).filter(Item.id == it.item_id).first()
+            item = locked_items.get(it.item_id)
             if item:
                 qty = Decimal(str(it.quantity))
                 current_stock = Decimal(item.current_stock or 0)
@@ -124,7 +139,13 @@ def create_wastage(payload: WastageEntryCreate, db: Session, current_user: User)
                     updated_by=current_user.id
                 ))
 
-    db.commit(); db.refresh(entry); return entry
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error saving wastage entry")
+        raise HTTPException(status_code=500, detail="Failed to save wastage entry due to concurrent access. Please try again.")
+    db.refresh(entry); return entry
 
 def get_wastage(wastage_id: int, db: Session) -> WastageEntry:
     entry = db.query(WastageEntry).filter(WastageEntry.id == wastage_id).first()
@@ -146,9 +167,14 @@ def delete_wastage(wastage_id: int, db: Session, current_user: User) -> None:
     
     # Restore stock for raw items
     wastage_items = db.query(WastageItem).filter(WastageItem.wastage_entry_id == wastage_id).all()
+    raw_item_ids = [w_item.item_id for w_item in wastage_items if w_item.item_id]
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(raw_item_ids)).order_by(Item.id).with_for_update().all()
+    } if raw_item_ids else {}
     for w_item in wastage_items:
         if w_item.item_id:
-            item = db.query(Item).filter(Item.id == w_item.item_id).first()
+            item = locked_items.get(w_item.item_id)
             if item:
                 item.current_stock = Decimal(item.current_stock or 0) + Decimal(str(w_item.quantity))
     
@@ -166,8 +192,13 @@ def delete_wastage(wastage_id: int, db: Session, current_user: User) -> None:
         StockLedger.ref_table == "wastage_items", 
         StockLedger.ref_id == wastage_id
     ).update({StockLedger.status: 0}, synchronize_session=False)
-    
-    db.commit()
+
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error deleting wastage entry %s", wastage_id)
+        raise HTTPException(status_code=500, detail="Failed to delete wastage entry. Please try again.")
 
 def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, current_user: User) -> WastageEntry:
     entry = get_wastage(wastage_id, db)
@@ -179,9 +210,14 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
 
     # Reverse previous stock effect for raw-item wastage rows.
     old_items = db.query(WastageItem).filter(WastageItem.wastage_entry_id == wastage_id).all()
+    old_item_ids = [old.item_id for old in old_items if old.item_id]
+    locked_old_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(old_item_ids)).order_by(Item.id).with_for_update().all()
+    } if old_item_ids else {}
     for old in old_items:
         if old.item_id:
-            item = db.query(Item).filter(Item.id == old.item_id).first()
+            item = locked_old_items.get(old.item_id)
             if item:
                 item.current_stock = Decimal(item.current_stock or 0) + Decimal(str(old.quantity))
                 item.updated_at = now
@@ -200,6 +236,15 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
     entry.times_cooked = payload.times_cooked
     entry.updated_at = now
     entry.updated_by = current_user.id
+
+    # Lock every raw item the new rows will touch, in ascending id order -
+    # items already locked above are simply re-referenced (same transaction
+    # already holds the lock), new ones get locked now.
+    new_item_ids = [it.item_id for it in payload.items if it.item_id]
+    locked_new_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(new_item_ids)).order_by(Item.id).with_for_update().all()
+    } if new_item_ids else {}
 
     # Apply new wastage rows and stock impact.
     for it in payload.items:
@@ -230,7 +275,7 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
                 menu_item.updated_by = current_user.id
 
         if it.item_id:
-            item = db.query(Item).filter(Item.id == it.item_id).first()
+            item = locked_new_items.get(it.item_id)
             if item:
                 qty = Decimal(str(it.quantity))
                 current_stock = Decimal(item.current_stock or 0)
@@ -264,5 +309,10 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
                     updated_by=current_user.id
                 ))
 
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error updating wastage entry %s", wastage_id)
+        raise HTTPException(status_code=500, detail="Failed to update wastage entry due to concurrent access. Please try again.")
     return get_wastage_full(entry.id, db)

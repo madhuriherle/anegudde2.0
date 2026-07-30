@@ -1,13 +1,17 @@
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 import math
 from fastapi import HTTPException
 from sqlalchemy import String, or_, text, func
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import ConsumptionEntry, ConsumptionItem, Item, StockLedger, User, WastageEntry, WastageItem
 from app.schemas.consumption import ConsumptionEntryCreate, ConsumptionEntryUpdate
 from app.services.item_service import get_item_last_price
 from app.utils.stock_ledger_utils import compute_current_value
+
+logger = logging.getLogger(__name__)
 
 def list_consumptions(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None):
     import re
@@ -142,15 +146,26 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
         updated_by=current_user.id
     )
     db.add(entry); db.flush()
+
+    # Lock every involved item row up front, in a consistent (ascending id)
+    # order - prevents lost updates from concurrent writes to the same
+    # item's stock, and locking in a fixed order (rather than one at a
+    # time as items come up in the loop) avoids two concurrent requests
+    # deadlocking each other by locking the same items in reverse order.
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(item_ids)).order_by(Item.id).with_for_update().all()
+    } if item_ids else {}
+
     for it in payload.items:
         if it.quantity_used < 0 or it.qty_returned < 0:
             raise HTTPException(status_code=422, detail="quantity_used and qty_returned must be >= 0")
         if it.qty_returned > it.quantity_used:
             raise HTTPException(status_code=422, detail="qty_returned cannot be greater than quantity_used")
 
-        item = db.query(Item).filter(Item.id == it.item_id).first()
+        item = locked_items.get(it.item_id)
         if item:
-            unit_cost = it.unit_cost_at_time or get_item_last_price(it.item_id, db)
+            unit_cost = it.unit_cost_at_time if it.unit_cost_at_time is not None else get_item_last_price(it.item_id, db)
             net_quantity = it.quantity_used - it.qty_returned
             line_total = net_quantity * unit_cost
             db.add(ConsumptionItem(
@@ -219,7 +234,13 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
                     created_by=current_user.id,
                     updated_by=current_user.id
                 ))
-    db.commit(); db.refresh(entry); return entry
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError) as e:
+        db.rollback()
+        logger.exception("DB error saving consumption entry")
+        raise HTTPException(status_code=500, detail="Failed to save entry due to concurrent access. Please try again.")
+    db.refresh(entry); return entry
 
 def get_consumption(consumption_id: int, db: Session) -> ConsumptionEntry:
     entry = db.query(ConsumptionEntry).filter(ConsumptionEntry.id == consumption_id).first()
@@ -239,18 +260,33 @@ def get_consumption_full(consumption_id: int, db: Session) -> ConsumptionEntry:
 def delete_consumption(consumption_id: int, db: Session, current_user: User) -> None:
     entry = get_consumption(consumption_id, db)
     now = datetime.now(timezone.utc)
-    
-    # 1. Soft Delete linked wastage entries
+
     wastages = db.query(WastageEntry).filter(WastageEntry.consumption_entry_id == consumption_id).all()
+    wastage_items_by_entry = {
+        w.id: db.query(WastageItem).filter(WastageItem.wastage_entry_id == w.id).all()
+        for w in wastages
+    }
+    consumption_lines = db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id).all()
+
+    # Lock every item touched by either restoration step up front, in a
+    # consistent (ascending id) order - see create_consumption for why.
+    all_item_ids = {
+        wi.item_id for items in wastage_items_by_entry.values() for wi in items if wi.item_id
+    } | {line.item_id for line in consumption_lines}
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(all_item_ids)).order_by(Item.id).with_for_update().all()
+    } if all_item_ids else {}
+
+    # 1. Soft Delete linked wastage entries
     for w in wastages:
         # Restore stock for raw items in wastage
-        w_items = db.query(WastageItem).filter(WastageItem.wastage_entry_id == w.id).all()
-        for wi in w_items:
+        for wi in wastage_items_by_entry[w.id]:
             if wi.item_id:
-                item = db.query(Item).filter(Item.id == wi.item_id).first()
+                item = locked_items.get(wi.item_id)
                 if item:
                     item.current_stock = Decimal(item.current_stock or 0) + Decimal(str(wi.quantity))
-        
+
         # Mark wastage and ledger entries as inactive
         w.status = 0
         w.updated_at = now
@@ -261,8 +297,8 @@ def delete_consumption(consumption_id: int, db: Session, current_user: User) -> 
         )
 
     # 2. Restore stock for consumption items
-    for line in db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id).all():
-        item = db.query(Item).filter(Item.id == line.item_id).first()
+    for line in consumption_lines:
+        item = locked_items.get(line.item_id)
         if item:
             item.current_stock = Decimal(item.current_stock or 0) + Decimal(line.net_quantity or 0)
 
@@ -280,7 +316,12 @@ def delete_consumption(consumption_id: int, db: Session, current_user: User) -> 
         {"rid": consumption_id}
     )
     
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError) as e:
+        db.rollback()
+        logger.exception("DB error deleting consumption entry %s", consumption_id)
+        raise HTTPException(status_code=500, detail="Failed to delete entry. Please try again.")
 
 def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db: Session, current_user: User) -> ConsumptionEntry:
     existing = get_consumption(consumption_id, db)
@@ -315,8 +356,14 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
 
     # Reverse old consumption stock impact before applying new rows.
     old_lines = db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id).all()
+    old_item_ids = [line.item_id for line in old_lines]
+    # Lock in a consistent (ascending id) order - see create_consumption for why.
+    locked_old_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(old_item_ids)).order_by(Item.id).with_for_update().all()
+    } if old_item_ids else {}
     for line in old_lines:
-        item = db.query(Item).filter(Item.id == line.item_id).first()
+        item = locked_old_items.get(line.item_id)
         if item:
             item.current_stock = Decimal(item.current_stock or 0) + Decimal(line.net_quantity or 0)
             item.updated_at = now
@@ -367,15 +414,24 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
         for item_id in item_ids
     }
 
+    # Items already locked above (locked_old_items) are re-locked here if they
+    # overlap with the new item set - SQLAlchemy/Postgres just reuses the
+    # existing lock held by this same transaction. Any new items in this
+    # set not already locked get locked now, still in ascending id order.
+    locked_new_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(item_ids)).order_by(Item.id).with_for_update().all()
+    } if item_ids else {}
+
     for it in payload.items:
         if it.quantity_used < 0 or it.qty_returned < 0:
             raise HTTPException(status_code=422, detail="quantity_used and qty_returned must be >= 0")
         if it.qty_returned > it.quantity_used:
             raise HTTPException(status_code=422, detail="qty_returned cannot be greater than quantity_used")
 
-        item = db.query(Item).filter(Item.id == it.item_id).first()
+        item = locked_new_items.get(it.item_id)
         if item:
-            unit_cost = it.unit_cost_at_time or get_item_last_price(it.item_id, db)
+            unit_cost = it.unit_cost_at_time if it.unit_cost_at_time is not None else get_item_last_price(it.item_id, db)
             net_quantity = it.quantity_used - it.qty_returned
             line_total = net_quantity * unit_cost
             db.add(ConsumptionItem(
@@ -447,5 +503,10 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
                     updated_by=current_user.id
                 ))
 
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError) as e:
+        db.rollback()
+        logger.exception("DB error updating consumption entry %s", consumption_id)
+        raise HTTPException(status_code=500, detail="Failed to update entry due to concurrent access. Please try again.")
     return get_consumption_full(existing.id, db)
