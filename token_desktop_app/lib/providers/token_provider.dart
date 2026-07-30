@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
@@ -36,10 +38,16 @@ class TokenProvider with ChangeNotifier {
     fetchDailyTotal();
   }
 
-  Future<void> fetchDailyTotal() async {
+  /// [silent] skips toggling the shared isLoading flag - used when this
+  /// runs as a background refresh piggy-backing on another action (e.g.
+  /// right after issueTokens()) so it doesn't re-lock the UI that action
+  /// already unlocked.
+  Future<void> fetchDailyTotal({bool silent = false}) async {
     _syncSelectedDateWithToday();
-    _isLoading = true;
-    notifyListeners();
+    if (!silent) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     try {
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
@@ -76,7 +84,9 @@ class TokenProvider with ChangeNotifier {
       _totalReceipts = 0;
     }
 
-    _isLoading = false;
+    if (!silent) {
+      _isLoading = false;
+    }
     notifyListeners();
   }
 
@@ -95,9 +105,19 @@ class TokenProvider with ChangeNotifier {
 
       print('Token Generated Successfully: $response');
 
-      await fetchDailyTotal(); // Refresh total and update mpd.txt
+      // The create call just proved the server is reachable - clear any
+      // stale "could not reach server" banner left over from an earlier
+      // totals refresh instead of leaving it stuck until the next fetch
+      // happens to succeed.
+      _fetchError = null;
       _isLoading = false;
       notifyListeners();
+
+      // Refresh totals and update mpd.txt in the background - don't make
+      // the caller (and the printer/next-token flow) wait on this
+      // secondary call.
+      unawaited(fetchDailyTotal(silent: true));
+
       return response;
     } catch (e) {
       print('Issue Token Error: $e');

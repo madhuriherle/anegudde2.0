@@ -13,11 +13,11 @@ const String _printerAgentUrl = 'http://localhost:5623';
 
 class PrintingService {
   // Split across two lines so it isn't cramped onto one tiny row:
-  // "Anegudde Sri Vinayaka Devasthana," / "Kumbashi"
+  // "Anegudde Sri Vinayaka Devasthana," / "Kumbhasi"
   static const String _templeNameLine1 =
       '\u0C86\u0CA8\u0CC6\u0C97\u0CC1\u0CA1\u0CCD\u0CA1\u0CC6 \u0CB6\u0CCD\u0CB0\u0CC0 \u0CB5\u0CBF\u0CA8\u0CBE\u0CAF\u0C95 \u0CA6\u0CC7\u0CB5\u0CB8\u0CCD\u0CA5\u0CBE\u0CA8,';
   static const String _templeNameLine2 =
-      '\u0C95\u0CC1\u0C82\u0CAD\u0CBE\u0CB6\u0CBF';
+      '\u0C95\u0CC1\u0C82\u0CAD\u0CBE\u0CB8\u0CBF';
   static const String _mahaPrasada =
       '\u0CAE\u0CB9\u0CBE \u0CAA\u0CCD\u0CB0\u0CB8\u0CBE\u0CA6';
   static const String _devoteeCountLabel =
@@ -373,7 +373,7 @@ class PrintingService {
       x: 318,
       y: dividerY + 4,
       width: 90,
-      fontSize: 42,
+      fontSize: 45,
       fontWeight: FontWeight.w700,
       textAlign: TextAlign.center,
       fontFamily: 'Arial',

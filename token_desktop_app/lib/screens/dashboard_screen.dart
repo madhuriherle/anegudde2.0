@@ -39,14 +39,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _refocusCountInput() {
     if (!mounted) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _focusNode.requestFocus();
-      _countController.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _countController.text.length,
-      );
-    });
+    _focusNode.requestFocus();
+    _countController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _countController.text.length,
+    );
   }
 
   @override
@@ -194,7 +191,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final fileError = _tokenProvider.fileWriteError;
     final fetchError = _tokenProvider.fetchError;
     final message = fileError != null ? 'File save error: $fileError' : fetchError;
-    if (message != null && mounted) {
+    if (message == null) {
+      // Both error states are clear - drop any stale banner still on screen
+      // instead of letting it linger out its own timer after we've already
+      // proven the server is reachable again.
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        });
+      }
+      return;
+    }
+    if (mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -887,12 +896,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (response != null) {
       _countController.text = '1';
+      setState(() {
+        _successMessage = 'Token generated for ${response['token_count']} devotee(s). Printing...';
+      });
+      _successTimer?.cancel();
+      _refocusCountInput();
 
-      try {
-        await PrintingService.printToken(
-          response,
-          printerName: _selectedPrinterName.isNotEmpty ? _selectedPrinterName : null,
-        );
+      PrintingService.printToken(
+        response,
+        printerName: _selectedPrinterName.isNotEmpty ? _selectedPrinterName : null,
+      ).then((_) {
         if (!mounted) return;
         setState(() {
           _successMessage = 'Token generated & printed for ${response['token_count']} devotee(s)';
@@ -901,7 +914,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _successTimer = Timer(const Duration(seconds: 5), () {
           if (mounted) setState(() => _successMessage = null);
         });
-      } catch (e) {
+      }).catchError((e) {
         print('Printing error: $e');
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -909,14 +922,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             content: Text('Issued successfully, but printing failed: $e'),
           ),
         );
-      }
+      });
     } else {
       await _showErrorAlert(
         tokenProvider.issueTokenError ?? 'Failed to generate token. Please try again.',
       );
+      _refocusCountInput();
     }
-
-    _refocusCountInput();
   }
 
   Future<void> _showInvalidFormatAlert() async {
