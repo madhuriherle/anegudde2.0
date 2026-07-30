@@ -1,5 +1,5 @@
 import logging
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette import status
@@ -7,6 +7,21 @@ from starlette import status
 logger = logging.getLogger(__name__)
 
 def register_exception_handlers(app):
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        # Log every deliberate error response (400, 403, 404, 422, etc.) too,
+        # not just unhandled 500s - so the log file has a complete picture
+        # of what failed and why, not just crashes.
+        logger.warning(
+            "HTTP %s on %s %s: %s",
+            exc.status_code, request.method, request.url.path, exc.detail,
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=getattr(exc, "headers", None),
+        )
+
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         logger.error(f"Validation error on {request.method} {request.url.path}: {exc.errors()}")

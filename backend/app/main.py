@@ -45,7 +45,25 @@ from app.db.session import SessionLocal
 from app.db.models import FinancialYear, SystemSettings
 from apscheduler.schedulers.background import BackgroundScheduler
 
-logging.basicConfig(level=logging.INFO)
+# Persist logs (including full tracebacks from unhandled errors) to a file,
+# not just the console - the console is often a hidden window when launched
+# via the batch script, and its output is lost once the window closes.
+# encoding='utf-8' is required: item/temple names are Kannada script, and
+# without it, log lines containing them crash the handler on Windows'
+# default (cp1252) console/file encoding instead of writing the message.
+logs_dir = os.path.join(backend_dir, "logs")
+os.makedirs(logs_dir, exist_ok=True)
+from logging.handlers import RotatingFileHandler
+file_handler = RotatingFileHandler(
+    os.path.join(logs_dir, "app.log"),
+    maxBytes=10 * 1024 * 1024,
+    backupCount=5,
+    encoding="utf-8",
+)
+file_handler.setFormatter(logging.Formatter(
+    "%(asctime)s %(levelname)s %(name)s: %(message)s"
+))
+logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler(), file_handler])
 app = FastAPI(title='Anegudde Temple Inventory API')
 
 app.add_middleware(ActivityAuditMiddleware)
