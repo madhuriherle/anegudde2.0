@@ -33,8 +33,17 @@ def sync_for_consumption(
 
     # 1. Reverse old adjustments
     old_adjustments = db.query(StockAdjustment).filter(StockAdjustment.consumption_entry_id == consumption_id).all()
+    
+    old_item_ids = [old.item_id for old in old_adjustments]
+    new_item_ids = [adj.item_id for adj in payload]
+    all_item_ids = list(set(old_item_ids + new_item_ids))
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(all_item_ids)).order_by(Item.id).with_for_update().all()
+    } if all_item_ids else {}
+
     for old in old_adjustments:
-        item = db.query(Item).filter(Item.id == old.item_id).first()
+        item = locked_items.get(old.item_id)
         if item:
             # Reverse prior effect regardless of sign
             item.current_stock = Decimal(item.current_stock or 0) - old.adjusted_qty
@@ -48,7 +57,7 @@ def sync_for_consumption(
 
     # 2. Apply new adjustments
     for adj in payload:
-        item = db.query(Item).filter(Item.id == adj.item_id).first()
+        item = locked_items.get(adj.item_id)
         if not item:
             continue
 

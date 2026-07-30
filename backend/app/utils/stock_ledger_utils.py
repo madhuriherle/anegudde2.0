@@ -15,4 +15,5 @@ def compute_current_value(
         StockLedger.status == 1,
     ).order_by(StockLedger.id.desc()).first()
     prev_val = last_ledger[0] if last_ledger else Decimal("0")
-    return Decimal(str(prev_val or 0)) + value_in - value_out
+    val = Decimal(str(prev_val or 0)) + value_in - value_out
+    return max(Decimal("0"), val)

@@ -84,6 +84,7 @@ const ItemsPage = () => {
   const [adjustingItem, setAdjustingItem] = useState(null);
   const [adjustMode, setAdjustMode] = useState('add');
   const [adjustQty, setAdjustQty] = useState('');
+  const [adjustUnitCost, setAdjustUnitCost] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
 
   // Filter States
@@ -233,6 +234,7 @@ const ItemsPage = () => {
       setAdjustOpen(false);
       setAdjustingItem(null);
       setAdjustQty('');
+      setAdjustUnitCost('');
       setAdjustReason('');
     },
     onError: (err) => showError(err.response?.data?.detail || 'Stock adjustment failed')
@@ -294,6 +296,7 @@ const ItemsPage = () => {
     setAdjustingItem(item);
     setAdjustMode('add');
     setAdjustQty('');
+    setAdjustUnitCost(item.default_price ? String(item.default_price) : '');
     setAdjustReason('');
     setAdjustOpen(true);
   };
@@ -305,6 +308,16 @@ const ItemsPage = () => {
       return;
     }
     const signedQty = adjustMode === 'deduct' ? -raw : raw;
+    
+    let unitCostPayload = undefined;
+    if (adjustMode === 'add' && adjustUnitCost !== '') {
+      unitCostPayload = parseFloat(adjustUnitCost);
+      if (isNaN(unitCostPayload) || unitCostPayload < 0) {
+        showError('Please enter a valid unit cost');
+        return;
+      }
+    }
+
     const label = adjustMode === 'deduct' ? 'deduct' : 'add';
     const confirmed = await showConfirm(
       'Confirm Stock Adjustment',
@@ -314,7 +327,8 @@ const ItemsPage = () => {
       stockAdjustMutation.mutate({
         item_id: adjustingItem.id,
         adjusted_qty: signedQty,
-        reason: adjustReason || null
+        reason: adjustReason || null,
+        ...(unitCostPayload !== undefined ? { unit_cost: unitCostPayload } : {})
       });
     }
   };
@@ -798,6 +812,24 @@ const ItemsPage = () => {
                 placeholder="e.g. 10"
                 className="text-text-main" />
             </div>
+
+            {adjustMode === 'add' && (
+              <div className="space-y-1.5">
+                <Label className="text-text-main">
+                  Unit Cost (₹)
+                  {(!adjustingItem?.default_price || adjustingItem.default_price <= 0) && 
+                    <span className="text-rose-500 ml-1">*Required for new items</span>
+                  }
+                </Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={adjustUnitCost}
+                  onChange={(e) => setAdjustUnitCost(e.target.value.replace(/^-/, ''))}
+                  placeholder="e.g. 50"
+                  className="text-text-main" />
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label className="text-text-main">Reason</Label>

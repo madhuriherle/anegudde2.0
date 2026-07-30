@@ -211,13 +211,15 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
     # Reverse previous stock effect for raw-item wastage rows.
     old_items = db.query(WastageItem).filter(WastageItem.wastage_entry_id == wastage_id).all()
     old_item_ids = [old.item_id for old in old_items if old.item_id]
-    locked_old_items = {
+    new_item_ids = [it.item_id for it in payload.items if it.item_id]
+    all_item_ids = list(set(old_item_ids + new_item_ids))
+    locked_items = {
         item.id: item
-        for item in db.query(Item).filter(Item.id.in_(old_item_ids)).order_by(Item.id).with_for_update().all()
-    } if old_item_ids else {}
+        for item in db.query(Item).filter(Item.id.in_(all_item_ids)).order_by(Item.id).with_for_update().all()
+    } if all_item_ids else {}
     for old in old_items:
         if old.item_id:
-            item = locked_old_items.get(old.item_id)
+            item = locked_items.get(old.item_id)
             if item:
                 item.current_stock = Decimal(item.current_stock or 0) + Decimal(str(old.quantity))
                 item.updated_at = now
@@ -236,15 +238,6 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
     entry.times_cooked = payload.times_cooked
     entry.updated_at = now
     entry.updated_by = current_user.id
-
-    # Lock every raw item the new rows will touch, in ascending id order -
-    # items already locked above are simply re-referenced (same transaction
-    # already holds the lock), new ones get locked now.
-    new_item_ids = [it.item_id for it in payload.items if it.item_id]
-    locked_new_items = {
-        item.id: item
-        for item in db.query(Item).filter(Item.id.in_(new_item_ids)).order_by(Item.id).with_for_update().all()
-    } if new_item_ids else {}
 
     # Apply new wastage rows and stock impact.
     for it in payload.items:
@@ -275,7 +268,7 @@ def update_wastage(wastage_id: int, payload: WastageEntryUpdate, db: Session, cu
                 menu_item.updated_by = current_user.id
 
         if it.item_id:
-            item = locked_new_items.get(it.item_id)
+            item = locked_items.get(it.item_id)
             if item:
                 qty = Decimal(str(it.quantity))
                 current_stock = Decimal(item.current_stock or 0)

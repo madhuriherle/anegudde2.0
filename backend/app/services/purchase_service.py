@@ -105,8 +105,14 @@ def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: Use
     )
     db.add(entry); db.flush()
     
+    item_ids = [it.item_id for it in payload.items]
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(item_ids)).order_by(Item.id).with_for_update().all()
+    } if item_ids else {}
+
     for it in payload.items:
-        item = db.query(Item).filter(Item.id == it.item_id).first()
+        item = locked_items.get(it.item_id)
         if item:
             line_total = it.quantity * it.price
             db.add(PurchaseItem(
@@ -192,9 +198,15 @@ def delete_purchase(purchase_id: int, db: Session, current_user: User) -> None:
     entry.deleted_at = now
     entry.deleted_by_id = current_user.id
     
+    item_ids = [item.item_id for item in entry.items]
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(item_ids)).order_by(Item.id).with_for_update().all()
+    } if item_ids else {}
+
     # We should also reverse the stock impact since the transaction is 'gone'
     for item in entry.items:
-        raw_item = db.query(Item).filter(Item.id == item.item_id).first()
+        raw_item = locked_items.get(item.item_id)
         if raw_item:
             raw_item.current_stock = Decimal(raw_item.current_stock or 0) - Decimal(item.quantity or 0)
     
@@ -239,8 +251,16 @@ def update_purchase(purchase_id: int, payload: PurchaseEntryUpdate, db: Session,
 
     # Reverse previous stock movement.
     old_items = db.query(PurchaseItem).filter(PurchaseItem.purchase_entry_id == purchase_id).all()
+    old_item_ids = [old.item_id for old in old_items]
+    new_item_ids = [it.item_id for it in payload.items]
+    all_item_ids = list(set(old_item_ids + new_item_ids))
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(all_item_ids)).order_by(Item.id).with_for_update().all()
+    } if all_item_ids else {}
+
     for old in old_items:
-        raw_item = db.query(Item).filter(Item.id == old.item_id).first()
+        raw_item = locked_items.get(old.item_id)
         if raw_item:
             raw_item.current_stock = Decimal(raw_item.current_stock or 0) - Decimal(old.quantity or 0)
             raw_item.updated_at = now
@@ -263,7 +283,7 @@ def update_purchase(purchase_id: int, payload: PurchaseEntryUpdate, db: Session,
     entry.updated_by = current_user.id
 
     for it in payload.items:
-        item = db.query(Item).filter(Item.id == it.item_id).first()
+        item = locked_items.get(it.item_id)
         if item:
             line_total = it.quantity * it.price
             db.add(PurchaseItem(

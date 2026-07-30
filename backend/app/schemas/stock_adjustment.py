@@ -16,6 +16,7 @@ class StandaloneStockAdjustmentCreate(BaseModel):
     item_id: int
     adjusted_qty: Decimal
     reason: str | None = None
+    unit_cost: Decimal | None = None
 
 class StockAdjustmentOut(StockAdjustmentBase):
     id: int

@@ -16,7 +16,7 @@ def adjust_stock(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("items.write"))
 ):
-    item = db.query(Item).filter(Item.id == payload.item_id, Item.is_deleted == False).first()
+    item = db.query(Item).with_for_update().filter(Item.id == payload.item_id, Item.is_deleted == False).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
@@ -58,7 +58,15 @@ def adjust_stock(
     item.updated_at = now
     item.updated_by = current_user.id
 
-    unit_cost = item.default_price or 0
+    if actual_qty > 0:
+        if payload.unit_cost is not None:
+            unit_cost = payload.unit_cost
+        else:
+            unit_cost = item.default_price or Decimal("0")
+            if unit_cost <= 0:
+                raise HTTPException(status_code=422, detail="This item has no recorded price. Please specify a unit cost for this positive stock adjustment.")
+    else:
+        unit_cost = item.default_price or Decimal("0")
     db.add(StockLedger(
         item_id=item.id,
         txn_date=today,

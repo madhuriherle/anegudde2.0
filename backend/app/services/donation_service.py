@@ -209,9 +209,15 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
     db.add(entry)
     db.flush()
     
+    item_ids = [it.item_id for it in (payload.items if payload.donation_mode == 0 else [])]
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(item_ids)).order_by(Item.id).with_for_update().all()
+    } if item_ids else {}
+    
     for it in (payload.items if payload.donation_mode == 0 else []):
         # ... (rest of stock update logic)
-        item = db.query(Item).filter(Item.id == it.item_id).first()
+        item = locked_items.get(it.item_id)
         if not item:
             raise HTTPException(status_code=400, detail=f"Invalid item_id: {it.item_id}")
 
@@ -291,8 +297,16 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
         raise HTTPException(status_code=404, detail="Donation not found")
     
     # 1. Reverse Previous Stock Changes
+    old_item_ids = [d_item.item_id for d_item in entry.items]
+    new_item_ids = [it.item_id for it in (payload.items if payload.donation_mode == 0 else [])]
+    all_item_ids = list(set(old_item_ids + new_item_ids))
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(all_item_ids)).order_by(Item.id).with_for_update().all()
+    } if all_item_ids else {}
+
     for d_item in entry.items:
-        item = db.query(Item).filter(Item.id == d_item.item_id).first()
+        item = locked_items.get(d_item.item_id)
         if item:
             item.current_stock = Decimal(item.current_stock or 0) - d_item.quantity
     
@@ -340,7 +354,7 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
 
     # 3. Add New Items and Apply New Stock
     for it in (payload.items if payload.donation_mode == 0 else []):
-        item = db.query(Item).filter(Item.id == it.item_id).first()
+        item = locked_items.get(it.item_id)
         if not item:
             raise HTTPException(status_code=400, detail=f"Invalid item_id: {it.item_id}")
 
@@ -403,8 +417,14 @@ def delete_donation(donation_id: int, db: Session, current_user: User) -> None:
     if not entry:
         raise HTTPException(status_code=404, detail="Donation not found")
 
+    item_ids = [d_item.item_id for d_item in entry.items]
+    locked_items = {
+        item.id: item
+        for item in db.query(Item).filter(Item.id.in_(item_ids)).order_by(Item.id).with_for_update().all()
+    } if item_ids else {}
+
     for donation_item in entry.items:
-        item = db.query(Item).filter(Item.id == donation_item.item_id).first()
+        item = locked_items.get(donation_item.item_id)
         if item:
             item.current_stock = Decimal(item.current_stock or 0) - donation_item.quantity
             item.updated_at = now

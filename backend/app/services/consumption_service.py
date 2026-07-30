@@ -228,7 +228,7 @@ def create_consumption(payload: ConsumptionEntryCreate, db: Session, current_use
                     value_in=(it.qty_returned * unit_cost),
                     value_out=0,
                     balance=return_balance,
-                    current_value=compute_current_value(db, item.id, it.qty_returned * unit_cost, it.quantity_used * unit_cost),
+                    current_value=compute_current_value(db, item.id, it.qty_returned * unit_cost, Decimal("0")),
                     created_at=now,
                     updated_at=now,
                     created_by=current_user.id,
@@ -354,16 +354,17 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
         if manpower_value < 0:
             raise HTTPException(status_code=422, detail="Manpower fields must be >= 0")
 
-    # Reverse old consumption stock impact before applying new rows.
-    old_lines = db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id).all()
-    old_item_ids = [line.item_id for line in old_lines]
-    # Lock in a consistent (ascending id) order - see create_consumption for why.
-    locked_old_items = {
+    # Reverse previous stock effect
+    old_items = db.query(ConsumptionItem).filter(ConsumptionItem.consumption_entry_id == consumption_id).all()
+    old_item_ids = [old.item_id for old in old_items if old.item_id]
+    new_item_ids = [it.item_id for it in (payload.items or [])]
+    all_item_ids = list(set(old_item_ids + new_item_ids))
+    locked_items = {
         item.id: item
-        for item in db.query(Item).filter(Item.id.in_(old_item_ids)).order_by(Item.id).with_for_update().all()
-    } if old_item_ids else {}
-    for line in old_lines:
-        item = locked_old_items.get(line.item_id)
+        for item in db.query(Item).filter(Item.id.in_(all_item_ids)).order_by(Item.id).with_for_update().all()
+    } if all_item_ids else {}
+    for line in old_items:
+        item = locked_items.get(line.item_id)
         if item:
             item.current_stock = Decimal(item.current_stock or 0) + Decimal(line.net_quantity or 0)
             item.updated_at = now
@@ -391,7 +392,7 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
     existing.updated_at = now
     existing.updated_by = current_user.id
 
-    item_ids = [it.item_id for it in (payload.items or [])]
+    item_ids = new_item_ids
     opening_rows = db.query(Item.id, Item.opening_stock).filter(Item.id.in_(item_ids)).all()
     opening_map = {item_id: Decimal(str(opening_stock or 0)) for item_id, opening_stock in opening_rows}
     before_rows = (
@@ -414,22 +415,13 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
         for item_id in item_ids
     }
 
-    # Items already locked above (locked_old_items) are re-locked here if they
-    # overlap with the new item set - SQLAlchemy/Postgres just reuses the
-    # existing lock held by this same transaction. Any new items in this
-    # set not already locked get locked now, still in ascending id order.
-    locked_new_items = {
-        item.id: item
-        for item in db.query(Item).filter(Item.id.in_(item_ids)).order_by(Item.id).with_for_update().all()
-    } if item_ids else {}
-
     for it in payload.items:
         if it.quantity_used < 0 or it.qty_returned < 0:
             raise HTTPException(status_code=422, detail="quantity_used and qty_returned must be >= 0")
         if it.qty_returned > it.quantity_used:
             raise HTTPException(status_code=422, detail="qty_returned cannot be greater than quantity_used")
 
-        item = locked_new_items.get(it.item_id)
+        item = locked_items.get(it.item_id)
         if item:
             unit_cost = it.unit_cost_at_time if it.unit_cost_at_time is not None else get_item_last_price(it.item_id, db)
             net_quantity = it.quantity_used - it.qty_returned
@@ -496,7 +488,7 @@ def update_consumption(consumption_id: int, payload: ConsumptionEntryUpdate, db:
                     value_in=(it.qty_returned * unit_cost),
                     value_out=0,
                     balance=return_balance,
-                    current_value=compute_current_value(db, item.id, it.qty_returned * unit_cost, it.quantity_used * unit_cost),
+                    current_value=compute_current_value(db, item.id, it.qty_returned * unit_cost, Decimal("0")),
                     created_at=now,
                     updated_at=now,
                     created_by=current_user.id,
