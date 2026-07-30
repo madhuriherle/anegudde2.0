@@ -94,19 +94,21 @@ for /f "tokens=5" %%p in ('netstat -aon ^| findstr :2509 ^| findstr LISTENING 2^
 echo.
 echo Starting Backend and Frontend...
 
-cd /d "%~dp0backend"
-for /f %%i in ('powershell -NoProfile -Command "(Start-Process cmd -ArgumentList '/c python -m uvicorn app.main:app --host 0.0.0.0 --port 2509 --reload' -WindowStyle Hidden -PassThru).Id"') do set backendpid=%%i
-echo !backendpid!>"%~dp0.backend.pid"
-
-cd /d "%~dp0frontend"
-for /f %%i in ('powershell -NoProfile -Command "(Start-Process cmd -ArgumentList '/c npm run dev' -WindowStyle Hidden -PassThru).Id"') do set frontendpid=%%i
-echo !frontendpid!>"%~dp0.frontend.pid"
-
 rmdir "%lockdir%" >nul 2>&1
 
 echo.
-echo Both started in background!
-echo Open browser (this PC):     http://localhost:2508
-if defined lanip echo Open browser (other devices): http://!lanip!:2508
+echo Starting Backend (port 2509) and Frontend (port 2508)...
+echo Open browser: http://localhost:2508
+if defined lanip echo Or from other devices: http://!lanip!:2508
 echo.
-pause
+echo --- BACKEND LOGS (starting in background) ---
+
+cd /d "%~dp0backend"
+start /b python -m uvicorn app.main:app --host 0.0.0.0 --port 2509 --reload
+timeout /t 3 /nobreak >nul
+
+echo.
+echo --- FRONTEND LOGS ---
+
+cd /d "%~dp0frontend"
+npm run dev
