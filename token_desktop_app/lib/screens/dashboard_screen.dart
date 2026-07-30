@@ -24,7 +24,6 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final _countController = TextEditingController(text: '1');
   final _focusNode = FocusNode();
-  Timer? _refreshTimer;
   final PrinterConfigService _printerConfigService = PrinterConfigService();
   String _selectedPrinterName = '';
   List<Printer> _availablePrinters = [];
@@ -57,10 +56,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     _tokenProvider.addListener(_onFileError);
 
-    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (!mounted) return;
-      _tokenProvider.fetchDailyTotal();
-    });
+    // Periodic re-fetch now rides on TokenProvider's own configurable
+    // interval timer (see _startSyncTimer) instead of a separate hardcoded
+    // 1-minute timer, so there's a single knob for all periodic backend
+    // polling instead of two independent ones.
   }
 
   Future<void> _initPrinterConfig() async {
@@ -163,6 +162,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Future<void> _showSyncIntervalDialog(TokenProvider tokenProvider) async {
+    final controller = TextEditingController(
+      text: tokenProvider.syncIntervalMinutes.toString(),
+    );
+
+    bool tryOnlineFirst = tokenProvider.tryOnlineFirst;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Offline Sync Settings'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'How often queued tokens are pushed to the server, in '
+                    'minutes (1-60). Default is 5.',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Minutes',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  CheckboxListTile(
+                    value: tryOnlineFirst,
+                    onChanged: (val) {
+                      setDialogState(() => tryOnlineFirst = val ?? false);
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: const Text(
+                      'Try the server first for the real receipt number',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    subtitle: const Text(
+                      'Off by default: every token prints instantly with a local '
+                      'number and syncs in the background. On: each token tries '
+                      'the server first, using a local number only if that fails.',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final minutes = int.tryParse(controller.text.trim());
+                    if (minutes == null) return;
+                    await tokenProvider.setSyncIntervalMinutes(minutes);
+                    await tokenProvider.setTryOnlineFirst(tryOnlineFirst);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _openDesktopManual() async {
     try {
       final bytes = await rootBundle.load('assets/manuals/DESKTOP_APP_MANUAL.pdf');
@@ -233,7 +311,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     _tokenProvider.removeListener(_onFileError);
-    _refreshTimer?.cancel();
     _successTimer?.cancel();
     _countController.dispose();
     _focusNode.dispose();
@@ -317,6 +394,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const Spacer(),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => _showSyncIntervalDialog(tokenProvider),
+                    child: _buildConnectionStatus(tokenProvider),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 // Profile Menu Badge
                 MouseRegion(
                   cursor: SystemMouseCursors.click,
@@ -1249,6 +1334,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildConnectionStatus(TokenProvider tokenProvider) {
+    final connected = tokenProvider.isConnected;
+    final pending = tokenProvider.pendingSyncCount;
+    final color = connected ? const Color(0xFF3A7D34) : const Color(0xFFB91C1C);
+    final bgColor = connected ? const Color(0xFFF0F9F0) : const Color(0xFFFEF2F2);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            connected ? 'Connected' : 'Not Connected',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          if (pending > 0) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$pending pending',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

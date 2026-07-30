@@ -12,6 +12,9 @@ class TokenDetailCreate(BaseModel):
     token_count: int
     date: Optional[dt_date] = None
     folder_path: Optional[str] = None
+    was_offline: bool = False
+    local_receipt_no: Optional[str] = None
+    printed_at: Optional[dt_datetime] = None
 
 class TokenDetailResponse(UTCBaseModel):
     id: int
@@ -21,6 +24,9 @@ class TokenDetailResponse(UTCBaseModel):
     receipt_number: int
     receipt_display_number: Optional[str] = None
     token_count: int
+    printed_offline: bool = False
+    offline_local_receipt_no: Optional[str] = None
+    offline_printed_at: Optional[dt_datetime] = None
     created_at: dt_datetime
     creator: Optional[UserMinimal] = None
 
