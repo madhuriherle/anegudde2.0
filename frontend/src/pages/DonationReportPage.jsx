@@ -251,7 +251,7 @@ const DonationReportPage = () => {
             </div>
 
             <h1 className="font-temple text-xl font-bold text-text-main">
-              ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ
+              ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಸಿ
             </h1>
             <p className="mt-1 text-sm font-bold uppercase text-text-main">
               {fromDate && toDate && fromDate === toDate ?

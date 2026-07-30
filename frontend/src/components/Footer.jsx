@@ -24,7 +24,7 @@ const Footer = () => {
                 alt="D-apps logo"
                 className="w-5 h-5" />
               
-              <span>D-apps.in, Kumbashi.</span>
+              <span>D-apps.in, Kumbhasi.</span>
             </a>
           </div>
         </div>

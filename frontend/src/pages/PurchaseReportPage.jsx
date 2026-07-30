@@ -168,7 +168,7 @@ const PurchaseReportPage = () => {
       <div className="report-table-wrap overflow-hidden rounded-lg border border-border-temple bg-white shadow-sm print:border-none print:shadow-none">
         <div className="purchase-print-header border-b border-border-temple/40 p-5 text-center">
           <h1 className="font-temple text-xl font-bold uppercase text-text-main">
-            ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ
+            ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಸಿ
           </h1>
           <p className="mt-1 text-sm font-bold uppercase text-text-main">
             Purchase Report From {formatDate(fromDate)} To {formatDate(toDate)}

@@ -223,7 +223,7 @@ const ManpowerReportPage = () => {
 
       <div className="manpower-report-card bg-white border border-border-temple rounded-lg overflow-hidden shadow-sm">
         <div className="manpower-print-header p-6 text-center border-b border-border-temple/40 print:pb-2">
-          <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ</h1>
+          <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಸಿ</h1>
           <p className="text-sm font-bold text-text-main mt-1 uppercase tracking-wider">
             {selectedMonth === 'ALL' ? 'YEARLY' : 'MONTHLY'} MANPOWER REPORT — {selectedMonth === 'ALL' ? `YEAR ${selectedYear}` : `${String(parseInt(selectedMonth) + 1).padStart(2, '0')}-${selectedYear}`}
           </p>

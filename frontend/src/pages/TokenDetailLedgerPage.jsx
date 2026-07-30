@@ -121,9 +121,11 @@ const TokenDetailLedgerPage = () => {
   const details = data?.items || [];
   const totalEntries = data?.total || 0;
 
-  // Fallback calculation if backend total is 0 but items exist
+  // Fallback calculation if backend total is null/undefined but items exist
   const totalDevotees = useMemo(() => {
-    if (data?.total_tokens && data.total_tokens > 0) return data.total_tokens;
+    if (data && data.total_tokens !== undefined && data.total_tokens !== null) {
+      return data.total_tokens;
+    }
     return details.reduce((sum, item) => sum + Number(item.token_count || 0), 0);
   }, [data, details]);
 
@@ -240,7 +242,7 @@ const TokenDetailLedgerPage = () => {
 
       {/* Canteen-style Print Header */}
       <div className="token-print-header text-center">
-        <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ (ಅನ್ನದಾನ)</h1>
+        <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಸಿ (ಅನ್ನದಾನ)</h1>
         <p className="text-sm font-bold text-text-main mt-1">
           TOKEN DETAILS REPORT FOR DATE : <span className="font-extrabold">{formatDate(selectedDate)}</span>
         </p>
