@@ -92,6 +92,12 @@ def update_role(
     if payload.rank_level is not None and payload.rank_level <= my_rank:
         raise HTTPException(status_code=400, detail="New rank must be weaker than yours")
 
+    # Check duplicate name (exclude self)
+    if payload.role_name is not None and payload.role_name != role.role_name:
+        existing = db.query(Role).filter(Role.role_name == payload.role_name).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Role name already exists")
+
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(role, key, value)
