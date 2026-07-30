@@ -43,3 +43,11 @@ class TokenDetailPaginatedResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+class TokenGenerationPaginatedResponse(BaseModel):
+    items: List[TokenGenerationResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    grand_total_tokens: int

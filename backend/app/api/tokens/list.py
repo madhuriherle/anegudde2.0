@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from datetime import date
 from app.api.deps import get_db, get_current_user, PermissionChecker, AnyPermissionChecker
-from app.schemas.token import TokenGenerationResponse, TokenDetailResponse, TokenDetailPaginatedResponse
+from app.schemas.token import TokenGenerationResponse, TokenDetailResponse, TokenDetailPaginatedResponse, TokenGenerationPaginatedResponse
 from app.schemas.base import PaginatedResponse
 from app.db.models import User
 from app.services import token_service
 from . import router
 
-@router.get("/list_generations", response_model=PaginatedResponse[TokenGenerationResponse])
+@router.get("/list_generations", response_model=TokenGenerationPaginatedResponse)
 def list_generations(
     page: int = 1, 
     page_size: int = 20, 

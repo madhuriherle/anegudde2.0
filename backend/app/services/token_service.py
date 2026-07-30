@@ -164,13 +164,36 @@ def list_token_generations(db: Session, page: int = 1, page_size: int = 20, q: s
         # Only override if we actually found details, otherwise keep the stored total
         if actual_total > 0:
             item.total_tokens = actual_total
-    
+
+    # Grand total across the full filtered date range (not just the current page)
+    detail_sums = (
+        db.query(
+            TokenDetail.generation_id.label("generation_id"),
+            func.coalesce(func.sum(TokenDetail.token_count), 0).label("detail_total")
+        )
+        .group_by(TokenDetail.generation_id)
+        .subquery()
+    )
+    range_query = (
+        db.query(TokenGeneration.total_tokens, detail_sums.c.detail_total)
+        .outerjoin(detail_sums, detail_sums.c.generation_id == TokenGeneration.id)
+    )
+    if start_date:
+        range_query = range_query.filter(TokenGeneration.date >= start_date)
+    if end_date:
+        range_query = range_query.filter(TokenGeneration.date <= end_date)
+    grand_total_tokens = sum(
+        (detail_total if detail_total else stored_total) or 0
+        for stored_total, detail_total in range_query.all()
+    )
+
     return {
         "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,
-        "total_pages": math.ceil(total / page_size) if total > 0 else 0
+        "total_pages": math.ceil(total / page_size) if total > 0 else 0,
+        "grand_total_tokens": grand_total_tokens
     }
 
 def get_token_details_by_date(target_date: date, db: Session, page: int = 1, page_size: int = 50):

@@ -210,13 +210,14 @@ def detailed_stock_summary_report(
 
 @router.get("/get_canteen_summary", response_model=CanteenSummaryResponse)
 def canteen_summary_report(
-    date_value: date = Query(..., alias="date"),
+    from_date: date = Query(...),
+    to_date: date = Query(...),
     db: Session = Depends(get_db),
     _: User = Depends(PermissionChecker("reports.canteen_summary.read")),
 ):
     try:
-        from_date = date_value
-        to_date = date_value
+        if to_date < from_date:
+            raise HTTPException(status_code=400, detail="to_date must not be before from_date")
 
         items = db.query(Item).join(Unit).filter(Item.is_deleted == False, Item.status == 1).all()
 
@@ -328,20 +329,20 @@ def canteen_summary_report(
                 func.coalesce(func.sum(ConsumptionEntry.total_serving_persons), 0).label("total_serving"),
                 func.coalesce(func.sum(ConsumptionEntry.times_cooked), 0).label("times_cooked"),
             )
-            .filter(ConsumptionEntry.is_deleted == False, ConsumptionEntry.usage_date == date_value, ConsumptionEntry.status == 1)
+            .filter(ConsumptionEntry.is_deleted == False, ConsumptionEntry.usage_date >= from_date, ConsumptionEntry.usage_date <= to_date, ConsumptionEntry.status == 1)
             .first()
         )
 
         token_total = (
             db.query(func.coalesce(func.sum(TokenDetail.token_count), 0))
             .join(TokenGeneration, TokenGeneration.id == TokenDetail.generation_id)
-            .filter(TokenGeneration.date == date_value)
+            .filter(TokenGeneration.date >= from_date, TokenGeneration.date <= to_date)
             .scalar()
         ) or 0
         if token_total == 0:
             token_total = (
                 db.query(func.coalesce(func.sum(TokenGeneration.total_tokens), 0))
-                .filter(TokenGeneration.date == date_value)
+                .filter(TokenGeneration.date >= from_date, TokenGeneration.date <= to_date)
                 .scalar()
             ) or 0
 
@@ -356,7 +357,8 @@ def canteen_summary_report(
             .join(ConsumptionEntry, ConsumptionEntry.id == ConsumptionItem.consumption_entry_id)
             .filter(
                 ConsumptionEntry.is_deleted == False,
-                ConsumptionEntry.usage_date == date_value,
+                ConsumptionEntry.usage_date >= from_date,
+                ConsumptionEntry.usage_date <= to_date,
                 ConsumptionEntry.status == 1,
                 ConsumptionItem.qty_returned > 0
             )
@@ -385,7 +387,8 @@ def canteen_summary_report(
             .join(WastageEntry, WastageEntry.id == WastageItem.wastage_entry_id)
             .filter(
                 WastageEntry.is_deleted == False,
-                WastageEntry.wastage_date == date_value,
+                WastageEntry.wastage_date >= from_date,
+                WastageEntry.wastage_date <= to_date,
                 WastageEntry.status == 1,
                 WastageItem.menu_item_id.isnot(None)
             )
@@ -422,7 +425,7 @@ def canteen_summary_report(
             wastage_total_amount=wastage_total_amount,
         )
 
-        return CanteenSummaryResponse(date=date_value, rows=rows, footer=footer)
+        return CanteenSummaryResponse(from_date=from_date, to_date=to_date, rows=rows, footer=footer)
     except Exception as e:
         import traceback
         import logging

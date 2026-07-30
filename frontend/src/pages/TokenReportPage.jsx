@@ -162,18 +162,20 @@ const TokenReportPage = () => {
           .token-report-print .shadow-sm {
             box-shadow: none !important;
           }
+          .token-report-print .grand-total-row td {
+            font-size: 16px !important;
+            padding: 10px 7px !important;
+            border-top: 2px solid #bfa892 !important;
+          }
         }
         .token-print-header { display: none; }
       `}</style>
 
       {/* Canteen-style Print Header */}
       <div className="token-print-header text-center">
-        <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ (ಅನ್ನದಾನ)</h1>
+        <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಸಿ (ಅನ್ನದಾನ)</h1>
         <p className="text-sm font-bold text-text-main mt-1">
           TOKEN ISSUED SUMMARY REPORT
-        </p>
-        <p className="text-xs text-text-main mt-1">
-          Range: {formatDate(activeDateRange.startDate)} to {formatDate(activeDateRange.endDate)}
         </p>
       </div>
 
@@ -183,6 +185,11 @@ const TokenReportPage = () => {
             Token Issued Report
           </h2>
         </div>
+        <PrinterSelectDropdown
+          context="REPORT_TOKEN"
+          onPrint={handlePrint}
+          buttonLabel="Print"
+        />
       </div>
 
       <Card className="border-border-temple shadow-sm print:hidden">
@@ -286,6 +293,19 @@ const TokenReportPage = () => {
                 )
                 }
               </tbody>
+              {!isLoadingSummary && generations?.length > 0 &&
+              <tfoot>
+                  <tr className="grand-total-row bg-[#FFF4E6] border-t-2 border-primary/30">
+                    <td className="px-6 py-5 text-text-main text-base font-black uppercase tracking-wide">Grand Total</td>
+                    <td className="px-6 py-5 text-left">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-base font-black bg-primary/10 text-primary">
+                        {generationsData?.grand_total_tokens ?? 0}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5"></td>
+                  </tr>
+                </tfoot>
+              }
             </table>
           </div>
 

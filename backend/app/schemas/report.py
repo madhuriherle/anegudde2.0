@@ -79,7 +79,8 @@ class CanteenSummaryFooter(BaseModel):
 
 
 class CanteenSummaryResponse(BaseModel):
-    date: date
+    from_date: date
+    to_date: date
     rows: list[DetailedStockSummaryRow]
     footer: CanteenSummaryFooter
 

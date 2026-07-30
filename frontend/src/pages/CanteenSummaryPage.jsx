@@ -13,18 +13,66 @@ import { formatDate, getTodayDateInput } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { QtyDisplay } from '../components/ui/QtyDisplay';
 
+const toDateInputValue = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getPresetRange = (mode) => {
+  const today = new Date();
+  const start = new Date(today);
+  const end = new Date(today);
+
+  if (mode === 'yesterday') {
+    start.setDate(today.getDate() - 1);
+    end.setDate(today.getDate() - 1);
+  }
+
+  if (mode === 'weekly') {
+    start.setDate(today.getDate() - 6);
+  }
+
+  return {
+    startDate: toDateInputValue(start),
+    endDate: toDateInputValue(end)
+  };
+};
+
 const CanteenSummaryPage = () => {
   const { showError, showSuccess } = useNotification();
-  const [selectedDate, setSelectedDate] = useState(getTodayDateInput());
+  const [dateFilterMode, setDateFilterMode] = useState('today');
+  const [customFromDate, setCustomFromDate] = useState(getTodayDateInput());
+  const [customToDate, setCustomToDate] = useState(getTodayDateInput());
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   // Custom filter state
   const [hideInactive, setHideInactive] = useState(true);
 
+  const activeDateRange = useMemo(() => {
+    if (dateFilterMode === 'custom') {
+      return { startDate: customFromDate, endDate: customToDate };
+    }
+    return getPresetRange(dateFilterMode);
+  }, [dateFilterMode, customFromDate, customToDate]);
+
+  const fromDate = activeDateRange.startDate;
+  const toDate = activeDateRange.endDate;
+
+  const handleDateFilterModeChange = (mode) => {
+    setDateFilterMode(mode);
+    if (mode !== 'custom') {
+      const range = getPresetRange(mode);
+      setCustomFromDate(range.startDate);
+      setCustomToDate(range.endDate);
+    }
+  };
+
   const { data: reportData, isLoading } = useQuery({
-    queryKey: ['canteen-summary', selectedDate],
+    queryKey: ['canteen-summary', fromDate, toDate],
     queryFn: async () => {
-      const res = await api.get('/reports/get_canteen_summary', { params: { date: selectedDate } });
+      const res = await api.get('/reports/get_canteen_summary', { params: { from_date: fromDate, to_date: toDate } });
       return res.data;
     }
   });
@@ -467,16 +515,47 @@ const CanteenSummaryPage = () => {
             {/* Left Section: Inputs & Controls */}
             <div className="flex flex-wrap items-end gap-x-4 gap-y-3 flex-1">
               
-              {/* 1. Date Selector */}
+              {/* 1. Date Filter Mode Selector */}
               <div className="space-y-1.5 w-full sm:w-[200px]">
-                <Label className="text-xs font-bold text-text-main/70 uppercase tracking-wider">Select Date</Label>
-                <Input 
-                  type="date" 
-                  value={selectedDate} 
-                  onChange={(e) => setSelectedDate(e.target.value)} 
-                  className="h-10 border-border-temple/50 bg-white text-text-main focus:border-primary focus:ring-primary" 
-                />
+                <Label className="text-xs font-bold text-text-main/70 uppercase tracking-wider">Date Filter</Label>
+                <select
+                  value={dateFilterMode}
+                  onChange={(e) => handleDateFilterModeChange(e.target.value)}
+                  className="h-10 w-full rounded-md border border-border-temple/50 bg-white px-3 text-sm text-text-main outline-none focus:border-primary transition-all">
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="custom">Custom</option>
+                </select>
               </div>
+
+              {dateFilterMode === 'custom' && (
+                <>
+                  <div className="space-y-1.5 w-full sm:w-[200px]">
+                    <Label className="text-xs font-bold text-text-main/70 uppercase tracking-wider">From Date</Label>
+                    <Input
+                      type="date"
+                      value={customFromDate}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCustomFromDate(value);
+                        if (customToDate < value) setCustomToDate(value);
+                      }}
+                      className="h-10 border-border-temple/50 bg-white text-text-main focus:border-primary focus:ring-primary"
+                    />
+                  </div>
+                  <div className="space-y-1.5 w-full sm:w-[200px]">
+                    <Label className="text-xs font-bold text-text-main/70 uppercase tracking-wider">To Date</Label>
+                    <Input
+                      type="date"
+                      value={customToDate}
+                      min={customFromDate}
+                      onChange={(e) => setCustomToDate(e.target.value)}
+                      className="h-10 border-border-temple/50 bg-white text-text-main focus:border-primary focus:ring-primary"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* 2. With Category Toggle */}
               <div className="flex items-center h-10">
@@ -545,11 +624,11 @@ const CanteenSummaryPage = () => {
 
       <div className="canteen-summary-report-card bg-white border border-border-temple rounded-lg overflow-hidden shadow-sm print:border-none print:shadow-none">
         <div className="canteen-summary-print-header p-6 text-center border-b border-border-temple/40 print:pb-2">
-          <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ (ಅನ್ನದಾನ)</h1>
+          <h1 className="text-xl font-bold text-text-main uppercase font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಸಿ (ಅನ್ನದಾನ)</h1>
           <p className="text-sm font-bold text-text-main mt-1">
-            MAHAPRASADAM SUMMARY REPORT FOR DATE :{' '}
+            MAHAPRASADAM SUMMARY REPORT FOR :{' '}
             <span className="font-extrabold">
-              {formatDate(selectedDate)}
+              {formatDate(fromDate)} to {formatDate(toDate)}
             </span>
           </p>
         </div>
@@ -888,9 +967,9 @@ const CanteenSummaryPage = () => {
 
       <div className="hidden print:hidden font-sans">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಶಿ (ಅನ್ನದಾನ)</h1>
+          <h1 className="text-2xl font-bold font-temple">ಆನೆಗುಡ್ಡೆ ಶ್ರೀ ವಿನಾಯಕ ದೇವಸ್ಥಾನ, ಕುಂಭಾಸಿ (ಅನ್ನದಾನ)</h1>
           <div className="text-md font-bold uppercase tracking-widest mt-1">
-            MAHAPRASAD SUMMARY REPORT : <span className="font-black underline">{formatDate(selectedDate)}</span>
+            MAHAPRASAD SUMMARY REPORT : <span className="font-black underline">{formatDate(fromDate)} to {formatDate(toDate)}</span>
           </div>
         </div>
 
