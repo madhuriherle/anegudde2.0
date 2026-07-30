@@ -169,7 +169,10 @@ const TokenReportPage = () => {
             border-top: 2px solid #bfa892 !important;
           }
         }
-        .token-print-header { display: block; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #d7c9ba; padding-bottom: 15px; }
+        .token-print-header { display: none; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #d7c9ba; padding-bottom: 15px; }
+        @media print {
+          .token-print-header { display: block !important; }
+        }
       `}</style>
 
       {/* Canteen-style Print Header */}
