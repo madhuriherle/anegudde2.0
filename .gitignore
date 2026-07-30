@@ -16,3 +16,5 @@ token_desktop_app/Output/
 token_desktop_app/New folder/
 .backend.pid
 .frontend.pid
+.launcher.title
+.launch.lock/

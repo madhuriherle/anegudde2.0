@@ -1,7 +1,20 @@
 @echo off
 setlocal enabledelayedexpansion
-taskkill /FI "WINDOWTITLE eq ATMS_Launcher" /T /F >nul 2>&1
+cd /d "%~dp0"
 title ATMS_Launcher
+
+REM Close the previous launcher window (if any) now that this one is taking
+REM over, so old windows don't pile up when launched multiple times (e.g.
+REM autostart + manual double-click). Each run tags its own window with a
+REM unique title and records it; the next run kills whatever title it finds.
+set titlefile=%~dp0.launcher.title
+if exist "%titlefile%" (
+    set /p oldtitle=<"%titlefile%"
+    if defined oldtitle taskkill /FI "WINDOWTITLE eq !oldtitle!" /F >nul 2>&1
+)
+set mytitle=ATMS_Launcher_%RANDOM%%RANDOM%
+title !mytitle!
+echo !mytitle!>"%titlefile%"
 
 echo ========================================
 echo  Anegudde Inventory System - Starting
@@ -11,84 +24,89 @@ echo.
 echo Waiting for network connection (WiFi/Ethernet)...
 set waitcount=0
 :waitnet
-ipconfig | findstr /c:"IPv4 Address" | findstr /v "169.254" >nul
-if not errorlevel 1 goto networkready
+set lanip=
+for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4 Address" ^| findstr /v "169.254"') do (
+    if not defined lanip set lanip=%%a
+)
+if defined lanip goto networkready
 set /a waitcount+=1
 if %waitcount% GEQ 45 (
     echo WARNING: No network detected after 90 seconds - continuing anyway.
     goto networkready
 )
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 goto waitnet
 :networkready
-echo Network connected.
+if defined lanip (
+    for /f "tokens=* delims= " %%a in ("!lanip!") do set lanip=%%a
+    echo Network connected. LAN IP: !lanip!
+) else (
+    echo Network not detected - only localhost will be reachable.
+)
+
+REM Guard against two copies of this script racing each other (e.g. the
+REM Startup-folder auto-launch and a manual double-click landing at the
+REM same time) - mkdir is atomic, so only one instance can win the lock.
+REM A lock older than 60s is assumed to be from a crashed run and is
+REM cleared rather than blocking forever.
+set lockdir=%~dp0.launch.lock
+set lockwait=0
+:trylock
+mkdir "%lockdir%" 2>nul
+if not errorlevel 1 goto lockacquired
+for /f %%a in ('powershell -NoProfile -Command "if (Test-Path '%lockdir%') { $age=((Get-Date) - (Get-Item '%lockdir%').CreationTime).TotalSeconds; if ($age -gt 60) {1} else {0} } else {1}"') do set stale=%%a
+if "%stale%"=="1" (
+    rmdir "%lockdir%" >nul 2>&1
+    goto trylock
+)
+set /a lockwait+=1
+if %lockwait% GEQ 30 (
+    echo Another instance appears stuck starting up - proceeding anyway.
+    rmdir "%lockdir%" >nul 2>&1
+    goto trylock
+)
+ping -n 2 127.0.0.1 >nul
+goto trylock
+:lockacquired
 
 echo.
 echo Stopping any existing instances...
 
-REM Layer 1: kill by the exact PID recorded from the previous run - most
-REM precise, immune to uvicorn --reload's parent-respawns-a-fresh-worker
-REM race and to window-title matching quirks under different terminal apps.
-if exist "%~dp0.backend.pid" (
-    set /p oldbackendpid=<"%~dp0.backend.pid"
+REM Layer 1: kill by the exact PID recorded from the previous run - fast
+REM and precise, no blanket killing of every node/python process on the
+REM machine.
+if exist ".backend.pid" (
+    set /p oldbackendpid=<".backend.pid"
     if defined oldbackendpid taskkill /PID !oldbackendpid! /T /F >nul 2>&1
-    del "%~dp0.backend.pid" >nul 2>&1
+    del ".backend.pid" >nul 2>&1
 )
-if exist "%~dp0.frontend.pid" (
-    set /p oldfrontendpid=<"%~dp0.frontend.pid"
+if exist ".frontend.pid" (
+    set /p oldfrontendpid=<".frontend.pid"
     if defined oldfrontendpid taskkill /PID !oldfrontendpid! /T /F >nul 2>&1
-    del "%~dp0.frontend.pid" >nul 2>&1
+    del ".frontend.pid" >nul 2>&1
 )
 
-REM Layer 2: fallback for anything not tracked by a PID file (very first
-REM run before PID files existed, or an instance started outside this
-REM script).
-REM Layer 2: Foolproof Kiosk Cleanup
-REM Forcefully kill all node and python processes to guarantee the ports are freed.
-REM This ensures the client never has to manually clear stuck background processes.
-taskkill /F /IM node.exe /T >nul 2>&1
-taskkill /F /IM python.exe /T >nul 2>&1
-
-echo Waiting for ports to be released...
-set freewait=0
-:waitports
-REM Layer 3: kill by whatever PID netstat says actually owns the port, not
-REM just by image name. Covers stragglers that survive taskkill /IM node.exe
-REM /python.exe - e.g. a leftover from a previous run started in a different
-REM session, or a second overlapping launch - by targeting the exact PID
-REM squatting on 2508/2509 every second instead of only waiting and hoping.
-for /f "tokens=5" %%p in ('netstat -aon ^| findstr :2508 ^| findstr LISTENING 2^>nul') do (
-    taskkill /PID %%p /F >nul 2>&1
-)
-for /f "tokens=5" %%p in ('netstat -aon ^| findstr :2509 ^| findstr LISTENING 2^>nul') do (
-    taskkill /PID %%p /F >nul 2>&1
-)
-netstat -aon | findstr :2508 | findstr LISTENING >nul
-set port2508busy=%errorlevel%
-netstat -aon | findstr :2509 | findstr LISTENING >nul
-set port2509busy=%errorlevel%
-if %port2508busy% NEQ 0 if %port2509busy% NEQ 0 goto portsfree
-set /a freewait+=1
-if %freewait% GEQ 15 (
-    echo WARNING: Ports still appear busy after 15 seconds - continuing anyway.
-    goto portsfree
-)
-timeout /t 1 /nobreak >nul
-goto waitports
-:portsfree
+REM Layer 2: catch anything still squatting on our ports (first run before
+REM PID files existed, or an instance started outside this script).
+for /f "tokens=5" %%p in ('netstat -aon ^| findstr :2508 ^| findstr LISTENING 2^>nul') do taskkill /PID %%p /F >nul 2>&1
+for /f "tokens=5" %%p in ('netstat -aon ^| findstr :2509 ^| findstr LISTENING 2^>nul') do taskkill /PID %%p /F >nul 2>&1
 
 echo.
 echo Starting Backend and Frontend...
 
 cd /d "%~dp0backend"
-start /b cmd /c "python -m uvicorn app.main:app --host 0.0.0.0 --port 2509 --reload"
+for /f %%i in ('powershell -NoProfile -Command "(Start-Process cmd -ArgumentList '/c python -m uvicorn app.main:app --host 0.0.0.0 --port 2509 --reload' -WindowStyle Hidden -PassThru).Id"') do set backendpid=%%i
+echo !backendpid!>"%~dp0.backend.pid"
 
 cd /d "%~dp0frontend"
-start /b cmd /c "npm run dev"
+for /f %%i in ('powershell -NoProfile -Command "(Start-Process cmd -ArgumentList '/c npm run dev' -WindowStyle Hidden -PassThru).Id"') do set frontendpid=%%i
+echo !frontendpid!>"%~dp0.frontend.pid"
+
+rmdir "%lockdir%" >nul 2>&1
 
 echo.
 echo Both started in background!
-echo Open browser: http://localhost:2508
+echo Open browser (this PC):     http://localhost:2508
+if defined lanip echo Open browser (other devices): http://!lanip!:2508
 echo.
-echo Press Ctrl+C to stop both services.
 pause
