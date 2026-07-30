@@ -156,6 +156,14 @@ const TokenReportPage = () => {
             display: none !important;
           }
 
+          /* Actions column only holds a "View Details" button, which is
+             hidden above - drop the whole column instead of leaving an
+             empty "ACTIONS" header and blank cells wasting space. */
+          .token-report-print th:nth-child(3),
+          .token-report-print td:nth-child(3) {
+            display: none !important;
+          }
+
           .token-report-print .border-border-temple {
             border: none !important;
           }
