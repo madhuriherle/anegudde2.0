@@ -21,3 +21,4 @@ token_desktop_app/New folder/
 backend/logs/
 backend.zip
 frontend.zip
+*.sql

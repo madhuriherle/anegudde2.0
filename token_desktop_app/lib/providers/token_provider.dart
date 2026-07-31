@@ -32,9 +32,15 @@ class TokenProvider with ChangeNotifier {
   int _syncIntervalMinutes = kDefaultSyncIntervalMinutes;
   bool _tryOnlineFirst = false;
   Timer? _syncTimer;
+  Timer? _midnightCheckTimer;
   bool _syncing = false;
   DateTime? _lastSyncedAt;
   DateTime? _nextSyncAt;
+  // If the persistent (Hive) queue is unavailable this session, printed
+  // tokens are tracked here instead so totals/pending count/sync still
+  // work correctly for the rest of the session - see _queueLocally. This
+  // does NOT survive an app restart, unlike the Hive-backed queue.
+  final List<Map<String, dynamic>> _fallbackPending = [];
 
   TokenProvider() {
     unawaited(_initOfflineQueue());
@@ -67,6 +73,23 @@ class TokenProvider with ChangeNotifier {
       _nextSyncAt = DateTime.now().add(Duration(minutes: _syncIntervalMinutes));
       _pollOnce();
     });
+    _startMidnightCheck();
+  }
+
+  // Checks every 30 seconds whether the date rolled over at midnight so the
+  // daily total resets instantly instead of waiting up to 5 min for the sync
+  // timer to fire. No API call unless the date actually changed.
+  void _startMidnightCheck() {
+    _midnightCheckTimer?.cancel();
+    _midnightCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      final now = DateTime.now();
+      if (_selectedDate.year != now.year ||
+          _selectedDate.month != now.month ||
+          _selectedDate.day != now.day) {
+        _selectedDate = now;
+        unawaited(fetchDailyTotal(silent: true));
+      }
+    });
   }
 
   void _pollOnce() {
@@ -86,9 +109,10 @@ class TokenProvider with ChangeNotifier {
   /// updates the instant a token is queued, not only after it syncs.
   void _recomputeDisplayedTotals() {
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    final pendingForDate = _offlineQueue.pendingEntries.values
-        .where((record) => record['date'] == dateStr)
-        .toList();
+    final pendingForDate = [
+      ..._offlineQueue.pendingEntries.values,
+      ..._fallbackPending,
+    ].where((record) => record['date'] == dateStr).toList();
     final pendingDevotees = pendingForDate.fold<int>(
       0,
       (sum, record) => sum + (record['tokenCount'] as int? ?? 0),
@@ -140,6 +164,12 @@ class TokenProvider with ChangeNotifier {
   DateTime? get lastSyncedAt => _lastSyncedAt;
   DateTime? get nextSyncAt => _nextSyncAt;
 
+  /// False if the local offline queue failed to open this session - tokens
+  /// still print, but silently never get queued for sync. The UI must
+  /// show a persistent warning in this state, since it can't be recovered
+  /// from within the session (only a restart re-attempts opening it).
+  bool get offlineQueueUnavailable => !_offlineQueue.isAvailable;
+
   /// Manual "Sync Now" - runs the same check/push logic as the periodic
   /// timer, just on demand instead of waiting for the next tick.
   Future<void> syncNow() => _syncPendingTokens();
@@ -147,6 +177,7 @@ class TokenProvider with ChangeNotifier {
   @override
   void dispose() {
     _syncTimer?.cancel();
+    _midnightCheckTimer?.cancel();
     super.dispose();
   }
 
@@ -283,13 +314,24 @@ class TokenProvider with ChangeNotifier {
   Future<Map<String, dynamic>> _queueLocally(int count, String dateStr) async {
     final printedAt = DateTime.now();
     final localReceiptNo = await _offlineQueue.nextLocalReceiptNo();
-    await _offlineQueue.addPending(
+    final key = await _offlineQueue.addPending(
       tokenCount: count,
       date: dateStr,
       localReceiptNo: localReceiptNo,
       printedAt: printedAt,
     );
-    _pendingSyncCount = _offlineQueue.pendingCount;
+    if (key == null) {
+      // Hive queue unavailable this session - track in memory instead so
+      // totals/pending/sync still work; this token just won't survive an
+      // app restart before it syncs.
+      _fallbackPending.add({
+        'tokenCount': count,
+        'date': dateStr,
+        'localReceiptNo': localReceiptNo,
+        'printedAt': printedAt.toIso8601String(),
+      });
+    }
+    _pendingSyncCount = _offlineQueue.pendingCount + _fallbackPending.length;
     _recomputeDisplayedTotals();
     _isLoading = false;
     notifyListeners();
@@ -343,7 +385,30 @@ class TokenProvider with ChangeNotifier {
           // Leave it queued, retry on the next cycle.
         }
       }
-      _pendingSyncCount = _offlineQueue.pendingCount;
+
+      // Also push anything tracked in-memory only (Hive was unavailable
+      // when these were printed) - iterate a copy since successful items
+      // get removed from the live list during the loop.
+      for (final record in List<Map<String, dynamic>>.from(_fallbackPending)) {
+        try {
+          await _apiService.post('/tokens/create_token', {
+            'token_count': record['tokenCount'],
+            'date': record['date'],
+            'was_offline': true,
+            'local_receipt_no': record['localReceiptNo'].toString(),
+            'printed_at': record['printedAt'],
+          });
+          _fallbackPending.remove(record);
+          if (record['date'] == currentDateStr) {
+            _backendDailyTotal += (record['tokenCount'] as int? ?? 0);
+            _backendTotalReceipts += 1;
+          }
+        } catch (e) {
+          print('Sync failed for in-memory token $record: $e');
+        }
+      }
+
+      _pendingSyncCount = _offlineQueue.pendingCount + _fallbackPending.length;
       _recomputeDisplayedTotals();
       notifyListeners();
     } finally {

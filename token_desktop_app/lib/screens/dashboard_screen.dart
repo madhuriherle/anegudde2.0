@@ -1418,10 +1418,10 @@ class _OfflineModeDialogState extends State<_OfflineModeDialog> {
   String _formatLastSynced(DateTime? lastSyncedAt) {
     if (lastSyncedAt == null) return 'Not synced yet';
     final diff = DateTime.now().difference(lastSyncedAt);
-    if (diff.inSeconds < 60) return 'Last synced: just now';
-    if (diff.inMinutes < 60) return 'Last synced: ${diff.inMinutes} min ago';
-    if (diff.inHours < 24) return 'Last synced: ${diff.inHours} hr ago';
-    return 'Last synced: ${diff.inDays} day${diff.inDays == 1 ? '' : 's'} ago';
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours} hr ago';
+    return '${diff.inDays} day${diff.inDays == 1 ? '' : 's'} ago';
   }
 
   String _formatCountdown(DateTime? nextSyncAt) {
@@ -1430,7 +1430,23 @@ class _OfflineModeDialogState extends State<_OfflineModeDialog> {
     if (remaining.isNegative) return 'Checking now…';
     final minutes = remaining.inMinutes;
     final seconds = remaining.inSeconds % 60;
-    return 'Next check in ${minutes.toString().padLeft(1, '0')}:${seconds.toString().padLeft(2, '0')}';
+    return '${minutes.toString().padLeft(1, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  TextSpan _buildLabeledValue(String label, String value, {bool isWarning = false}) {
+    return TextSpan(
+      children: [
+        TextSpan(text: '$label ', style: const TextStyle(fontSize: 12, color: Color(0xFF6B4F3A))),
+        TextSpan(
+          text: value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isWarning ? const Color(0xFFB45309) : const Color(0xFF4A3728),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildReceiptNumberOption({
@@ -1438,12 +1454,13 @@ class _OfflineModeDialogState extends State<_OfflineModeDialog> {
     required String subtitle,
     required bool selected,
     required VoidCallback onTap,
+    bool recommended = false,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
             Radio<bool>(
@@ -1456,8 +1473,24 @@ class _OfflineModeDialogState extends State<_OfflineModeDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF4A3728))),
-                  Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF9B8674))),
+                  Row(
+                    children: [
+                      Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF4A3728))),
+                      if (recommended) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4A3728),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text('Recommended', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white)),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 1),
+                  Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF6B4F3A))),
                 ],
               ),
             ),
@@ -1474,14 +1507,14 @@ class _OfflineModeDialogState extends State<_OfflineModeDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: const Color(0xFFFFF8F1),
       child: Container(
-        width: 360,
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+        width: 380,
+        padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Offline Mode',
+              'Printing & Sync',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF4A3728)),
             ),
             const SizedBox(height: 16),
@@ -1489,8 +1522,9 @@ class _OfflineModeDialogState extends State<_OfflineModeDialog> {
               listenable: tokenProvider,
               builder: (context, _) {
                 final pending = tokenProvider.pendingSyncCount;
+                final isWarning = pending > 0;
                 return Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF5EAD9),
                     borderRadius: BorderRadius.circular(12),
@@ -1500,40 +1534,52 @@ class _OfflineModeDialogState extends State<_OfflineModeDialog> {
                     children: [
                       Row(
                         children: [
+                          Icon(
+                            isWarning ? Icons.sync_problem : Icons.check_circle,
+                            size: 16,
+                            color: isWarning ? const Color(0xFFB45309) : const Color(0xFF4A3728),
+                          ),
+                          const SizedBox(width: 6),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  pending > 0
-                                      ? '$pending receipt${pending == 1 ? '' : 's'} pending sync'
-                                      : 'All receipts synced',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF4A3728)),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _formatLastSynced(tokenProvider.lastSyncedAt),
-                                  style: const TextStyle(fontSize: 11, color: Color(0xFF9B8674)),
-                                ),
-                              ],
+                            child: Text(
+                              isWarning
+                                  ? '$pending receipt${pending == 1 ? '' : 's'} waiting'
+                                  : 'All receipts synced',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: isWarning ? const Color(0xFFB45309) : const Color(0xFF4A3728),
+                              ),
                             ),
                           ),
-                          TextButton(
-                            onPressed: _isSyncingNow
-                                ? null
-                                : () async {
-                                    setState(() => _isSyncingNow = true);
-                                    await tokenProvider.syncNow();
-                                    if (mounted) setState(() => _isSyncingNow = false);
-                                  },
-                            child: Text(_isSyncingNow ? 'Syncing…' : 'Sync Now'),
+                          SizedBox(
+                            height: 28,
+                            child: TextButton(
+                              onPressed: _isSyncingNow
+                                  ? null
+                                  : () async {
+                                      setState(() => _isSyncingNow = true);
+                                      await tokenProvider.syncNow();
+                                      if (mounted) setState(() => _isSyncingNow = false);
+                                    },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                                textStyle: const TextStyle(fontSize: 11),
+                              ),
+                              child: Text(_isSyncingNow ? 'Syncing…' : 'Sync Now'),
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatCountdown(tokenProvider.nextSyncAt),
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF9B8674)),
+                      const SizedBox(height: 6),
+                      RichText(
+                        text: _buildLabeledValue('Last synced:', _formatLastSynced(tokenProvider.lastSyncedAt)),
+                      ),
+                      const SizedBox(height: 2),
+                      RichText(
+                        text: _buildLabeledValue('Next sync:', _formatCountdown(tokenProvider.nextSyncAt)),
                       ),
                     ],
                   ),
@@ -1573,29 +1619,34 @@ class _OfflineModeDialogState extends State<_OfflineModeDialog> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'Receipt Number',
+              'Receipt Printing',
               style: TextStyle(fontSize: 13, color: Color(0xFF6B4F3A), fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             _buildReceiptNumberOption(
-              title: 'Print instantly',
-              subtitle: 'Recommended',
+              title: 'Print immediately',
+              subtitle: 'Receipt prints even without internet.',
               selected: !_tryOnlineFirst,
               onTap: () => setState(() => _tryOnlineFirst = false),
+              recommended: true,
             ),
             _buildReceiptNumberOption(
-              title: 'Wait for server number',
-              subtitle: 'Needs a stable connection',
+              title: 'Wait for internet',
+              subtitle: 'Gets the official receipt number before printing.',
               selected: _tryOnlineFirst,
               onTap: () => setState(() => _tryOnlineFirst = true),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Color(0xFF6B4F3A))),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF9B8674),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  child: const Text('Cancel'),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
@@ -1609,9 +1660,12 @@ class _OfflineModeDialogState extends State<_OfflineModeDialog> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF4A3728),
                     foregroundColor: Colors.white,
+                    elevation: 2,
+                    shadowColor: const Color(0xFF4A3728).withValues(alpha: 0.3),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text('Save'),
+                  child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ],
             ),
