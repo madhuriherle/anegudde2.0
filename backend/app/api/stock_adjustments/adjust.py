@@ -1,12 +1,15 @@
+import logging
 from datetime import datetime, timezone, date
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, PermissionChecker
 from app.db.models import Item, StockAdjustment, StockLedger, User
 from app.utils.stock_ledger_utils import compute_current_value
 from app.schemas.stock_adjustment import StandaloneStockAdjustmentCreate
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("/adjust", status_code=status.HTTP_200_OK)
@@ -86,7 +89,12 @@ def adjust_stock(
         updated_by=current_user.id
     ))
 
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error saving stock adjustment for item %s", payload.item_id)
+        raise HTTPException(status_code=500, detail="Failed to save stock adjustment due to concurrent access. Please try again.")
     db.refresh(new_adj)
 
     return {

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 import math
@@ -5,10 +6,13 @@ import os
 from pathlib import Path
 from fastapi import HTTPException
 from sqlalchemy import func, text
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import Item, PurchaseEntry, PurchaseItem, StockLedger, User, Vendor, ItemPrice
 from app.utils.stock_ledger_utils import compute_current_value
 from app.schemas.purchase import PurchaseEntryCreate, PurchaseEntryUpdate
+
+logger = logging.getLogger(__name__)
 
 def list_purchases(db: Session, page: int = 1, page_size: int = 20, q: str = None, status: int = None, search_field: str = None, from_date: str = None, to_date: str = None):
     import re
@@ -163,7 +167,12 @@ def create_purchase(payload: PurchaseEntryCreate, db: Session, current_user: Use
                 updated_by=current_user.id
             ))
 
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error saving purchase entry")
+        raise HTTPException(status_code=500, detail="Failed to save purchase entry due to concurrent access. Please try again.")
     db.refresh(entry)
     return entry
 
@@ -215,8 +224,13 @@ def delete_purchase(purchase_id: int, db: Session, current_user: User) -> None:
         text("UPDATE stock_ledger SET status = 0 WHERE ref_table = 'purchase_entries' AND ref_id = :rid"),
         {"rid": purchase_id}
     )
-    
-    db.commit()
+
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error deleting purchase entry %s", purchase_id)
+        raise HTTPException(status_code=500, detail="Failed to delete purchase entry. Please try again.")
 
 def update_purchase(purchase_id: int, payload: PurchaseEntryUpdate, db: Session, current_user: User) -> PurchaseEntry:
     entry = db.query(PurchaseEntry).filter(PurchaseEntry.id == purchase_id).first()
@@ -332,5 +346,10 @@ def update_purchase(purchase_id: int, payload: PurchaseEntryUpdate, db: Session,
                 updated_by=current_user.id
             ))
 
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error updating purchase entry %s", purchase_id)
+        raise HTTPException(status_code=500, detail="Failed to update purchase entry due to concurrent access. Please try again.")
     return get_purchase_full(entry.id, db)

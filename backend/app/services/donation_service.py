@@ -1,9 +1,13 @@
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 import math
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import DonationAmountMaster, DonationEntry, DonationItem, Item, StockLedger, User, Devotee, DonationType
+
+logger = logging.getLogger(__name__)
 from app.schemas.donation import DonationAmountMasterCreate, DonationAmountMasterUpdate, DonationEntryCreate
 from app.utils.stock_ledger_utils import compute_current_value
 from app.services import devotee_service
@@ -101,7 +105,12 @@ def create_amount_master(payload: DonationAmountMasterCreate, db: Session, curre
         updated_by=current_user.id,
     )
     db.add(row)
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error saving donation amount master")
+        raise HTTPException(status_code=500, detail="Failed to save amount option due to concurrent access. Please try again.")
     db.refresh(row)
     return row
 
@@ -124,7 +133,12 @@ def update_amount_master(amount_id: int, payload: DonationAmountMasterUpdate, db
         row.status = payload.status
     row.updated_at = datetime.now(timezone.utc)
     row.updated_by = current_user.id
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error updating donation amount master %s", amount_id)
+        raise HTTPException(status_code=500, detail="Failed to update amount option due to concurrent access. Please try again.")
     db.refresh(row)
     return row
 
@@ -135,7 +149,12 @@ def delete_amount_master(amount_id: int, db: Session, current_user: User) -> Non
     row.is_deleted = True
     row.deleted_at = datetime.now(timezone.utc)
     row.deleted_by_id = current_user.id
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error deleting donation amount master %s", amount_id)
+        raise HTTPException(status_code=500, detail="Failed to delete amount option. Please try again.")
 
 def _validate_amount_selection(payload: DonationEntryCreate, db: Session) -> None:
     if payload.donation_mode != 1:  # 1: AMOUNT
@@ -252,10 +271,17 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
             updated_by=current_user.id
         ))
 
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error saving donation entry")
+        raise HTTPException(status_code=500, detail="Failed to save donation due to concurrent access. Please try again.")
     db.refresh(entry)
 
-    # Generate and save receipt PDF automatically
+    # Generate and save receipt PDF automatically - non-critical, so any
+    # failure here (including a DB error on this secondary commit) is only
+    # logged, not raised, since the donation itself already saved fine.
     try:
         pdf_url = generate_and_save_donation_receipt(entry.id, db)
         if pdf_url:
@@ -263,8 +289,6 @@ def create_donation(payload: DonationEntryCreate, db: Session, current_user: Use
             db.commit()
             db.refresh(entry)
     except Exception as e:
-        import logging
-        logger = logging.getLogger("uvicorn.error")
         logger.error(f"Failed to generate receipt on save: {str(e)}")
 
     return entry
@@ -389,10 +413,17 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
             updated_by=current_user.id
         ))
 
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error updating donation entry %s", donation_id)
+        raise HTTPException(status_code=500, detail="Failed to update donation due to concurrent access. Please try again.")
     db.refresh(entry)
 
-    # Generate and save receipt PDF automatically
+    # Generate and save receipt PDF automatically - non-critical, so any
+    # failure here (including a DB error on this secondary commit) is only
+    # logged, not raised, since the donation itself already saved fine.
     try:
         pdf_url = generate_and_save_donation_receipt(entry.id, db)
         if pdf_url:
@@ -400,8 +431,6 @@ def update_donation(donation_id: int, payload: DonationEntryCreate, db: Session,
             db.commit()
             db.refresh(entry)
     except Exception as e:
-        import logging
-        logger = logging.getLogger("uvicorn.error")
         logger.error(f"Failed to generate receipt on save: {str(e)}")
 
     return entry
@@ -442,5 +471,10 @@ def delete_donation(donation_id: int, db: Session, current_user: User) -> None:
     entry.is_deleted = True
     entry.deleted_at = now
     entry.deleted_by_id = current_user.id
-    
-    db.commit()
+
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error deleting donation entry %s", donation_id)
+        raise HTTPException(status_code=500, detail="Failed to delete donation. Please try again.")

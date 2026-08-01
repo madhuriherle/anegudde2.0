@@ -1,6 +1,8 @@
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db, PermissionChecker
 from app.db.models import Item, StockAdjustment, StockLedger, User, ConsumptionEntry
@@ -8,6 +10,7 @@ from app.utils.stock_ledger_utils import compute_current_value
 from app.schemas.stock_adjustment import StockAdjustmentCreate
 from typing import List
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("/sync_for_consumption/{consumption_id}", status_code=status.HTTP_200_OK)
@@ -112,5 +115,10 @@ def sync_for_consumption(
             updated_by=current_user.id
         ))
 
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, OperationalError):
+        db.rollback()
+        logger.exception("DB error syncing stock adjustments for consumption %s", consumption_id)
+        raise HTTPException(status_code=500, detail="Failed to save stock adjustments due to concurrent access. Please try again.")
     return {"message": "Stock adjustments synchronized successfully"}
