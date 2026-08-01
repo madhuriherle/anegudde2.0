@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
@@ -6,11 +8,16 @@ import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 
 import 'services/api_service.dart';
+import 'services/printing_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiService().init();
-  
+
+  // Pay the one-time printer-list/font-loading cost now, in the
+  // background, so the very first token issued doesn't have to wait on it.
+  unawaited(PrintingService.warmUp());
+
   runApp(
     MultiProvider(
       providers: [

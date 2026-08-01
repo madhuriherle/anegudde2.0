@@ -915,33 +915,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _successTimer?.cancel();
       _refocusCountInput();
 
-      PrintingService.printToken(
-        response,
-        printerName: _selectedPrinterName.isNotEmpty ? _selectedPrinterName : null,
-      ).then((_) {
-        if (!mounted) return;
-        setState(() {
-          _successMessage = 'Token generated & printed for ${response['token_count']} devotee(s)';
-        });
-        _successTimer?.cancel();
-        _successTimer = Timer(const Duration(seconds: 5), () {
-          if (mounted) setState(() => _successMessage = null);
-        });
-      }).catchError((e) {
-        print('Printing error: $e');
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Issued successfully, but printing failed: $e'),
-          ),
-        );
-      });
+      _printReceipt(response);
     } else {
       await _showErrorAlert(
         tokenProvider.issueTokenError ?? 'Failed to generate token. Please try again.',
       );
       _refocusCountInput();
     }
+  }
+
+  /// Prints the given already-issued token's receipt. Split out from
+  /// _handleIssueTokens so the same call can be re-run from the "RETRY"
+  /// action below if the physical print fails - the token itself is
+  /// already recorded at this point, this only retries the print step.
+  void _printReceipt(Map<String, dynamic> response) {
+    PrintingService.printToken(
+      response,
+      printerName: _selectedPrinterName.isNotEmpty ? _selectedPrinterName : null,
+    ).then((_) {
+      if (!mounted) return;
+      setState(() {
+        _successMessage = 'Token generated & printed for ${response['token_count']} devotee(s)';
+      });
+      _successTimer?.cancel();
+      _successTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted) setState(() => _successMessage = null);
+      });
+    }).catchError((e) {
+      print('Printing error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Issued successfully (R.No. ${response['receipt_number']}), but printing failed: $e',
+          ),
+          duration: const Duration(seconds: 10),
+          action: SnackBarAction(
+            label: 'RETRY',
+            onPressed: () => _printReceipt(response),
+          ),
+        ),
+      );
+    });
   }
 
   Future<void> _showInvalidFormatAlert() async {
